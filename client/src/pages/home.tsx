@@ -37,14 +37,17 @@ export default function Home() {
 
   // Check if we have a wallet address in the URL or if we need to reset
   useEffect(() => {
+    // Only process URL params on initial render or when URL actually changes
     if (params.walletAddress && params.walletAddress.startsWith('0x')) {
-      // Handle wallet address from URL
-      handleSearch(params.walletAddress);
-    } else if (!params.walletAddress) {
+      if (searchedAddress !== params.walletAddress) {
+        // Handle wallet address from URL only if it's different from current
+        handleSearch(params.walletAddress);
+      }
+    } else if (!params.walletAddress && searchedAddress) {
       // Reset state when on the root URL
       setSearchedAddress(null);
     }
-  }, [params.walletAddress]);
+  }, [params.walletAddress, searchedAddress]);
 
   const { 
     data: walletData, 

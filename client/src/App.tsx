@@ -30,8 +30,8 @@ function Header() {
     e.preventDefault();
     // Reset location to home
     setLocation("/");
-    // Reset any other global state if needed
-    queryClient.removeQueries({ queryKey: ['/api/wallet'] });
+    // Do not actively remove queries - let the Home component handle its own state
+    // This is more efficient than invalidating all wallet queries at once
   };
 
   return (
