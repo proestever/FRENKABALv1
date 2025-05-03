@@ -538,10 +538,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Bookmark API Routes
   
-  // Get all bookmarks for a user
+  // Get all bookmarks for a user with userId in URL
   app.get("/api/bookmarks/:userId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const bookmarks = await storage.getBookmarks(userId);
+      return res.json(bookmarks);
+    } catch (error) {
+      console.error("Error fetching bookmarks:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch bookmarks",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Simple endpoint for getting the authenticated user's bookmarks
+  app.get("/api/bookmarks", async (req, res) => {
+    try {
+      // For simplicity, we're using the walletAddress query parameter if provided
+      const userId = req.query.userId ? parseInt(req.query.userId as string) : null;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required. Please provide it as a query parameter." });
+      }
       
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Invalid user ID" });
@@ -591,8 +616,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new bookmark
   app.post("/api/bookmarks", async (req, res) => {
     try {
-      // Validate request body using Zod schema
-      const validationResult = insertBookmarkSchema.safeParse(req.body);
+      // Create an extended schema that includes isFavorite field
+      const extendedBookmarkSchema = insertBookmarkSchema.extend({
+        isFavorite: z.boolean().optional().default(false),
+      });
+      
+      // Validate request body using extended schema
+      const validationResult = extendedBookmarkSchema.safeParse(req.body);
       
       if (!validationResult.success) {
         return res.status(400).json({ 
@@ -641,6 +671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateSchema = z.object({
         label: z.string().optional(),
         notes: z.string().optional(),
+        isFavorite: z.boolean().optional(),
       });
       
       // Validate request body

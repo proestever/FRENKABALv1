@@ -46,8 +46,19 @@ export function Profile() {
     isError, 
     refetch 
   } = useQuery<Bookmark[]>({
-    queryKey: ['/api/bookmarks', userId],
-    enabled: !!userId,
+    queryKey: ['/api/bookmarks'],
+    queryFn: async () => {
+      if (!userId) {
+        console.warn("No userId available for fetching bookmarks");
+        return [];
+      }
+      const response = await fetch(`/api/bookmarks?userId=${userId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch bookmarks');
+      }
+      return response.json();
+    },
+    enabled: !!userId && isConnected,
   });
 
   const handleDeleteBookmark = async (id: number) => {
@@ -66,6 +77,40 @@ export function Profile() {
         toast({
           title: "Error",
           description: "Failed to delete bookmark. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleToggleFavorite = async (id: number, isFavorite: boolean) => {
+    try {
+      const response = await fetch(`/api/bookmarks/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isFavorite }),
+      });
+      
+      if (response.ok) {
+        toast({
+          title: isFavorite ? "Added to Favorites" : "Removed from Favorites",
+          description: isFavorite 
+            ? "This wallet has been added to your favorites." 
+            : "This wallet has been removed from your favorites.",
+        });
+        refetch();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update favorite status. Please try again.",
           variant: "destructive"
         });
       }
@@ -166,16 +211,19 @@ export function Profile() {
                         View
                       </Link>
                     </Button>
-                    {bookmark.isFavorite && (
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        className="glass-card border-white/15 bg-yellow-500/10 text-yellow-300 hover:text-yellow-200 hover:bg-yellow-500/20 h-8 w-8"
-                        title="Favorite"
-                      >
-                        <Star className="h-3.5 w-3.5" fill="currentColor" />
-                      </Button>
-                    )}
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => handleToggleFavorite(bookmark.id, !bookmark.isFavorite)}
+                      className={`glass-card border-white/15 h-8 w-8 ${
+                        bookmark.isFavorite 
+                          ? "bg-yellow-500/10 text-yellow-300 hover:text-yellow-200 hover:bg-yellow-500/20" 
+                          : "text-muted-foreground hover:text-yellow-300"
+                      }`}
+                      title={bookmark.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      <Star className="h-3.5 w-3.5" fill={bookmark.isFavorite ? "currentColor" : "none"} />
+                    </Button>
                     <Button 
                       variant="outline" 
                       size="icon"
