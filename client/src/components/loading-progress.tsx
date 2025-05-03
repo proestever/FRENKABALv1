@@ -12,11 +12,6 @@ export function LoadingProgress({ isLoading }: LoadingProgressProps) {
   const progress = useLoadingProgress(isLoading);
   const [animatedProgress, setAnimatedProgress] = useState(0);
   
-  // Don't show anything if we're not loading or if there are no batches to process
-  if (!isLoading || progress.status === 'idle' || progress.totalBatches === 0) {
-    return null;
-  }
-  
   // Calculate the progress percentage
   const progressPercent = progress.totalBatches > 0 
     ? Math.min(Math.round((progress.currentBatch / progress.totalBatches) * 100), 100)
@@ -43,6 +38,11 @@ export function LoadingProgress({ isLoading }: LoadingProgressProps) {
       setAnimatedProgress(progressPercent);
     }
   }, [progressPercent, animatedProgress]);
+  
+  // Don't show anything if we're not loading or if there are no batches to process
+  if (!isLoading || progress.status === 'idle' || progress.totalBatches === 0) {
+    return null;
+  }
   
   // Determine the icon based on status
   const StatusIcon = () => {
