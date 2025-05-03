@@ -33,7 +33,7 @@ function Header() {
             <h1 className="text-xl md:text-2xl font-bold text-white">FrenKabal</h1>
             <span className="ml-2 text-[0.6rem] font-bold px-1.5 py-0.5 rounded-[4px] uppercase tracking-wider relative bg-black"
                   style={{
-                    background: 'linear-gradient(45deg, #ff0000, #ff00aa, #aa00ff, #0088ff, #00ffff)',
+                    background: 'linear-gradient(45deg, #ffcc00, #ff8800, #ff3300, #ff0066, #ff00cc)',
                     backgroundSize: '200% 200%',
                     WebkitBackgroundClip: 'text',
                     backgroundClip: 'text',
@@ -41,7 +41,7 @@ function Header() {
                     filter: 'brightness(1.3) contrast(1.3) saturate(1.2)',
                     textShadow: '0 0 2px rgba(255,255,255,0.5)',
                     border: '1px solid rgba(255,255,255,0.2)',
-                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.15), 0 0 4px rgba(0,136,255,0.5)',
+                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.15), 0 0 4px rgba(255,150,0,0.5)',
                     animation: 'gradient-x 4s ease infinite, beta-glow 2s ease-in-out infinite'
                   }}>
                 Beta
