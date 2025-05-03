@@ -445,7 +445,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     {/* Display USD value if available */}
                     {calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') && (
                       <div className="text-xs text-muted-foreground flex items-center justify-end">
-                        <DollarSign size={10} className="mr-0.5" />
                         {(calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') || 0).toLocaleString('en-US', {
                           style: 'currency',
                           currency: 'USD',
@@ -494,7 +493,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     {/* Display USD value if available for native PLS token */}
                     {calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
                       <div className="text-xs text-muted-foreground flex items-center justify-end">
-                        <DollarSign size={10} className="mr-0.5" />
                         {(calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
                           style: 'currency',
                           currency: 'USD',
@@ -513,7 +511,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 {/* Add USD value for gas fee if available */}
                 {calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
                   <div className="flex items-center justify-end mt-0.5">
-                    <DollarSign size={10} className="mr-0.5" />
                     {(calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
                       style: 'currency',
                       currency: 'USD',
@@ -639,7 +636,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       {/* Add USD value display */}
                       {calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') && (
                         <div className="text-xs text-muted-foreground flex items-center justify-end">
-                          <DollarSign size={10} className="mr-0.5" />
                           {(calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') || 0).toLocaleString('en-US', {
                             style: 'currency',
                             currency: 'USD',
@@ -660,7 +656,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       {/* Add USD value display for native PLS token */}
                       {calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
                         <div className="text-xs text-muted-foreground flex items-center justify-end">
-                          <DollarSign size={10} className="mr-0.5" />
                           {(calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
                             style: 'currency',
                             currency: 'USD',
@@ -677,7 +672,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     {/* Add USD value for gas fee if available */}
                     {calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
                       <div className="flex items-center justify-end mt-0.5">
-                        <DollarSign size={10} className="mr-0.5" />
                         {(calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
                           style: 'currency',
                           currency: 'USD',
