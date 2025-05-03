@@ -82,11 +82,22 @@ export function LoadingProgress({ isLoading }: LoadingProgressProps) {
         
         <Progress 
           value={animatedProgress} 
-          className="h-2 bg-muted/50"
-          // Add gradient effect to progress bar
+          className="h-2 bg-muted/50 relative overflow-hidden"
+          // Add subtle background gradient
           style={{
             background: 'linear-gradient(90deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)'
           }}
+          // Add custom colored indicator with subtle PulseChain gradient
+          indicator={
+            <div 
+              className="h-full w-full absolute progress-shimmer"
+              style={{
+                background: 'linear-gradient(90deg, rgba(0,150,255,0.3) 0%, rgba(120,20,220,0.3) 50%, rgba(200,0,255,0.3) 100%)',
+                transform: `translateX(-${100 - animatedProgress}%)`,
+                transition: 'transform 120ms cubic-bezier(0.65, 0, 0.35, 1)'
+              }}
+            />
+          }
         />
         
         <p className="text-xs text-muted-foreground mt-1">
