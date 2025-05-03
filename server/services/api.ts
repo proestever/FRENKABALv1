@@ -158,11 +158,48 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
     
     console.log(`Successfully fetched wallet balances with price for ${walletAddress}`);
     
-    // For debugging
-    console.log(`Got response from Moralis with type: ${typeof response.raw}`);
+    // Enhanced debugging
+    const result = response.raw;
+    console.log(`Got response from Moralis with type: ${typeof result}`);
+    
+    // Check if we have a native token (PLS)
+    if (Array.isArray(result)) {
+      // Log item count
+      console.log(`Moralis returned ${result.length} tokens`);
+      
+      // Look for PLS token in different ways
+      const nativeToken = result.find((token: any) => token.native_token === true);
+      const plsSymbol = result.find((token: any) => token.symbol && token.symbol.toLowerCase() === 'pls');
+      const plsAddress = result.find((token: any) => token.token_address && 
+                                      (token.token_address.toLowerCase() === PLS_TOKEN_ADDRESS.toLowerCase() || 
+                                       token.token_address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'));
+      
+      // Log what we found
+      if (nativeToken) {
+        console.log(`Found native PLS by native_token flag: ${nativeToken.symbol}, address: ${nativeToken.token_address}, balance: ${nativeToken.balance_formatted}`);
+      }
+      
+      if (plsSymbol) {
+        console.log(`Found PLS by symbol: address=${plsSymbol.token_address}, balance=${plsSymbol.balance_formatted}`);
+      }
+      
+      if (plsAddress) {
+        console.log(`Found PLS by address: symbol=${plsAddress.symbol}, balance=${plsAddress.balance_formatted}`);
+      }
+      
+      if (!nativeToken && !plsSymbol && !plsAddress) {
+        console.log('PLS token not found in Moralis response by any method');
+        
+        // Log some token samples to understand structure
+        if (result.length > 0) {
+          console.log('Sample token data:');
+          console.log(JSON.stringify(result[0], null, 2));
+        }
+      }
+    }
     
     // Just return the raw data - we'll handle the structure in the caller
-    return response.raw;
+    return result;
   } catch (error: any) {
     console.error('Error fetching wallet balances from Moralis:', error.message);
     return null;
@@ -242,8 +279,23 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       // Filter out any null items from processing errors
       const tokens = processedTokens.filter(t => t !== null);
       
-      // Find the native PLS token
-      const plsToken = tokens.find(token => token.isNative || token.symbol.toLowerCase() === 'pls');
+      // Find the native PLS token - be more flexible in detection
+      // Set address as all lowercase for consistent comparison
+      const plsTokenAddress = PLS_TOKEN_ADDRESS.toLowerCase();
+      
+      const plsToken = tokens.find(token => 
+        token.isNative === true || 
+        token.symbol.toLowerCase() === 'pls' || 
+        token.address.toLowerCase() === plsTokenAddress || 
+        token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' // Common native token address
+      );
+      
+      // Debug the native token detection
+      if (plsToken) {
+        console.log(`Found PLS token: ${plsToken.symbol} with balance ${plsToken.balanceFormatted}`);
+      } else {
+        console.log(`PLS token not found. Tokens: ${tokens.map(t => t.symbol).join(', ')}`);
+      }
       
       // Calculate total value
       const totalValue = tokens.reduce((sum, token) => sum + (token.value || 0), 0);
@@ -361,11 +413,22 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       }
     });
     
-    // Find PLS token (native token)
+    // Find PLS token (native token) - consistent with the above implementation
+    const plsTokenAddress = PLS_TOKEN_ADDRESS.toLowerCase();
+    
     const plsToken = tokensWithPrice.find(token => 
+      token.isNative === true || 
       token.symbol.toLowerCase() === 'pls' || 
-      token.address.toLowerCase() === PLS_TOKEN_ADDRESS.toLowerCase()
+      token.address.toLowerCase() === plsTokenAddress || 
+      token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' // Common native token address
     );
+    
+    // Debug the native token detection
+    if (plsToken) {
+      console.log(`Found PLS token (fallback): ${plsToken.symbol} with balance ${plsToken.balanceFormatted}`);
+    } else {
+      console.log(`PLS token not found in fallback. Tokens: ${tokensWithPrice.map(t => t.symbol).join(', ')}`);
+    }
     
     return {
       address: walletAddress,
