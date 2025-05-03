@@ -10,9 +10,10 @@ import { FrenKabalLogo } from '@/components/frenklabal-logo';
 interface SearchSectionProps {
   onSearch: (address: string) => void;
   isLoading: boolean;
+  hasSearched?: boolean;
 }
 
-export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
+export function SearchSection({ onSearch, isLoading, hasSearched = false }: SearchSectionProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const recentAddresses = getRecentAddresses();
 
@@ -34,60 +35,100 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
     onSearch(address);
   };
 
-  return (
-    <section className="flex flex-col justify-center items-center mb-16 min-h-[60vh] pt-8 gap-10">
-      <div className="logo-glow">
-        <FrenKabalLogo useAppLogo size="2xl" centered />
-      </div>
-      <Card className="shadow-lg glass-card max-w-md w-full mx-auto border border-white/30 card-glitter">
-        <CardContent className="pt-8 pb-8 px-6">
-          
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Enter PulseChain wallet address (0x...)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="w-full pr-10 glass-card border-white/15 text-foreground bg-black/10"
-              disabled={isLoading}
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <Button 
-                onClick={handleSearch}
-                disabled={isLoading || !searchQuery.trim()}
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full hover:bg-white/10 transition-colors"
-                aria-label="Search"
-              >
-                {isLoading ? (
-                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  <Search className="h-5 w-5 text-white" />
-                )}
-              </Button>
-            </div>
-          </div>
-          
-          {recentAddresses.length > 0 && (
-            <div className="mt-6">
-              <div className="flex items-center justify-center gap-x-3 gap-y-2 text-sm text-muted-foreground flex-wrap">
-                <span className="opacity-70">Recent:</span>
-                {recentAddresses.map((address) => (
-                  <button
-                    key={address}
-                    onClick={() => handleRecentAddressClick(address)}
-                    className="px-3 py-1.5 text-xs glass-card rounded-md hover:bg-white/5 transition text-white border-white/20"
-                  >
-                    {truncateAddress(address)}
-                  </button>
-                ))}
+  // Different search bar layout based on whether a search has been performed
+  if (!hasSearched) {
+    // Initial layout with logo centered and narrow search card
+    return (
+      <section className="flex flex-col justify-center items-center mb-16 min-h-[60vh] pt-8 gap-10">
+        <div className="logo-glow">
+          <FrenKabalLogo useAppLogo size="2xl" centered />
+        </div>
+        <Card className="shadow-lg glass-card max-w-md w-full mx-auto border border-white/30 card-glitter">
+          <CardContent className="pt-8 pb-8 px-6">
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Enter PulseChain wallet address (0x...)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full pr-10 glass-card border-white/15 text-foreground bg-black/10"
+                disabled={isLoading}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Button 
+                  onClick={handleSearch}
+                  disabled={isLoading || !searchQuery.trim()}
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-full hover:bg-white/10 transition-colors"
+                  aria-label="Search"
+                >
+                  {isLoading ? (
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <Search className="h-5 w-5 text-white" />
+                  )}
+                </Button>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </section>
-  );
+            
+            {recentAddresses.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center justify-center gap-x-3 gap-y-2 text-sm text-muted-foreground flex-wrap">
+                  <span className="opacity-70">Recent:</span>
+                  {recentAddresses.map((address) => (
+                    <button
+                      key={address}
+                      onClick={() => handleRecentAddressClick(address)}
+                      className="px-3 py-1.5 text-xs glass-card rounded-md hover:bg-white/5 transition text-white border-white/20"
+                    >
+                      {truncateAddress(address)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+    );
+  } else {
+    // Compact search bar after a search has been performed
+    return (
+      <section className="mb-6">
+        <Card className="shadow-lg glass-card w-full mx-auto border border-white/20">
+          <CardContent className="py-4 px-6">
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Enter PulseChain wallet address (0x...)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full pr-10 glass-card border-white/15 text-foreground bg-black/10"
+                disabled={isLoading}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Button 
+                  onClick={handleSearch}
+                  disabled={isLoading || !searchQuery.trim()}
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-full hover:bg-white/10 transition-colors"
+                  aria-label="Search"
+                >
+                  {isLoading ? (
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <Search className="h-5 w-5 text-white" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
 }

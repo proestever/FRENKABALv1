@@ -82,7 +82,11 @@ export default function Home() {
 
   return (
     <main className="container mx-auto px-4 py-6">
-      <SearchSection onSearch={handleSearch} isLoading={isLoading} />
+      <SearchSection 
+        onSearch={handleSearch} 
+        isLoading={isLoading} 
+        hasSearched={!!searchedAddress} 
+      />
       
       {/* Loading Progress Bar - shows during loading */}
       <LoadingProgress isLoading={isLoading || isFetching} />
