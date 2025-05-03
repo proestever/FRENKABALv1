@@ -6,9 +6,24 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
+import { useWallet } from "@/hooks/use-wallet";
+import { Wallet, HelpCircle, Loader2 } from "lucide-react";
 
 // Header component
 function Header() {
+  const { 
+    connect, 
+    disconnect, 
+    isConnected, 
+    account, 
+    isConnecting 
+  } = useWallet();
+
+  // Format account address for display
+  const formatAccount = (address: string) => {
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+
   return (
     <header className="backdrop-blur-md bg-black/10 shadow-md border-b border-white/15 sticky top-0 z-30">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -22,16 +37,37 @@ function Header() {
         
         <div className="flex space-x-4 items-center">
           <button className="hidden md:flex px-4 py-2 text-sm glass-card border-white/15 rounded-md hover:bg-black/20 transition text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-1">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
+            <HelpCircle className="w-4 h-4 mr-1" />
             Help
           </button>
-          <button className="px-4 py-2 text-sm font-medium relative overflow-hidden border border-white/30 bg-black/20 text-white rounded-md hover:bg-black/30 transition-all focus:outline-none connect-button">
-            Connect
-          </button>
+          
+          {isConnected && account ? (
+            <button 
+              onClick={disconnect}
+              className="px-4 py-2 text-sm font-medium relative overflow-hidden border border-white/30 bg-black/20 text-white rounded-md hover:bg-black/30 transition-all focus:outline-none connect-button flex items-center"
+            >
+              <Wallet className="w-4 h-4 mr-2" />
+              {formatAccount(account)}
+            </button>
+          ) : (
+            <button 
+              onClick={connect}
+              disabled={isConnecting}
+              className="px-4 py-2 text-sm font-medium relative overflow-hidden border border-white/30 bg-black/20 text-white rounded-md hover:bg-black/30 transition-all focus:outline-none connect-button flex items-center"
+            >
+              {isConnecting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Connect
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </header>
