@@ -480,6 +480,30 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           </tbody>
         </table>
       </div>
+      
+      {/* Load More Button (if there are more transactions) */}
+      {hasMore && (
+        <div className="p-6 flex justify-center">
+          <Button 
+            variant="secondary" 
+            onClick={loadMoreTransactions}
+            disabled={isLoadingMore}
+            className="w-full max-w-md"
+          >
+            {isLoadingMore ? (
+              <span className="flex items-center">
+                <Loader2 size={18} className="mr-2 animate-spin" /> 
+                Loading more transactions...
+              </span>
+            ) : (
+              <span className="flex items-center">
+                <ChevronDown size={18} className="mr-2" /> 
+                Load More Transactions
+              </span>
+            )}
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }
