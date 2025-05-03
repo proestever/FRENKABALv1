@@ -333,6 +333,7 @@ export async function getWalletTransactionHistory(
     // Parse the JSON response
     const responseData = await response.json();
     console.log(`Transaction response cursor: ${responseData?.cursor || 'none'}`);
+    console.log('Response data keys:', Object.keys(responseData));
     
     const result = responseData?.result || [];
     const cursor = responseData?.cursor || null;
@@ -340,6 +341,7 @@ export async function getWalletTransactionHistory(
     const page_size = responseData?.page_size || limit;
     
     console.log(`Successfully fetched transaction history for ${walletAddress} - ${result.length} transactions`);
+    console.log('First transaction sample:', result.length > 0 ? JSON.stringify(result[0]).substring(0, 300) : 'No transactions');
     
     return {
       result,

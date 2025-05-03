@@ -79,14 +79,17 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         // Use the actual wallet address (not the token address)
         const response = await fetchTransactionHistory(walletAddress, TRANSACTIONS_PER_BATCH);
         console.log('Initial transaction history fetched:', response ? 'yes' : 'no', 
-          response?.result ? `${response.result.length} transactions` : '');
+          response?.result ? `${response.result.length} transactions` : '', 
+          'Response data:', JSON.stringify(response).substring(0, 300) + '...');
         
         // Update state with the response data
         if (response?.result) {
+          console.log(`Setting ${response.result.length} transactions`);
           setTransactions(response.result || []);
           setNextCursor(response.cursor);
           setHasMore(!!response.cursor); // Has more if cursor exists
         } else {
+          console.log('No transactions found in response, clearing state');
           setTransactions([]);
           setHasMore(false);
         }
