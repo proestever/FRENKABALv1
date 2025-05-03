@@ -1,4 +1,4 @@
-import { Token, Wallet } from '@shared/schema';
+import { Token, Wallet, Bookmark } from '@shared/schema';
 
 /**
  * Fetch wallet data from the server API
@@ -126,5 +126,132 @@ export function clearHiddenTokens(): void {
     localStorage.removeItem('hiddenTokens');
   } catch (error) {
     console.error('Error clearing hidden tokens from localStorage:', error);
+  }
+}
+
+/**
+ * Get all bookmarks for a user
+ */
+export async function getBookmarks(userId: number): Promise<Bookmark[]> {
+  try {
+    const response = await fetch(`/api/bookmarks/${userId}`);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch bookmarks');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching bookmarks:', error);
+    return [];
+  }
+}
+
+/**
+ * Check if a wallet address is bookmarked by user
+ */
+export async function isAddressBookmarked(userId: number, walletAddress: string): Promise<Bookmark | null> {
+  try {
+    const response = await fetch(`/api/bookmarks/${userId}/address/${walletAddress}`);
+    
+    if (response.status === 404) {
+      return null;
+    }
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to check bookmark status');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error checking bookmark status:', error);
+    return null;
+  }
+}
+
+/**
+ * Add a bookmark
+ */
+export async function addBookmark(userId: number, walletAddress: string, label: string, notes: string = ''): Promise<Bookmark | null> {
+  try {
+    const response = await fetch('/api/bookmarks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        walletAddress,
+        label,
+        notes
+      }),
+    });
+    
+    if (response.status === 409) {
+      // Already bookmarked
+      const data = await response.json();
+      return data.bookmark;
+    }
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to add bookmark');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error adding bookmark:', error);
+    return null;
+  }
+}
+
+/**
+ * Update a bookmark
+ */
+export async function updateBookmark(id: number, label: string, notes: string = ''): Promise<Bookmark | null> {
+  try {
+    const response = await fetch(`/api/bookmarks/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        label,
+        notes
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update bookmark');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error updating bookmark:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete a bookmark
+ */
+export async function deleteBookmark(id: number): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/bookmarks/${id}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to delete bookmark');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting bookmark:', error);
+    return false;
   }
 }

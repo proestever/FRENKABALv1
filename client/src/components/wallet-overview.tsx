@@ -1,12 +1,14 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Wallet } from '@shared/schema';
-import { ExternalLink, Copy, RotateCw } from 'lucide-react';
+import { Wallet, Bookmark } from '@shared/schema';
+import { ExternalLink, Copy, RotateCw, Bookmark as BookmarkIcon, CheckCircle } from 'lucide-react';
 import { formatCurrency, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass, truncateAddress } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
 import { useState, useEffect } from 'react';
-import { getHiddenTokens, isTokenHidden } from '@/lib/api';
+import { getHiddenTokens, isTokenHidden, isAddressBookmarked } from '@/lib/api';
+import { useWallet } from '@/hooks/use-wallet';
+import { BookmarkDialog } from '@/components/bookmark-dialog';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -16,9 +18,38 @@ interface WalletOverviewProps {
 
 export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewProps) {
   const { toast } = useToast();
+  const { account: connectedWalletAddress, isConnected } = useWallet();
   const [hiddenTokens, setHiddenTokens] = useState<string[]>([]);
   const [totalVisibleValue, setTotalVisibleValue] = useState<number>(0);
   const [visibleTokenCount, setVisibleTokenCount] = useState<number>(0);
+  const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
+  const [existingBookmark, setExistingBookmark] = useState<Bookmark | null>(null);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isCheckingBookmark, setIsCheckingBookmark] = useState(false);
+
+  // Check if the current wallet is bookmarked
+  useEffect(() => {
+    const checkIfBookmarked = async () => {
+      if (!wallet || !isConnected || !connectedWalletAddress) return;
+      
+      // Get the user ID from the connected wallet address
+      // For now, we'll use a simple hash of the address as the ID
+      const userId = parseInt(connectedWalletAddress.slice(2, 10), 16) % 1000000;
+      
+      setIsCheckingBookmark(true);
+      try {
+        const bookmark = await isAddressBookmarked(userId, wallet.address);
+        setIsBookmarked(!!bookmark);
+        setExistingBookmark(bookmark);
+      } catch (error) {
+        console.error('Error checking bookmark status:', error);
+      } finally {
+        setIsCheckingBookmark(false);
+      }
+    };
+    
+    checkIfBookmarked();
+  }, [wallet, isConnected, connectedWalletAddress]);
 
   useEffect(() => {
     // Get hidden tokens from localStorage
