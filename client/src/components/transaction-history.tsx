@@ -67,17 +67,46 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [loadingTimeout, setLoadingTimeout] = useState<boolean>(false);
+  const [requestTimeoutId, setRequestTimeoutId] = useState<NodeJS.Timeout | null>(null);
   // Add state for token prices
   const [tokenPrices, setTokenPrices] = useState<Record<string, number>>({});
+
+  // Set up a timeout to show an error message if the transactions don't load within reasonable time
+  useEffect(() => {
+    // Clear any existing timeout when component mounts or is unmounted
+    return () => {
+      if (requestTimeoutId) {
+        clearTimeout(requestTimeoutId);
+      }
+    };
+  }, [requestTimeoutId]);
 
   // Initial transaction data fetch
   const { isLoading, isError, data: initialData, refetch } = useQuery({
     queryKey: ['transactions', walletAddress], // Removed timestamp to prevent infinite fetching
     queryFn: async () => {
       console.log('Fetching transaction history for:', walletAddress);
+      
+      // Set a timeout to detect if the request is taking too long
+      if (requestTimeoutId) clearTimeout(requestTimeoutId);
+      
+      const timeoutId = setTimeout(() => {
+        console.log('Transaction history request is taking too long');
+        setLoadingTimeout(true);
+      }, 20000); // 20 seconds timeout
+      
+      setRequestTimeoutId(timeoutId);
+      setLoadingTimeout(false);
+      
       try {
         // Use the actual wallet address (not the token address)
         const response = await fetchTransactionHistory(walletAddress, TRANSACTIONS_PER_BATCH);
+        
+        // Clear timeout as we got a response
+        if (requestTimeoutId) clearTimeout(requestTimeoutId);
+        setLoadingTimeout(false);
+        
         console.log('Initial transaction history fetched:', response ? 'yes' : 'no', 
           response?.result ? `${response.result.length} transactions` : '', 
           'Response data:', JSON.stringify(response).substring(0, 300) + '...');
@@ -88,20 +117,26 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           throw new Error(response.error);
         }
         
-        // Update state with the response data
-        if (response?.result) {
-          console.log(`Setting ${response.result.length} transactions`);
-          setTransactions(response.result || []);
-          setNextCursor(response.cursor);
-          setHasMore(!!response.cursor); // Has more if cursor exists
-        } else {
+        // Handle empty results specifically
+        if (!response || !response.result || response.result.length === 0) {
           console.log('No transactions found in response, clearing state');
           setTransactions([]);
           setHasMore(false);
+          return { result: [], cursor: null, page: 0, page_size: TRANSACTIONS_PER_BATCH };
         }
+        
+        // Update state with the response data
+        console.log(`Setting ${response.result.length} transactions`);
+        setTransactions(response.result || []);
+        setNextCursor(response.cursor);
+        setHasMore(!!response.cursor); // Has more if cursor exists
         
         return response;
       } catch (error) {
+        // Clear timeout on error
+        if (requestTimeoutId) clearTimeout(requestTimeoutId);
+        setLoadingTimeout(false);
+        
         console.error('Error fetching transaction history:', error);
         throw error;
       }
@@ -110,9 +145,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     staleTime: 0, // Don't use stale data
     gcTime: 0, // Don't keep data in cache
     refetchOnMount: true, // Always refetch when component mounts
-    retry: 3, // Retry failed requests up to 3 times 
-    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 15000), // Exponential backoff with longer max delay
-    // Custom retry logic to handle timeout and 500 errors from server
+    retry: 2, // Reduce retries to prevent long loading times
+    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 5000), // Faster retry with shorter max delay
     retryOnMount: true
   });
   
@@ -121,6 +155,19 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     if (!nextCursor || isLoadingMore || !walletAddress) return;
     
     setIsLoadingMore(true);
+    
+    // Set a timeout for loading more transactions
+    if (requestTimeoutId) clearTimeout(requestTimeoutId);
+    
+    const timeoutId = setTimeout(() => {
+      console.log('Load more transactions request is taking too long');
+      setLoadingTimeout(true);
+      setIsLoadingMore(false);
+      // Don't set hasMore to false to allow retry
+    }, 20000); // 20 seconds timeout
+    
+    setRequestTimeoutId(timeoutId);
+    
     try {
       const moreData = await fetchTransactionHistory(
         walletAddress, 
@@ -128,21 +175,36 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         nextCursor
       );
       
-      if (moreData?.result) {
+      // Clear timeout as we got a response
+      if (requestTimeoutId) clearTimeout(requestTimeoutId);
+      setLoadingTimeout(false);
+      
+      if (moreData?.error) {
+        console.error('Error in load more transaction response:', moreData.error);
+        throw new Error(moreData.error);
+      }
+      
+      if (moreData?.result && moreData.result.length > 0) {
         // Append new transactions to existing list
         setTransactions(prev => [...prev, ...moreData.result]);
         setNextCursor(moreData.cursor);
         setHasMore(!!moreData.cursor); // Has more if cursor exists
       } else {
+        // No more data available
+        console.log('No more transactions available');
         setHasMore(false);
       }
     } catch (error) {
+      // Clear timeout on error
+      if (requestTimeoutId) clearTimeout(requestTimeoutId);
+      setLoadingTimeout(false);
+      
       console.error('Error loading more transactions:', error);
-      setHasMore(false);
+      // Don't set hasMore to false to allow retry
     } finally {
       setIsLoadingMore(false);
     }
-  }, [nextCursor, isLoadingMore, walletAddress]);
+  }, [nextCursor, isLoadingMore, walletAddress, requestTimeoutId]);
 
   // Format timestamp
   const formatTimestamp = (timestamp: string) => {
@@ -283,10 +345,37 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
         <div className="flex flex-col items-center justify-center min-h-[300px]">
           <Loader2 size={40} className="animate-spin text-primary mb-4" />
-          <h3 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Loading Transaction History...</h3>
+          <h3 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            {loadingTimeout ? 'Still Loading...' : 'Loading Transaction History...'}
+          </h3>
           <p className="text-muted-foreground mt-2">
-            This may take a moment depending on your transaction count
+            {loadingTimeout ? (
+              <>
+                The server is taking longer than expected to respond. 
+                <br />This could be due to high network traffic or temporary API limitations.
+                <br />You can wait or try again later.
+              </>
+            ) : (
+              'This may take a moment depending on your transaction count'
+            )}
           </p>
+          
+          {loadingTimeout && (
+            <div className="mt-4">
+              <button
+                onClick={() => {
+                  // Clear timeout state
+                  setLoadingTimeout(false);
+                  // Try again
+                  refetch();
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
+              >
+                <RefreshCw size={16} className="mr-1" />
+                <span className="text-sm font-medium">Try Again</span>
+              </button>
+            </div>
+          )}
         </div>
       </Card>
     );
