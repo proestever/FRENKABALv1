@@ -1,4 +1,4 @@
-import { Switch, Route, Link } from "wouter";
+import { Switch, Route, Link, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -18,16 +18,30 @@ function Header() {
     account, 
     isConnecting 
   } = useWallet();
+  const [, setLocation] = useLocation();
 
   // Format account address for display
   const formatAccount = (address: string) => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
+  // Handle logo click to properly reset state when returning to the home page
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Reset location to home
+    setLocation("/");
+    // Reset any other global state if needed
+    queryClient.removeQueries({ queryKey: ['/api/wallet'] });
+  };
+
   return (
     <header className="backdrop-blur-md bg-black/10 shadow-md border-b border-white/15 sticky top-0 z-30">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="flex items-center group">
+        <a 
+          href="/" 
+          onClick={handleLogoClick} 
+          className="flex items-center group cursor-pointer"
+        >
           <FrenKabalLogo size="md" className="mr-3 transition-transform duration-200 group-hover:scale-105" />
           <div className="flex items-center">
             <h1 className="text-xl md:text-2xl font-bold text-white group-hover:text-white/90 transition-colors duration-200">FrenKabal</h1>
@@ -47,7 +61,7 @@ function Header() {
                 Beta
             </span>
           </div>
-        </Link>
+        </a>
         
         <div className="flex space-x-4 items-center">
           <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
