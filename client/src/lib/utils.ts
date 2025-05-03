@@ -76,6 +76,6 @@ export function getChangeColorClass(value: number | undefined): string {
 export function getAdvancedChangeClass(value: number | undefined): string {
   if (value === undefined || value === 0) return 'text-muted-foreground';
   return value > 0 
-    ? 'text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium' 
-    : 'text-red-400 border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 rounded-md font-medium';
+    ? 'text-green-400 font-medium' 
+    : 'text-red-400 font-medium';
 }
