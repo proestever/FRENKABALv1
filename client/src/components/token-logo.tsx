@@ -1,5 +1,6 @@
 import { useTokenLogo } from '@/hooks/use-token-logo';
 import customTokenLogo from '../assets/100xfrenlogo.png';
+import plsLogo from '../assets/pls-logo.png';
 
 interface TokenLogoProps {
   address: string;
@@ -28,9 +29,23 @@ export function TokenLogo({ address, symbol, size = 'md', fallbackLogo }: TokenL
     lg: 'text-base'
   };
   
+  // Check if this is the native PLS token
+  const isPLS = symbol.toLowerCase() === 'pls' || 
+               address.toLowerCase() === '0x5616458eb2bac88dd60a4b08f815f37335215f9b' || 
+               address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+  
   return (
     <div className={`${sizeClasses[size]} rounded-full flex items-center justify-center bg-secondary/80 overflow-hidden border border-border/40 shadow-sm`}>
-      {logoUrl ? (
+      {isPLS ? (
+        // Always use our custom PLS logo for the native token
+        <img 
+          src={plsLogo} 
+          alt="PLS" 
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      ) : logoUrl ? (
+        // For other tokens, use the logo from API with fallback
         <img 
           src={logoUrl} 
           alt={symbol} 
@@ -41,6 +56,7 @@ export function TokenLogo({ address, symbol, size = 'md', fallbackLogo }: TokenL
           loading="lazy"
         />
       ) : (
+        // Fallback for tokens without a logo
         <img 
           src={customTokenLogo} 
           alt={symbol} 
