@@ -81,7 +81,8 @@ export function useTokenLogo(tokenAddress: string, fallbackLogo?: string): strin
       } catch (error) {
         // Only log once per session to avoid console spam
         if (!logoCache[normalizedAddress]) {
-          console.error(`Error fetching logo for ${normalizedAddress}:`, error);
+          // Silently handle errors - we don't need to log every token that doesn't have a logo
+      // console.error(`Error fetching logo for ${normalizedAddress}:`, error);
           // Still mark as not found to prevent repeated failed requests
           logoCache[normalizedAddress] = false;
           notFoundTimestamps[normalizedAddress] = Date.now();

@@ -60,34 +60,54 @@ export function useBatchTokenLogos(
         return;
       }
       
-      // Fetch all missing logos in one batch request
-      const response = await fetch('/api/token-logos/batch', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ addresses: uncachedAddresses }),
+      // Process logos in smaller batches to avoid 400 errors
+      const MAX_BATCH_SIZE = 50;
+      const allData: Record<string, any> = {};
+      
+      // Break up large requests into smaller batches
+      for (let i = 0; i < uncachedAddresses.length; i += MAX_BATCH_SIZE) {
+        const batchAddresses = uncachedAddresses.slice(i, i + MAX_BATCH_SIZE);
+        console.log(`Processing logo batch ${i/MAX_BATCH_SIZE + 1}/${Math.ceil(uncachedAddresses.length/MAX_BATCH_SIZE)}, size: ${batchAddresses.length}`);
+        
+        try {
+          // Fetch batch of logos
+          const response = await fetch('/api/token-logos/batch', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ addresses: batchAddresses }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            // Merge results into allData
+            Object.assign(allData, data);
+          } else {
+            console.error(`Error fetching batch of logos: ${response.status}`);
+            // Even if this batch fails, continue with other batches
+          }
+        } catch (err) {
+          console.error(`Failed to fetch logo batch: ${err}`);
+          // Continue with other batches even if one fails
+        }
+      }
+      
+      // Update cache with all fetched logos
+      Object.entries(allData).forEach(([addr, logoData]: [string, any]) => {
+        if (logoData && logoData.logoUrl) {
+          logoCache[addr.toLowerCase()] = logoData.logoUrl;
+        }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Update cache with new logos
-        Object.entries(data).forEach(([addr, logoData]: [string, any]) => {
-          if (logoData && logoData.logoUrl) {
-            logoCache[addr.toLowerCase()] = logoData.logoUrl;
-          }
-        });
-        
-        // Update state with all logos (cached + newly fetched)
-        const allLogos: Record<string, string> = {};
-        addresses.forEach(addr => {
-          const normalizedAddr = addr.toLowerCase();
-          allLogos[normalizedAddr] = logoCache[normalizedAddr] || customTokenLogo;
-        });
-        
-        setLogoUrls(allLogos);
-      }
+      // Update state with all logos (cached + newly fetched)
+      const allLogos: Record<string, string> = {};
+      addresses.forEach(addr => {
+        const normalizedAddr = addr.toLowerCase();
+        allLogos[normalizedAddr] = logoCache[normalizedAddr] || customTokenLogo;
+      });
+      
+      setLogoUrls(allLogos);
     } catch (error) {
       console.error('Error batch fetching token logos:', error);
     } finally {

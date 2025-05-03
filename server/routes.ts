@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice } from "./services/api";
 import { z } from "zod";
+import { TokenLogo } from "@shared/schema";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -349,11 +350,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      if (logo) {
-        return res.json(logo);
-      } else {
-        return res.status(404).json({ message: "Token logo not found" });
+      // By this point, we should always have a logo - either a real one or a fallback
+      // But as a final safety check, create a default logo if somehow we still don't have one
+      if (!logo) {
+        // Create default fallback logo as absolute last resort
+        const fallbackLogo = {
+          tokenAddress: address,
+          logoUrl: '/assets/100xfrenlogo.png',
+          symbol: null,
+          name: null,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        try {
+          logo = await storage.saveTokenLogo(fallbackLogo);
+          console.log(`Created final fallback logo for ${address}`);
+        } catch (err) {
+          console.error(`Failed to save final fallback logo: ${err}`);
+          
+          // If we still somehow don't have a logo at this point,
+          // create a final error response instead of returning 404
+          return res.json({
+            id: -1,
+            tokenAddress: address,
+            logoUrl: '/assets/100xfrenlogo.png',
+            symbol: null,
+            name: null,
+            lastUpdated: new Date().toISOString()
+          });
+        }
       }
+      
+      // At this point we should definitely have a logo to return
+      return res.json(logo);
     } catch (error) {
       console.error("Error fetching token logo:", error);
       return res.status(500).json({ 
