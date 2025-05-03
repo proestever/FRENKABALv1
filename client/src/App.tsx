@@ -125,11 +125,8 @@ function Header() {
       
       {/* Mobile header */}
       <div className="container mx-auto px-4 py-3 md:hidden grid grid-cols-3 items-center">
-        {/* Left area: empty for balance */}
-        <div className="col-span-1"></div>
-        
-        {/* Center area: logo */}
-        <div className="col-span-1 flex justify-center">
+        {/* Left area: logo */}
+        <div className="col-span-1 flex items-center">
           <a 
             href="/" 
             onClick={handleLogoClick} 
@@ -137,6 +134,10 @@ function Header() {
           >
             <FrenKabalLogo size="md" className="transition-transform duration-200 group-hover:scale-105" />
           </a>
+        </div>
+        
+        {/* Center area: empty */}
+        <div className="col-span-1 flex justify-center">
         </div>
         
         {/* Right area: menu button */}
