@@ -26,6 +26,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
   const [showHidden, setShowHidden] = useState(false);
   const [hiddenTokens, setHiddenTokens] = useState<string[]>(getHiddenTokens());
   const [showTransactions, setShowTransactions] = useState(false);
+  const [txHistoryKey, setTxHistoryKey] = useState(Date.now());
 
   // Extract token addresses and symbols for batch logo loading
   const tokenAddresses = useMemo(() => tokens.map(t => t.address), [tokens]);
@@ -136,7 +137,10 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
               <span className="text-sm font-medium">Tokens</span>
             </button>
             <button
-              onClick={() => setShowTransactions(true)}
+              onClick={() => {
+                setShowTransactions(true);
+                setTxHistoryKey(Date.now());
+              }}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 transition-all duration-200 
                 ${showTransactions 
                   ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
@@ -195,7 +199,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
         <TransactionHistory 
           walletAddress={effectiveWalletAddress} 
           onClose={() => setShowTransactions(false)}
-          key={`tx-${effectiveWalletAddress}-${Date.now()}`} // Force remount on toggle
+          key={`tx-${effectiveWalletAddress}-${txHistoryKey}`} // Force remount on toggle
         />
       ) : (
         <>
