@@ -34,10 +34,10 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
   };
 
   return (
-    <section className="mb-8">
-      <Card className="shadow-lg glass-card">
-        <CardContent className="pt-6">
-          <h2 className="text-lg font-semibold mb-4 text-white">
+    <section className="flex justify-center items-center mb-16 min-h-[60vh] pt-8">
+      <Card className="shadow-lg glass-card max-w-md w-full mx-auto border border-white/25" style={{ boxShadow: '0 0 35px rgba(255, 255, 255, 0.12)' }}>
+        <CardContent className="pt-8 pb-8 px-6">
+          <h2 className="text-xl font-semibold mb-6 text-white text-center">
             Track Any PulseChain Wallet
           </h2>
           
@@ -70,14 +70,14 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
           </div>
           
           {recentAddresses.length > 0 && (
-            <div className="mt-3">
-              <div className="flex items-center gap-x-2 text-sm text-muted-foreground flex-wrap">
-                <span>Recent:</span>
+            <div className="mt-6">
+              <div className="flex items-center justify-center gap-x-3 text-sm text-muted-foreground flex-wrap">
+                <span className="opacity-70">Recent:</span>
                 {recentAddresses.map((address) => (
                   <button
                     key={address}
                     onClick={() => handleRecentAddressClick(address)}
-                    className="px-2 py-1 text-xs glass-card rounded-md hover:bg-black/20 transition text-white border-white/15"
+                    className="px-3 py-1.5 text-xs glass-card rounded-md hover:bg-white/5 transition text-white border-white/20"
                   >
                     {truncateAddress(address)}
                   </button>
