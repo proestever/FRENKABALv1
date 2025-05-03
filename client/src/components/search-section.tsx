@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { getRecentAddresses } from '@/lib/api';
 import { truncateAddress } from '@/lib/utils';
 import { Search } from 'lucide-react';
+import { FrenKabalLogo } from '@/components/frenklabal-logo';
 
 interface SearchSectionProps {
   onSearch: (address: string) => void;
@@ -37,9 +38,9 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
     <section className="flex justify-center items-center mb-16 min-h-[60vh] pt-8">
       <Card className="shadow-lg glass-card max-w-md w-full mx-auto border border-white/30 card-glitter">
         <CardContent className="pt-8 pb-8 px-6">
-          <h2 className="text-xl font-semibold mb-6 text-white text-center">
-            Track Any PulseChain Wallet
-          </h2>
+          <div className="mb-6 text-center">
+            <FrenKabalLogo useAppLogo size="2xl" centered />
+          </div>
           
           <div className="relative">
             <Input
