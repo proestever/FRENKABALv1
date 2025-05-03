@@ -14,22 +14,29 @@ import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/use-wallet";
 import { Bookmark } from "@shared/schema";
 import { Home, ExternalLink, Star, Trash2, Wallet } from "lucide-react";
-import { formatAccount } from "@/lib/format";
+import { formatAccount } from "../lib/format";
 
 export function Profile() {
   const { isConnected, account, userId } = useWallet();
   const [, setLocation] = useLocation();
   
-  // Redirect to home if not connected
+  // Redirect to home if not connected - with a delay to ensure wallet state is fully loaded
   useEffect(() => {
-    if (!isConnected || !account) {
-      toast({
-        title: "Authentication Required",
-        description: "Please connect your wallet to view your profile.",
-        variant: "destructive"
-      });
-      setLocation("/");
-    }
+    // Add a small delay to allow the wallet state to fully load
+    const checkConnection = setTimeout(() => {
+      if (!isConnected || !account) {
+        toast({
+          title: "Authentication Required",
+          description: "Please connect your wallet to view your profile.",
+          variant: "destructive"
+        });
+        setLocation("/");
+      } else {
+        console.log("Profile accessed with wallet:", account);
+      }
+    }, 500);
+    
+    return () => clearTimeout(checkConnection);
   }, [isConnected, account, setLocation]);
 
   // Fetch user's bookmarks
