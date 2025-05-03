@@ -214,7 +214,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                       </span>
                       <button 
                         onClick={() => handleToggleVisibility(token.address)}
-                        className={`p-1.5 rounded-full ${isHidden ? 'text-muted-foreground' : 'text-purple-400'}`}
+                        className={`p-1.5 rounded-full glass-card hover:bg-black/20 ${isHidden ? 'text-white/60' : 'text-purple-400'}`}
                         title={isHidden ? "Show token" : "Hide token"}
                       >
                         {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -335,7 +335,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <button 
                       onClick={() => handleToggleVisibility(token.address)}
-                      className={`p-1.5 rounded-full hover:bg-secondary ${isHidden ? 'text-muted-foreground' : 'text-purple-400'}`}
+                      className={`p-1.5 rounded-full glass-card hover:bg-black/20 ${isHidden ? 'text-white/60' : 'text-purple-400'}`}
                       title={isHidden ? "Show token" : "Hide token"}
                     >
                       {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -364,7 +364,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
               {!showHidden && (
                 <button 
                   onClick={() => setShowHidden(true)}
-                  className="text-xs px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md border border-purple-500/30 hover:bg-purple-500/20"
+                  className="text-xs px-2 py-1 glass-card text-purple-400 rounded-md border-white/15 hover:bg-black/20"
                 >
                   Show
                 </button>

@@ -48,7 +48,7 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full pr-32 glass-card border-border/50 text-foreground bg-secondary/60"
+              className="w-full pr-32 glass-card border-white/15 text-foreground bg-black/10"
               disabled={isLoading}
             />
             <div className="absolute right-1 top-1">
@@ -73,7 +73,7 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
                   <button
                     key={address}
                     onClick={() => handleRecentAddressClick(address)}
-                    className="px-2 py-1 text-xs glass-card rounded-md hover:bg-secondary/70 transition text-foreground"
+                    className="px-2 py-1 text-xs glass-card rounded-md hover:bg-black/20 transition text-white border-white/15"
                   >
                     {truncateAddress(address)}
                   </button>

@@ -65,7 +65,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
 
   return (
     <section className="mb-8">
-      <Card className="p-6 glass-card glass-highlight shadow-lg">
+      <Card className="p-6 glass-card glass-highlight shadow-lg border-white/15">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="text-xl font-bold text-white">Wallet Overview</h2>
@@ -100,7 +100,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-card rounded-lg p-4 glass-highlight">
+          <div className="glass-card rounded-lg p-4 glass-highlight border-white/15">
             <div className="text-sm text-muted-foreground mb-1">Total Value (Visible)</div>
             <div className="text-2xl font-bold text-white">
               {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
@@ -110,7 +110,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             </div>
           </div>
           
-          <div className="glass-card rounded-lg p-4 glass-highlight">
+          <div className="glass-card rounded-lg p-4 glass-highlight border-white/15">
             <div className="text-sm text-muted-foreground mb-1">Token Count (Visible)</div>
             <div className="text-2xl font-bold text-white">
               {visibleTokenCount || 0}
