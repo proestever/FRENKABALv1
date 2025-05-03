@@ -2,28 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Deep Purple Theme */
+/* FrenKabal Theme - Deep Muted Purple */
 :root {
-  /* Deeper dark mode by default */
-  --background: 260 35% 4%;
+  /* Deeper dark mode with muted purple tones */
+  --background: 270 40% 3%;
   --foreground: 220 25% 98%;
-  --muted: 260 30% 12%;
+  --muted: 270 30% 10%;
   --muted-foreground: 240 20% 75%;
-  --popover: 260 35% 6%;
+  --popover: 270 35% 5%;
   --popover-foreground: 220 25% 98%;
-  --card: 260 35% 8%;
+  --card: 270 35% 7%;
   --card-foreground: 220 25% 98%;
-  --border: 260 30% 15%;
-  --input: 260 30% 15%;
-  --primary: 275 90% 65%;
+  --border: 270 30% 12%;
+  --input: 270 30% 12%;
+  --primary: 280 80% 50%;
   --primary-foreground: 220 25% 98%;
-  --secondary: 260 30% 14%;
+  --secondary: 275 25% 12%;
   --secondary-foreground: 220 25% 98%;
-  --accent: 290 70% 60%;
+  --accent: 285 60% 45%;
   --accent-foreground: 220 25% 98%;
   --destructive: 0 90% 60%;
   --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 280 85% 45%;
+  --ring: 280 75% 40%;
   --success: 135 80% 45%;
   --error: 0 90% 55%;
   --radius: 0.5rem;
