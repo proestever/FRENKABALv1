@@ -18,9 +18,15 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
       throw new Error(`PulseChain Scan API error: ${response.status} ${response.statusText}`);
     }
     
-    const data = await response.json() as PulseChainTokenBalanceResponse;
+    // The API returns an array of token balances directly
+    const tokenBalances = await response.json() as PulseChainTokenBalanceResponse;
     
-    return data.items.map(item => {
+    if (!Array.isArray(tokenBalances)) {
+      console.error('Unexpected response format:', tokenBalances);
+      return [];
+    }
+    
+    return tokenBalances.map((item: PulseChainTokenBalance) => {
       const decimals = parseInt(item.token.decimals) || 18;
       const balance = item.value;
       const balanceFormatted = parseFloat(balance) / Math.pow(10, decimals);

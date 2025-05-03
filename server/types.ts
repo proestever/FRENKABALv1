@@ -1,7 +1,6 @@
 // PulseChain Scan API response types
-export interface PulseChainTokenBalanceResponse {
-  items: PulseChainTokenBalance[];
-}
+// The API returns an array of token balances directly, not wrapped in an items property
+export type PulseChainTokenBalanceResponse = PulseChainTokenBalance[];
 
 export interface PulseChainTokenBalance {
   token: {
@@ -15,6 +14,8 @@ export interface PulseChainTokenBalance {
     icon_url: string | null;
   };
   value: string;
+  token_id?: string | null;
+  token_instance?: any | null;
 }
 
 // Moralis API response types
