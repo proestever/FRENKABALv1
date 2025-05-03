@@ -164,8 +164,24 @@ export function useWallet(): UseWalletReturn {
       if (accounts.length > 0) {
         const address = accounts[0];
         
-        // Create a signature message for authentication
-        const message = `FrenKabal Wallet Authentication\n\nThis signature proves you own this wallet address: ${address}\n\nThis signature will not trigger any blockchain transaction or cost any gas fees.\n\nTimestamp: ${new Date().toISOString()}`;
+        // Create a welcoming signature message with features
+        const message = `🌟 Welcome to FrenKabal! 🌟\n
+🔑 Wallet Authentication
+This signature proves you own this wallet address: ${address}
+
+🔒 Security Note
+This signature will not trigger any blockchain transaction or cost any gas fees.
+
+✨ Unlock FrenKabal Premium Features ✨
+• Real-time wallet tracking and portfolio monitoring
+• Advanced token sniping tools and alerts
+• Deep dive transaction history analysis
+• Cross-chain asset visualization
+• Custom price alerts and notifications
+• And much more coming soon!
+
+Become part of the FrenKabal community today.
+Timestamp: ${new Date().toISOString()}`;
         
         try {
           // Request signature to verify wallet ownership
@@ -217,8 +233,8 @@ export function useWallet(): UseWalletReturn {
           }
           
           toast({
-            title: "Wallet Connected and Verified",
-            description: `Connected to ${address.substring(0, 6)}...${address.substring(38)}`,
+            title: "Welcome to FrenKabal! 🌟",
+            description: `Account ${address.substring(0, 6)}...${address.substring(38)} successfully connected and verified. Enjoy all premium features!`,
           });
         } catch (signError) {
           console.error("Error signing verification message:", signError);
