@@ -31,13 +31,17 @@ function Header() {
           <FrenKabalLogo size="md" className="mr-3" />
           <div className="flex items-center">
             <h1 className="text-xl md:text-2xl font-bold text-white">FrenKabal</h1>
-            <span className="ml-2 text-xs font-bold px-2.5 py-1 rounded-md bg-black uppercase tracking-wider relative"
+            <span className="ml-2 text-[0.6rem] font-bold px-1.5 py-0.5 rounded-[4px] uppercase tracking-wider relative bg-gradient-to-br from-black/80 to-black/40"
                   style={{
-                    animation: 'neon-pulse 2s ease-in-out infinite',
-                    border: '1px solid #e81cff',
-                    color: '#e81cff',
-                    boxShadow: '0 0 10px 1px #e81cff, inset 0 0 6px 1px #e81cff',
-                    textShadow: '0 0 8px #e81cff'
+                    background: 'linear-gradient(45deg, #ffcc00, #ff8800, #ff3300, #ff0066, #ff00cc)',
+                    backgroundSize: '200% 200%',
+                    animation: 'gradient-x 4s ease infinite',
+                    WebkitBackgroundClip: 'text',
+                    backgroundClip: 'text',
+                    color: 'transparent',
+                    textShadow: '0 0 1px rgba(255,255,255,0.5)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.2)'
                   }}>
                 Beta
             </span>
