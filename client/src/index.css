@@ -276,3 +276,16 @@
   color: #B6B6B6;
   font-weight: 600;
 }
+
+/* Dialog styling - override Radix UI defaults */
+[data-state="open"].fixed.inset-0.z-50.bg-black\/80 {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+[data-state="open"].fixed.z-50.bg-background {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}

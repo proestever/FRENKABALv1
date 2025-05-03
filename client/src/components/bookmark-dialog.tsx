@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogOverlay } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -154,7 +154,7 @@ export function BookmarkDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px] glass-card border-white/15">
+      <DialogContent className="sm:max-w-[425px] dialog-content">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="text-white">{existingBookmark ? 'Edit Bookmark' : 'Save Bookmark'}</DialogTitle>
