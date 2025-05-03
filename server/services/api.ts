@@ -289,8 +289,24 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
  */
 export async function getWalletData(walletAddress: string): Promise<WalletData> {
   try {
+    // Initialize loading progress at the start with a reasonable estimate of total batches
+    // Use an initial high count to show progress for the entire process
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: 1,
+      totalBatches: 50, // Start with a high estimate that will be refined as we go
+      message: 'Initializing wallet data fetch...'
+    });
+    
     // Always get native PLS balance directly from PulseChain Scan API (most reliable method)
     console.log(`Getting native PLS balance for ${walletAddress} using direct API call`);
+    
+    // Update progress
+    updateLoadingProgress({
+      currentBatch: 2,
+      message: 'Fetching native PLS balance...'
+    });
+    
     let nativePlsBalance = await getNativePlsBalance(walletAddress);
     console.log(`Native PLS balance from direct API call: ${nativePlsBalance?.balanceFormatted || 'Not found'}`);
     
