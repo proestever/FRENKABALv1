@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Wallet } from '@shared/schema';
 import { ExternalLink, Copy, RotateCw } from 'lucide-react';
-import { formatCurrency, formatTokenAmount, getChangeColorClass, truncateAddress } from '@/lib/utils';
+import { formatCurrency, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass, truncateAddress } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
 
@@ -26,8 +26,8 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
     });
   };
 
-  const plsPriceChangeClass = getChangeColorClass(wallet.plsPriceChange || 0);
-  const totalValueChangeClass = 'text-success'; // This would be dynamic if we had portfolio change data
+  const plsPriceChangeClass = getAdvancedChangeClass(wallet.plsPriceChange || 0);
+  const totalValueChangeClass = 'text-success border border-success/30 bg-success/10 px-1.5 py-0.5 rounded'; // This would be dynamic if we had portfolio change data
 
   return (
     <section className="mb-8">

@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Token } from '@shared/schema';
 import { Search, ArrowDownUp } from 'lucide-react';
-import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass } from '@/lib/utils';
+import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass } from '@/lib/utils';
 import { TokenLogo } from '@/components/token-logo';
 
 interface TokenListProps {
@@ -50,14 +50,14 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
   // Handle loading state
   if (isLoading) {
     return (
-      <Card className="p-6">
+      <Card className="p-6 border-border shadow-lg backdrop-blur-sm bg-card/70">
         <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-secondary-200 rounded w-1/4"></div>
-          <div className="h-10 bg-secondary-200 rounded w-full"></div>
+          <div className="h-4 bg-secondary/60 rounded w-1/4"></div>
+          <div className="h-10 bg-secondary/60 rounded w-full"></div>
           <div className="space-y-2">
-            <div className="h-20 bg-secondary-200 rounded"></div>
-            <div className="h-20 bg-secondary-200 rounded"></div>
-            <div className="h-20 bg-secondary-200 rounded"></div>
+            <div className="h-20 bg-secondary/60 rounded"></div>
+            <div className="h-20 bg-secondary/60 rounded"></div>
+            <div className="h-20 bg-secondary/60 rounded"></div>
           </div>
         </div>
       </Card>
@@ -155,7 +155,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
           </thead>
           <tbody className="divide-y divide-border">
             {sortedTokens.map((token) => {
-              const priceChangeClass = getChangeColorClass(token.priceChange24h);
+              const priceChangeClass = getAdvancedChangeClass(token.priceChange24h);
               
               return (
                 <tr key={token.address} className="hover:bg-secondary/40 transition-colors">
