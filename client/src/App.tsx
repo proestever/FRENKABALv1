@@ -40,7 +40,7 @@ function Header() {
                     color: 'transparent',
                     filter: 'brightness(1.3) contrast(1.3) saturate(1.2)',
                     textShadow: '0 0 2px rgba(255,255,255,0.5)',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    border: 'none',
                     boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.15), 0 0 4px rgba(85,0,255,0.5)',
                     animation: 'gradient-x 4s ease infinite, beta-glow 2s ease-in-out infinite'
                   }}>
