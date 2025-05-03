@@ -146,7 +146,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               className="text-white glass-card hover:bg-black/20 transition-all text-sm flex items-center h-8 px-3 rounded-md border border-white/15"
             >
               <ExternalLink className="h-4 w-4 mr-1" />
-              View on PulseScan
+              <span className="hidden md:inline">View on </span>PulseScan
             </a>
             {isConnected && (
               <Button
@@ -161,12 +161,14 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
                 {isBookmarked ? (
                   <>
                     <CheckCircle className="h-4 w-4 mr-1" />
-                    Bookmarked
+                    <span className="hidden md:inline">Bookmarked</span>
+                    <span className="inline md:hidden">Saved</span>
                   </>
                 ) : (
                   <>
                     <BookmarkIcon className="h-4 w-4 mr-1" />
-                    Bookmark
+                    <span className="hidden md:inline">Bookmark</span>
+                    <span className="inline md:hidden">Save</span>
                   </>
                 )}
               </Button>
