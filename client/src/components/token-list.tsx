@@ -194,7 +194,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
       {showTransactions ? (
         <TransactionHistory 
           walletAddress={effectiveWalletAddress} 
-          onClose={() => setShowTransactions(false)} 
+          onClose={() => setShowTransactions(false)}
+          key={`tx-${effectiveWalletAddress}-${Date.now()}`} // Force remount on toggle
         />
       ) : (
         <>
