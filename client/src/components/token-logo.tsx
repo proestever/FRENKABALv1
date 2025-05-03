@@ -29,7 +29,7 @@ export function TokenLogo({ address, symbol, size = 'md', fallbackLogo }: TokenL
   };
   
   return (
-    <div className={`${sizeClasses[size]} rounded-full flex items-center justify-center bg-secondary-200 overflow-hidden`}>
+    <div className={`${sizeClasses[size]} rounded-full flex items-center justify-center bg-secondary/80 overflow-hidden border border-border/40 shadow-sm`}>
       {logoUrl ? (
         <img 
           src={logoUrl} 

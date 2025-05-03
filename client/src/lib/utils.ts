@@ -66,6 +66,16 @@ export function truncateAddress(address: string): string {
  * Get CSS class for positive/negative values
  */
 export function getChangeColorClass(value: number | undefined): string {
-  if (value === undefined || value === 0) return 'text-secondary-500';
+  if (value === undefined || value === 0) return 'text-muted-foreground';
   return value > 0 ? 'text-success' : 'text-error';
+}
+
+/**
+ * Get advanced CSS class with background for change values
+ */
+export function getAdvancedChangeClass(value: number | undefined): string {
+  if (value === undefined || value === 0) return 'text-muted-foreground';
+  return value > 0 
+    ? 'text-success border border-success/30 bg-success/10 px-1.5 py-0.5 rounded' 
+    : 'text-error border border-error/30 bg-error/10 px-1.5 py-0.5 rounded';
 }
