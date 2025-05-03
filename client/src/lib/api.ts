@@ -137,6 +137,7 @@ export interface TransactionResponse {
   cursor: string | null;
   page: number;
   page_size: number;
+  error?: string; // Add error property for error handling
 }
 
 /**

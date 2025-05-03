@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
-import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
@@ -71,7 +71,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   const [tokenPrices, setTokenPrices] = useState<Record<string, number>>({});
 
   // Initial transaction data fetch
-  const { isLoading, isError, data: initialData } = useQuery({
+  const { isLoading, isError, data: initialData, refetch } = useQuery({
     queryKey: ['transactions', walletAddress],
     queryFn: async () => {
       console.log('Fetching transaction history for:', walletAddress);
@@ -81,6 +81,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         console.log('Initial transaction history fetched:', response ? 'yes' : 'no', 
           response?.result ? `${response.result.length} transactions` : '', 
           'Response data:', JSON.stringify(response).substring(0, 300) + '...');
+        
+        // Check if there's an error
+        if (response?.error) {
+          console.error('Error in transaction history response:', response.error);
+          throw new Error(response.error);
+        }
         
         // Update state with the response data
         if (response?.result) {
@@ -102,6 +108,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     },
     enabled: !!walletAddress,
     staleTime: 60 * 1000, // 1 minute
+    retry: 2, // Retry failed requests up to 2 times
+    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 10000), // Exponential backoff
   });
   
   // Function to load more transactions
@@ -293,15 +301,25 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           Unable to load transaction history
         </h3>
         <p className="text-muted-foreground mb-4">
-          There was an error retrieving the transaction history. Please try again later.
+          The PulseChain API is experiencing high volume. Please try again in a few moments.
         </p>
-        <button
-          onClick={onClose}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 mx-auto"
-        >
-          <Wallet size={16} className="mr-1" />
-          <span className="text-sm font-medium">View Tokens</span>
-        </button>
+        <div className="flex justify-center gap-3 my-4">
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
+          >
+            <RefreshCw size={16} className="mr-1" />
+            <span className="text-sm font-medium">Try Again</span>
+          </button>
+          
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
+          >
+            <Wallet size={16} className="mr-1" />
+            <span className="text-sm font-medium">View Tokens</span>
+          </button>
+        </div>
       </Card>
     );
   }
