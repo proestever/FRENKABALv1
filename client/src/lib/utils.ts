@@ -32,7 +32,9 @@ export function formatCurrencyWithPrecision(value: number, minimumFractionDigits
 /**
  * Format a token amount based on its value
  */
-export function formatTokenAmount(amount: number): string {
+export function formatTokenAmount(amount: number | undefined): string {
+  if (amount === undefined) return '0';
+  
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: amount >= 1 ? 2 : 6

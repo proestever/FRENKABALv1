@@ -94,12 +94,12 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               <div className="text-sm text-secondary-500 ml-2">PLS Balance</div>
             </div>
             <div className="text-2xl font-bold">
-              {wallet.plsBalance !== null ? 
+              {wallet.plsBalance !== null && wallet.plsBalance !== undefined ? 
                 `${formatTokenAmount(wallet.plsBalance)} PLS` : 
                 'N/A'
               }
             </div>
-            {wallet.plsPriceChange !== null && (
+            {wallet.plsPriceChange !== null && wallet.plsPriceChange !== undefined && (
               <div className={`text-sm mt-1 flex items-center ${plsPriceChangeClass}`}>
                 <span>{wallet.plsPriceChange > 0 ? '+' : ''}{wallet.plsPriceChange.toFixed(1)}% (24h)</span>
               </div>
