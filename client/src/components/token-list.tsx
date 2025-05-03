@@ -201,7 +201,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                   
                   {/* Token Value & Hide Button */}
                   <div className="flex flex-col items-end">
-                    <div className="text-base sm:text-lg font-bold mb-1">
+                    <div className="text-base sm:text-lg font-bold mb-1 text-white">
                       {token.value !== undefined 
                         ? formatCurrency(token.value) 
                         : 'N/A'}
@@ -308,18 +308,18 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="text-sm font-medium">{formatTokenAmount(token.balanceFormatted || 0)}</div>
+                    <div className="text-sm font-medium text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
                     <div className="text-xs text-muted-foreground">{token.symbol}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="text-sm font-medium">
+                    <div className="text-sm font-medium text-white">
                       {token.price !== undefined 
                         ? formatCurrencyWithPrecision(token.price, 2, token.price < 0.01 ? 8 : 2) 
                         : 'N/A'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="text-sm font-medium">
+                    <div className="text-sm font-medium text-white">
                       {token.value !== undefined 
                         ? formatCurrency(token.value) 
                         : 'N/A'}
