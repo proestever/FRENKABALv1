@@ -87,7 +87,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid token address" });
       }
       
-      // Validate token address format
+      // Special case for native PLS token (0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
+      if (address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+        console.log("Detected request for native PLS token logo, using special handling");
+        
+        // Check if we already have this logo saved
+        let logo = await storage.getTokenLogo(address);
+        
+        if (!logo) {
+          // Store our custom PLS logo for the native token
+          const newLogo = {
+            tokenAddress: address,
+            logoUrl: '/assets/pls-logo.png', // Reference to static asset we're serving
+            symbol: "PLS",
+            name: "PulseChain",
+            lastUpdated: new Date().toISOString()
+          };
+          
+          console.log(`Saving logo for token ${address}: ${newLogo.logoUrl}`);
+          logo = await storage.saveTokenLogo(newLogo);
+          console.log(`Saved new token logo for ${address}: ${newLogo.logoUrl}`);
+        }
+        
+        return res.json(logo);
+      }
+      
+      // For other tokens, validate the address format
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {
         return res.status(400).json({ message: "Invalid token address format" });

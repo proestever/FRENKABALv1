@@ -20,16 +20,16 @@ export default function Home() {
     isError, 
     error, 
     refetch 
-  } = useQuery({
+  } = useQuery<any>({
     queryKey: searchedAddress ? [`/api/wallet/${searchedAddress}`] : [],
     enabled: !!searchedAddress,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       console.log('Wallet data loaded:', data);
       console.log('PLS Balance:', data.plsBalance);
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast({
         title: "Error loading wallet data",
         description: err instanceof Error ? err.message : "An unknown error occurred",
