@@ -25,10 +25,18 @@ export default function Home() {
     isFetching 
   } = useQuery<Wallet, Error>({
     queryKey: searchedAddress ? [`/api/wallet/${searchedAddress}`] : [],
-    queryFn: async () => {
+    queryFn: () => {
       if (!searchedAddress) throw new Error('No address provided');
       console.log('Fetching wallet data for:', searchedAddress);
-      return fetchWalletData(searchedAddress);
+      return fetchWalletData(searchedAddress)
+        .then(data => {
+          console.log('Wallet data fetched successfully');
+          return data;
+        })
+        .catch(error => {
+          console.error('Error fetching wallet data:', error);
+          throw error;
+        });
     },
     enabled: !!searchedAddress,
     staleTime: 60 * 1000, // 1 minute

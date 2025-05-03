@@ -3,15 +3,16 @@ import { Token, Wallet } from '@shared/schema';
 /**
  * Fetch wallet data from the server API
  */
-export async function fetchWalletData(address: string): Promise<Wallet> {
-  const response = await fetch(`/api/wallet/${address}`);
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to fetch wallet data');
-  }
-  
-  return await response.json();
+export function fetchWalletData(address: string): Promise<Wallet> {
+  return fetch(`/api/wallet/${address}`)
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(errorData => {
+          throw new Error(errorData.message || 'Failed to fetch wallet data');
+        });
+      }
+      return response.json();
+    });
 }
 
 /**
