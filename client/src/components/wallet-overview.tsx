@@ -5,6 +5,8 @@ import { ExternalLink, Copy, RotateCw } from 'lucide-react';
 import { formatCurrency, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass, truncateAddress } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
+import { useState, useEffect } from 'react';
+import { getHiddenTokens, isTokenHidden } from '@/lib/api';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -14,6 +16,26 @@ interface WalletOverviewProps {
 
 export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewProps) {
   const { toast } = useToast();
+  const [hiddenTokens, setHiddenTokens] = useState<string[]>([]);
+  const [totalVisibleValue, setTotalVisibleValue] = useState<number>(0);
+  const [visibleTokenCount, setVisibleTokenCount] = useState<number>(0);
+
+  useEffect(() => {
+    // Get hidden tokens from localStorage
+    setHiddenTokens(getHiddenTokens());
+  }, []);
+
+  useEffect(() => {
+    if (wallet && wallet.tokens) {
+      // Calculate total value excluding hidden tokens
+      const visibleTokens = wallet.tokens.filter(token => !hiddenTokens.includes(token.address));
+      const visibleTotal = visibleTokens.reduce((sum, token) => {
+        return sum + (token.value || 0);
+      }, 0);
+      setTotalVisibleValue(visibleTotal);
+      setVisibleTokenCount(visibleTokens.length);
+    }
+  }, [wallet, hiddenTokens]);
 
   if (!wallet) return null;
 
@@ -67,9 +89,9 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-secondary rounded-lg p-4 border border-border">
-            <div className="text-sm text-muted-foreground mb-1">Total Value</div>
+            <div className="text-sm text-muted-foreground mb-1">Total Value (Visible)</div>
             <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              {wallet.totalValue !== undefined ? formatCurrency(wallet.totalValue) : 'N/A'}
+              {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
             </div>
             <div className="text-sm mt-2 flex items-center">
               <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
@@ -77,13 +99,13 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
           </div>
           
           <div className="bg-secondary rounded-lg p-4 border border-border">
-            <div className="text-sm text-muted-foreground mb-1">Token Count</div>
+            <div className="text-sm text-muted-foreground mb-1">Token Count (Visible)</div>
             <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-accent bg-clip-text text-transparent">
-              {wallet.tokenCount || 0}
+              {visibleTokenCount || 0}
             </div>
             <div className="text-sm mt-2 flex items-center">
               <span className="text-purple-400 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">
-                Across {wallet.networkCount || 1} networks
+                {hiddenTokens.length > 0 && `(${hiddenTokens.length} hidden)`}
               </span>
             </div>
           </div>

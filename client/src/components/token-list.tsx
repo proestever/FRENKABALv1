@@ -175,7 +175,9 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                     </div>
                     <div className="min-w-0 flex-grow">
                       <div className="flex items-center gap-1">
-                        <span className="text-base font-bold text-foreground truncate max-w-[160px]" title={token.name}>{token.name}</span>
+                        <span className="text-base font-bold text-foreground" title={token.name}>
+                          {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
+                        </span>
                         {token.verified && (
                           <span className="text-green-400 flex-shrink-0" title="Verified Contract">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -254,7 +256,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
               
               return (
                 <tr key={token.address} className="hover:bg-secondary/40 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap max-w-[200px]">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="mr-3 flex-shrink-0">
                         <TokenLogo 
@@ -263,9 +265,11 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                           fallbackLogo={token.logo}
                         />
                       </div>
-                      <div className="truncate">
+                      <div>
                         <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium text-foreground truncate max-w-[120px]" title={token.name}>{token.name}</span>
+                          <span className="text-sm font-medium text-foreground" title={token.name}>
+                            {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
+                          </span>
                           {token.verified && (
                             <span className="text-green-400 flex-shrink-0" title="Verified Contract">
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
