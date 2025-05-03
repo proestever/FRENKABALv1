@@ -587,15 +587,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
                     {/* Add USD value for gas fee if available */}
                     {calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
-                      <span className="ml-1 flex items-center inline-block">
-                        (<DollarSign size={10} className="mx-0.5" />
+                      <div className="flex items-center justify-end mt-0.5">
+                        <DollarSign size={10} className="mr-0.5" />
                         {(calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
                           style: 'currency',
                           currency: 'USD',
                           maximumFractionDigits: 2,
                           minimumFractionDigits: 2
-                        })})
-                      </span>
+                        })}
+                      </div>
                     )}
                   </div>
                 </td>
