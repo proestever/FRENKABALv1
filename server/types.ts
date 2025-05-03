@@ -37,7 +37,14 @@ export interface MoralisTokenPriceResponse {
   exchangeAddress: string;
   tokenAddress: string;
   blockTimestamp: string;
+  priceLastChangedAtBlock?: string;
+  possibleSpam?: boolean;
+  verifiedContract?: boolean;
+  pairAddress?: string;
+  pairTotalLiquidityUsd?: string;
+  securityScore?: number;
   usdPrice24hr?: number;
+  usdPrice24hrUsdChange?: number;
   usdPrice24hrPercentChange?: number;
   '24hrPercentChange'?: string;
 }
@@ -54,6 +61,9 @@ export interface ProcessedToken {
   value?: number;
   priceChange24h?: number;
   logo?: string;
+  exchange?: string;
+  verified?: boolean;
+  securityScore?: number;
 }
 
 export interface WalletData {
