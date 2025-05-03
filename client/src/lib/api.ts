@@ -130,6 +130,26 @@ export function clearHiddenTokens(): void {
 }
 
 /**
+ * Fetch transaction history for a wallet address
+ */
+export async function fetchTransactionHistory(address: string): Promise<any> {
+  try {
+    const response = await fetch(`/api/wallet/${address}/transactions`);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Failed to fetch transaction history:', errorData);
+      throw new Error(errorData.message || 'Failed to fetch transaction history');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching transaction history:', error);
+    throw error;
+  }
+}
+
+/**
  * Get all bookmarks for a user
  */
 export async function getBookmarks(userId: number): Promise<Bookmark[]> {

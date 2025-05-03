@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { getWalletData, getTokenPrice } from "./services/api";
+import { getWalletData, getTokenPrice, getWalletTransactionHistory } from "./services/api";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 
@@ -92,6 +92,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // API route to get wallet transaction history
+  app.get("/api/wallet/:address/transactions", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format (0x followed by 40 hex chars)
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      const transactionHistory = await getWalletTransactionHistory(address);
+      
+      if (!transactionHistory) {
+        return res.status(404).json({ message: "Transaction history not found" });
+      }
+      
+      return res.json(transactionHistory);
+    } catch (error) {
+      console.error("Error fetching transaction history:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch transaction history",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // Token Logo API Routes
   app.get("/api/token-logos", async (_req, res) => {
     try {

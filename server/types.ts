@@ -125,7 +125,7 @@ export interface WalletData {
 export interface TransactionTransfer {
   token_name?: string;
   token_symbol?: string;
-  token_logo?: string;
+  token_logo?: string | null;
   token_decimals?: string;
   from_address: string;
   from_address_label?: string | null;
@@ -140,8 +140,6 @@ export interface TransactionTransfer {
   security_score?: number;
   direction?: string;
   internal_transaction?: boolean;
-  token_symbol?: string;
-  token_logo?: string | null;
 }
 
 export interface Transaction {
