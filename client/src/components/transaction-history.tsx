@@ -428,6 +428,18 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {/* Gas Fee */}
               <div className="mt-2 text-xs text-right text-muted-foreground">
                 Gas Fee: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
+                {/* Add USD value for gas fee if available */}
+                {calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
+                  <div className="flex items-center justify-end mt-0.5">
+                    <DollarSign size={10} className="mr-0.5" />
+                    {(calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                      maximumFractionDigits: 2,
+                      minimumFractionDigits: 2
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -530,21 +542,61 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
-                    <div key={`${tx.hash}-erc20-value-${i}`} className={`text-sm ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'} ${i > 0 ? 'mt-2' : ''}`}>
-                      {transfer.direction === 'receive' ? '+' : '-'}
-                      {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol}
+                    <div key={`${tx.hash}-erc20-value-${i}`} className={`${i > 0 ? 'mt-2' : ''}`}>
+                      <div className={`text-sm ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
+                        {transfer.direction === 'receive' ? '+' : '-'}
+                        {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol}
+                      </div>
+                      {/* Add USD value display */}
+                      {calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') && (
+                        <div className="text-xs text-muted-foreground flex items-center justify-end">
+                          <DollarSign size={10} className="mr-0.5" />
+                          {(calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') || 0).toLocaleString('en-US', {
+                            style: 'currency',
+                            currency: 'USD',
+                            maximumFractionDigits: 2,
+                            minimumFractionDigits: 2
+                          })}
+                        </div>
+                      )}
                     </div>
                   ))}
                   
                   {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
-                    <div key={`${tx.hash}-native-value-${i}`} className={`text-sm ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'} ${(tx.erc20_transfers?.length || 0) > 0 || i > 0 ? 'mt-2' : ''}`}>
-                      {transfer.direction === 'receive' ? '+' : '-'}
-                      {transfer.value_formatted || formatTokenValue(transfer.value)} {transfer.token_symbol || 'PLS'}
+                    <div key={`${tx.hash}-native-value-${i}`} className={`${(tx.erc20_transfers?.length || 0) > 0 || i > 0 ? 'mt-2' : ''}`}>
+                      <div className={`text-sm ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
+                        {transfer.direction === 'receive' ? '+' : '-'}
+                        {transfer.value_formatted || formatTokenValue(transfer.value)} {transfer.token_symbol || 'PLS'}
+                      </div>
+                      {/* Add USD value display for native PLS token */}
+                      {calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
+                        <div className="text-xs text-muted-foreground flex items-center justify-end">
+                          <DollarSign size={10} className="mr-0.5" />
+                          {(calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
+                            style: 'currency',
+                            currency: 'USD',
+                            maximumFractionDigits: 2,
+                            minimumFractionDigits: 2
+                          })}
+                        </div>
+                      )}
                     </div>
                   ))}
                   
                   <div className="text-xs text-muted-foreground mt-2">
                     Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
+                    {/* Add USD value for gas fee if available */}
+                    {calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
+                      <span className="ml-1 flex items-center inline-block">
+                        (<DollarSign size={10} className="mx-0.5" />
+                        {(calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
+                          style: 'currency',
+                          currency: 'USD',
+                          maximumFractionDigits: 2,
+                          minimumFractionDigits: 2
+                        })})
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
