@@ -92,6 +92,7 @@ export const bookmarks = pgTable("bookmarks", {
   walletAddress: text("wallet_address").notNull(),
   label: text("label").notNull(),
   notes: text("notes"),
+  isFavorite: boolean("is_favorite").default(false).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
