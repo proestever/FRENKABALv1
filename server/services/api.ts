@@ -339,10 +339,10 @@ export async function getWalletTransactionHistory(
         const errorText = await response.text();
         console.error(`Moralis API error (${response.status}): ${errorText}`);
         
-        // If this is a timeout (504), retry
-        if (response.status === 504 && attempt < MAX_RETRIES) {
+        // If this is a timeout (504) or internal server error (500), retry
+        if ((response.status === 504 || response.status === 500) && attempt < MAX_RETRIES) {
           const retryDelay = INITIAL_RETRY_DELAY * attempt;
-          console.log(`Gateway timeout received, retrying in ${retryDelay}ms...`);
+          console.log(`${response.status} error received, retrying in ${retryDelay}ms...`);
           await new Promise(resolve => setTimeout(resolve, retryDelay));
           continue; // Try again
         }
@@ -384,7 +384,7 @@ export async function getWalletTransactionHistory(
       }
       
       // If we've exhausted all retries or it's a different error
-      if (attempt === MAX_RETRIES) {
+      if (attempt >= MAX_RETRIES) {
         console.error(`Error fetching wallet transaction history after ${MAX_RETRIES} attempts:`, error.message);
         return {
           result: [],

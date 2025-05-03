@@ -110,8 +110,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     staleTime: 0, // Don't use stale data
     gcTime: 0, // Don't keep data in cache
     refetchOnMount: true, // Always refetch when component mounts
-    retry: 2, // Retry failed requests up to 2 times
-    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 10000), // Exponential backoff
+    retry: 3, // Retry failed requests up to 3 times 
+    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 15000), // Exponential backoff with longer max delay
+    // Custom retry logic to handle timeout and 500 errors from server
+    retryOnMount: true
   });
   
   // Function to load more transactions
@@ -304,7 +306,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           Unable to load transaction history
         </h3>
         <p className="text-muted-foreground mb-4">
-          The PulseChain API is experiencing high volume. Please try again in a few moments.
+          The Moralis API is experiencing high volume or temporary issues. 
+          This is common during peak times or network congestion. Please try again in a few moments.
         </p>
         <div className="flex justify-center gap-3 my-4">
           <button
