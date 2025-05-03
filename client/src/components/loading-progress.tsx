@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLoadingProgress } from '@/hooks/use-loading-progress';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
@@ -10,6 +10,7 @@ interface LoadingProgressProps {
 
 export function LoadingProgress({ isLoading }: LoadingProgressProps) {
   const progress = useLoadingProgress(isLoading);
+  const [animatedProgress, setAnimatedProgress] = useState(0);
   
   // Don't show anything if we're not loading or if there are no batches to process
   if (!isLoading || progress.status === 'idle' || progress.totalBatches === 0) {
@@ -20,6 +21,28 @@ export function LoadingProgress({ isLoading }: LoadingProgressProps) {
   const progressPercent = progress.totalBatches > 0 
     ? Math.min(Math.round((progress.currentBatch / progress.totalBatches) * 100), 100)
     : 0;
+  
+  // Smooth animation for progress updates
+  useEffect(() => {
+    // If the actual progress is ahead of our animated progress, gradually catch up
+    if (progressPercent > animatedProgress) {
+      const interval = setInterval(() => {
+        setAnimatedProgress(prev => {
+          const next = prev + 1;
+          if (next >= progressPercent) {
+            clearInterval(interval);
+            return progressPercent;
+          }
+          return next;
+        });
+      }, 20); // Update every 20ms for smooth animation
+      
+      return () => clearInterval(interval);
+    } else if (progressPercent < animatedProgress) {
+      // If progress went backward (rare case), snap directly to new value
+      setAnimatedProgress(progressPercent);
+    }
+  }, [progressPercent, animatedProgress]);
   
   // Determine the icon based on status
   const StatusIcon = () => {
@@ -36,25 +59,32 @@ export function LoadingProgress({ isLoading }: LoadingProgressProps) {
   };
   
   return (
-    <Card className="p-4 mb-4 border border-border bg-card/90 backdrop-blur-sm">
+    <Card className="p-4 mb-4 border border-border bg-card/90 backdrop-blur-sm shadow-lg">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <StatusIcon />
             <h3 className="text-sm font-medium">
-              {progress.status === 'loading' ? 'Loading...' : 
-               progress.status === 'complete' ? 'Complete' : 
-               'Error'}
+              {progress.status === 'loading' ? 'Loading wallet data...' : 
+               progress.status === 'complete' ? 'Loading complete' : 
+               'Error loading data'}
             </h3>
           </div>
-          <span className="text-xs text-muted-foreground">
-            {progress.currentBatch}/{progress.totalBatches} batches
+          <span className="text-xs text-muted-foreground font-mono">
+            Batch {progress.currentBatch}/{progress.totalBatches}
           </span>
         </div>
         
-        <Progress value={progressPercent} className="h-2" />
+        <Progress 
+          value={animatedProgress} 
+          className="h-2 bg-muted/50"
+          // Add gradient effect to progress bar
+          style={{
+            background: 'linear-gradient(90deg, rgba(139,92,246,0.2) 0%, rgba(79,70,229,0.2) 100%)'
+          }}
+        />
         
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground mt-1">
           {progress.message}
         </p>
       </div>
