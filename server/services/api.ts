@@ -1,0 +1,144 @@
+import fetch from 'node-fetch';
+import { ProcessedToken, PulseChainTokenBalanceResponse, MoralisTokenPriceResponse, WalletData } from '../types';
+
+// Constants
+const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
+const MORALIS_API_BASE = 'https://deep-index.moralis.io/api/v2';
+const MORALIS_API_KEY = process.env.MORALIS_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98';
+const PLS_TOKEN_ADDRESS = '0x5616458eb2bAc88dD60a4b08F815F37335215f9B'; // PulseChain native token
+
+/**
+ * Get token balances for a wallet address from PulseChain Scan API
+ */
+export async function getTokenBalances(walletAddress: string): Promise<ProcessedToken[]> {
+  try {
+    const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/token-balances`);
+    
+    if (!response.ok) {
+      throw new Error(`PulseChain Scan API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json() as PulseChainTokenBalanceResponse;
+    
+    return data.items.map(item => {
+      const decimals = parseInt(item.token.decimals) || 18;
+      const balance = item.value;
+      const balanceFormatted = parseFloat(balance) / Math.pow(10, decimals);
+      
+      return {
+        address: item.token.address,
+        symbol: item.token.symbol,
+        name: item.token.name,
+        decimals,
+        balance,
+        balanceFormatted,
+        logo: item.token.icon_url || getDefaultLogo(item.token.symbol),
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching token balances:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get token price from Moralis API
+ */
+export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenPriceResponse | null> {
+  try {
+    const response = await fetch(`${MORALIS_API_BASE}/token/${tokenAddress}/price?chain=pulse&include=percent_change`, {
+      headers: {
+        'X-API-Key': MORALIS_API_KEY,
+      },
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        // Token not found in Moralis, return null
+        return null;
+      }
+      throw new Error(`Moralis API error: ${response.status} ${response.statusText}`);
+    }
+    
+    return await response.json() as MoralisTokenPriceResponse;
+  } catch (error) {
+    console.error(`Error fetching price for token ${tokenAddress}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get default logo URL for common tokens
+ */
+function getDefaultLogo(symbol: string): string {
+  const symbolLower = symbol.toLowerCase();
+  const defaultLogos: Record<string, string> = {
+    pls: 'https://cryptologos.cc/logos/pulse-pls-logo.png',
+    hex: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2469.png',
+    phex: 'https://cryptologos.cc/logos/hex-hex-logo.png',
+    peth: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+    pbnb: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
+  };
+  
+  return defaultLogos[symbolLower] || 'https://cryptologos.cc/logos/placeholder-logo.png';
+}
+
+/**
+ * Get full wallet data including token balances and prices
+ */
+export async function getWalletData(walletAddress: string): Promise<WalletData> {
+  try {
+    // Get token balances
+    const tokens = await getTokenBalances(walletAddress);
+    
+    // Get prices for each token
+    const tokensWithPrice = await Promise.all(
+      tokens.map(async (token) => {
+        try {
+          const priceData = await getTokenPrice(token.address);
+          
+          if (priceData) {
+            return {
+              ...token,
+              price: priceData.usdPrice,
+              value: token.balanceFormatted * priceData.usdPrice,
+              priceChange24h: priceData.priceChange?.['24h'] || 0,
+            };
+          }
+          
+          return token;
+        } catch (error) {
+          console.error(`Error processing price for token ${token.symbol}:`, error);
+          return token;
+        }
+      })
+    );
+    
+    // Calculate total value
+    let totalValue = 0;
+    tokensWithPrice.forEach(token => {
+      if (token.value) {
+        totalValue += token.value;
+      }
+    });
+    
+    // Find PLS token (native token)
+    const plsToken = tokensWithPrice.find(token => 
+      token.symbol.toLowerCase() === 'pls' || 
+      token.address.toLowerCase() === PLS_TOKEN_ADDRESS.toLowerCase()
+    );
+    
+    return {
+      address: walletAddress,
+      tokens: tokensWithPrice,
+      totalValue,
+      tokenCount: tokens.length,
+      plsBalance: plsToken?.balanceFormatted || null,
+      plsPriceChange: plsToken?.priceChange24h || null,
+      networkCount: 1, // Default to PulseChain network
+    };
+  } catch (error) {
+    console.error('Error in getWalletData:', error);
+    throw error;
+  }
+}
