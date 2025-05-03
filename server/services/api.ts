@@ -311,6 +311,12 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     console.log(`Native PLS balance from direct API call: ${nativePlsBalance?.balanceFormatted || 'Not found'}`);
     
     // Try to get token data from Moralis (includes other tokens with prices)
+    // Update progress
+    updateLoadingProgress({
+      currentBatch: 3,
+      message: 'Fetching token data from Moralis...'
+    });
+    
     const moralisData = await getWalletTokenBalancesFromMoralis(walletAddress);
     
     // If we have Moralis data, use it
@@ -326,11 +332,13 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       const processedTokens: ProcessedToken[] = [];
       const totalBatches = Math.ceil(moralisTokens.length/BATCH_SIZE);
       
-      // Initialize loading progress
+      // Update existing loading progress with the new batch count
+      // But maintain the overall progress count by starting at 5
       updateLoadingProgress({
         status: 'loading',
-        currentBatch: 0,
-        totalBatches,
+        currentBatch: 5,
+        // Adjust totalBatches to include our previous steps (1-4) plus the new batches
+        totalBatches: totalBatches + 5,
         message: 'Processing token data...'
       });
       
@@ -339,9 +347,9 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
         const currentBatch = Math.floor(i/BATCH_SIZE) + 1;
         console.log(`Processing token batch ${currentBatch}/${totalBatches}`);
         
-        // Update loading progress
+        // Update loading progress - add the offset to maintain continuous progress
         updateLoadingProgress({
-          currentBatch,
+          currentBatch: currentBatch + 5, // Add 5 to account for previous steps
           message: `Processing token batch ${currentBatch}/${totalBatches}...`
         });
         
@@ -449,7 +457,8 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       // Update loading progress to complete
       updateLoadingProgress({
         status: 'complete',
-        currentBatch: totalBatches,
+        currentBatch: totalBatches + 5, // Add 5 to account for previous steps
+        totalBatches: totalBatches + 5, // Ensure we have the right total
         message: 'Data loaded successfully'
       });
       
@@ -466,6 +475,12 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     
     // Fallback to the PulseChain Scan API for token balances (we already have the native PLS)
     console.log('Falling back to PulseChain Scan API for token balances');
+    
+    // Update progress
+    updateLoadingProgress({
+      currentBatch: 4,
+      message: 'Fetching token balances from PulseChain Scan...'
+    });
     
     // Get token balances from PulseChain Scan API
     const tokens = await getTokenBalances(walletAddress);
@@ -509,11 +524,13 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     const tokensWithPrice: ProcessedToken[] = [];
     const totalBatches = Math.ceil(tokens.length/BATCH_SIZE);
     
-    // Initialize loading progress for fallback method
+    // Update existing loading progress for fallback method
+    // But maintain the overall progress count by starting at 5
     updateLoadingProgress({
       status: 'loading',
-      currentBatch: 0,
-      totalBatches,
+      currentBatch: 5,
+      // Adjust totalBatches to include our previous steps (1-4) plus the new batches
+      totalBatches: totalBatches + 5,
       message: 'Processing token price data...'
     });
     
@@ -522,9 +539,9 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       const currentBatch = Math.floor(i/BATCH_SIZE) + 1;
       console.log(`Processing fallback token batch ${currentBatch}/${totalBatches}`);
       
-      // Update loading progress
+      // Update loading progress - add the offset to maintain continuous progress
       updateLoadingProgress({
-        currentBatch,
+        currentBatch: currentBatch + 5, // Add 5 to account for previous steps
         message: `Processing price data batch ${currentBatch}/${totalBatches}...`
       });
       
@@ -638,7 +655,8 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     // Update loading progress to complete
     updateLoadingProgress({
       status: 'complete',
-      currentBatch: totalBatches,
+      currentBatch: totalBatches + 5, // Add 5 to account for previous steps
+      totalBatches: totalBatches + 5, // Ensure we have the right total
       message: 'Data loaded successfully'
     });
     
