@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
-import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchTransactionHistory, TransactionResponse } from '@/lib/api';
+import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
 
 // Transaction types
@@ -67,6 +67,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  // Add state for token prices
+  const [tokenPrices, setTokenPrices] = useState<Record<string, number>>({});
 
   // Initial transaction data fetch
   const { isLoading, isError, data: initialData } = useQuery({
@@ -136,6 +138,67 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   const formatTokenValue = (value: string, decimals: string = '18') => {
     const decimalValue = parseInt(decimals);
     return (parseInt(value) / 10 ** decimalValue).toFixed(decimalValue > 8 ? 4 : 2);
+  };
+
+  // Fetch wallet data to get token prices
+  const { data: walletData } = useQuery({
+    queryKey: ['wallet', walletAddress],
+    queryFn: async () => {
+      try {
+        return await fetchWalletData(walletAddress);
+      } catch (error) {
+        console.error('Error fetching wallet data:', error);
+        return null;
+      }
+    },
+    enabled: !!walletAddress,
+    staleTime: 60 * 1000, // 1 minute
+  });
+
+  // Update token prices whenever wallet data changes
+  useEffect(() => {
+    if (walletData?.tokens) {
+      // Create a map of token addresses to their prices
+      const priceMap: Record<string, number> = {};
+      
+      walletData.tokens.forEach(token => {
+        // Normalize addresses to lowercase for consistent comparison
+        const tokenAddress = token.address.toLowerCase();
+        
+        // Only include tokens that have a price
+        if (token.price) {
+          priceMap[tokenAddress] = token.price;
+        }
+      });
+      
+      // Add PLS token price (using native token address)
+      const plsToken = walletData.tokens.find(t => 
+        t.isNative === true || t.symbol === 'PLS' || 
+        t.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+      );
+      
+      if (plsToken?.price) {
+        priceMap['0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'] = plsToken.price;
+      }
+      
+      console.log('Updated token prices for transaction history:', priceMap);
+      setTokenPrices(priceMap);
+    }
+  }, [walletData]);
+
+  // Function to calculate USD value for a transaction
+  const calculateUsdValue = (value: string, decimals: string = '18', tokenAddress: string) => {
+    // Check if we have a price for this token
+    const price = tokenPrices[tokenAddress?.toLowerCase()];
+    if (!price) return null;
+    
+    // Calculate the token amount
+    const decimalValue = parseInt(decimals);
+    const tokenAmount = parseInt(value) / (10 ** decimalValue);
+    
+    // Calculate USD value
+    const usdValue = tokenAmount * price;
+    return usdValue;
   };
 
   // Extract token addresses for logos
@@ -297,6 +360,18 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       {transfer.direction === 'receive' ? '+' : '-'}
                       {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)}
                     </div>
+                    {/* Display USD value if available */}
+                    {calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') && (
+                      <div className="text-xs text-muted-foreground flex items-center justify-end">
+                        <DollarSign size={10} className="mr-0.5" />
+                        {(calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') || 0).toLocaleString('en-US', {
+                          style: 'currency',
+                          currency: 'USD',
+                          maximumFractionDigits: 2,
+                          minimumFractionDigits: 2
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -334,6 +409,18 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       {transfer.direction === 'receive' ? '+' : '-'}
                       {transfer.value_formatted || formatTokenValue(transfer.value)}
                     </div>
+                    {/* Display USD value if available for native PLS token */}
+                    {calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
+                      <div className="text-xs text-muted-foreground flex items-center justify-end">
+                        <DollarSign size={10} className="mr-0.5" />
+                        {(calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
+                          style: 'currency',
+                          currency: 'USD',
+                          maximumFractionDigits: 2,
+                          minimumFractionDigits: 2
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
