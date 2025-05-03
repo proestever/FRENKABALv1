@@ -2,31 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-/* FrenKabal Theme - Very Dark Subtle Purple */
+/* FrenKabal Theme - Dark Grey with PulseChain Gradients */
 :root {
-  /* Very dark, subtle purple theme */
-  --background: 270 30% 2%;
-  --foreground: 220 25% 98%;
-  --muted: 270 20% 7%;
-  --muted-foreground: 240 20% 70%;
-  --popover: 270 25% 3%;
-  --popover-foreground: 220 25% 98%;
-  --card: 270 25% 5%;
-  --card-foreground: 220 25% 98%;
-  --border: 270 20% 8%;
-  --input: 270 20% 8%;
-  --primary: 280 60% 40%;
-  --primary-foreground: 220 25% 100%;
-  --secondary: 275 20% 9%;
-  --secondary-foreground: 220 25% 98%;
-  --accent: 285 40% 35%;
-  --accent-foreground: 220 25% 100%;
+  /* Dark grey base with PulseChain gradient accents */
+  --background: 220 10% 4%;
+  --foreground: 0 0% 98%;
+  --muted: 220 10% 8%;
+  --muted-foreground: 220 10% 70%;
+  --popover: 220 10% 5%;
+  --popover-foreground: 0 0% 98%;
+  --card: 220 10% 7%;
+  --card-foreground: 0 0% 98%;
+  --border: 220 10% 10%;
+  --input: 220 10% 10%;
+  --primary: 280 80% 50%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 10% 12%;
+  --secondary-foreground: 0 0% 98%;
+  --accent: 200 80% 50%;
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 90% 60%;
   --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 280 55% 35%;
+  --ring: 249 89% 50%;
   --success: 135 80% 45%;
   --error: 0 90% 55%;
   --radius: 0.5rem;
+
+  /* PulseChain gradient colors */
+  --pulse-red: 0 100% 50%;
+  --pulse-magenta: 325 100% 50%;
+  --pulse-purple: 270 100% 50%;
+  --pulse-blue: 235 100% 50%;
+  --pulse-cyan: 180 100% 50%;
 }
 
 @layer base {
@@ -37,4 +44,67 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+}
+
+/* Glass card styles and PulseChain gradient utilities */
+.glass-card {
+  @apply bg-secondary/50 backdrop-blur-md border border-border/50;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.glass-card-active {
+  @apply bg-secondary/70 backdrop-blur-md border border-border;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+}
+
+.pulse-gradient-text {
+  background: linear-gradient(to right, 
+    hsl(0, 100%, 50%), 
+    hsl(325, 100%, 50%), 
+    hsl(270, 100%, 50%), 
+    hsl(235, 100%, 50%), 
+    hsl(180, 100%, 50%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.pulse-gradient-border {
+  position: relative;
+}
+
+.pulse-gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(to right, 
+    hsl(0, 100%, 50%), 
+    hsl(325, 100%, 50%), 
+    hsl(270, 100%, 50%), 
+    hsl(235, 100%, 50%), 
+    hsl(180, 100%, 50%));
+  z-index: -1;
+  border-radius: inherit;
+  opacity: 0.5;
+}
+
+.glass-highlight {
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-highlight::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    transparent, 
+    rgba(255, 255, 255, 0.05), 
+    transparent
+  );
+  transform: rotate(30deg);
+  pointer-events: none;
 }

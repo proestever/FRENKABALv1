@@ -65,10 +65,10 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
 
   return (
     <section className="mb-8">
-      <Card className="p-6 border-border shadow-lg backdrop-blur-sm bg-card/70">
+      <Card className="p-6 glass-card glass-highlight shadow-lg">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Wallet Overview</h2>
+            <h2 className="text-xl font-bold pulse-gradient-text">Wallet Overview</h2>
             <div className="flex items-center mt-1">
               <span className="text-sm text-muted-foreground mr-2">{wallet.address}</span>
               <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-foreground hover:text-primary">
@@ -100,7 +100,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-secondary rounded-lg p-4 border border-border">
+          <div className="glass-card rounded-lg p-4 glass-highlight">
             <div className="text-sm text-muted-foreground mb-1">Total Value (Visible)</div>
             <div className="text-2xl font-bold text-white">
               {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
@@ -110,7 +110,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             </div>
           </div>
           
-          <div className="bg-secondary rounded-lg p-4 border border-border">
+          <div className="glass-card rounded-lg p-4 glass-highlight">
             <div className="text-sm text-muted-foreground mb-1">Token Count (Visible)</div>
             <div className="text-2xl font-bold text-white">
               {visibleTokenCount || 0}
@@ -122,7 +122,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             </div>
           </div>
           
-          <div className="bg-secondary rounded-lg p-4 border border-border">
+          <div className="glass-card rounded-lg p-4 glass-highlight">
             <div className="flex items-center mb-2">
               <TokenLogo 
                 address="0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" /* PLS native token address */
