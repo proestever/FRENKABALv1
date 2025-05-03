@@ -1,0 +1,96 @@
+Get Native & ERC20 Token Balances by Wallet
+GEThttps://deep-index.moralis.io/api/v2.2/wallets/:address/tokens
+Get token balances for a specific wallet address and their token prices in USD.
+
+PATH PARAMS
+addressstringrequired
+The address from which token balances will be checked
+0x592139a3f8cf019f628a152fc1262b8aef5b7199
+QUERY PARAMS
+chainstring
+The chain to query
+
+pulse
+to_blocknumber
+The block number up to which the balances will be checked.
+token_addressesarray
+The addresses to get balances for (optional)
+No items in the array
+Add Item
+exclude_spamboolean
+Exclude spam tokens from the result
+
+exclude_unverified_contractsboolean
+Exclude unverified contracts from the result
+
+cursorstring
+The cursor returned in the previous response (used for getting the next page).
+limitnumber
+The desired page size of the result.
+exclude_nativeboolean
+Exclude native balance from the result
+
+max_token_inactivitynumber
+Exclude tokens inactive for more than the given amount of days
+min_pair_side_liquidity_usdnumber
+Exclude tokens with liquidity less than the specified amount in USD. This parameter refers to the liquidity on a single side of the pair.
+Responses
+
+200 Returns ERC20 token balance, details, and additional financial information for a specific address, including pagination details.object
+API KEY
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98
+Test Live API
+Node.js
+Python
+cURL
+Go
+PHP
+import Moralis from 'moralis';
+
+try {
+  await Moralis.start({
+    apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98"
+  });
+
+  const response = await Moralis.EvmApi.wallets.getWalletTokenBalancesPrice({
+    "chain": "pulse",
+    "address": "0x592139a3f8cf019f628a152fc1262b8aef5b7199"
+  });
+
+  console.log(response.raw);
+} catch (e) {
+  console.error(e);
+}
+
+
+Response Example
+
+200 Returns ERC20 token balance, details, and additional financial information for a specific address, including pagination details.
+{
+  "cursor": "",
+  "page": 2,
+  "page_size": 100,
+  "result": [
+    {
+      "token_address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+      "symbol": "ETH",
+      "name": "Ether",
+      "logo": "https://cdn.moralis.io/eth/0x.png",
+      "thumbnail": "https://cdn.moralis.io/eth/0x_thumb.png",
+      "decimals": "",
+      "balance": "360659174684349604",
+      "possible_spam": "",
+      "verified_contract": true,
+      "balance_formatted": "0.360659174684349604",
+      "usd_price": 3725.2775921204284,
+      "usd_price_24hr_percent_change": 1.2028612707326054,
+      "usd_price_24hr_usd_change": 44.80992138289679,
+      "usd_value": 1343.5555418442548,
+      "usd_value_24hr_usd_change": 16.161109263626145,
+      "native_token": true,
+      "portfolio_percentage": 55.7292
+    }
+  ]
+}
+
+

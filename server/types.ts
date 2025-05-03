@@ -49,6 +49,34 @@ export interface MoralisTokenPriceResponse {
   '24hrPercentChange'?: string;
 }
 
+// Moralis Wallet Token Balances Price Response
+export interface MoralisWalletTokenBalanceItem {
+  token_address: string;
+  symbol: string;
+  name: string;
+  logo?: string;
+  thumbnail?: string;
+  decimals: string;
+  balance: string;
+  possible_spam?: boolean;
+  verified_contract?: boolean;
+  balance_formatted: string;
+  usd_price?: number;
+  usd_price_24hr_percent_change?: number;
+  usd_price_24hr_usd_change?: number;
+  usd_value?: number;
+  usd_value_24hr_usd_change?: number;
+  native_token?: boolean;
+  portfolio_percentage?: number;
+}
+
+export interface MoralisWalletTokenBalancesResponse {
+  cursor: string;
+  page: number;
+  page_size: number;
+  result: MoralisWalletTokenBalanceItem[];
+}
+
 // Combined wallet data types
 export interface ProcessedToken {
   address: string;
@@ -64,6 +92,7 @@ export interface ProcessedToken {
   exchange?: string;
   verified?: boolean;
   securityScore?: number;
+  isNative?: boolean;
 }
 
 export interface WalletData {

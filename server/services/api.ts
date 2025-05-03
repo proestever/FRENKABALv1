@@ -1,6 +1,13 @@
 import fetch from 'node-fetch';
 import Moralis from 'moralis';
-import { ProcessedToken, PulseChainTokenBalanceResponse, PulseChainTokenBalance, MoralisTokenPriceResponse, WalletData } from '../types';
+import { 
+  ProcessedToken, 
+  PulseChainTokenBalanceResponse, 
+  PulseChainTokenBalance, 
+  MoralisTokenPriceResponse, 
+  MoralisWalletTokenBalancesResponse,
+  WalletData 
+} from '../types';
 import { storage } from '../storage';
 import { InsertTokenLogo } from '@shared/schema';
 
@@ -137,11 +144,117 @@ function getDefaultLogo(symbol: string | null | undefined): string {
 }
 
 /**
+ * Get wallet balance using Moralis API 
+ * (includes native PLS and ERC20 tokens with pricing data)
+ */
+export async function getWalletTokenBalancesFromMoralis(walletAddress: string): Promise<MoralisWalletTokenBalancesResponse | null> {
+  try {
+    console.log(`Fetching wallet balances with price for ${walletAddress} from Moralis`);
+    
+    const response = await Moralis.EvmApi.wallets.getWalletTokenBalancesPrice({
+      chain: "pulse", // PulseChain
+      address: walletAddress
+    });
+    
+    console.log(`Successfully fetched wallet balances with price for ${walletAddress}`);
+    // Force cast through unknown to match our defined type
+    return response.raw as unknown as MoralisWalletTokenBalancesResponse;
+  } catch (error: any) {
+    console.error('Error fetching wallet balances from Moralis:', error.message);
+    return null;
+  }
+}
+
+/**
  * Get full wallet data including token balances and prices
  */
 export async function getWalletData(walletAddress: string): Promise<WalletData> {
   try {
-    // Get token balances
+    // Try to get data from Moralis first (includes PLS and tokens with prices)
+    const moralisData = await getWalletTokenBalancesFromMoralis(walletAddress);
+    
+    // If we have Moralis data, use it
+    if (moralisData && moralisData.result && moralisData.result.length > 0) {
+      console.log(`Got wallet data from Moralis with ${moralisData.result.length} tokens`);
+      
+      // Process tokens from Moralis
+      const processedTokens = await Promise.all(moralisData.result.map(async (item: MoralisWalletTokenBalanceItem) => {
+        try {
+          const isNative = item.native_token === true;
+          const symbol = item.symbol || 'UNKNOWN';
+          let logoUrl = item.logo || null;
+          
+          // If no logo in Moralis response, try our database
+          if (!logoUrl) {
+            const storedLogo = await storage.getTokenLogo(item.token_address);
+            if (storedLogo) {
+              logoUrl = storedLogo.logoUrl;
+            } else {
+              // If still no logo, use default
+              logoUrl = getDefaultLogo(symbol);
+            }
+          } else {
+            // Store the logo in our database for future use
+            try {
+              const newLogo: InsertTokenLogo = {
+                tokenAddress: item.token_address,
+                logoUrl,
+                symbol,
+                name: item.name || symbol,
+                lastUpdated: new Date().toISOString()
+              };
+              
+              await storage.saveTokenLogo(newLogo);
+            } catch (storageError) {
+              console.error(`Error storing logo for token ${item.token_address}:`, storageError);
+            }
+          }
+          
+          return {
+            address: item.token_address,
+            symbol,
+            name: item.name || 'Unknown Token',
+            decimals: parseInt(item.decimals || '18'),
+            balance: item.balance || '0',
+            balanceFormatted: parseFloat(item.balance_formatted || '0'),
+            price: item.usd_price,
+            value: item.usd_value,
+            priceChange24h: item.usd_price_24hr_percent_change,
+            logo: logoUrl,
+            exchange: '', // Moralis doesn't provide exchange info in this endpoint
+            verified: item.verified_contract === true,
+            isNative
+          };
+        } catch (error) {
+          console.error(`Error processing token from Moralis:`, error);
+          return null;
+        }
+      }));
+      
+      // Filter out any null items from processing errors
+      const tokens = processedTokens.filter(t => t !== null);
+      
+      // Find the native PLS token
+      const plsToken = tokens.find(token => token.isNative || token.symbol.toLowerCase() === 'pls');
+      
+      // Calculate total value
+      const totalValue = tokens.reduce((sum, token) => sum + (token.value || 0), 0);
+      
+      return {
+        address: walletAddress,
+        tokens,
+        totalValue,
+        tokenCount: tokens.length,
+        plsBalance: plsToken?.balanceFormatted || null,
+        plsPriceChange: plsToken?.priceChange24h || null,
+        networkCount: 1 // Default to PulseChain network
+      };
+    }
+    
+    // Fallback to the original implementation if Moralis data is not available
+    console.log('Falling back to PulseChain Scan API for token balances');
+    
+    // Get token balances from PulseChain Scan API
     const tokens = await getTokenBalances(walletAddress);
     
     // If no tokens found, still return a valid response with empty tokens
