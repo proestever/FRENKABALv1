@@ -2,10 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
-import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw, Filter } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Transaction types
 interface TransactionTransfer {
@@ -61,6 +69,44 @@ interface TransactionHistoryProps {
 // Number of transactions to load per batch (Moralis free plan limit is 100)
 const TRANSACTIONS_PER_BATCH = 100;
 
+// Define transaction type options
+type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contract';
+
+// Helper function to determine transaction type
+const getTransactionType = (tx: Transaction): TransactionType => {
+  if (!tx.category) {
+    // Try to infer from other properties if category is not available
+    if (tx.method_label?.toLowerCase().includes('swap')) {
+      return 'swap';
+    } else if (tx.method_label?.toLowerCase().includes('approve')) {
+      return 'approval';
+    } else if (tx.erc20_transfers?.some(t => t.from_address.toLowerCase() === t.to_address.toLowerCase())) {
+      return 'contract'; // Self-transfers are often contract interactions
+    } else if (tx.erc20_transfers?.length > 0) {
+      return 'send'; // Default for token transfers
+    } else {
+      return 'all'; // Default fallback
+    }
+  }
+  
+  // If category is provided, use it
+  const category = tx.category.toLowerCase();
+  
+  if (category.includes('swap') || category.includes('trade')) {
+    return 'swap';
+  } else if (category.includes('send') || category.includes('transfer')) {
+    return 'send';
+  } else if (category.includes('receive')) {
+    return 'receive';
+  } else if (category.includes('approve') || category.includes('approval')) {
+    return 'approval';
+  } else if (category.includes('contract') || category.includes('deploy') || category.includes('execute')) {
+    return 'contract';
+  }
+  
+  return 'all';
+};
+
 export function TransactionHistory({ walletAddress, onClose }: TransactionHistoryProps) {
   const [visibleTokenAddresses, setVisibleTokenAddresses] = useState<string[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -69,8 +115,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   const [hasMore, setHasMore] = useState(true);
   const [loadingTimeout, setLoadingTimeout] = useState<boolean>(false);
   const [requestTimeoutId, setRequestTimeoutId] = useState<NodeJS.Timeout | null>(null);
-  // Add state for token prices
   const [tokenPrices, setTokenPrices] = useState<Record<string, number>>({});
+  
+  // Add state for transaction type filter
+  const [selectedType, setSelectedType] = useState<TransactionType>('all');
 
   // Set up a timeout to show an error message if the transactions don't load within reasonable time
   useEffect(() => {
@@ -315,6 +363,19 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return usdValue;
   };
 
+  // Filter transactions based on selected type
+  const filteredTransactions = transactions.filter(tx => {
+    if (selectedType === 'all') return true; // Show all transactions
+    return getTransactionType(tx) === selectedType;
+  });
+  
+  // Count transactions by type
+  const transactionCounts = transactions.reduce((counts, tx) => {
+    const type = getTransactionType(tx);
+    counts[type] = (counts[type] || 0) + 1;
+    return counts;
+  }, {} as Record<string, number>);
+  
   // Extract token addresses for logos
   useEffect(() => {
     if (transactions) {
@@ -449,16 +510,113 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               Transaction History
             </h2>
             <span className="text-sm bg-secondary/40 text-white px-2 py-1 rounded-md">
-              {transactions.length} Transactions
+              {filteredTransactions.length} 
+              {selectedType !== 'all' ? ' / ' + transactions.length : ''} Transactions
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
-          >
-            <Wallet size={16} className="mr-1" />
-            <span className="text-sm font-medium">View Tokens</span>
-          </button>
+          <div className="flex gap-2">
+            {/* Transaction Type Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200">
+                  <Filter size={16} className="mr-1" />
+                  <span className="text-sm font-medium capitalize">
+                    {selectedType === 'all' ? 'All Types' : selectedType}
+                  </span>
+                  <ChevronDown size={14} className="ml-1" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="glass-card bg-black/90 border border-white/10">
+                <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-white/10" />
+                
+                {/* All Transactions */}
+                <DropdownMenuItem 
+                  onClick={() => setSelectedType('all')}
+                  className={`capitalize ${selectedType === 'all' ? 'bg-primary/20' : ''}`}
+                >
+                  <div className="flex justify-between w-full">
+                    <span>All Types</span>
+                    <span className="text-muted-foreground">{transactions.length}</span>
+                  </div>
+                </DropdownMenuItem>
+                
+                {/* Swaps */}
+                {transactionCounts['swap'] > 0 && (
+                  <DropdownMenuItem 
+                    onClick={() => setSelectedType('swap')}
+                    className={`capitalize ${selectedType === 'swap' ? 'bg-primary/20' : ''}`}
+                  >
+                    <div className="flex justify-between w-full">
+                      <span>Swaps</span>
+                      <span className="text-muted-foreground">{transactionCounts['swap']}</span>
+                    </div>
+                  </DropdownMenuItem>
+                )}
+                
+                {/* Sends */}
+                {transactionCounts['send'] > 0 && (
+                  <DropdownMenuItem 
+                    onClick={() => setSelectedType('send')}
+                    className={`capitalize ${selectedType === 'send' ? 'bg-primary/20' : ''}`}
+                  >
+                    <div className="flex justify-between w-full">
+                      <span>Sends</span>
+                      <span className="text-muted-foreground">{transactionCounts['send']}</span>
+                    </div>
+                  </DropdownMenuItem>
+                )}
+                
+                {/* Receives */}
+                {transactionCounts['receive'] > 0 && (
+                  <DropdownMenuItem 
+                    onClick={() => setSelectedType('receive')}
+                    className={`capitalize ${selectedType === 'receive' ? 'bg-primary/20' : ''}`}
+                  >
+                    <div className="flex justify-between w-full">
+                      <span>Receives</span>
+                      <span className="text-muted-foreground">{transactionCounts['receive']}</span>
+                    </div>
+                  </DropdownMenuItem>
+                )}
+                
+                {/* Approvals */}
+                {transactionCounts['approval'] > 0 && (
+                  <DropdownMenuItem 
+                    onClick={() => setSelectedType('approval')}
+                    className={`capitalize ${selectedType === 'approval' ? 'bg-primary/20' : ''}`}
+                  >
+                    <div className="flex justify-between w-full">
+                      <span>Approvals</span>
+                      <span className="text-muted-foreground">{transactionCounts['approval']}</span>
+                    </div>
+                  </DropdownMenuItem>
+                )}
+                
+                {/* Contract Interactions */}
+                {transactionCounts['contract'] > 0 && (
+                  <DropdownMenuItem 
+                    onClick={() => setSelectedType('contract')}
+                    className={`capitalize ${selectedType === 'contract' ? 'bg-primary/20' : ''}`}
+                  >
+                    <div className="flex justify-between w-full">
+                      <span>Contract</span>
+                      <span className="text-muted-foreground">{transactionCounts['contract']}</span>
+                    </div>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            {/* View Tokens Button */}
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
+            >
+              <Wallet size={16} className="mr-1" />
+              <span className="text-sm font-medium">View Tokens</span>
+            </button>
+          </div>
         </div>
       </div>
       
