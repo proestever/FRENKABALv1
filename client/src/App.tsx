@@ -124,32 +124,35 @@ function Header() {
       </div>
       
       {/* Mobile header */}
-      <div className="container mx-auto px-4 py-3 md:hidden grid grid-cols-3 items-center">
-        {/* Left area: logo */}
-        <div className="col-span-1 flex items-center">
-          <a 
-            href="/" 
-            onClick={handleLogoClick} 
-            className="flex items-center group cursor-pointer"
-          >
-            <FrenKabalLogo size="md" className="transition-transform duration-200 group-hover:scale-105" />
-          </a>
-        </div>
-        
-        {/* Center area: empty */}
-        <div className="col-span-1 flex justify-center">
-        </div>
-        
-        {/* Right area: menu button */}
-        <div className="col-span-1 flex justify-end">
-          <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
-            <Menu className="w-6 h-6" />
-          </button>
-        </div>
-        
-        {/* Connect wallet button (centered below) */}
-        <div className="col-span-3 flex justify-center mt-2">
+      <div className="container mx-auto px-4 py-3 md:hidden">
+        {/* Top row: connect button centered at the top */}
+        <div className="flex justify-center mb-3">
           {connectButton}
+        </div>
+        
+        {/* Bottom row: logo left, menu right */}
+        <div className="grid grid-cols-3 items-center">
+          {/* Left area: logo */}
+          <div className="col-span-1 flex items-center">
+            <a 
+              href="/" 
+              onClick={handleLogoClick} 
+              className="flex items-center group cursor-pointer"
+            >
+              <FrenKabalLogo size="md" className="transition-transform duration-200 group-hover:scale-105" />
+            </a>
+          </div>
+          
+          {/* Center area: empty */}
+          <div className="col-span-1 flex justify-center">
+          </div>
+          
+          {/* Right area: menu button */}
+          <div className="col-span-1 flex justify-end">
+            <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
         </div>
       </div>
     </header>
