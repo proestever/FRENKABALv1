@@ -4,7 +4,33 @@ import { storage } from "./storage";
 import { getWalletData, getTokenPrice } from "./services/api";
 import { z } from "zod";
 
+// Loading progress tracking
+export interface LoadingProgress {
+  currentBatch: number;
+  totalBatches: number;
+  status: 'idle' | 'loading' | 'complete' | 'error';
+  message: string;
+}
+
+// Initialize loading progress
+export const loadingProgress: LoadingProgress = {
+  currentBatch: 0,
+  totalBatches: 0,
+  status: 'idle',
+  message: ''
+};
+
+// Update loading progress (exposed for use in api.ts)
+export const updateLoadingProgress = (progress: Partial<LoadingProgress>) => {
+  Object.assign(loadingProgress, progress);
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // API endpoint to get loading progress
+  app.get("/api/loading-progress", (_req, res) => {
+    res.json(loadingProgress);
+  });
+  
   // API route to get wallet data
   app.get("/api/wallet/:address", async (req, res) => {
     try {
