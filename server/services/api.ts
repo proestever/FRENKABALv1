@@ -1,6 +1,8 @@
 import fetch from 'node-fetch';
 import Moralis from 'moralis';
 import { ProcessedToken, PulseChainTokenBalanceResponse, PulseChainTokenBalance, MoralisTokenPriceResponse, WalletData } from '../types';
+import { storage } from '../storage';
+import { InsertTokenLogo } from '@shared/schema';
 
 // Constants
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
