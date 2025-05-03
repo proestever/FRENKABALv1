@@ -19,7 +19,7 @@ export function FrenKabalLogo({
     md: 'w-10 h-10',
     lg: 'w-12 h-12',
     xl: 'w-16 h-16',
-    '2xl': 'w-24 h-24',
+    '2xl': 'w-32 h-32',
   };
   
   const centeredClass = centered ? 'mx-auto' : '';

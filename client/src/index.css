@@ -155,3 +155,21 @@
   animation: glitter 8s ease-in-out infinite;
   transition: all 0.5s ease;
 }
+
+.logo-glow {
+  filter: drop-shadow(0 0 8px rgba(255, 0, 150, 0.2));
+  animation: logo-pulse 5s ease-in-out infinite;
+  transition: all 0.5s ease;
+}
+
+@keyframes logo-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(0, 150, 255, 0.2));
+  }
+  33% {
+    filter: drop-shadow(0 0 10px rgba(200, 0, 255, 0.25));
+  }
+  66% {
+    filter: drop-shadow(0 0 10px rgba(255, 0, 150, 0.2));
+  }
+}
