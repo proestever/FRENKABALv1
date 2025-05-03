@@ -1,0 +1,88 @@
+Get ERC20 token price
+GEThttps://deep-index.moralis.io/api/v2.2/erc20/:address/price
+Get the token price denominated in the blockchain's native token and USD. View supported exchanges here
+
+PATH PARAMS
+addressstringrequired
+The address of the token contract
+0xdAC17F958D2ee523a2206206994597C13D831ec7
+QUERY PARAMS
+chainstring
+The chain to query
+
+pulse
+includestring
+If the result should contain the 24hr percent change
+
+percent_change
+exchangestring
+The factory name or address of the token exchange. View supported exchanges here
+
+to_blocknumber
+The block number from which the token price should be checked
+max_token_inactivitynumber
+Exclude tokens inactive for more than the given amount of days
+min_pair_side_liquidity_usdnumber
+Exclude tokens with liquidity less than the specified amount in USD. This parameter refers to the liquidity on a single side of the pair.
+Responses
+
+200 Returns the price denominated in the blockchain's native token and USD for a given token contract addressobject
+API KEY
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98
+Test Live API
+Node.js
+Python
+cURL
+Go
+PHP
+import Moralis from 'moralis';
+
+try {
+  await Moralis.start({
+    apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98"
+  });
+
+  const response = await Moralis.EvmApi.token.getTokenPrice({
+    "chain": "pulse",
+    "include": "percent_change",
+    "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+  });
+
+  console.log(response.raw);
+} catch (e) {
+  console.error(e);
+}
+
+
+Response
+
+200 Test Request
+{
+  "tokenName": "Tether USD",
+  "tokenSymbol": "USDT",
+  "tokenLogo": "https://logo.moralis.io/0x171_0xdac17f958d2ee523a2206206994597c13d831ec7_a4a86a8c1a65495db3815a81096ba4c7.png",
+  "tokenDecimals": "6",
+  "nativePrice": {
+    "value": "22539641823151262592",
+    "decimals": 18,
+    "name": "Wrapped Pulse",
+    "symbol": "WPLS",
+    "address": "0xa1077a294dde1b09bb078844df40758a5d0f9a27"
+  },
+  "usdPrice": 0.000649850216469368,
+  "usdPriceFormatted": "0.000649850216469368",
+  "exchangeName": "PulseX v2",
+  "exchangeAddress": "0x1715a3E4A142d8b698131108995174F37aEBA10D",
+  "tokenAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+  "priceLastChangedAtBlock": "23367688",
+  "blockTimestamp": "1746229835000",
+  "possibleSpam": false,
+  "verifiedContract": false,
+  "pairAddress": "0xfadc475639131c1eac3655c37eda430851d53716",
+  "pairTotalLiquidityUsd": "42422.32",
+  "securityScore": 47,
+  "usdPrice24hr": 0.00071978805876214,
+  "usdPrice24hrUsdChange": -0.00006993784229276999,
+  "usdPrice24hrPercentChange": -9.716449368866446,
+  "24hrPercentChange": "-9.716449368866446"
+}

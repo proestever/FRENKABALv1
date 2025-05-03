@@ -61,9 +61,9 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
  */
 export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenPriceResponse | null> {
   try {
-    // Using Moralis SDK to get token price
+    // Using Moralis SDK to get token price with PulseChain's chain ID (369 or 0x171)
     const response = await Moralis.EvmApi.token.getTokenPrice({
-      chain: "pulse",
+      chain: "0x171", // PulseChain's chain ID in hex
       include: "percent_change",
       address: tokenAddress
     });
