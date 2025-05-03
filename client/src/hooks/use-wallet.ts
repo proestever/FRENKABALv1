@@ -170,7 +170,19 @@ export function useWallet(): UseWalletReturn {
 
   // Connect to wallet with signature verification
   const connect = useCallback(async () => {
+    // Set connection state
     setIsConnecting(true);
+    
+    // Add a timeout to prevent infinite loading state
+    const connectionTimeout = setTimeout(() => {
+      console.log("Wallet connection timeout - resetting state");
+      setIsConnecting(false);
+      toast({
+        title: "Connection Timeout",
+        description: "Wallet connection attempt timed out. Please try again.",
+        variant: "destructive",
+      });
+    }, 30000); // 30 second timeout
     
     try {
       if (!window.ethereum) {
@@ -179,16 +191,22 @@ export function useWallet(): UseWalletReturn {
           description: "Please install MetaMask or another compatible wallet",
           variant: "destructive",
         });
+        clearTimeout(connectionTimeout);
+        setIsConnecting(false);
         return;
       }
       
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      // Create a fresh provider for each connection attempt
+      const provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+      
+      console.log("Requesting accounts from wallet...");
       
       // Request wallet connection
       const accounts = await provider.send("eth_requestAccounts", []);
       
       if (accounts.length > 0) {
         const address = accounts[0];
+        console.log("Wallet connected:", address);
         
         // Create a welcoming signature message with features
         const message = `🌟 Welcome to FrenKabal! 🌟\n
@@ -210,9 +228,12 @@ Become part of the FrenKabal community today.
 Timestamp: ${new Date().toISOString()}`;
         
         try {
+          console.log("Requesting signature...");
           // Request signature to verify wallet ownership
           const signer = provider.getSigner();
           await signer.signMessage(message);
+          
+          console.log("Signature verified successfully");
           
           // Set the account if signature was successful
           setAccount(address);
@@ -225,6 +246,8 @@ Timestamp: ${new Date().toISOString()}`;
           const network = await provider.getNetwork();
           setChainId(network.chainId);
           
+          console.log("Connected to network:", network.chainId);
+          
           // Create or get user ID for this wallet
           const user = await getUserFromWallet(address);
           if (user) {
@@ -234,6 +257,7 @@ Timestamp: ${new Date().toISOString()}`;
           
           // Check if on PulseChain
           if (network.chainId !== PULSE_CHAIN_ID) {
+            console.log("Not on PulseChain, prompting to switch...");
             // Prompt to switch to PulseChain
             try {
               await window.ethereum.request({
@@ -286,6 +310,7 @@ Timestamp: ${new Date().toISOString()}`;
         variant: "destructive",
       });
     } finally {
+      clearTimeout(connectionTimeout);
       setIsConnecting(false);
     }
   }, [toast, PULSE_CHAIN_ID]);

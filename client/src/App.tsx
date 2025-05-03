@@ -33,6 +33,25 @@ function Header() {
     // Do not actively remove queries - let the Home component handle its own state
     // This is more efficient than invalidating all wallet queries at once
   };
+  
+  // Handle Connect wallet click
+  const handleConnectClick = async () => {
+    // If we're on a wallet address page, first go back to homepage to avoid state conflicts
+    const currentPath = String(location);
+    const isWalletAddressPage = currentPath.indexOf('/0x') === 0;
+    
+    if (isWalletAddressPage && !isConnected) {
+      console.log("Currently on wallet page, navigating to home before connecting");
+      setLocation("/");
+      // Small delay to let the navigation complete before connecting
+      setTimeout(() => {
+        connect();
+      }, 100);
+    } else {
+      // Otherwise connect normally
+      connect();
+    }
+  };
 
   return (
     <header className="backdrop-blur-md bg-black/10 shadow-md border-b border-white/15 sticky top-0 z-30">
@@ -78,7 +97,7 @@ function Header() {
             </button>
           ) : (
             <button 
-              onClick={connect}
+              onClick={handleConnectClick}
               disabled={isConnecting}
               className="px-4 py-2 text-sm font-medium relative overflow-hidden border border-white/30 bg-black/20 text-white rounded-md hover:bg-black/30 transition-all focus:outline-none connect-button flex items-center"
             >
