@@ -148,7 +148,7 @@ function Header() {
               </DropdownMenuItem>
               
               {isConnected && (
-                <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer">
                   <Bookmark className="mr-2 h-4 w-4" />
                   <span>Saved Addresses</span>
                 </DropdownMenuItem>
@@ -193,7 +193,7 @@ function Header() {
                 </DropdownMenuItem>
                 
                 {isConnected && (
-                  <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer">
                     <Bookmark className="mr-2 h-4 w-4" />
                     <span>Saved Addresses</span>
                   </DropdownMenuItem>
@@ -258,6 +258,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/profile" component={Profile} />
+          <Route path="/saved" component={Profile} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
         </Switch>
