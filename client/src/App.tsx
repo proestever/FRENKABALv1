@@ -5,9 +5,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
+import { Profile } from "@/pages/profile";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useWallet } from "@/hooks/use-wallet";
-import { Wallet, Menu, Loader2 } from "lucide-react";
+import { Wallet, Menu, Loader2, User } from "lucide-react";
 
 // Header component
 function Header() {
@@ -126,6 +127,15 @@ function Header() {
         </a>
         
         <div className="flex space-x-4 items-center">
+          {isConnected && (
+            <Link 
+              href="/profile" 
+              className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105"
+              title="Your Profile"
+            >
+              <User className="w-5 h-5" />
+            </Link>
+          )}
           <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
             <Menu className="w-6 h-6" />
           </button>
@@ -152,8 +162,17 @@ function Header() {
             {renderConnectButton(true)}
           </div>
           
-          {/* Right area: menu button */}
-          <div className="col-span-1 flex justify-end">
+          {/* Right area: menu button and profile link */}
+          <div className="col-span-1 flex justify-end space-x-2">
+            {isConnected && (
+              <Link 
+                href="/profile" 
+                className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105"
+                title="Your Profile"
+              >
+                <User className="w-5 h-5" />
+              </Link>
+            )}
             <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
               <Menu className="w-6 h-6" />
             </button>
@@ -229,6 +248,7 @@ function Router() {
       <div className="flex-grow relative z-10">
         <Switch>
           <Route path="/" component={Home} />
+          <Route path="/profile" component={Profile} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
         </Switch>
