@@ -120,3 +120,51 @@ export interface WalletData {
   plsPriceChange: number | null;
   networkCount: number;
 }
+
+// Transaction history types
+export interface TransactionTransfer {
+  token_name?: string;
+  token_symbol?: string;
+  token_logo?: string;
+  token_decimals?: string;
+  from_address: string;
+  from_address_label?: string | null;
+  to_address: string;
+  to_address_label?: string | null;
+  address?: string;
+  log_index?: number;
+  value: string;
+  value_formatted?: string;
+  possible_spam?: boolean;
+  verified_contract?: boolean;
+  security_score?: number;
+  direction?: string;
+  internal_transaction?: boolean;
+  token_symbol?: string;
+  token_logo?: string | null;
+}
+
+export interface Transaction {
+  hash: string;
+  nonce: string;
+  transaction_index: string;
+  from_address: string;
+  from_address_label?: string | null;
+  to_address: string;
+  to_address_label?: string | null;
+  value: string;
+  gas: string;
+  gas_price: string;
+  receipt_gas_used: string;
+  receipt_status: string;
+  block_timestamp: string;
+  block_number: string;
+  transaction_fee: string;
+  method_label?: string;
+  erc20_transfers?: TransactionTransfer[];
+  native_transfers?: TransactionTransfer[];
+  nft_transfers?: any[];
+  summary?: string;
+  category?: string;
+  possible_spam?: boolean;
+}

@@ -285,6 +285,27 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
 }
 
 /**
+ * Get wallet transaction history from Moralis API
+ */
+export async function getWalletTransactionHistory(walletAddress: string): Promise<any> {
+  try {
+    console.log(`Fetching transaction history for ${walletAddress} from Moralis`);
+    
+    const response = await Moralis.EvmApi.wallets.getWalletHistory({
+      chain: "0x171", // PulseChain chain hex ID
+      address: walletAddress,
+      order: "DESC"
+    });
+    
+    console.log(`Successfully fetched transaction history for ${walletAddress}`);
+    return response.raw;
+  } catch (error: any) {
+    console.error('Error fetching wallet transaction history from Moralis:', error.message);
+    return null;
+  }
+}
+
+/**
  * Get full wallet data including token balances and prices
  */
 export async function getWalletData(walletAddress: string): Promise<WalletData> {
