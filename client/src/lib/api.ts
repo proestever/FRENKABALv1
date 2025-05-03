@@ -255,3 +255,31 @@ export async function deleteBookmark(id: number): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Create or get user ID from wallet address
+ */
+export async function getUserFromWallet(walletAddress: string): Promise<number | null> {
+  try {
+    const response = await fetch('/api/users/wallet', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        walletAddress
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to get user from wallet');
+    }
+    
+    const data = await response.json();
+    return data.id || null;
+  } catch (error) {
+    console.error('Error getting user from wallet:', error);
+    return null;
+  }
+}

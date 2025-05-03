@@ -444,24 +444,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create a deterministic username from the wallet address
       const username = `wallet_${walletAddress.toLowerCase()}`;
       
-      // Generate a deterministic password (not secure, but suitable for this demo)
-      const password = `pwd_${walletAddress.toLowerCase()}`;
-      
       // Check if user already exists
       let user = await storage.getUserByUsername(username);
       
-      if (!user) {
-        // Create a new user
+      if (user) {
+        return res.json({ 
+          id: user.id,
+          username: user.username
+        });
+      }
+      
+      // User doesn't exist, create a new one
+      // Generate a deterministic password (not secure, but suitable for this demo)
+      const password = `pwd_${walletAddress.toLowerCase()}`;
+      
+      try {
         user = await storage.createUser({
           username,
           password
         });
+        
+        return res.json({ 
+          id: user.id,
+          username: user.username
+        });
+      } catch (createError) {
+        // In case there's a race condition and the user was created between our check and create
+        console.log("Error creating user, checking if it exists now:", createError);
+        user = await storage.getUserByUsername(username);
+        
+        if (user) {
+          return res.json({ 
+            id: user.id,
+            username: user.username
+          });
+        } else {
+          throw createError; // Re-throw if the user still doesn't exist
+        }
       }
-      
-      return res.json({ 
-        id: user.id,
-        username: user.username
-      });
     } catch (error) {
       console.error("Error getting/creating user from wallet:", error);
       return res.status(500).json({ 

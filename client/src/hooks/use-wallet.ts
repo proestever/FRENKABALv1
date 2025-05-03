@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useToast } from '@/hooks/use-toast';
+import { getUserFromWallet } from '@/lib/api';
 
 interface UseWalletReturn {
   isConnected: boolean;
@@ -16,6 +17,7 @@ interface UseWalletReturn {
 export function useWallet(): UseWalletReturn {
   const [account, setAccount] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
 
@@ -47,6 +49,13 @@ export function useWallet(): UseWalletReturn {
             setChainId(network.chainId);
             
             console.log("Restored wallet connection from localStorage:", savedAddress);
+            
+            // Get or create user ID for this wallet
+            const user = await getUserFromWallet(savedAddress);
+            if (user) {
+              setUserId(user);
+              localStorage.setItem('userId', String(user));
+            }
           } else if (accounts.length > 0) {
             // Fallback: If the saved address is not available but others are
             setAccount(accounts[0]);
@@ -57,16 +66,25 @@ export function useWallet(): UseWalletReturn {
             // Get chain ID
             const network = await provider.getNetwork();
             setChainId(network.chainId);
+            
+            // Get or create user ID for this wallet
+            const user = await getUserFromWallet(accounts[0]);
+            if (user) {
+              setUserId(user);
+              localStorage.setItem('userId', String(user));
+            }
           } else {
             // No accounts available, clear localStorage
             localStorage.removeItem('walletConnected');
             localStorage.removeItem('walletAddress');
+            localStorage.removeItem('userId');
           }
         } catch (error) {
           console.error("Error checking connection:", error);
           // Clear localStorage on error
           localStorage.removeItem('walletConnected');
           localStorage.removeItem('walletAddress');
+          localStorage.removeItem('userId');
         }
       } else if (window.ethereum) {
         // No localStorage data, check if wallet is connected
@@ -84,6 +102,13 @@ export function useWallet(): UseWalletReturn {
             // Get chain ID
             const network = await provider.getNetwork();
             setChainId(network.chainId);
+            
+            // Get or create user ID for this wallet
+            const user = await getUserFromWallet(accounts[0]);
+            if (user) {
+              setUserId(user);
+              localStorage.setItem('userId', String(user));
+            }
           }
         } catch (error) {
           console.error("Error checking connection:", error);
@@ -200,6 +225,13 @@ Timestamp: ${new Date().toISOString()}`;
           const network = await provider.getNetwork();
           setChainId(network.chainId);
           
+          // Create or get user ID for this wallet
+          const user = await getUserFromWallet(address);
+          if (user) {
+            setUserId(user);
+            localStorage.setItem('userId', String(user));
+          }
+          
           // Check if on PulseChain
           if (network.chainId !== PULSE_CHAIN_ID) {
             // Prompt to switch to PulseChain
@@ -263,10 +295,12 @@ Timestamp: ${new Date().toISOString()}`;
     // Clear state
     setAccount(null);
     setChainId(null);
+    setUserId(null);
     
     // Clear localStorage data
     localStorage.removeItem('walletConnected');
     localStorage.removeItem('walletAddress');
+    localStorage.removeItem('userId');
     
     toast({
       title: "Wallet Disconnected",
@@ -278,6 +312,7 @@ Timestamp: ${new Date().toISOString()}`;
     isConnected: !!account,
     account,
     chainId,
+    userId,
     connect,
     disconnect,
     isConnecting,
