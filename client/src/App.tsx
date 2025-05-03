@@ -132,7 +132,7 @@ function Footer() {
           href="https://t.me/frenkabal" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="absolute bottom-6 right-6 transition-all hover:scale-110 text-white/90 hover:text-white bg-black/30 hover:bg-primary/20 p-2 rounded-full"
+          className="absolute top-1/2 -translate-y-1/2 right-6 transition-all hover:scale-110 text-white/90 hover:text-white bg-black/30 hover:bg-black/40 p-1.5 rounded-full"
           title="Join our Telegram Channel"
         >
           <svg
@@ -145,7 +145,7 @@ function Footer() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="w-6 h-6"
+            className="w-5 h-5"
           >
             <path d="M22 2L11 13"></path>
             <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
