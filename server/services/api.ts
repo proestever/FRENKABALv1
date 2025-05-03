@@ -147,7 +147,7 @@ function getDefaultLogo(symbol: string | null | undefined): string {
  * Get wallet balance using Moralis API 
  * (includes native PLS and ERC20 tokens with pricing data)
  */
-export async function getWalletTokenBalancesFromMoralis(walletAddress: string): Promise<MoralisWalletTokenBalancesResponse | null> {
+export async function getWalletTokenBalancesFromMoralis(walletAddress: string): Promise<any> {
   try {
     console.log(`Fetching wallet balances with price for ${walletAddress} from Moralis`);
     
@@ -157,8 +157,12 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
     });
     
     console.log(`Successfully fetched wallet balances with price for ${walletAddress}`);
-    // Force cast through unknown to match our defined type
-    return response.raw as unknown as MoralisWalletTokenBalancesResponse;
+    
+    // For debugging
+    console.log(`Got response from Moralis with type: ${typeof response.raw}`);
+    
+    // Just return the raw data - we'll handle the structure in the caller
+    return response.raw;
   } catch (error: any) {
     console.error('Error fetching wallet balances from Moralis:', error.message);
     return null;
@@ -174,11 +178,15 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     const moralisData = await getWalletTokenBalancesFromMoralis(walletAddress);
     
     // If we have Moralis data, use it
-    if (moralisData && moralisData.result && moralisData.result.length > 0) {
-      console.log(`Got wallet data from Moralis with ${moralisData.result.length} tokens`);
+    // Check if moralisData is an array (direct result) or has a result property
+    const moralisTokens = Array.isArray(moralisData) ? moralisData : 
+                         (moralisData && moralisData.result) ? moralisData.result : [];
+                         
+    if (moralisTokens.length > 0) {
+      console.log(`Got wallet data from Moralis with ${moralisTokens.length} tokens`);
       
       // Process tokens from Moralis
-      const processedTokens = await Promise.all(moralisData.result.map(async (item: MoralisWalletTokenBalanceItem) => {
+      const processedTokens = await Promise.all(moralisTokens.map(async (item: any) => {
         try {
           const isNative = item.native_token === true;
           const symbol = item.symbol || 'UNKNOWN';
