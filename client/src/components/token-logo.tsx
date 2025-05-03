@@ -44,7 +44,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
         // Handle special case for native PLS token
         if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || symbol === 'PLS') {
           console.log('Using native PLS token logo for:', address, symbol);
-          setLogoUrl('/assets/pls-logo.png');
+          setLogoUrl('/assets/pls-logo-trimmed.png');
           setIsLoading(false);
           return;
         }

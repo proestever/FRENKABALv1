@@ -211,7 +211,7 @@ function getDefaultLogo(symbol: string | null | undefined): string {
   const symbolLower = symbol.toLowerCase();
   // Updated with application-specific path for PLS
   const defaultLogos: Record<string, string> = {
-    pls: '/api/token-logo/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', // Use API to get our custom PLS logo
+    pls: '/assets/pls-logo-trimmed.png', // Use our local, trimmed PLS logo
     hex: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2469.png',
     phex: 'https://cryptologos.cc/logos/hex-hex-logo.png',
     peth: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',

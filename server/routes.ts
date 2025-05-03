@@ -192,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (plsIndex !== -1) {
           const plsLogo = {
             tokenAddress: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-            logoUrl: '/assets/pls-logo.png',
+            logoUrl: '/assets/pls-logo-trimmed.png',
             symbol: "PLS",
             name: "PulseChain",
             lastUpdated: new Date().toISOString()
@@ -309,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Store our custom PLS logo for the native token
           const newLogo = {
             tokenAddress: address,
-            logoUrl: '/assets/pls-logo.png', // Reference to static asset we're serving
+            logoUrl: '/assets/pls-logo-trimmed.png', // Reference to static asset we're serving
             symbol: "PLS",
             name: "PulseChain",
             lastUpdated: new Date().toISOString()
