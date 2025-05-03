@@ -111,6 +111,25 @@
   }
 }
 
+/* Subtle glitter effect for card glow */
+@keyframes glitter {
+  0% {
+    box-shadow: 0 0 25px rgba(0, 150, 255, 0.025), 0 0 35px rgba(200, 0, 255, 0.015), 0 0 45px rgba(255, 0, 150, 0.005);
+  }
+  25% {
+    box-shadow: 0 0 25px rgba(0, 150, 255, 0.03), 0 0 35px rgba(200, 0, 255, 0.02), 0 0 45px rgba(255, 0, 150, 0.01);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(0, 150, 255, 0.015), 0 0 35px rgba(200, 0, 255, 0.025), 0 0 45px rgba(255, 0, 150, 0.02);
+  }
+  75% {
+    box-shadow: 0 0 25px rgba(0, 150, 255, 0.005), 0 0 35px rgba(200, 0, 255, 0.01), 0 0 45px rgba(255, 0, 150, 0.025);
+  }
+  100% {
+    box-shadow: 0 0 25px rgba(0, 150, 255, 0.025), 0 0 35px rgba(200, 0, 255, 0.015), 0 0 45px rgba(255, 0, 150, 0.005);
+  }
+}
+
 .progress-shimmer {
   position: relative;
   overflow: hidden;
@@ -130,4 +149,9 @@
     transparent
   );
   animation: shimmer 2s infinite;
+}
+
+.card-glitter {
+  animation: glitter 8s ease-in-out infinite;
+  transition: all 0.5s ease;
 }
