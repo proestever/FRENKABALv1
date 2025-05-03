@@ -31,6 +31,7 @@ export const TokenSchema = z.object({
   exchange: z.string().optional(),
   verified: z.boolean().optional(),
   securityScore: z.number().optional(),
+  isNative: z.boolean().optional(), // Add isNative flag to properly identify native tokens
 });
 
 export type Token = z.infer<typeof TokenSchema>;
