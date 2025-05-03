@@ -153,7 +153,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
             
             <button
               onClick={() => setShowHidden(!showHidden)}
-              className={`p-2 rounded-md hover:bg-secondary/80 border border-border bg-secondary ${showHidden ? 'text-purple-400' : 'text-muted-foreground'}`}
+              className={`p-2 rounded-md glass-card hover:bg-black/20 border-white/15 ${showHidden ? 'text-purple-400' : 'text-white/70'}`}
               title={showHidden ? "Hide hidden tokens" : "Show hidden tokens"}
             >
               {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -170,7 +170,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
             const isHidden = hiddenTokens.includes(token.address);
             
             return (
-              <div key={token.address} className="p-5 glass-card rounded-lg hover:bg-secondary/60 transition-colors glass-highlight">
+              <div key={token.address} className="p-5 glass-card rounded-lg hover:bg-black/20 transition-colors glass-highlight">
                 <div className="flex items-center justify-between">
                   {/* Token Info */}
                   <div className="flex items-center flex-grow">
@@ -235,8 +235,8 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
       
       {/* Desktop View - Only shown on medium screens and up */}
       <div className="hidden md:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-border">
-          <thead className="bg-secondary/60 backdrop-blur-sm">
+        <table className="min-w-full divide-y divide-white/10">
+          <thead className="bg-black/20 backdrop-blur-md">
             <tr>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/5 first:rounded-tl-md">
                 Token
@@ -258,13 +258,13 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-white/10">
             {sortedTokens.map((token) => {
               const priceChangeClass = getAdvancedChangeClass(token.priceChange24h);
               const isHidden = hiddenTokens.includes(token.address);
               
               return (
-                <tr key={token.address} className="hover:bg-secondary/40 transition-colors">
+                <tr key={token.address} className="hover:bg-black/20 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="mr-3 flex-shrink-0">
@@ -348,7 +348,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
         </table>
       </div>
       
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-white/10">
         <div className="text-muted-foreground text-sm flex justify-between items-center">
           <div>
             Showing {sortedTokens.length} token{sortedTokens.length !== 1 ? 's' : ''}
