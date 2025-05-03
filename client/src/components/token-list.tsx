@@ -291,7 +291,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                           <div className="text-xs text-muted-foreground">{token.symbol}</div>
                           {token.exchange && (
                             <div className="text-xs bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded-md border border-purple-500/30 flex-shrink-0">
-                              {token.exchange}
+                              {token.exchange === "PulseX" || token.exchange === "PulseX v2" || token.exchange === "PancakeSwap v3" ? "9mm v3" : token.exchange}
                             </div>
                           )}
                           {token.securityScore && (
