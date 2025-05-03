@@ -124,9 +124,14 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
       <Card className="p-6 glass-card shadow-lg border-white/15">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-xl font-bold text-white">Wallet Overview</h2>
+            <h2 className="text-xl font-bold text-white flex items-center">
+              Wallet Overview
+              {existingBookmark && existingBookmark.label && (
+                <span className="ml-2 text-base font-medium">: <span className="gradient-text">{existingBookmark.label}</span></span>
+              )}
+            </h2>
             <div className="flex items-center mt-1">
-              <span className="text-sm text-muted-foreground mr-2">{wallet.address}</span>
+              <span className="text-sm text-muted-foreground mr-2 metallic-address">{wallet.address}</span>
               <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-white glass-card hover:bg-black/20 p-0.5">
                 <Copy className="h-4 w-4" />
               </Button>

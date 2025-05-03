@@ -238,3 +238,40 @@
     filter: drop-shadow(0 0 10px rgba(255, 0, 150, 0.2));
   }
 }
+
+/* Hex Gradient and Metallic Effects */
+.gradient-text {
+  background: linear-gradient(to right, 
+    #FFDE00, #FF9100, #FF0054, #6100FF, #00FFFF);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  position: relative;
+  font-weight: 600;
+}
+
+/* Metallic shine effect for wallet addresses */
+@keyframes metallic-shine {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.metallic-address {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(to right, 
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.2) 25%, 
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.2) 75%,
+    rgba(255, 255, 255, 0.1) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  background-size: 200% 100%;
+  animation: metallic-shine 5s linear infinite;
+  color: #B6B6B6;
+}
