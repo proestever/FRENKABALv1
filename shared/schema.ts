@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -83,3 +83,23 @@ export const insertTokenLogoSchema = createInsertSchema(tokenLogos).pick({
 
 export type InsertTokenLogo = z.infer<typeof insertTokenLogoSchema>;
 export type TokenLogo = typeof tokenLogos.$inferSelect;
+
+// Bookmark model for saving wallet addresses with custom labels
+export const bookmarks = pgTable("bookmarks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  walletAddress: text("wallet_address").notNull(),
+  label: text("label").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertBookmarkSchema = createInsertSchema(bookmarks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBookmark = z.infer<typeof insertBookmarkSchema>;
+export type Bookmark = typeof bookmarks.$inferSelect;
