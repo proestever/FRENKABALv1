@@ -11,6 +11,7 @@ import {
 } from '../types';
 import { storage } from '../storage';
 import { InsertTokenLogo } from '@shared/schema';
+import { updateLoadingProgress } from '../routes';
 
 // Constants
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
@@ -307,10 +308,26 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       // Process tokens in batches to avoid overwhelming API
       const BATCH_SIZE = 5; // Process 5 tokens at a time
       const processedTokens: ProcessedToken[] = [];
+      const totalBatches = Math.ceil(moralisTokens.length/BATCH_SIZE);
+      
+      // Initialize loading progress
+      updateLoadingProgress({
+        status: 'loading',
+        currentBatch: 0,
+        totalBatches,
+        message: 'Processing token data...'
+      });
       
       // Process tokens in batches
       for (let i = 0; i < moralisTokens.length; i += BATCH_SIZE) {
-        console.log(`Processing token batch ${i/BATCH_SIZE + 1}/${Math.ceil(moralisTokens.length/BATCH_SIZE)}`);
+        const currentBatch = Math.floor(i/BATCH_SIZE) + 1;
+        console.log(`Processing token batch ${currentBatch}/${totalBatches}`);
+        
+        // Update loading progress
+        updateLoadingProgress({
+          currentBatch,
+          message: `Processing token batch ${currentBatch}/${totalBatches}...`
+        });
         
         const batch = moralisTokens.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(batch.map(async (item: any) => {
@@ -413,6 +430,13 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       // Calculate total value
       const totalValue = tokens.reduce((sum, token) => sum + (token.value || 0), 0);
       
+      // Update loading progress to complete
+      updateLoadingProgress({
+        status: 'complete',
+        currentBatch: totalBatches,
+        message: 'Data loaded successfully'
+      });
+      
       return {
         address: walletAddress,
         tokens,
@@ -467,10 +491,26 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     console.log(`Processing ${tokens.length} tokens in batches for price data...`);
     const BATCH_SIZE = 5; // Process 5 tokens at a time
     const tokensWithPrice: ProcessedToken[] = [];
+    const totalBatches = Math.ceil(tokens.length/BATCH_SIZE);
+    
+    // Initialize loading progress for fallback method
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: 0,
+      totalBatches,
+      message: 'Processing token price data...'
+    });
     
     // Process tokens in batches
     for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
-      console.log(`Processing fallback token batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(tokens.length/BATCH_SIZE)}`);
+      const currentBatch = Math.floor(i/BATCH_SIZE) + 1;
+      console.log(`Processing fallback token batch ${currentBatch}/${totalBatches}`);
+      
+      // Update loading progress
+      updateLoadingProgress({
+        currentBatch,
+        message: `Processing price data batch ${currentBatch}/${totalBatches}...`
+      });
       
       const batch = tokens.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(batch.map(async (token) => {
@@ -579,6 +619,13 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       console.log(`PLS token not found in fallback. Tokens: ${tokensWithPrice.map(t => t.symbol).join(', ')}`);
     }
     
+    // Update loading progress to complete
+    updateLoadingProgress({
+      status: 'complete',
+      currentBatch: totalBatches,
+      message: 'Data loaded successfully'
+    });
+    
     return {
       address: walletAddress,
       tokens: tokensWithPrice,
@@ -590,6 +637,13 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     };
   } catch (error) {
     console.error('Error in getWalletData:', error);
+    
+    // Update loading progress to error state
+    updateLoadingProgress({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'An unexpected error occurred'
+    });
+    
     throw error;
   }
 }
