@@ -25,6 +25,11 @@ export default function Home() {
     isFetching 
   } = useQuery<Wallet, Error>({
     queryKey: searchedAddress ? [`/api/wallet/${searchedAddress}`] : [],
+    queryFn: async () => {
+      if (!searchedAddress) throw new Error('No address provided');
+      console.log('Fetching wallet data for:', searchedAddress);
+      return fetchWalletData(searchedAddress);
+    },
     enabled: !!searchedAddress,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 2 * 60 * 1000, // 2 minutes (previously cacheTime in v4)
@@ -32,9 +37,16 @@ export default function Home() {
     refetchOnWindowFocus: false // Don't refetch when window gets focus
   });
   
+  // Debug wallet data
+  useEffect(() => {
+    console.log('Wallet data changed:', walletData);
+    console.log('isLoading:', isLoading, 'isFetching:', isFetching, 'isError:', isError);
+  }, [walletData, isLoading, isFetching, isError]);
+
   // Handle errors
   useEffect(() => {
     if (isError && error) {
+      console.error('Error fetching wallet data:', error);
       toast({
         title: "Error loading wallet data",
         description: error instanceof Error ? error.message : "An unknown error occurred",
@@ -67,18 +79,20 @@ export default function Home() {
       {/* Loading Progress Bar - only shows during loading */}
       <LoadingProgress isLoading={isLoading || isFetching} />
       
-      {searchedAddress && walletData && !isError && (
+      {searchedAddress && !isLoading && !isFetching && walletData && !isError && (
         <>
-          <WalletOverview 
-            wallet={walletData} 
-            isLoading={isLoading || isFetching} 
-            onRefresh={handleRefresh} 
-          />
-          <TokenList 
-            tokens={walletData.tokens} 
-            isLoading={isLoading || isFetching} 
-            hasError={isError} 
-          />
+          <div className="mt-4">
+            <WalletOverview 
+              wallet={walletData} 
+              isLoading={isLoading || isFetching} 
+              onRefresh={handleRefresh} 
+            />
+            <TokenList 
+              tokens={walletData.tokens} 
+              isLoading={isLoading || isFetching} 
+              hasError={isError} 
+            />
+          </div>
         </>
       )}
       

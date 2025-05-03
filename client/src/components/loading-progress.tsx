@@ -39,8 +39,11 @@ export function LoadingProgress({ isLoading }: LoadingProgressProps) {
     }
   }, [progressPercent, animatedProgress]);
   
-  // Don't show anything if we're not loading or if there are no batches to process
-  if (!isLoading || progress.status === 'idle' || progress.totalBatches === 0) {
+  // Check loading state and progress
+  const shouldShow = isLoading && progress.status !== 'idle' && progress.totalBatches > 0 && progress.status !== 'complete';
+  
+  // Don't show anything if not in loading state
+  if (!shouldShow) {
     return null;
   }
   
