@@ -48,19 +48,23 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full pr-32 glass-card border-white/15 text-foreground bg-black/10"
+              className="w-full pr-10 glass-card border-white/15 text-foreground bg-black/10"
               disabled={isLoading}
             />
-            <div className="absolute right-1 top-1">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <Button 
                 onClick={handleSearch}
                 disabled={isLoading || !searchQuery.trim()}
-                className="relative glass-highlight overflow-hidden border border-transparent bg-gradient-to-r from-[rgba(255,0,150,0.8)] to-[rgba(0,150,255,0.8)] hover:opacity-90 text-white"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full hover:bg-white/10 transition-colors"
+                aria-label="Search"
               >
-                <div className="flex items-center">
-                  <Search className="h-4 w-4 mr-1" />
-                  <span>{isLoading ? 'Loading...' : 'Search'}</span>
-                </div>
+                {isLoading ? (
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Search className="h-5 w-5 text-white" />
+                )}
               </Button>
             </div>
           </div>
