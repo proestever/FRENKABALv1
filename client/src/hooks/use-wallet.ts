@@ -6,6 +6,7 @@ interface UseWalletReturn {
   isConnected: boolean;
   account: string | null;
   chainId: number | null;
+  userId: number | null;
   connect: () => Promise<void>;
   disconnect: () => void;
   isConnecting: boolean;

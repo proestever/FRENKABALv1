@@ -114,15 +114,17 @@ export class DatabaseStorage implements IStorage {
   
   async getBookmarkByAddress(userId: number, walletAddress: string): Promise<Bookmark | undefined> {
     const addressLower = walletAddress.toLowerCase();
-    const [bookmark] = await db
+    
+    // Get all bookmarks for this user
+    const userBookmarks = await db
       .select()
       .from(bookmarks)
-      .where(
-        eq(bookmarks.userId, userId)
-      );
+      .where(eq(bookmarks.userId, userId));
       
-    // Filter for the wallet address in JavaScript since we're having issues with the SQL query
-    return bookmark && bookmark.walletAddress.toLowerCase() === addressLower ? bookmark : undefined;
+    // Find the bookmark with the matching wallet address (case-insensitive)
+    return userBookmarks.find(bookmark => 
+      bookmark.walletAddress.toLowerCase() === addressLower
+    );
   }
   
   async createBookmark(bookmark: InsertBookmark): Promise<Bookmark> {

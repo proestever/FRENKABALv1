@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice } from "./services/api";
 import { z } from "zod";
-import { TokenLogo, insertBookmarkSchema } from "@shared/schema";
+import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -427,6 +427,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error saving token logo:", error);
       return res.status(500).json({ 
         message: "Failed to save token logo",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // User API Routes
+  app.post("/api/users/wallet", async (req, res) => {
+    try {
+      const { walletAddress } = req.body;
+      
+      if (!walletAddress || typeof walletAddress !== 'string') {
+        return res.status(400).json({ message: "Valid wallet address is required" });
+      }
+      
+      // Create a deterministic username from the wallet address
+      const username = `wallet_${walletAddress.toLowerCase()}`;
+      
+      // Generate a deterministic password (not secure, but suitable for this demo)
+      const password = `pwd_${walletAddress.toLowerCase()}`;
+      
+      // Check if user already exists
+      let user = await storage.getUserByUsername(username);
+      
+      if (!user) {
+        // Create a new user
+        user = await storage.createUser({
+          username,
+          password
+        });
+      }
+      
+      return res.json({ 
+        id: user.id,
+        username: user.username
+      });
+    } catch (error) {
+      console.error("Error getting/creating user from wallet:", error);
+      return res.status(500).json({ 
+        message: "Failed to get/create user",
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
