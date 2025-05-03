@@ -6,6 +6,7 @@ import { TokenList } from '@/components/token-list';
 import { EmptyState } from '@/components/empty-state';
 import { fetchWalletData, saveRecentAddress } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { Wallet } from '@shared/schema';
 
 // Example wallet address
 const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
@@ -19,17 +20,16 @@ export default function Home() {
     isLoading, 
     isError, 
     error, 
-    refetch 
-  } = useQuery<any>({
+    refetch,
+    isFetching 
+  } = useQuery<Wallet>({
     queryKey: searchedAddress ? [`/api/wallet/${searchedAddress}`] : [],
     enabled: !!searchedAddress,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 2 * 60 * 1000, // 2 minutes (previously cacheTime in v4)
     retry: 1,
-    onSuccess: (data: any) => {
-      console.log('Wallet data loaded:', data);
-      console.log('PLS Balance:', data.plsBalance);
-    },
-    onError: (err: any) => {
+    refetchOnWindowFocus: false, // Don't refetch when window gets focus
+    onError: (err: unknown) => {
       toast({
         title: "Error loading wallet data",
         description: err instanceof Error ? err.message : "An unknown error occurred",
@@ -63,12 +63,12 @@ export default function Home() {
         <>
           <WalletOverview 
             wallet={walletData} 
-            isLoading={isLoading} 
+            isLoading={isLoading || isFetching} 
             onRefresh={handleRefresh} 
           />
           <TokenList 
             tokens={walletData.tokens} 
-            isLoading={isLoading} 
+            isLoading={isLoading || isFetching} 
             hasError={isError} 
           />
         </>
