@@ -71,16 +71,20 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               {wallet.totalValue !== undefined ? formatCurrency(wallet.totalValue) : 'N/A'}
             </div>
-            <div className={`text-sm mt-1 flex items-center ${totalValueChangeClass}`}>
-              <span>+2.34% (24h)</span>
+            <div className="text-sm mt-2 flex items-center">
+              <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
             </div>
           </div>
           
           <div className="bg-secondary rounded-lg p-4 border border-border">
             <div className="text-sm text-muted-foreground mb-1">Token Count</div>
-            <div className="text-2xl font-bold">{wallet.tokenCount || 0}</div>
-            <div className="text-sm mt-1 text-muted-foreground">
-              Across {wallet.networkCount || 1} networks
+            <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-accent bg-clip-text text-transparent">
+              {wallet.tokenCount || 0}
+            </div>
+            <div className="text-sm mt-2 flex items-center">
+              <span className="text-purple-400 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">
+                Across {wallet.networkCount || 1} networks
+              </span>
             </div>
           </div>
           
@@ -93,15 +97,20 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               />
               <div className="text-sm text-muted-foreground ml-2">PLS Balance</div>
             </div>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
               {wallet.plsBalance !== null && wallet.plsBalance !== undefined ? 
                 `${formatTokenAmount(wallet.plsBalance)} PLS` : 
                 'N/A'
               }
             </div>
             {wallet.plsPriceChange !== null && wallet.plsPriceChange !== undefined && (
-              <div className={`text-sm mt-1 flex items-center ${plsPriceChangeClass}`}>
-                <span>{wallet.plsPriceChange > 0 ? '+' : ''}{wallet.plsPriceChange.toFixed(1)}% (24h)</span>
+              <div className="text-sm mt-2 flex items-center">
+                <span className={wallet.plsPriceChange > 0 
+                  ? "text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium"
+                  : "text-red-400 border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 rounded-md font-medium"
+                }>
+                  {wallet.plsPriceChange > 0 ? '+' : ''}{wallet.plsPriceChange.toFixed(1)}% (24h)
+                </span>
               </div>
             )}
           </div>

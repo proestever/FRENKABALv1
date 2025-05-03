@@ -2,30 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark Purple/Blue Theme */
+/* Deep Purple Theme */
 :root {
-  /* Dark mode by default */
-  --background: 250 30% 8%;
-  --foreground: 220 20% 98%;
-  --muted: 245 25% 15%;
-  --muted-foreground: 220 20% 70%;
-  --popover: 250 30% 10%;
-  --popover-foreground: 220 20% 98%;
-  --card: 250 30% 12%;
-  --card-foreground: 220 20% 98%;
-  --border: 245 25% 20%;
-  --input: 245 25% 20%;
-  --primary: 270 85% 65%;
-  --primary-foreground: 220 20% 98%;
-  --secondary: 245 25% 20%;
-  --secondary-foreground: 220 20% 98%;
-  --accent: 270 60% 55%;
-  --accent-foreground: 220 20% 98%;
-  --destructive: 0 84.2% 60.2%;
+  /* Deeper dark mode by default */
+  --background: 260 35% 4%;
+  --foreground: 220 25% 98%;
+  --muted: 260 30% 12%;
+  --muted-foreground: 240 20% 75%;
+  --popover: 260 35% 6%;
+  --popover-foreground: 220 25% 98%;
+  --card: 260 35% 8%;
+  --card-foreground: 220 25% 98%;
+  --border: 260 30% 15%;
+  --input: 260 30% 15%;
+  --primary: 275 90% 65%;
+  --primary-foreground: 220 25% 98%;
+  --secondary: 260 30% 14%;
+  --secondary-foreground: 220 25% 98%;
+  --accent: 290 70% 60%;
+  --accent-foreground: 220 25% 98%;
+  --destructive: 0 90% 60%;
   --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 270 80% 45%;
-  --success: 135 70% 40%;
-  --error: 0 80% 50%;
+  --ring: 280 85% 45%;
+  --success: 135 80% 45%;
+  --error: 0 90% 55%;
   --radius: 0.5rem;
 }
 

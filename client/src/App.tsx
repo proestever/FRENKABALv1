@@ -94,7 +94,7 @@ function Footer() {
 function Router() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(120,50,255,0.15),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(255,70,200,0.1),transparent_50%)] pointer-events-none"></div>
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(150,70,255,0.2),transparent_70%),radial-gradient(ellipse_at_bottom_left,rgba(255,70,255,0.15),transparent_70%),radial-gradient(ellipse_at_center,rgba(80,30,180,0.1),transparent_100%)] pointer-events-none"></div>
       <Header />
       <div className="flex-grow relative z-10">
         <Switch>

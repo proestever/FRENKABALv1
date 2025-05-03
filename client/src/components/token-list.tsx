@@ -172,7 +172,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                         <div className="flex items-center gap-1">
                           <span className="text-sm font-medium text-foreground">{token.name}</span>
                           {token.verified && (
-                            <span className="text-success" title="Verified Contract">
+                            <span className="text-green-400" title="Verified Contract">
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                                 <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
                               </svg>
@@ -182,15 +182,15 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                         <div className="flex items-center gap-2">
                           <div className="text-xs text-muted-foreground">{token.symbol}</div>
                           {token.exchange && (
-                            <div className="text-xs bg-secondary text-muted-foreground px-1.5 py-0.5 rounded border border-border">
+                            <div className="text-xs bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded-md border border-purple-500/30">
                               {token.exchange}
                             </div>
                           )}
                           {token.securityScore && (
-                            <div className={`text-xs px-1.5 py-0.5 rounded border ${
-                              token.securityScore > 80 ? 'border-success/30 bg-success/10 text-success' :
-                              token.securityScore > 50 ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-500' :
-                              'border-error/30 bg-error/10 text-error'
+                            <div className={`text-xs px-1.5 py-0.5 rounded-md border ${
+                              token.securityScore > 80 ? 'border-green-500/30 bg-green-500/10 text-green-400' :
+                              token.securityScore > 50 ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400' :
+                              'border-red-500/30 bg-red-500/10 text-red-400'
                             }`}>
                               Score: {token.securityScore}
                             </div>
