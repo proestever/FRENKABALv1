@@ -35,9 +35,11 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
 
   return (
     <section className="mb-8">
-      <Card>
+      <Card className="border-border shadow-lg backdrop-blur-sm bg-card/70">
         <CardContent className="pt-6">
-          <h2 className="text-lg font-semibold mb-4">Track Any PulseChain Wallet</h2>
+          <h2 className="text-lg font-semibold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Track Any PulseChain Wallet
+          </h2>
           
           <div className="relative">
             <Input
@@ -46,14 +48,14 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full pr-32"
+              className="w-full pr-32 bg-secondary border-border text-foreground"
               disabled={isLoading}
             />
             <div className="absolute right-1 top-1">
               <Button 
                 onClick={handleSearch}
                 disabled={isLoading || !searchQuery.trim()}
-                className="bg-primary-500 hover:bg-primary-600"
+                className="bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white"
               >
                 <div className="flex items-center">
                   <Search className="h-4 w-4 mr-1" />
@@ -65,13 +67,13 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
           
           {recentAddresses.length > 0 && (
             <div className="mt-3">
-              <div className="flex items-center gap-x-2 text-sm text-secondary-600 flex-wrap">
+              <div className="flex items-center gap-x-2 text-sm text-muted-foreground flex-wrap">
                 <span>Recent:</span>
                 {recentAddresses.map((address) => (
                   <button
                     key={address}
                     onClick={() => handleRecentAddressClick(address)}
-                    className="px-2 py-1 text-xs bg-secondary-100 text-secondary-600 rounded-md hover:bg-secondary-200 transition"
+                    className="px-2 py-1 text-xs bg-secondary border border-border text-foreground rounded-md hover:bg-secondary/80 transition"
                   >
                     {truncateAddress(address)}
                   </button>
