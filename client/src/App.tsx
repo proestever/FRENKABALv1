@@ -53,37 +53,47 @@ function Header() {
     }
   };
 
-  const connectButton = (
-    <>
-      {isConnected && account ? (
+  // Define button styles with responsive variants
+  const getButtonClass = (isMobile = false) => {
+    return `${isMobile ? 'px-2 py-1 text-xs' : 'px-4 py-2 text-sm'} font-medium relative overflow-hidden border border-white/30 bg-black/20 text-white rounded-md hover:bg-black/30 transition-all focus:outline-none connect-button flex items-center`;
+  };
+
+  // Connected/disconnected button logic for desktop and mobile
+  const renderConnectButton = (isMobile = false) => {
+    const iconSize = isMobile ? "w-3 h-3 mr-1" : "w-4 h-4 mr-2";
+    
+    if (isConnected && account) {
+      return (
         <button 
           onClick={disconnect}
-          className="px-4 py-2 text-sm font-medium relative overflow-hidden border border-white/30 bg-black/20 text-white rounded-md hover:bg-black/30 transition-all focus:outline-none connect-button flex items-center"
+          className={getButtonClass(isMobile)}
         >
-          <Wallet className="w-4 h-4 mr-2" />
+          <Wallet className={iconSize} />
           {formatAccount(account)}
         </button>
-      ) : (
+      );
+    } else {
+      return (
         <button 
           onClick={handleConnectClick}
           disabled={isConnecting}
-          className="px-4 py-2 text-sm font-medium relative overflow-hidden border border-white/30 bg-black/20 text-white rounded-md hover:bg-black/30 transition-all focus:outline-none connect-button flex items-center"
+          className={getButtonClass(isMobile)}
         >
           {isConnecting ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              <span className="md:inline">Connecting...</span>
+              <Loader2 className={`${iconSize} animate-spin`} />
+              <span>Connecting...</span>
             </>
           ) : (
             <>
-              <Wallet className="w-4 h-4 mr-2" />
-              <span className="md:inline">Connect</span>
+              <Wallet className={iconSize} />
+              <span>Connect</span>
             </>
           )}
         </button>
-      )}
-    </>
-  );
+      );
+    }
+  };
 
   return (
     <header className="backdrop-blur-md bg-black/10 shadow-md border-b border-white/15 sticky top-0 z-30">
@@ -119,18 +129,12 @@ function Header() {
           <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
             <Menu className="w-6 h-6" />
           </button>
-          {connectButton}
+          {renderConnectButton(false)}
         </div>
       </div>
       
       {/* Mobile header */}
       <div className="container mx-auto px-4 py-3 md:hidden">
-        {/* Top row: connect button centered at the top */}
-        <div className="flex justify-center mb-3">
-          {connectButton}
-        </div>
-        
-        {/* Bottom row: logo left, menu right */}
         <div className="grid grid-cols-3 items-center">
           {/* Left area: logo */}
           <div className="col-span-1 flex items-center">
@@ -143,8 +147,9 @@ function Header() {
             </a>
           </div>
           
-          {/* Center area: empty */}
+          {/* Center area: connect wallet button */}
           <div className="col-span-1 flex justify-center">
+            {renderConnectButton(true)}
           </div>
           
           {/* Right area: menu button */}
