@@ -142,18 +142,13 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
               </SelectContent>
             </Select>
             
-            <div className="flex items-center gap-2 px-3 h-10 rounded-md border border-border bg-secondary">
-              <div className="flex items-center text-sm gap-2">
-                <div className="text-purple-400">
-                  {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
-                </div>
-                <span>{showHidden ? "Show Hidden" : "Hide Hidden"}</span>
-              </div>
-              <Switch
-                checked={showHidden}
-                onCheckedChange={setShowHidden}
-              />
-            </div>
+            <button
+              onClick={() => setShowHidden(!showHidden)}
+              className={`p-2 rounded-md hover:bg-secondary/80 border border-border bg-secondary ${showHidden ? 'text-purple-400' : 'text-muted-foreground'}`}
+              title={showHidden ? "Hide hidden tokens" : "Show hidden tokens"}
+            >
+              {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
         </div>
       </div>
