@@ -4,6 +4,7 @@ import { Wallet } from '@shared/schema';
 import { ExternalLink, Copy, RotateCw } from 'lucide-react';
 import { formatCurrency, formatTokenAmount, getChangeColorClass, truncateAddress } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { TokenLogo } from '@/components/token-logo';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -25,7 +26,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
     });
   };
 
-  const plsPriceChangeClass = getChangeColorClass(wallet.plsPriceChange);
+  const plsPriceChangeClass = getChangeColorClass(wallet.plsPriceChange || 0);
   const totalValueChangeClass = 'text-success'; // This would be dynamic if we had portfolio change data
 
   return (
@@ -84,7 +85,14 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
           </div>
           
           <div className="bg-secondary-50 rounded-lg p-4">
-            <div className="text-sm text-secondary-500 mb-1">PLS Balance</div>
+            <div className="flex items-center mb-2">
+              <TokenLogo 
+                address="0x5616458eb2bAc88dD60a4b08F815F37335215f9B" /* PLS token address */
+                symbol="PLS"
+                size="sm"
+              />
+              <div className="text-sm text-secondary-500 ml-2">PLS Balance</div>
+            </div>
             <div className="text-2xl font-bold">
               {wallet.plsBalance !== null ? 
                 `${formatTokenAmount(wallet.plsBalance)} PLS` : 

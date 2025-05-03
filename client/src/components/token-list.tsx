@@ -6,6 +6,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { Token } from '@shared/schema';
 import { Search, ArrowDownUp } from 'lucide-react';
 import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass } from '@/lib/utils';
+import { TokenLogo } from '@/components/token-logo';
 
 interface TokenListProps {
   tokens: Token[];
@@ -168,20 +169,12 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                 <tr key={token.address} className="hover:bg-secondary-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 mr-3 rounded-full flex items-center justify-center bg-secondary-200 overflow-hidden">
-                        {token.logo ? (
-                          <img 
-                            src={token.logo} 
-                            alt={token.symbol} 
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'https://cryptologos.cc/logos/placeholder-logo.png';
-                            }}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="text-xs font-bold text-secondary-600">{token.symbol.substring(0, 2).toUpperCase()}</span>
-                        )}
+                      <div className="mr-3">
+                        <TokenLogo 
+                          address={token.address}
+                          symbol={token.symbol}
+                          fallbackLogo={token.logo}
+                        />
                       </div>
                       <div>
                         <div className="flex items-center gap-1">
