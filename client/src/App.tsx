@@ -29,9 +29,9 @@ function Header() {
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center">
           <FrenKabalLogo size="md" className="mr-3" />
-          <div className="flex flex-col">
+          <div className="flex items-center">
             <h1 className="text-xl md:text-2xl font-bold text-white">FrenKabal</h1>
-            <p className="text-xs md:text-sm text-muted-foreground">PulseChain Wallet Tracker</p>
+            <span className="ml-2 text-xs font-bold px-2 py-0.5 rounded bg-gradient-to-r from-[#e81cff] via-[#40c9ff] to-[#e81cff] bg-size-200 animate-gradient-x text-white uppercase tracking-wider shadow-lg border border-white/20" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Beta</span>
           </div>
         </div>
         
