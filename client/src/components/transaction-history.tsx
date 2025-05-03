@@ -712,11 +712,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       {/* Load More Button (if there are more transactions) */}
       {hasMore && (
         <div className="p-6 flex justify-center">
-          <Button 
-            variant="secondary" 
+          <button 
             onClick={loadMoreTransactions}
             disabled={isLoadingMore}
-            className="w-full max-w-md"
+            className="w-full max-w-md flex items-center justify-center px-3 py-2 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoadingMore ? (
               <span className="flex items-center">
@@ -729,7 +728,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 Load More Transactions
               </span>
             )}
-          </Button>
+          </button>
         </div>
       )}
     </Card>
