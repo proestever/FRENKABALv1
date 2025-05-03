@@ -114,7 +114,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
   }
 
   return (
-    <Card className="shadow-lg glass-card glass-highlight">
+    <Card className="shadow-lg glass-card">
       <div className="p-6 border-b border-border">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h2 className="text-xl font-bold text-white">
@@ -170,7 +170,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
             const isHidden = hiddenTokens.includes(token.address);
             
             return (
-              <div key={token.address} className="p-5 glass-card rounded-lg hover:bg-black/20 transition-colors glass-highlight">
+              <div key={token.address} className="p-5 glass-card rounded-lg hover:bg-black/20 transition-colors">
                 <div className="flex items-center justify-between">
                   {/* Token Info */}
                   <div className="flex items-center flex-grow">

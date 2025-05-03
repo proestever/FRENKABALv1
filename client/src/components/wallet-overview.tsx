@@ -122,7 +122,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             </div>
           </div>
           
-          <div className="glass-card rounded-lg p-4 glass-highlight border-white/15">
+          <div className="glass-card rounded-lg p-4 border-white/15">
             <div className="flex items-center mb-2">
               <TokenLogo 
                 address="0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" /* PLS native token address */
