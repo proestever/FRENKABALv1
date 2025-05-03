@@ -162,6 +162,51 @@
   transition: all 0.5s ease;
 }
 
+.connect-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px rgba(0, 150, 255, 0.1);
+  animation: button-glow 5s ease-in-out infinite;
+}
+
+.connect-button:hover {
+  box-shadow: 0 0 15px rgba(0, 150, 255, 0.3), 0 0 20px rgba(200, 0, 255, 0.2);
+  animation: none;
+}
+
+@keyframes button-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(0, 150, 255, 0.1);
+  }
+  33% {
+    box-shadow: 0 0 12px rgba(200, 0, 255, 0.15);
+  }
+  66% {
+    box-shadow: 0 0 12px rgba(255, 0, 150, 0.1);
+  }
+}
+
+.connect-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, 
+    rgba(0, 150, 255, 0.05),
+    rgba(200, 0, 255, 0.05), 
+    rgba(255, 0, 150, 0.05));
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.3s ease;
+}
+
+.connect-button:hover::after {
+  opacity: 1;
+}
+
 @keyframes logo-pulse {
   0%, 100% {
     filter: drop-shadow(0 0 8px rgba(0, 150, 255, 0.2));

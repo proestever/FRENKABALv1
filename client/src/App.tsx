@@ -29,8 +29,8 @@ function Header() {
             </svg>
             Help
           </button>
-          <button className="px-4 py-2 text-sm font-medium relative overflow-hidden border border-transparent bg-gradient-to-r from-[rgba(255,0,150,0.8)] to-[rgba(0,150,255,0.8)] text-white rounded-md hover:opacity-90 transition focus:outline-none">
-            Connect Wallet
+          <button className="px-4 py-2 text-sm font-medium relative overflow-hidden border border-white/30 bg-black/20 text-white rounded-md hover:bg-black/30 transition-all focus:outline-none connect-button">
+            Connect
           </button>
         </div>
       </div>
