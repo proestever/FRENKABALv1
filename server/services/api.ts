@@ -289,16 +289,24 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
  */
 export async function getWalletTransactionHistory(
   walletAddress: string, 
-  limit: number = 100, 
+  limit: number = 200, 
   cursorParam: string | null = null
 ): Promise<any> {
   try {
     console.log(`Fetching transaction history for ${walletAddress} from Moralis (limit: ${limit}, cursor: ${cursorParam || 'none'})`);
     
+    // Ensure Moralis is initialized with the API key
+    if (!Moralis.Core.isStarted) {
+      await Moralis.start({
+        apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98"
+      });
+    }
+    
+    // Use the exact parameters shown to match the working example
     const params: any = {
-      chain: "0x171", // PulseChain chain hex ID
-      address: walletAddress,
+      chain: "pulse", // Use "pulse" instead of hex ID
       order: "DESC",
+      address: walletAddress,
       limit: limit
     };
     
@@ -307,10 +315,15 @@ export async function getWalletTransactionHistory(
       params.cursor = cursorParam;
     }
     
+    // Log the exact parameters we're using to help debug
+    console.log("Fetching transactions with params:", JSON.stringify(params));
+    
     const response = await Moralis.EvmApi.wallets.getWalletHistory(params);
     
-    // Extract data from the raw response (which is returned as a plain object)
+    // Extract data from the raw response
     const responseData = response.raw as any;
+    console.log(`Transaction response cursor: ${responseData?.cursor || 'none'}`);
+    
     const result = responseData?.result || [];
     const cursor = responseData?.cursor || null;
     const page = responseData?.page || 0;
