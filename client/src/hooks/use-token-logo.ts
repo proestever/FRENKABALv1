@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import customTokenLogo from '../assets/100xfrenlogo.png';
 
 const logoCache: Record<string, string> = {};
 
@@ -9,7 +10,7 @@ const logoCache: Record<string, string> = {};
  * @returns The token logo URL
  */
 export function useTokenLogo(tokenAddress: string, fallbackLogo?: string): string {
-  const [logoUrl, setLogoUrl] = useState<string>(fallbackLogo || 'https://cryptologos.cc/logos/placeholder-logo.png');
+  const [logoUrl, setLogoUrl] = useState<string>(fallbackLogo || customTokenLogo);
   
   useEffect(() => {
     // If this token is already in our cache, use it

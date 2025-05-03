@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Pagination } from '@/components/ui/pagination';
 import { Token } from '@shared/schema';
 import { Search, ArrowDownUp } from 'lucide-react';
 import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass } from '@/lib/utils';
@@ -17,10 +16,8 @@ interface TokenListProps {
 type SortOption = 'value' | 'balance' | 'name' | 'price' | 'change';
 
 export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
-  const [currentPage, setCurrentPage] = useState(1);
   const [filterText, setFilterText] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('value');
-  const itemsPerPage = 5;
 
   // Filter tokens
   const filteredTokens = useMemo(() => {
@@ -49,13 +46,6 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
       }
     });
   }, [filteredTokens, sortBy]);
-
-  // Paginate tokens
-  const totalPages = Math.ceil(sortedTokens.length / itemsPerPage);
-  const paginatedTokens = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return sortedTokens.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedTokens, currentPage]);
 
   // Handle loading state
   if (isLoading) {
@@ -162,7 +152,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-secondary-200">
-            {paginatedTokens.map((token) => {
+            {sortedTokens.map((token) => {
               const priceChangeClass = getChangeColorClass(token.priceChange24h);
               
               return (
@@ -239,18 +229,11 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
         </table>
       </div>
       
-      {totalPages > 1 && (
-        <div className="p-4 border-t border-secondary-200 flex justify-between items-center">
-          <div className="text-secondary-500 text-sm">
-            Showing {paginatedTokens.length} of {sortedTokens.length} tokens
-          </div>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+      <div className="p-4 border-t border-secondary-200">
+        <div className="text-secondary-500 text-sm">
+          Showing all {sortedTokens.length} tokens
         </div>
-      )}
+      </div>
     </Card>
   );
 }

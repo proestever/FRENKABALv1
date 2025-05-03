@@ -1,4 +1,5 @@
 import { useTokenLogo } from '@/hooks/use-token-logo';
+import customTokenLogo from '../assets/100xfrenlogo.png';
 
 interface TokenLogoProps {
   address: string;
@@ -35,12 +36,17 @@ export function TokenLogo({ address, symbol, size = 'md', fallbackLogo }: TokenL
           alt={symbol} 
           className="w-full h-full object-cover"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://cryptologos.cc/logos/placeholder-logo.png';
+            (e.target as HTMLImageElement).src = customTokenLogo;
           }}
           loading="lazy"
         />
       ) : (
-        <span className={`${textSizeClasses[size]} font-bold text-secondary-600`}>{initials}</span>
+        <img 
+          src={customTokenLogo} 
+          alt={symbol} 
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
       )}
     </div>
   );
