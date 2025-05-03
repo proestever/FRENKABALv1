@@ -306,7 +306,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       console.log(`Got wallet data from Moralis with ${moralisTokens.length} tokens`);
       
       // Process tokens in batches to avoid overwhelming API
-      const BATCH_SIZE = 5; // Process 5 tokens at a time
+      const BATCH_SIZE = 15; // Process 15 tokens at a time (increased from 5 for faster loading)
       const processedTokens: ProcessedToken[] = [];
       const totalBatches = Math.ceil(moralisTokens.length/BATCH_SIZE);
       
@@ -489,7 +489,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     
     // Process tokens in batches to avoid overwhelming API
     console.log(`Processing ${tokens.length} tokens in batches for price data...`);
-    const BATCH_SIZE = 5; // Process 5 tokens at a time
+    const BATCH_SIZE = 15; // Process 15 tokens at a time (increased from 5 for faster loading)
     const tokensWithPrice: ProcessedToken[] = [];
     const totalBatches = Math.ceil(tokens.length/BATCH_SIZE);
     

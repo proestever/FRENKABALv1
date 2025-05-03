@@ -4,6 +4,7 @@ import { SearchSection } from '@/components/search-section';
 import { WalletOverview } from '@/components/wallet-overview';
 import { TokenList } from '@/components/token-list';
 import { EmptyState } from '@/components/empty-state';
+import { LoadingProgress } from '@/components/loading-progress';
 import { fetchWalletData, saveRecentAddress } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Wallet, Token } from '@shared/schema';
@@ -62,6 +63,9 @@ export default function Home() {
   return (
     <main className="container mx-auto px-4 py-6">
       <SearchSection onSearch={handleSearch} isLoading={isLoading} />
+      
+      {/* Loading Progress Bar - only shows during loading */}
+      <LoadingProgress isLoading={isLoading || isFetching} />
       
       {searchedAddress && walletData && !isError && (
         <>
