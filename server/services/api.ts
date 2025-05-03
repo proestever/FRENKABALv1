@@ -3,7 +3,8 @@ import Moralis from 'moralis';
 import { 
   ProcessedToken, 
   PulseChainTokenBalanceResponse, 
-  PulseChainTokenBalance, 
+  PulseChainTokenBalance,
+  PulseChainAddressResponse, 
   MoralisTokenPriceResponse, 
   MoralisWalletTokenBalancesResponse,
   WalletData 
@@ -16,6 +17,8 @@ const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98';
 const PLS_TOKEN_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'; // PulseChain native token is 0xeee...eee 
 const PLS_CONTRACT_ADDRESS = '0x5616458eb2bAc88dD60a4b08F815F37335215f9B'; // Alternative PLS contract address
+const PLS_DECIMALS = 18; // Native PLS has 18 decimals
+const PLS_PRICE_USD = 0.000029; // Approximate placeholder price if API fails
 
 // Initialize Moralis
 try {
@@ -24,6 +27,44 @@ try {
   }).then(() => console.log('Moralis initialized successfully'));
 } catch (error) {
   console.error('Failed to initialize Moralis:', error);
+}
+
+/**
+ * Get native PLS balance for a wallet address directly from PulseChain Scan API
+ */
+export async function getNativePlsBalance(walletAddress: string): Promise<{balance: string, balanceFormatted: number} | null> {
+  try {
+    console.log(`Fetching native PLS balance for ${walletAddress} from PulseChain Scan API`);
+    
+    // Using the direct address endpoint which includes the native PLS balance
+    const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}`);
+    
+    if (!response.ok) {
+      console.log(`PulseChain API response status for native balance: ${response.status} ${response.statusText}`);
+      return null;
+    }
+    
+    const data = await response.json() as PulseChainAddressResponse;
+    
+    // Extract the coin balance which represents native PLS
+    const coinBalance = data.coin_balance;
+    if (coinBalance === undefined) {
+      console.log('Could not find coin_balance in PulseChain Scan API response');
+      return null;
+    }
+    
+    // Format the balance from wei to PLS (divide by 10^18)
+    const balanceFormatted = parseFloat(coinBalance) / Math.pow(10, PLS_DECIMALS);
+    console.log(`Native PLS balance for ${walletAddress}: ${balanceFormatted} PLS (raw: ${coinBalance})`);
+    
+    return {
+      balance: coinBalance,
+      balanceFormatted
+    };
+  } catch (error) {
+    console.error('Error fetching native PLS balance:', error);
+    return null;
+  }
 }
 
 /**
@@ -359,15 +400,38 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       };
     }
     
-    // Fallback to the original implementation if Moralis data is not available
-    console.log('Falling back to PulseChain Scan API for token balances');
+    // Fallback to the PulseChain Scan API for token balances and native PLS
+    console.log('Falling back to PulseChain Scan API for token balances and native PLS');
+    
+    // Get native PLS balance directly from PulseChain Scan API
+    const nativePlsBalance = await getNativePlsBalance(walletAddress);
+    console.log(`Native PLS balance from direct API call: ${nativePlsBalance?.balanceFormatted || 'Not found'}`);
     
     // Get token balances from PulseChain Scan API
     const tokens = await getTokenBalances(walletAddress);
     
-    // If no tokens found, still return a valid response with empty tokens
-    if (tokens.length === 0) {
-      console.log(`No tokens found for wallet ${walletAddress}, returning empty data`);
+    // If we have a native PLS balance, add it as a token at the top of the list
+    if (nativePlsBalance) {
+      console.log(`Adding native PLS token with balance: ${nativePlsBalance.balanceFormatted}`);
+      
+      // Add native PLS token to the beginning of the token list
+      tokens.unshift({
+        address: PLS_TOKEN_ADDRESS,
+        symbol: 'PLS',
+        name: 'PulseChain',
+        decimals: PLS_DECIMALS,
+        balance: nativePlsBalance.balance,
+        balanceFormatted: nativePlsBalance.balanceFormatted,
+        price: PLS_PRICE_USD, // Use our default price
+        value: nativePlsBalance.balanceFormatted * PLS_PRICE_USD,
+        logo: getDefaultLogo('pls'),
+        isNative: true
+      });
+    }
+    
+    // If no tokens found and no native PLS, still return a valid response with empty data
+    if (tokens.length === 0 && !nativePlsBalance) {
+      console.log(`No tokens or native PLS found for wallet ${walletAddress}, returning empty data`);
       return {
         address: walletAddress,
         tokens: [],

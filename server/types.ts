@@ -18,6 +18,22 @@ export interface PulseChainTokenBalance {
   token_instance?: any | null;
 }
 
+export interface PulseChainAddressResponse {
+  address: string;
+  coin_balance: string; // Native PLS balance in wei
+  creator_address?: string | null;
+  implementation_address?: string | null;
+  implementation_name?: string | null;
+  name?: string | null;
+  is_contract: boolean;
+  is_verified: boolean;
+  private_tags?: string[];
+  public_tags?: string[];
+  watchlist_names?: string[];
+  tx_count: number;
+  created_at?: string;
+}
+
 // Moralis API response types
 export interface MoralisTokenPriceResponse {
   tokenName: string;
