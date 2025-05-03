@@ -287,7 +287,12 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
  */
 export async function getWalletData(walletAddress: string): Promise<WalletData> {
   try {
-    // Try to get data from Moralis first (includes PLS and tokens with prices)
+    // Always get native PLS balance directly from PulseChain Scan API (most reliable method)
+    console.log(`Getting native PLS balance for ${walletAddress} using direct API call`);
+    const nativePlsBalance = await getNativePlsBalance(walletAddress);
+    console.log(`Native PLS balance from direct API call: ${nativePlsBalance?.balanceFormatted || 'Not found'}`);
+    
+    // Try to get token data from Moralis (includes other tokens with prices)
     const moralisData = await getWalletTokenBalancesFromMoralis(walletAddress);
     
     // If we have Moralis data, use it
@@ -394,18 +399,14 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
         tokens,
         totalValue,
         tokenCount: tokens.length,
-        plsBalance: plsToken?.balanceFormatted || null,
+        plsBalance: nativePlsBalance?.balanceFormatted || plsToken?.balanceFormatted || null,
         plsPriceChange: plsToken?.priceChange24h || null,
         networkCount: 1 // Default to PulseChain network
       };
     }
     
-    // Fallback to the PulseChain Scan API for token balances and native PLS
-    console.log('Falling back to PulseChain Scan API for token balances and native PLS');
-    
-    // Get native PLS balance directly from PulseChain Scan API
-    const nativePlsBalance = await getNativePlsBalance(walletAddress);
-    console.log(`Native PLS balance from direct API call: ${nativePlsBalance?.balanceFormatted || 'Not found'}`);
+    // Fallback to the PulseChain Scan API for token balances (we already have the native PLS)
+    console.log('Falling back to PulseChain Scan API for token balances');
     
     // Get token balances from PulseChain Scan API
     const tokens = await getTokenBalances(walletAddress);
