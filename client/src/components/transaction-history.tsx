@@ -80,9 +80,9 @@ const getTransactionType = (tx: Transaction): TransactionType => {
       return 'swap';
     } else if (tx.method_label?.toLowerCase().includes('approve')) {
       return 'approval';
-    } else if (tx.erc20_transfers?.some(t => t.from_address.toLowerCase() === t.to_address.toLowerCase())) {
+    } else if (tx.erc20_transfers && tx.erc20_transfers.some(t => t.from_address.toLowerCase() === t.to_address.toLowerCase())) {
       return 'contract'; // Self-transfers are often contract interactions
-    } else if (tx.erc20_transfers?.length > 0) {
+    } else if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
       return 'send'; // Default for token transfers
     } else {
       return 'all'; // Default fallback
@@ -623,7 +623,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       {/* Mobile View */}
       <div className="block md:hidden">
         <div className="p-4 space-y-4">
-          {transactions.map((tx: Transaction) => (
+          {filteredTransactions.map((tx: Transaction) => (
             <div key={tx.hash} className="p-4 glass-card rounded-lg hover:bg-black/20 transition-colors">
               <div className="flex justify-between items-start mb-3">
                 <span className="text-xs font-medium text-muted-foreground">
@@ -795,7 +795,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
-            {transactions.map((tx: Transaction) => (
+            {filteredTransactions.map((tx: Transaction) => (
               <tr key={tx.hash} className="hover:bg-black/20 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-foreground">
@@ -895,7 +895,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   ))}
                   
                   {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
-                    <div key={`${tx.hash}-native-value-${i}`} className={`${(tx.erc20_transfers?.length || 0) > 0 || i > 0 ? 'mt-2' : ''}`}>
+                    <div key={`${tx.hash}-native-value-${i}`} className={`${(tx.erc20_transfers && tx.erc20_transfers.length > 0) || i > 0 ? 'mt-2' : ''}`}>
                       <div className={`text-sm ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
                         {transfer.direction === 'receive' ? '+' : '-'}
                         {transfer.value_formatted || formatTokenValue(transfer.value)} {transfer.token_symbol || 'PLS'}
