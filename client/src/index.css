@@ -145,10 +145,10 @@
   background: linear-gradient(
     90deg, 
     transparent, 
-    rgba(255, 255, 255, 0.05), 
+    rgba(255, 255, 255, 0.3), 
     transparent
   );
-  animation: shimmer 2s infinite;
+  animation: shimmer 1.5s infinite;
 }
 
 .card-glitter {
