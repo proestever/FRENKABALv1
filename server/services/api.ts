@@ -105,11 +105,42 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     const tokensWithPrice = await Promise.all(
       tokens.map(async (token) => {
         try {
+          // First, try to get logo from our database
+          let logoUrl = token.logo;
+          const storedLogo = await storage.getTokenLogo(token.address);
+          
+          if (storedLogo) {
+            logoUrl = storedLogo.logoUrl;
+          }
+          
           const priceData = await getTokenPrice(token.address);
           
           if (priceData) {
-            // Use tokenLogo from Moralis if available and our token doesn't have a logo
-            const logo = token.logo || priceData.tokenLogo || getDefaultLogo(token.symbol);
+            // If we don't have a logo yet and Moralis has one, use it and store it
+            if (!logoUrl && priceData.tokenLogo) {
+              logoUrl = priceData.tokenLogo;
+              
+              // Store the logo in our database for future use
+              try {
+                const newLogo: InsertTokenLogo = {
+                  tokenAddress: token.address,
+                  logoUrl: priceData.tokenLogo,
+                  symbol: priceData.tokenSymbol || token.symbol,
+                  name: priceData.tokenName || token.name,
+                  lastUpdated: new Date().toISOString()
+                };
+                
+                await storage.saveTokenLogo(newLogo);
+                console.log(`Stored logo for token ${token.symbol} (${token.address})`);
+              } catch (storageError) {
+                console.error(`Error storing logo for token ${token.address}:`, storageError);
+              }
+            }
+            
+            // If we still don't have a logo, use default
+            if (!logoUrl) {
+              logoUrl = getDefaultLogo(token.symbol);
+            }
             
             // Parse percent change as a number (remove the minus sign if present and convert)
             const percentChangeStr = priceData['24hrPercentChange'] || '0';
@@ -121,10 +152,18 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
               price: priceData.usdPrice,
               value: token.balanceFormatted * priceData.usdPrice,
               priceChange24h: priceData.usdPrice24hrPercentChange || percentChange || 0,
-              logo,
+              logo: logoUrl,
               exchange: priceData.exchangeName,
               verified: priceData.verifiedContract,
               securityScore: priceData.securityScore,
+            };
+          }
+          
+          // If we don't have price data, but have a stored logo, use it
+          if (storedLogo) {
+            return {
+              ...token,
+              logo: storedLogo.logoUrl,
             };
           }
           
