@@ -8,6 +8,9 @@ interface TokenLogoProps {
 }
 
 export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenLogoProps) {
+  // Debug log the props to see what's being passed in
+  console.log("TokenLogo props:", { address, symbol, fallbackLogo });
+  
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);

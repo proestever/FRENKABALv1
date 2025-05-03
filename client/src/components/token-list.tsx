@@ -297,11 +297,20 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="mr-3 flex-shrink-0">
+                            {/* Force use our PLS logo for PLS token */}
+                          {token.symbol === 'PLS' || token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? (
+                            <img 
+                              src="/assets/pls-logo-trimmed.png" 
+                              alt="PLS" 
+                              className="w-8 h-8 rounded-full object-cover border border-white/10"
+                            />
+                          ) : (
                             <TokenLogo 
                               address={token.address}
                               symbol={token.symbol}
                               fallbackLogo={token.logo}
                             />
+                          )}
                           </div>
                           <div>
                             <div className="flex items-center gap-1">

@@ -370,11 +370,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     {/* Native Transfers */}
                     {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
                       <div key={`${tx.hash}-native-${i}`} className="flex items-center mt-2">
-                        <TokenLogo 
-                          address="0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-                          symbol="PLS"
-                          fallbackLogo="/assets/pls-logo.png"
-                          size="sm"
+                        <img 
+                          src="/assets/pls-logo-trimmed.png"
+                          alt="PLS"
+                          className="w-6 h-6 rounded-full object-cover border border-white/10"
                         />
                         <div className="ml-2 flex items-center">
                           <div className="mr-1">
