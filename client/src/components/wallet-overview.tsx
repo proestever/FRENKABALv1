@@ -71,7 +71,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             <h2 className="text-xl font-bold text-white">Wallet Overview</h2>
             <div className="flex items-center mt-1">
               <span className="text-sm text-muted-foreground mr-2">{wallet.address}</span>
-              <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-foreground hover:text-primary">
+              <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-white glass-card hover:bg-black/20 p-0.5">
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
@@ -82,7 +82,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               href={`https://scan.pulsechain.com/address/${wallet.address}`}
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-primary hover:text-accent transition-colors text-sm flex items-center"
+              className="text-white glass-card hover:bg-black/20 transition-all text-sm flex items-center px-2 py-1 rounded-md border-white/15"
             >
               <ExternalLink className="h-4 w-4 mr-1" />
               View on PulseScan
@@ -92,7 +92,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               size="icon" 
               onClick={onRefresh}
               disabled={isLoading}
-              className="border-muted h-8 w-8 hover:bg-accent hover:text-accent-foreground"
+              className="glass-card border-white/15 h-8 w-8 hover:bg-black/20 hover:text-white"
             >
               <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
@@ -122,7 +122,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             </div>
           </div>
           
-          <div className="glass-card rounded-lg p-4 glass-highlight">
+          <div className="glass-card rounded-lg p-4 glass-highlight border-white/15">
             <div className="flex items-center mb-2">
               <TokenLogo 
                 address="0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" /* PLS native token address */
