@@ -7,14 +7,14 @@ interface TokenLogoProps {
   symbol: string;
   size?: 'sm' | 'md' | 'lg';
   fallbackLogo?: string;
+  rounded?: boolean; // Option to control if the logo container is rounded
 }
 
 /**
  * Component for displaying token logos with fallback
  */
-export function TokenLogo({ address, symbol, size = 'md', fallbackLogo }: TokenLogoProps) {
+export function TokenLogo({ address, symbol, size = 'md', fallbackLogo, rounded = true }: TokenLogoProps) {
   const logoUrl = useTokenLogo(address, fallbackLogo);
-  const initials = symbol.substring(0, 2).toUpperCase();
   
   // Size classes
   const sizeClasses = {
@@ -23,25 +23,19 @@ export function TokenLogo({ address, symbol, size = 'md', fallbackLogo }: TokenL
     lg: 'w-10 h-10'
   };
   
-  const textSizeClasses = {
-    sm: 'text-xs',
-    md: 'text-sm',
-    lg: 'text-base'
-  };
-  
   // Check if this is the native PLS token
   const isPLS = symbol.toLowerCase() === 'pls' || 
                address.toLowerCase() === '0x5616458eb2bac88dd60a4b08f815f37335215f9b' || 
                address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
   
   return (
-    <div className={`${sizeClasses[size]} rounded-full flex items-center justify-center bg-secondary/80 overflow-hidden border border-border/40 shadow-sm`}>
+    <div className={`${sizeClasses[size]} ${rounded ? 'rounded-full' : ''} flex items-center justify-center bg-secondary/80 overflow-hidden border border-border/40 shadow-sm`}>
       {isPLS ? (
         // Always use our custom PLS logo for the native token
         <img 
           src={plsLogo} 
           alt="PLS" 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain p-1"
           loading="lazy"
         />
       ) : logoUrl ? (
@@ -49,7 +43,7 @@ export function TokenLogo({ address, symbol, size = 'md', fallbackLogo }: TokenL
         <img 
           src={logoUrl} 
           alt={symbol} 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain p-1"
           onError={(e) => {
             (e.target as HTMLImageElement).src = customTokenLogo;
           }}
@@ -60,7 +54,7 @@ export function TokenLogo({ address, symbol, size = 'md', fallbackLogo }: TokenL
         <img 
           src={customTokenLogo} 
           alt={symbol} 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain p-1"
           loading="lazy"
         />
       )}
