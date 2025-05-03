@@ -7,7 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useWallet } from "@/hooks/use-wallet";
-import { Wallet, HelpCircle, Loader2 } from "lucide-react";
+import { Wallet, Menu, Loader2 } from "lucide-react";
 
 // Header component
 function Header() {
@@ -36,9 +36,8 @@ function Header() {
         </div>
         
         <div className="flex space-x-4 items-center">
-          <button className="hidden md:flex px-4 py-2 text-sm glass-card border-white/15 rounded-md hover:bg-black/20 transition text-white">
-            <HelpCircle className="w-4 h-4 mr-1" />
-            Help
+          <button className="flex px-4 py-2 text-sm glass-card border-white/15 rounded-md hover:bg-black/20 transition text-white">
+            <Menu className="w-4 h-4" />
           </button>
           
           {isConnected && account ? (
