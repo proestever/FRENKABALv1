@@ -264,14 +264,15 @@
   position: relative;
   overflow: hidden;
   background: linear-gradient(to right, 
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.2) 25%, 
-    rgba(255, 255, 255, 0.3) 50%,
-    rgba(255, 255, 255, 0.2) 75%,
-    rgba(255, 255, 255, 0.1) 100%);
+    rgba(74, 222, 128, 0.5) 0%,
+    rgba(74, 222, 128, 0.7) 25%, 
+    rgba(74, 222, 128, 0.9) 50%,
+    rgba(74, 222, 128, 0.7) 75%,
+    rgba(74, 222, 128, 0.5) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   background-size: 200% 100%;
   animation: metallic-shine 5s linear infinite;
   color: #B6B6B6;
+  font-weight: 600;
 }

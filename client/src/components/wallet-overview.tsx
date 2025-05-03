@@ -127,7 +127,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             <h2 className="text-xl font-bold text-white flex items-center">
               Wallet Overview
               {existingBookmark && existingBookmark.label && (
-                <span className="ml-2 text-base font-medium">: <span className="gradient-text">{existingBookmark.label}</span></span>
+                <span className="ml-2 text-base">: <span className="text-green-400 font-bold">{existingBookmark.label}</span></span>
               )}
             </h2>
             <div className="flex items-center mt-1">
