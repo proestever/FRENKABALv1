@@ -102,10 +102,10 @@
   height: 200%;
   background: linear-gradient(
     transparent, 
-    rgba(255, 255, 255, 0.02), 
+    rgba(255, 255, 255, 0.01), 
     transparent
   );
   transform: rotate(30deg);
   pointer-events: none;
-  filter: blur(3px);
+  filter: blur(4px);
 }
