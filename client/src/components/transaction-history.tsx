@@ -358,8 +358,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 <div className="text-sm font-medium">
                   {tx.summary || tx.method_label || 'Transaction'}
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {tx.category || 'Unknown type'}
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-muted-foreground">
+                    {tx.category || 'Unknown type'}
+                  </div>
+                  {tx.method_label && (
+                    <div className="text-xs px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary-foreground">
+                      {tx.method_label}
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -514,8 +521,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-foreground">
-                    {tx.category || (tx.method_label ? `Method: ${tx.method_label}` : 'Transaction')}
+                    {tx.category || 'Transaction'}
                   </div>
+                  {tx.method_label && (
+                    <div className="mt-1">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary-foreground">
+                        {tx.method_label}
+                      </span>
+                    </div>
+                  )}
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm">
