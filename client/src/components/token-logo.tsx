@@ -1,98 +1,135 @@
-import { useTokenLogo } from '@/hooks/use-token-logo';
-import customTokenLogo from '../assets/100xfrenlogo.png';
-import plsLogo from '../assets/pls-logo-optimized.png'; // Use optimized PLS logo
-import { memo, useMemo } from 'react';
-
-// Map of common token symbols to their local logos
-// This prevents unnecessary API calls for common tokens
-const COMMON_TOKEN_LOGOS: Record<string, string> = {
-  'pls': plsLogo,
-  'fren': customTokenLogo,
-  'frens': customTokenLogo,
-  'kabal': customTokenLogo,
-  '100xfren': customTokenLogo,
-};
-
-// PLS token addresses (both mainnet and testnet)
-const PLS_ADDRESSES = [
-  '0x5616458eb2bac88dd60a4b08f815f37335215f9b',
-  '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
-];
+import { useState, useEffect } from 'react';
 
 interface TokenLogoProps {
   address: string;
-  symbol: string;
-  size?: 'sm' | 'md' | 'lg';
+  symbol?: string;
   fallbackLogo?: string;
-  rounded?: boolean; // Option to control if the logo container is rounded
+  size?: 'sm' | 'md' | 'lg';
 }
 
-/**
- * Component for displaying token logos with fallback
- * Memoized to prevent unnecessary re-renders and API calls
- */
-export const TokenLogo = memo(function TokenLogo({ 
-  address, 
-  symbol, 
-  size = 'md', 
-  fallbackLogo, 
-  rounded = true 
-}: TokenLogoProps) {
-  // Check if this is a common token we have a local logo for
-  const normalizedSymbol = symbol.toLowerCase();
-  const normalizedAddress = address.toLowerCase();
-  
-  // Determine if we should use a local logo or fetch from API
-  const shouldUseLocalLogo = useMemo(() => {
-    return normalizedSymbol in COMMON_TOKEN_LOGOS || PLS_ADDRESSES.includes(normalizedAddress);
-  }, [normalizedSymbol, normalizedAddress]);
-  
-  // Only fetch from API if not a common token
-  const logoUrl = shouldUseLocalLogo 
-    ? null 
-    : useTokenLogo(address, fallbackLogo);
-  
-  // Size classes
-  const sizeClasses = {
-    sm: 'w-6 h-6',
-    md: 'w-8 h-8',
-    lg: 'w-10 h-10'
+export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenLogoProps) {
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  // Get the size class based on the size prop
+  const sizeClass = 
+    size === 'sm' ? 'w-6 h-6' : 
+    size === 'lg' ? 'w-10 h-10' : 
+    'w-8 h-8'; // medium size default
+
+  // Get fallback logo from local storage/cache if possible
+  useEffect(() => {
+    if (!address) {
+      setIsLoading(false);
+      setError(true);
+      return;
+    }
+
+    // If we have a direct fallback logo, use it immediately
+    if (fallbackLogo) {
+      setLogoUrl(fallbackLogo);
+      setIsLoading(false);
+      return;
+    }
+
+    // Try to fetch the logo from our API
+    const fetchLogo = async () => {
+      try {
+        // Normalize address
+        const normalizedAddress = address.toLowerCase();
+        setIsLoading(true);
+        setError(false);
+
+        // Handle special case for native PLS token
+        if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+          setLogoUrl('/assets/pls-logo.png');
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await fetch(`/api/token-logo/${normalizedAddress}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch token logo');
+        }
+        
+        const data = await response.json();
+        if (data && data.logoUrl) {
+          setLogoUrl(data.logoUrl);
+        } else {
+          // Default to the app logo if no logo found
+          setLogoUrl('/assets/100xfrenlogo.png');
+        }
+      } catch (error) {
+        console.error('Error fetching token logo:', error);
+        setError(true);
+        // Default to the app logo if error
+        setLogoUrl('/assets/100xfrenlogo.png');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLogo();
+  }, [address, fallbackLogo]);
+
+  // Generate the fallback logo/text
+  const getFallbackLogo = () => {
+    // Use the symbol if available
+    if (symbol) {
+      // Get the first 2 characters of the symbol
+      const text = symbol.slice(0, 2).toUpperCase();
+      
+      return (
+        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold`}>
+          {text}
+        </div>
+      );
+    }
+    
+    // If no symbol, use address
+    if (address) {
+      // Get the first 2 characters of the address (after 0x)
+      const text = address.slice(2, 4).toUpperCase();
+      
+      return (
+        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white font-bold`}>
+          {text}
+        </div>
+      );
+    }
+    
+    // Ultimate fallback
+    return (
+      <div className={`${sizeClass} rounded-full bg-gray-700 flex items-center justify-center text-white font-bold`}>
+        ?
+      </div>
+    );
   };
-  
-  // Get the appropriate logo source
-  const logoSrc = useMemo(() => {
-    // For PLS token
-    if (normalizedSymbol === 'pls' || PLS_ADDRESSES.includes(normalizedAddress)) {
-      return plsLogo;
-    }
-    
-    // For other common tokens
-    if (normalizedSymbol in COMMON_TOKEN_LOGOS) {
-      return COMMON_TOKEN_LOGOS[normalizedSymbol];
-    }
-    
-    // For tokens with API logos
-    if (logoUrl) {
-      return logoUrl;
-    }
-    
-    // Fallback to default
-    return customTokenLogo;
-  }, [normalizedSymbol, normalizedAddress, logoUrl]);
-  
-  return (
-    <div className={`${sizeClasses[size]} ${rounded ? 'rounded-full' : ''} flex items-center justify-center bg-secondary/80 overflow-hidden border border-border/40 shadow-sm`}>
+
+  // When loading
+  if (isLoading) {
+    return (
+      <div className={`${sizeClass} rounded-full bg-secondary/30 animate-pulse`}></div>
+    );
+  }
+
+  // If we have a logo URL
+  if (logoUrl) {
+    return (
       <img 
-        src={logoSrc} 
-        alt={symbol} 
-        className="w-full h-full object-contain p-1"
-        onError={(e) => {
-          // On error, fallback to custom token logo
-          (e.target as HTMLImageElement).src = customTokenLogo;
+        src={logoUrl} 
+        alt={symbol || 'Token logo'} 
+        className={`${sizeClass} rounded-full object-cover border border-white/10`}
+        onError={() => {
+          setError(true);
+          setLogoUrl(null);
         }}
-        loading="eager" // Load eagerly for visible tokens
-        decoding="async" // Use async decoding for performance
       />
-    </div>
-  );
-});
+    );
+  }
+
+  // Fallback
+  return getFallbackLogo();
+}

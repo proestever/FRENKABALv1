@@ -79,3 +79,25 @@ export function getAdvancedChangeClass(value: number | undefined): string {
     ? 'text-green-400 font-medium' 
     : 'text-red-400 font-medium';
 }
+
+/**
+ * Format a date to a human-readable string
+ */
+export function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).format(date);
+}
+
+/**
+ * Shorten an Ethereum address for display
+ */
+export function shortenAddress(address: string): string {
+  if (!address) return '';
+  return address.slice(0, 6) + '...' + address.slice(-4);
+}
