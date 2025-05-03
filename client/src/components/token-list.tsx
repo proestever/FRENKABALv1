@@ -15,11 +15,12 @@ interface TokenListProps {
   tokens: Token[];
   isLoading: boolean;
   hasError: boolean;
+  walletAddress?: string; // Optional wallet address
 }
 
 type SortOption = 'value' | 'balance' | 'name' | 'price' | 'change';
 
-export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
+export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenListProps) {
   const [filterText, setFilterText] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('value');
   const [showHidden, setShowHidden] = useState(false);
@@ -115,8 +116,8 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
     );
   }
 
-  // Extract wallet address from the first token
-  const walletAddress = tokens.length > 0 ? tokens[0].address.split(':')[0] : '';
+  // Use prop wallet address or extract from token if needed
+  const effectiveWalletAddress = walletAddress || (tokens.length > 0 ? tokens[0].address.split(':')[0] : '');
 
   return (
     <Card className="shadow-lg glass-card">
@@ -186,7 +187,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
 
       {showTransactions ? (
         <TransactionHistory 
-          walletAddress={tokens.length > 0 ? (tokens[0].native?.walletAddress || tokens[0].ownerAddress || tokens[0].address) : ''} 
+          walletAddress={effectiveWalletAddress} 
           onClose={() => setShowTransactions(false)} 
         />
       ) : (

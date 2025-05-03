@@ -126,7 +126,8 @@ export default function Home() {
             <TokenList 
               tokens={walletData.tokens} 
               isLoading={isLoading || isFetching} 
-              hasError={isError} 
+              hasError={isError}
+              walletAddress={searchedAddress || ''}
             />
           </div>
         </>
@@ -136,7 +137,8 @@ export default function Home() {
         <TokenList 
           tokens={[]} 
           isLoading={false} 
-          hasError={true} 
+          hasError={true}
+          walletAddress={searchedAddress} 
         />
       )}
       
