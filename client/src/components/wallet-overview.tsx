@@ -18,7 +18,7 @@ interface WalletOverviewProps {
 
 export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewProps) {
   const { toast } = useToast();
-  const { account: connectedWalletAddress, isConnected } = useWallet();
+  const { account: connectedWalletAddress, isConnected, userId } = useWallet();
   const [hiddenTokens, setHiddenTokens] = useState<string[]>([]);
   const [totalVisibleValue, setTotalVisibleValue] = useState<number>(0);
   const [visibleTokenCount, setVisibleTokenCount] = useState<number>(0);
@@ -30,11 +30,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
   // Check if the current wallet is bookmarked
   useEffect(() => {
     const checkIfBookmarked = async () => {
-      if (!wallet || !isConnected || !connectedWalletAddress) return;
-      
-      // Get the user ID from the connected wallet address
-      // For now, we'll use a simple hash of the address as the ID
-      const userId = parseInt(connectedWalletAddress.slice(2, 10), 16) % 1000000;
+      if (!wallet || !isConnected || !userId) return;
       
       setIsCheckingBookmark(true);
       try {
@@ -49,7 +45,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
     };
     
     checkIfBookmarked();
-  }, [wallet, isConnected, connectedWalletAddress]);
+  }, [wallet, isConnected, userId]);
 
   useEffect(() => {
     // Get hidden tokens from localStorage
@@ -109,22 +105,15 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
     setExistingBookmark(null);
   };
   
-  // Get user ID from wallet address
-  const getUserId = () => {
-    if (!connectedWalletAddress) return null;
-    // Simple hash of address as user ID
-    return parseInt(connectedWalletAddress.slice(2, 10), 16) % 1000000;
-  };
-
   return (
     <section className="mb-8">
       {/* Bookmark Dialog */}
-      {isConnected && (
+      {isConnected && userId && (
         <BookmarkDialog
           isOpen={bookmarkDialogOpen}
           onClose={() => setBookmarkDialogOpen(false)}
           walletAddress={wallet.address}
-          userId={getUserId()}
+          userId={userId}
           existingBookmark={existingBookmark}
           onBookmarkCreated={handleBookmarkCreated}
           onBookmarkUpdated={handleBookmarkUpdated}
@@ -158,10 +147,11 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               <Button
                 variant="outline"
                 onClick={() => setBookmarkDialogOpen(true)}
-                disabled={isCheckingBookmark}
+                disabled={isCheckingBookmark || !userId}
                 className={`glass-card border-white/15 text-sm h-8 hover:bg-black/20 hover:text-white flex items-center px-2 ${
                   isBookmarked ? 'bg-green-500/10 text-green-300 hover:text-green-200' : ''
                 }`}
+                title={!userId ? "Wallet authentication required" : ""}
               >
                 {isBookmarked ? (
                   <>
