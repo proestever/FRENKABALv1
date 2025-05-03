@@ -102,7 +102,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-secondary rounded-lg p-4 border border-border">
             <div className="text-sm text-muted-foreground mb-1">Total Value (Visible)</div>
-            <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <div className="text-2xl font-bold text-white">
               {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
             </div>
             <div className="text-sm mt-2 flex items-center">
@@ -112,7 +112,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
           
           <div className="bg-secondary rounded-lg p-4 border border-border">
             <div className="text-sm text-muted-foreground mb-1">Token Count (Visible)</div>
-            <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-accent bg-clip-text text-transparent">
+            <div className="text-2xl font-bold text-white">
               {visibleTokenCount || 0}
             </div>
             <div className="text-sm mt-2 flex items-center">
@@ -131,7 +131,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               />
               <div className="text-sm text-muted-foreground ml-2">PLS Balance</div>
             </div>
-            <div className="text-2xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
+            <div className="text-2xl font-bold text-white">
               {wallet.plsBalance !== null && wallet.plsBalance !== undefined ? 
                 `${formatTokenAmount(wallet.plsBalance)} PLS` : 
                 'N/A'
