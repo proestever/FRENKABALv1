@@ -71,14 +71,14 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
           </div>
           
           {recentAddresses.length > 0 && (
-            <div className="mt-8">
-              <div className="flex items-center justify-center gap-x-4 gap-y-5 text-sm text-muted-foreground flex-wrap">
-                <span className="opacity-70 mb-1">Recent:</span>
+            <div className="mt-6">
+              <div className="flex items-center justify-center gap-x-3 gap-y-2 text-sm text-muted-foreground flex-wrap">
+                <span className="opacity-70">Recent:</span>
                 {recentAddresses.map((address) => (
                   <button
                     key={address}
                     onClick={() => handleRecentAddressClick(address)}
-                    className="px-3 py-2 text-xs glass-card rounded-md hover:bg-white/5 transition text-white border-white/20"
+                    className="px-3 py-1.5 text-xs glass-card rounded-md hover:bg-white/5 transition text-white border-white/20"
                   >
                     {truncateAddress(address)}
                   </button>
