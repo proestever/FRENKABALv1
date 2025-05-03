@@ -8,6 +8,7 @@ import { Search, ArrowDownUp, Eye, EyeOff } from 'lucide-react';
 import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass } from '@/lib/utils';
 import { TokenLogo } from '@/components/token-logo';
 import { getHiddenTokens, toggleHiddenToken, isTokenHidden } from '@/lib/api';
+import { useBatchTokenLogos } from '@/hooks/use-batch-token-logos';
 
 interface TokenListProps {
   tokens: Token[];
@@ -22,6 +23,14 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
   const [sortBy, setSortBy] = useState<SortOption>('value');
   const [showHidden, setShowHidden] = useState(false);
   const [hiddenTokens, setHiddenTokens] = useState<string[]>(getHiddenTokens());
+
+  // Extract token addresses and symbols for batch logo loading
+  const tokenAddresses = useMemo(() => tokens.map(t => t.address), [tokens]);
+  const tokenSymbols = useMemo(() => tokens.map(t => t.symbol), [tokens]);
+  
+  // Pre-fetch all token logos in a single batch request
+  // This dramatically reduces API calls and speeds up initial loading
+  const logoUrls = useBatchTokenLogos(tokenAddresses, tokenSymbols);
 
   // Handle toggling token visibility
   const handleToggleVisibility = (tokenAddress: string) => {

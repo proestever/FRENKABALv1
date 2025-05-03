@@ -104,6 +104,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // Batch API for fetching multiple logos at once
+  app.post("/api/token-logos/batch", async (req, res) => {
+    try {
+      const { addresses } = req.body;
+      
+      if (!Array.isArray(addresses)) {
+        return res.status(400).json({ message: "addresses must be an array" });
+      }
+      
+      // Limit batch size to prevent abuse
+      const MAX_BATCH_SIZE = 50;
+      if (addresses.length > MAX_BATCH_SIZE) {
+        return res.status(400).json({ 
+          message: `Batch size too large. Maximum allowed: ${MAX_BATCH_SIZE}`
+        });
+      }
+      
+      // Normalize addresses
+      const normalizedAddresses = addresses.map(addr => 
+        typeof addr === 'string' ? addr.toLowerCase() : addr);
+      
+      // Get all existing logos from storage
+      const existingLogos = await Promise.all(
+        normalizedAddresses.map(async (address) => {
+          try {
+            return await storage.getTokenLogo(address);
+          } catch (err) {
+            console.error(`Error fetching logo for ${address}:`, err);
+            return null;
+          }
+        })
+      );
+      
+      // Create a map of address -> logo
+      const logoMap: Record<string, any> = {};
+      
+      // For addresses without logos in our DB, try to fetch from Moralis
+      const missingAddresses = normalizedAddresses.filter(
+        (addr, index) => !existingLogos[index]
+      );
+      
+      // First, add all existing logos to the map
+      for (let i = 0; i < normalizedAddresses.length; i++) {
+        if (existingLogos[i]) {
+          logoMap[normalizedAddresses[i]] = existingLogos[i];
+        }
+      }
+      
+      // Special case for native PLS token
+      if (missingAddresses.includes('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')) {
+        const plsIndex = missingAddresses.indexOf('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+        if (plsIndex !== -1) {
+          const plsLogo = {
+            tokenAddress: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+            logoUrl: '/assets/pls-logo.png',
+            symbol: "PLS",
+            name: "PulseChain",
+            lastUpdated: new Date().toISOString()
+          };
+          
+          // Store it for future requests
+          await storage.saveTokenLogo(plsLogo);
+          
+          // Add to response map
+          logoMap['0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'] = plsLogo;
+          
+          // Remove from missing addresses
+          missingAddresses.splice(plsIndex, 1);
+        }
+      }
+      
+      // For any remaining missing logos, try to fetch from Moralis in parallel
+      // but limit concurrent requests to 5 to avoid rate limiting
+      const CONCURRENT_LIMIT = 5;
+      const chunks = [];
+      for (let i = 0; i < missingAddresses.length; i += CONCURRENT_LIMIT) {
+        chunks.push(missingAddresses.slice(i, i + CONCURRENT_LIMIT));
+      }
+      
+      for (const chunk of chunks) {
+        await Promise.all(chunk.map(async (address) => {
+          try {
+            // Try to get token data from Moralis
+            const tokenData = await getTokenPrice(address);
+            
+            if (tokenData && tokenData.tokenLogo) {
+              const newLogo = {
+                tokenAddress: address,
+                logoUrl: tokenData.tokenLogo,
+                symbol: tokenData.tokenSymbol || "",
+                name: tokenData.tokenName || "",
+                lastUpdated: new Date().toISOString()
+              };
+              
+              // Store in database
+              const savedLogo = await storage.saveTokenLogo(newLogo);
+              
+              // Add to response map
+              logoMap[address] = savedLogo;
+            }
+          } catch (error) {
+            console.error(`Error fetching logo for ${address} in batch:`, error);
+          }
+        }));
+      }
+      
+      return res.json(logoMap);
+    } catch (error) {
+      console.error("Error in batch logo fetch:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch token logos in batch",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
 
   app.get("/api/token-logo/:address", async (req, res) => {
     try {
