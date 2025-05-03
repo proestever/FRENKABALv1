@@ -247,115 +247,119 @@ export function Profile() {
               </Button>
             </div>
           ) : bookmarks && bookmarks.length > 0 ? (
-            <div className="space-y-3">
-              {bookmarks.map((bookmark) => (
-                <div 
-                  key={bookmark.id} 
-                  className={`flex flex-col p-4 border border-white/10 rounded-md ${
-                    bookmark.isFavorite 
-                      ? "bg-yellow-950/10 border-yellow-500/20" 
-                      : "bg-black/20 hover:bg-black/30"
-                  } transition-colors relative`}
-                >
-                  {/* Favorite badge */}
-                  {bookmark.isFavorite && (
-                    <div className="absolute top-0 right-0 -mt-2 -mr-2 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded-full">
-                      Favorite
-                    </div>
-                  )}
-                  
-                  {/* Wallet info */}
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between">
-                    <div className="mb-3 sm:mb-0 flex-grow">
-                      <div className="flex items-center">
-                        <Wallet className="h-5 w-5 mr-2 text-primary" />
-                        <h3 className="font-semibold text-white text-lg">
-                          {bookmark.label || formatAccount(bookmark.walletAddress)}
-                        </h3>
-                      </div>
-                      
-                      <div className="flex items-center mt-2 text-sm text-muted-foreground">
-                        <p className="font-mono bg-black/30 px-2 py-1 rounded-md">
-                          {formatAccount(bookmark.walletAddress)}
-                        </p>
-                      </div>
-                      
-                      {bookmark.notes && (
-                        <div className="mt-3 pl-3 border-l-2 border-primary/30">
-                          <p className="text-sm text-muted-foreground italic">
-                            "{bookmark.notes}"
-                          </p>
-                        </div>
-                      )}
-                      
-                      {/* Meta info */}
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-muted-foreground">
-                        <div className="flex items-center">
-                          <Calendar className="h-3.5 w-3.5 mr-1 opacity-70" />
-                          <span>Added: {formatDate(bookmark.createdAt.toString())}</span>
-                        </div>
-                        {bookmark.updatedAt && bookmark.updatedAt.toString() !== bookmark.createdAt.toString() && (
-                          <div className="flex items-center">
-                            <Clock className="h-3.5 w-3.5 mr-1 opacity-70" />
-                            <span>Updated: {formatDate(bookmark.updatedAt.toString())}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Actions */}
-                    <div className="flex sm:flex-col gap-2 self-end sm:self-auto">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        asChild
-                        className="glass-card border-white/15 hover:bg-black/20 hover:text-white h-8 w-20"
-                      >
-                        <Link href={`/${bookmark.walletAddress}`}>
-                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                          View
-                        </Link>
-                      </Button>
-                      
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleEditBookmark(bookmark)}
-                        className="glass-card border-white/15 hover:bg-blue-500/20 hover:text-blue-300 h-8 w-20"
-                      >
-                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                        Edit
-                      </Button>
-                      
-                      <div className="flex gap-2">
+            <div className="overflow-x-auto rounded-md border border-white/10">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/10 text-left bg-black/20">
+                    <th className="py-3 px-2 text-sm text-white/60 font-medium w-[50px]"></th>
+                    <th className="py-3 px-2 text-sm text-white/60 font-medium">Name</th>
+                    <th className="py-3 px-2 text-sm text-white/60 font-medium hidden md:table-cell">Address</th>
+                    <th className="py-3 px-2 text-sm text-white/60 font-medium hidden md:table-cell">Date Added</th>
+                    <th className="py-3 px-2 text-sm text-white/60 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookmarks.map((bookmark) => (
+                    <tr 
+                      key={bookmark.id} 
+                      className={`border-b border-white/5 hover:bg-black/30 transition-colors ${
+                        bookmark.isFavorite ? "bg-yellow-950/5" : ""
+                      }`}
+                    >
+                      {/* Favorite Star */}
+                      <td className="py-2 px-2">
                         <Button 
-                          variant="outline" 
+                          variant="ghost" 
                           size="icon"
                           onClick={() => handleToggleFavorite(bookmark.id, !bookmark.isFavorite)}
-                          className={`glass-card border-white/15 h-8 w-8 ${
+                          className={`h-7 w-7 ${
                             bookmark.isFavorite 
-                              ? "bg-yellow-500/10 text-yellow-300 hover:text-yellow-200 hover:bg-yellow-500/20" 
+                              ? "text-yellow-300" 
                               : "text-muted-foreground hover:text-yellow-300"
                           }`}
-                          title={bookmark.isFavorite ? "Remove from favorites" : "Add to favorites"}
                         >
-                          <Star className="h-3.5 w-3.5" fill={bookmark.isFavorite ? "currentColor" : "none"} />
+                          <Star className="h-4 w-4" fill={bookmark.isFavorite ? "currentColor" : "none"} />
                         </Button>
-                        
-                        <Button 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => handleDeleteBookmark(bookmark.id)}
-                          className="glass-card border-white/15 hover:bg-red-500/20 hover:text-red-300 h-8 w-8"
-                          title="Delete bookmark"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                      </td>
+                      
+                      {/* Name & Address (mobile view combines these) */}
+                      <td className="py-2 px-2">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-white">
+                            {bookmark.label || formatAccount(bookmark.walletAddress)}
+                          </span>
+                          
+                          {/* Mobile-only address */}
+                          <span className="font-mono text-xs text-muted-foreground mt-1 md:hidden">
+                            {formatAccount(bookmark.walletAddress)}
+                          </span>
+                          
+                          {/* Mobile-only date */}
+                          <span className="text-xs text-muted-foreground mt-1 md:hidden flex items-center">
+                            <Calendar className="h-3 w-3 mr-1 opacity-70 inline" />
+                            {formatDate(bookmark.createdAt.toString())}
+                          </span>
+                          
+                          {bookmark.notes && (
+                            <span className="text-xs text-muted-foreground mt-1 italic max-w-[200px] truncate">
+                              "{bookmark.notes}"
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Address - Desktop only */}
+                      <td className="py-2 px-2 hidden md:table-cell">
+                        <span className="font-mono text-sm text-muted-foreground">
+                          {formatAccount(bookmark.walletAddress)}
+                        </span>
+                      </td>
+                      
+                      {/* Date - Desktop only */}
+                      <td className="py-2 px-2 text-sm text-muted-foreground hidden md:table-cell">
+                        {formatDate(bookmark.createdAt.toString())}
+                      </td>
+                      
+                      {/* Actions */}
+                      <td className="py-2 px-2 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            asChild
+                            className="h-7 w-7 p-0 hover:bg-black/30 hover:text-white rounded-full"
+                            title="View Wallet"
+                          >
+                            <Link href={`/${bookmark.walletAddress}`}>
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
+                          
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleEditBookmark(bookmark)}
+                            className="h-7 w-7 p-0 hover:bg-blue-500/10 hover:text-blue-300 rounded-full"
+                            title="Edit Bookmark"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDeleteBookmark(bookmark.id)}
+                            className="h-7 w-7 p-0 hover:bg-red-500/10 hover:text-red-300 rounded-full"
+                            title="Delete Bookmark"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <div className="text-center py-12 border border-dashed border-white/10 rounded-md">
