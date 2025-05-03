@@ -130,11 +130,36 @@ export function clearHiddenTokens(): void {
 }
 
 /**
- * Fetch transaction history for a wallet address
+ * Interface for paginated transaction response from server
  */
-export async function fetchTransactionHistory(address: string): Promise<any> {
+export interface TransactionResponse {
+  result: any[];
+  cursor: string | null;
+  page: number;
+  page_size: number;
+}
+
+/**
+ * Fetch transaction history for a wallet address with pagination support
+ * @param address - Wallet address to fetch transactions for
+ * @param limit - Number of transactions per page (default: 200)
+ * @param cursor - Pagination cursor for fetching next page of results
+ * @returns Paginated transaction response
+ */
+export async function fetchTransactionHistory(
+  address: string,
+  limit: number = 200,
+  cursor: string | null = null
+): Promise<TransactionResponse> {
   try {
-    const response = await fetch(`/api/wallet/${address}/transactions`);
+    // Build URL with query parameters
+    let url = `/api/wallet/${address}/transactions?limit=${limit}`;
+    if (cursor) {
+      url += `&cursor=${encodeURIComponent(cursor)}`;
+    }
+    
+    console.log(`Fetching transaction history: ${url}`);
+    const response = await fetch(url);
     
     if (!response.ok) {
       const errorData = await response.json();

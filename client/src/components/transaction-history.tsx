@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
-import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchTransactionHistory } from '@/lib/api';
+import { fetchTransactionHistory, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
 
 // Transaction types
@@ -58,20 +58,38 @@ interface TransactionHistoryProps {
   onClose: () => void;
 }
 
+// Number of transactions to load per batch
+const TRANSACTIONS_PER_BATCH = 200;
+
 export function TransactionHistory({ walletAddress, onClose }: TransactionHistoryProps) {
   const [visibleTokenAddresses, setVisibleTokenAddresses] = useState<string[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
-  const { data: transactions, isLoading, isError } = useQuery({
+  // Initial transaction data fetch
+  const { isLoading, isError, data: initialData } = useQuery({
     queryKey: ['transactions', walletAddress],
     queryFn: async () => {
       console.log('Fetching transaction history for:', walletAddress);
       try {
-        // Use the native token address for transactions (0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
-        // as the server expects this format
-        const nativeTokenAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-        const txHistory = await fetchTransactionHistory(nativeTokenAddress);
-        console.log('Transaction history fetched:', txHistory ? 'yes' : 'no', txHistory ? txHistory.length + ' transactions' : '');
-        return txHistory;
+        // Use the actual wallet address (not the token address)
+        const response = await fetchTransactionHistory(walletAddress, TRANSACTIONS_PER_BATCH);
+        console.log('Initial transaction history fetched:', response ? 'yes' : 'no', 
+          response?.result ? `${response.result.length} transactions` : '');
+        
+        // Update state with the response data
+        if (response?.result) {
+          setTransactions(response.result || []);
+          setNextCursor(response.cursor);
+          setHasMore(!!response.cursor); // Has more if cursor exists
+        } else {
+          setTransactions([]);
+          setHasMore(false);
+        }
+        
+        return response;
       } catch (error) {
         console.error('Error fetching transaction history:', error);
         throw error;
@@ -80,6 +98,34 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     enabled: !!walletAddress,
     staleTime: 60 * 1000, // 1 minute
   });
+  
+  // Function to load more transactions
+  const loadMoreTransactions = useCallback(async () => {
+    if (!nextCursor || isLoadingMore || !walletAddress) return;
+    
+    setIsLoadingMore(true);
+    try {
+      const moreData = await fetchTransactionHistory(
+        walletAddress, 
+        TRANSACTIONS_PER_BATCH, 
+        nextCursor
+      );
+      
+      if (moreData?.result) {
+        // Append new transactions to existing list
+        setTransactions(prev => [...prev, ...moreData.result]);
+        setNextCursor(moreData.cursor);
+        setHasMore(!!moreData.cursor); // Has more if cursor exists
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error loading more transactions:', error);
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [nextCursor, isLoadingMore, walletAddress]);
 
   // Format timestamp
   const formatTimestamp = (timestamp: string) => {
