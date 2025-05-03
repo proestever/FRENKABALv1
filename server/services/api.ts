@@ -225,8 +225,21 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       // Process tokens from Moralis
       const processedTokens = await Promise.all(moralisTokens.map(async (item: any) => {
         try {
-          const isNative = item.native_token === true;
-          const symbol = item.symbol || 'UNKNOWN';
+          // Check if this is the native PLS token (has address 0xeeee...eeee and native_token flag)
+          const isNative = item.native_token === true || 
+                          (item.token_address && item.token_address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+          
+          // Fix the incorrect label of native PLS token (Moralis returns it as WPLS)
+          // Fix incorrect labeling for the native PLS token
+          let symbol = item.symbol || 'UNKNOWN';
+          let name = item.name || 'Unknown Token';
+          
+          if (isNative && symbol.toLowerCase() === 'wpls') {
+            symbol = 'PLS'; // Correct the symbol for native token
+            name = 'PulseChain'; // Correct the name too
+            console.log('Corrected native token from WPLS/Wrapped Pulse to PLS/PulseChain');
+          }
+          
           let logoUrl = item.logo || null;
           
           // If no logo in Moralis response, try our database
@@ -245,7 +258,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
                 tokenAddress: item.token_address,
                 logoUrl,
                 symbol,
-                name: item.name || symbol,
+                name, // Use our corrected name for native token
                 lastUpdated: new Date().toISOString()
               };
               
@@ -258,7 +271,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
           return {
             address: item.token_address,
             symbol,
-            name: item.name || 'Unknown Token',
+            name, // Use our corrected name for native token
             decimals: parseInt(item.decimals || '18'),
             balance: item.balance || '0',
             balanceFormatted: parseFloat(item.balance_formatted || '0'),
