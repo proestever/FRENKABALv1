@@ -11,14 +11,29 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useWallet } from "@/hooks/use-wallet";
 import { Bookmark } from "@shared/schema";
-import { Home, ExternalLink, Star, Trash2, Wallet } from "lucide-react";
+import { Home, ExternalLink, Star, Trash2, Wallet, Pencil, Clock, Calendar } from "lucide-react";
 import { formatAccount } from "../lib/format";
 
 export function Profile() {
   const { isConnected, account, userId } = useWallet();
   const [, setLocation] = useLocation();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [currentBookmark, setCurrentBookmark] = useState<Bookmark | null>(null);
+  const [editedLabel, setEditedLabel] = useState("");
+  const [editedNotes, setEditedNotes] = useState("");
   
   // Redirect to home if not connected - with a delay to ensure wallet state is fully loaded
   useEffect(() => {
@@ -122,6 +137,61 @@ export function Profile() {
       });
     }
   };
+  
+  const handleEditBookmark = (bookmark: Bookmark) => {
+    setCurrentBookmark(bookmark);
+    setEditedLabel(bookmark.label || '');
+    setEditedNotes(bookmark.notes || '');
+    setIsEditDialogOpen(true);
+  };
+  
+  const handleSaveEdit = async () => {
+    if (!currentBookmark) return;
+    
+    try {
+      const response = await fetch(`/api/bookmarks/${currentBookmark.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          label: editedLabel,
+          notes: editedNotes,
+        }),
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Bookmark Updated",
+          description: "Your wallet bookmark has been updated successfully.",
+        });
+        setIsEditDialogOpen(false);
+        refetch();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update bookmark. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Format date in a user-friendly way
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
 
   if (!isConnected || !account) {
     return null; // Will be redirected by the useEffect
@@ -181,58 +251,108 @@ export function Profile() {
               {bookmarks.map((bookmark) => (
                 <div 
                   key={bookmark.id} 
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-white/10 rounded-md bg-black/20 hover:bg-black/30 transition-colors"
+                  className={`flex flex-col p-4 border border-white/10 rounded-md ${
+                    bookmark.isFavorite 
+                      ? "bg-yellow-950/10 border-yellow-500/20" 
+                      : "bg-black/20 hover:bg-black/30"
+                  } transition-colors relative`}
                 >
-                  <div className="mb-3 sm:mb-0">
-                    <div className="flex items-center">
-                      <Wallet className="h-4 w-4 mr-2 text-primary" />
-                      <h3 className="font-medium text-white">
-                        {bookmark.label || formatAccount(bookmark.walletAddress)}
-                      </h3>
+                  {/* Favorite badge */}
+                  {bookmark.isFavorite && (
+                    <div className="absolute top-0 right-0 -mt-2 -mr-2 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded-full">
+                      Favorite
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {bookmark.label ? formatAccount(bookmark.walletAddress) : ''}
-                    </p>
-                    {bookmark.notes && (
-                      <p className="text-sm text-muted-foreground mt-1 italic">
-                        "{bookmark.notes}"
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      asChild
-                      className="glass-card border-white/15 hover:bg-black/20 hover:text-white h-8"
-                    >
-                      <Link href={`/${bookmark.walletAddress}`}>
-                        <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                        View
-                      </Link>
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={() => handleToggleFavorite(bookmark.id, !bookmark.isFavorite)}
-                      className={`glass-card border-white/15 h-8 w-8 ${
-                        bookmark.isFavorite 
-                          ? "bg-yellow-500/10 text-yellow-300 hover:text-yellow-200 hover:bg-yellow-500/20" 
-                          : "text-muted-foreground hover:text-yellow-300"
-                      }`}
-                      title={bookmark.isFavorite ? "Remove from favorites" : "Add to favorites"}
-                    >
-                      <Star className="h-3.5 w-3.5" fill={bookmark.isFavorite ? "currentColor" : "none"} />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={() => handleDeleteBookmark(bookmark.id)}
-                      className="glass-card border-white/15 hover:bg-red-500/20 hover:text-red-300 h-8 w-8"
-                      title="Delete bookmark"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                  )}
+                  
+                  {/* Wallet info */}
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between">
+                    <div className="mb-3 sm:mb-0 flex-grow">
+                      <div className="flex items-center">
+                        <Wallet className="h-5 w-5 mr-2 text-primary" />
+                        <h3 className="font-semibold text-white text-lg">
+                          {bookmark.label || formatAccount(bookmark.walletAddress)}
+                        </h3>
+                      </div>
+                      
+                      <div className="flex items-center mt-2 text-sm text-muted-foreground">
+                        <p className="font-mono bg-black/30 px-2 py-1 rounded-md">
+                          {formatAccount(bookmark.walletAddress)}
+                        </p>
+                      </div>
+                      
+                      {bookmark.notes && (
+                        <div className="mt-3 pl-3 border-l-2 border-primary/30">
+                          <p className="text-sm text-muted-foreground italic">
+                            "{bookmark.notes}"
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Meta info */}
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-muted-foreground">
+                        <div className="flex items-center">
+                          <Calendar className="h-3.5 w-3.5 mr-1 opacity-70" />
+                          <span>Added: {formatDate(bookmark.createdAt.toString())}</span>
+                        </div>
+                        {bookmark.updatedAt && bookmark.updatedAt.toString() !== bookmark.createdAt.toString() && (
+                          <div className="flex items-center">
+                            <Clock className="h-3.5 w-3.5 mr-1 opacity-70" />
+                            <span>Updated: {formatDate(bookmark.updatedAt.toString())}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="flex sm:flex-col gap-2 self-end sm:self-auto">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        asChild
+                        className="glass-card border-white/15 hover:bg-black/20 hover:text-white h-8 w-20"
+                      >
+                        <Link href={`/${bookmark.walletAddress}`}>
+                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                          View
+                        </Link>
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleEditBookmark(bookmark)}
+                        className="glass-card border-white/15 hover:bg-blue-500/20 hover:text-blue-300 h-8 w-20"
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                        Edit
+                      </Button>
+                      
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => handleToggleFavorite(bookmark.id, !bookmark.isFavorite)}
+                          className={`glass-card border-white/15 h-8 w-8 ${
+                            bookmark.isFavorite 
+                              ? "bg-yellow-500/10 text-yellow-300 hover:text-yellow-200 hover:bg-yellow-500/20" 
+                              : "text-muted-foreground hover:text-yellow-300"
+                          }`}
+                          title={bookmark.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                        >
+                          <Star className="h-3.5 w-3.5" fill={bookmark.isFavorite ? "currentColor" : "none"} />
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => handleDeleteBookmark(bookmark.id)}
+                          className="glass-card border-white/15 hover:bg-red-500/20 hover:text-red-300 h-8 w-8"
+                          title="Delete bookmark"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -252,6 +372,64 @@ export function Profile() {
           )}
         </CardContent>
       </Card>
+      {/* Edit Bookmark Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="glass-card border-white/15 bg-black/80 backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle className="text-white">Edit Bookmark</DialogTitle>
+            <DialogDescription>
+              Update the details for this saved wallet.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="wallet-address" className="text-white">Wallet Address</Label>
+              <div className="p-2 bg-black/50 rounded-md border border-white/10 text-sm font-mono text-muted-foreground">
+                {currentBookmark?.walletAddress}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="label" className="text-white">Label</Label>
+              <Input
+                id="label"
+                value={editedLabel}
+                onChange={(e) => setEditedLabel(e.target.value)}
+                placeholder="My Primary Wallet"
+                className="bg-black/50 border-white/10 text-white focus:border-primary"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="notes" className="text-white">Notes</Label>
+              <Textarea
+                id="notes"
+                value={editedNotes || ''}
+                onChange={(e) => setEditedNotes(e.target.value)}
+                placeholder="Any additional notes about this wallet..."
+                className="bg-black/50 border-white/10 text-white focus:border-primary min-h-[100px]"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="flex sm:justify-between">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditDialogOpen(false)}
+              className="glass-card border-white/15"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveEdit}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
