@@ -177,11 +177,15 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
               <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 24h Change
               </th>
+              <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Visibility
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {sortedTokens.map((token) => {
               const priceChangeClass = getAdvancedChangeClass(token.priceChange24h);
+              const isHidden = hiddenTokens.includes(token.address);
               
               return (
                 <tr key={token.address} className="hover:bg-secondary/40 transition-colors">
@@ -250,6 +254,15 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                         : 'N/A'}
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <button 
+                      onClick={() => handleToggleVisibility(token.address)}
+                      className={`p-1.5 rounded-full hover:bg-secondary ${isHidden ? 'text-muted-foreground' : 'text-purple-400'}`}
+                      title={isHidden ? "Show token" : "Hide token"}
+                    >
+                      {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </td>
                 </tr>
               );
             })}
@@ -258,8 +271,28 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
       </div>
       
       <div className="p-4 border-t border-border">
-        <div className="text-muted-foreground text-sm">
-          Showing all {sortedTokens.length} tokens
+        <div className="text-muted-foreground text-sm flex justify-between items-center">
+          <div>
+            Showing {sortedTokens.length} token{sortedTokens.length !== 1 ? 's' : ''}
+          </div>
+          {hiddenTokens.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className={`text-xs ${showHidden ? 'text-purple-400' : 'text-muted-foreground'}`}>
+                {showHidden 
+                  ? 'Showing hidden tokens' 
+                  : `${hiddenTokens.length} hidden token${hiddenTokens.length !== 1 ? 's' : ''}`
+                }
+              </span>
+              {!showHidden && (
+                <button 
+                  onClick={() => setShowHidden(true)}
+                  className="text-xs px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md border border-purple-500/30 hover:bg-purple-500/20"
+                >
+                  Show
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </Card>
