@@ -53,7 +53,7 @@ export function LoadingProgress({ isLoading }: LoadingProgressProps) {
   const StatusIcon = () => {
     switch (progress.status) {
       case 'loading':
-        return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
+        return <Loader2 className="h-5 w-5 animate-spin text-white" />;
       case 'complete':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'error':
@@ -64,12 +64,12 @@ export function LoadingProgress({ isLoading }: LoadingProgressProps) {
   };
   
   return (
-    <Card className="p-4 mb-4 border border-border bg-card/90 backdrop-blur-sm shadow-lg">
+    <Card className="p-4 mb-4 glass-card border-white/15 backdrop-blur-md shadow-lg">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <StatusIcon />
-            <h3 className="text-sm font-medium">
+            <h3 className="text-sm font-medium text-white">
               {progress.status === 'loading' ? 'Loading wallet data...' : 
                progress.status === 'complete' ? 'Loading complete' : 
                'Error loading data'}
@@ -85,7 +85,7 @@ export function LoadingProgress({ isLoading }: LoadingProgressProps) {
           className="h-2 bg-muted/50"
           // Add gradient effect to progress bar
           style={{
-            background: 'linear-gradient(90deg, rgba(139,92,246,0.2) 0%, rgba(79,70,229,0.2) 100%)'
+            background: 'linear-gradient(90deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)'
           }}
         />
         

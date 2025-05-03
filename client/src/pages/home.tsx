@@ -112,9 +112,7 @@ export default function Home() {
         />
       )}
       
-      {!searchedAddress && (
-        <EmptyState onViewExample={handleViewExample} />
-      )}
+      {/* Empty state card hidden as requested */}
     </main>
   );
 }
