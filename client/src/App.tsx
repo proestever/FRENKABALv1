@@ -128,29 +128,56 @@ function Footer() {
         <div className="text-sm text-muted-foreground text-center">
           <p className="mt-1">© {new Date().getFullYear()} FrenKabal. All rights reserved.</p>
         </div>
-        <a 
-          href="https://t.me/frenkabal" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="absolute top-1/2 -translate-y-1/2 right-6 transition-all hover:scale-110 text-white/90 hover:text-white bg-black/30 hover:bg-black/40 p-1.5 rounded-full"
-          title="Join our Telegram Channel"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-5 h-5"
+        <div className="absolute top-1/2 -translate-y-1/2 right-6 flex gap-2.5">
+          <a 
+            href="https://t.me/frenkabal" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="transition-all hover:scale-110 text-white/90 hover:text-white bg-black/30 hover:bg-black/40 p-1.5 rounded-full"
+            title="Join our Telegram Channel"
           >
-            <path d="M22 2L11 13"></path>
-            <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
-          </svg>
-        </a>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-5 h-5"
+            >
+              <path d="M22 2L11 13"></path>
+              <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+            </svg>
+          </a>
+          <a 
+            href="https://x.com/giga_pls" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="transition-all hover:scale-110 text-white/90 hover:text-white bg-black/30 hover:bg-black/40 p-1.5 rounded-full"
+            title="Follow @giga_pls on X (Twitter)"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-5 h-5"
+            >
+              <path d="M4 4l11.5 11.5" />
+              <path d="M20 4L6.5 17.5" />
+              <path d="M4 20l7.5-7.5" />
+              <path d="M12.5 12.5L20 20" />
+            </svg>
+          </a>
+        </div>
       </div>
     </footer>
   );
