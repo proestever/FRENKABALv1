@@ -126,7 +126,10 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setShowTransactions(false)}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${!showTransactions ? 'bg-primary text-white' : 'hover:bg-black/30 text-white/70'}`}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 transition-all duration-200 
+                ${!showTransactions 
+                  ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
+                  : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
               title="View token holdings"
             >
               <Wallet size={18} />
@@ -134,7 +137,10 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
             </button>
             <button
               onClick={() => setShowTransactions(true)}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${showTransactions ? 'bg-primary text-white' : 'hover:bg-black/30 text-white/70'}`}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 transition-all duration-200 
+                ${showTransactions 
+                  ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
+                  : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
               title="View transaction history"
             >
               <History size={18} />

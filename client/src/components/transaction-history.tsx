@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
-import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
@@ -292,9 +292,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         <p className="text-muted-foreground mb-4">
           There was an error retrieving the transaction history. Please try again later.
         </p>
-        <Button onClick={onClose} variant="outline">
-          Back to Tokens
-        </Button>
+        <button
+          onClick={onClose}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 mx-auto"
+        >
+          <Wallet size={16} className="mr-1" />
+          <span className="text-sm font-medium">View Tokens</span>
+        </button>
       </Card>
     );
   }
@@ -309,9 +313,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         <p className="text-muted-foreground mb-4">
           No transaction history was found for this wallet.
         </p>
-        <Button onClick={onClose} variant="outline">
-          Back to Tokens
-        </Button>
+        <button
+          onClick={onClose}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 mx-auto"
+        >
+          <Wallet size={16} className="mr-1" />
+          <span className="text-sm font-medium">View Tokens</span>
+        </button>
       </Card>
     );
   }
@@ -328,9 +336,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {transactions.length} Transactions
             </span>
           </div>
-          <Button onClick={onClose} variant="outline" size="sm">
-            View Tokens
-          </Button>
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
+          >
+            <Wallet size={16} className="mr-1" />
+            <span className="text-sm font-medium">View Tokens</span>
+          </button>
         </div>
       </div>
       
