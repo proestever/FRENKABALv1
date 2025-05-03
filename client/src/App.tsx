@@ -8,7 +8,15 @@ import Home from "@/pages/home";
 import { Profile } from "@/pages/profile";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useWallet } from "@/hooks/use-wallet";
-import { Wallet, Menu, Loader2, User } from "lucide-react";
+import { Wallet, Menu, Loader2, User, Settings, Home as HomeIcon, Bookmark, ChevronRight } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Header component
 function Header() {
@@ -127,18 +135,41 @@ function Header() {
         </a>
         
         <div className="flex space-x-4 items-center">
-          {isConnected && (
-            <Link 
-              href="/profile" 
-              className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105"
-              title="Your Profile"
-            >
-              <User className="w-5 h-5" />
-            </Link>
-          )}
-          <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
-            <Menu className="w-6 h-6" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
+                <Menu className="w-6 h-6" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 glass-card bg-black/90 border border-white/10">
+              <DropdownMenuItem onClick={() => setLocation("/")} className="cursor-pointer">
+                <HomeIcon className="mr-2 h-4 w-4" />
+                <span>Home</span>
+              </DropdownMenuItem>
+              
+              {isConnected && (
+                <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>My Profile</span>
+                </DropdownMenuItem>
+              )}
+              
+              {isConnected && (
+                <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
+                  <Bookmark className="mr-2 h-4 w-4" />
+                  <span>Saved Addresses</span>
+                </DropdownMenuItem>
+              )}
+              
+              <DropdownMenuSeparator className="bg-white/10" />
+              
+              <DropdownMenuItem className="cursor-pointer opacity-50">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+                <ChevronRight className="ml-auto h-4 w-4" />
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {renderConnectButton(false)}
         </div>
       </div>
@@ -162,20 +193,43 @@ function Header() {
             {renderConnectButton(true)}
           </div>
           
-          {/* Right area: menu button and profile link */}
+          {/* Right area: menu button */}
           <div className="col-span-1 flex justify-end space-x-2">
-            {isConnected && (
-              <Link 
-                href="/profile" 
-                className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105"
-                title="Your Profile"
-              >
-                <User className="w-5 h-5" />
-              </Link>
-            )}
-            <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
-              <Menu className="w-6 h-6" />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
+                  <Menu className="w-6 h-6" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 glass-card bg-black/90 border border-white/10">
+                <DropdownMenuItem onClick={() => setLocation("/")} className="cursor-pointer">
+                  <HomeIcon className="mr-2 h-4 w-4" />
+                  <span>Home</span>
+                </DropdownMenuItem>
+                
+                {isConnected && (
+                  <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>My Profile</span>
+                  </DropdownMenuItem>
+                )}
+                
+                {isConnected && (
+                  <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    <span>Saved Addresses</span>
+                  </DropdownMenuItem>
+                )}
+                
+                <DropdownMenuSeparator className="bg-white/10" />
+                
+                <DropdownMenuItem className="cursor-pointer opacity-50">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                  <ChevronRight className="ml-auto h-4 w-4" />
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
