@@ -72,7 +72,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
   // Initial transaction data fetch
   const { isLoading, isError, data: initialData, refetch } = useQuery({
-    queryKey: ['transactions', walletAddress],
+    queryKey: ['transactions', walletAddress, Date.now()], // Add timestamp to force refetch on remount
     queryFn: async () => {
       console.log('Fetching transaction history for:', walletAddress);
       try {
@@ -107,7 +107,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       }
     },
     enabled: !!walletAddress,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 0, // Don't use stale data
+    gcTime: 0, // Don't keep data in cache
+    refetchOnMount: true, // Always refetch when component mounts
     retry: 2, // Retry failed requests up to 2 times
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 10000), // Exponential backoff
   });
@@ -153,7 +155,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
   // Fetch wallet data to get token prices
   const { data: walletData } = useQuery({
-    queryKey: ['wallet', walletAddress],
+    queryKey: ['wallet', walletAddress, Date.now()], // Add timestamp to force refetch
     queryFn: async () => {
       try {
         return await fetchWalletData(walletAddress);
@@ -163,7 +165,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       }
     },
     enabled: !!walletAddress,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: true, // Always refetch when component mounts
   });
 
   // Update token prices whenever wallet data changes
