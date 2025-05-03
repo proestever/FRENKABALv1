@@ -15,7 +15,36 @@ const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
 
 export default function Home() {
   const [searchedAddress, setSearchedAddress] = useState<string | null>(null);
+  const params = useParams<{ walletAddress?: string }>();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // Define search function
+  const handleSearch = (address: string) => {
+    if (!address) return;
+    
+    setSearchedAddress(address);
+    
+    // Update URL to include wallet address
+    const currentPath = `/${address}`;
+    if (location !== currentPath) {
+      setLocation(currentPath);
+    }
+    
+    // Save to recent addresses
+    saveRecentAddress(address);
+  };
+
+  // Check if we have a wallet address in the URL
+  useEffect(() => {
+    if (params.walletAddress && !searchedAddress) {
+      // Handle wallet address from URL
+      const address = params.walletAddress;
+      if (address && address.startsWith('0x')) {
+        handleSearch(address);
+      }
+    }
+  }, [params, searchedAddress]);
 
   const { 
     data: walletData, 
@@ -63,15 +92,6 @@ export default function Home() {
       });
     }
   }, [isError, error, toast]);
-
-  const handleSearch = (address: string) => {
-    if (!address) return;
-    
-    setSearchedAddress(address);
-    
-    // Save to recent addresses
-    saveRecentAddress(address);
-  };
 
   const handleRefresh = () => {
     refetch();
