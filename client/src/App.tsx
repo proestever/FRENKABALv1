@@ -8,13 +8,13 @@ import Home from "@/pages/home";
 import { Profile } from "@/pages/profile";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useWallet } from "@/hooks/use-wallet";
-import { Wallet, Menu, Loader2, User, Settings, Home as HomeIcon, Bookmark, ChevronRight } from "lucide-react";
+import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark } from "lucide-react";
+import telegramLogo from "@assets/Telegram_2019_Logo.svg.png";
+import xLogo from "@assets/X_logo.jpg";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -149,25 +149,10 @@ function Header() {
               
               {isConnected && (
                 <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>My Profile</span>
-                </DropdownMenuItem>
-              )}
-              
-              {isConnected && (
-                <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
                   <Bookmark className="mr-2 h-4 w-4" />
                   <span>Saved Addresses</span>
                 </DropdownMenuItem>
               )}
-              
-              <DropdownMenuSeparator className="bg-white/10" />
-              
-              <DropdownMenuItem className="cursor-pointer opacity-50">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-                <ChevronRight className="ml-auto h-4 w-4" />
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           {renderConnectButton(false)}
@@ -209,25 +194,10 @@ function Header() {
                 
                 {isConnected && (
                   <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>My Profile</span>
-                  </DropdownMenuItem>
-                )}
-                
-                {isConnected && (
-                  <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
                     <Bookmark className="mr-2 h-4 w-4" />
                     <span>Saved Addresses</span>
                   </DropdownMenuItem>
                 )}
-                
-                <DropdownMenuSeparator className="bg-white/10" />
-                
-                <DropdownMenuItem className="cursor-pointer opacity-50">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                  <ChevronRight className="ml-auto h-4 w-4" />
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -250,42 +220,27 @@ function Footer() {
             href="https://t.me/frenkabal" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="transition-all hover:scale-110 text-white/90 hover:text-white bg-black/30 hover:bg-black/40 p-1.5 rounded-full"
+            className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
             title="Join our Telegram Channel"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-5 h-5"
-            >
-              <path d="M22 2L11 13"></path>
-              <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
-            </svg>
+            <img 
+              src={telegramLogo} 
+              alt="Telegram" 
+              className="w-6 h-6 object-contain" 
+            />
           </a>
           <a 
             href="https://x.com/giga_pls" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="transition-all hover:scale-110 text-white/90 hover:text-white bg-black/30 hover:bg-black/40 p-1.5 rounded-full"
+            className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
             title="Follow @giga_pls on X (Twitter)"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="w-5 h-5"
-            >
-              <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932L18.901 1.153ZM17.61 20.644h2.039L6.486 3.24H4.298L17.61 20.644Z" />
-            </svg>
+            <img 
+              src={xLogo} 
+              alt="X (Twitter)" 
+              className="w-6 h-6 object-contain"
+            />
           </a>
         </div>
       </div>
