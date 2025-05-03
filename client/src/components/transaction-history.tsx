@@ -188,16 +188,52 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
   // Function to calculate USD value for a transaction
   const calculateUsdValue = (value: string, decimals: string = '18', tokenAddress: string) => {
+    // Normalize token address
+    const normalizedAddress = tokenAddress?.toLowerCase();
+    
+    // Handle special case for PLS
+    const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+    const addressToUse = normalizedAddress === plsAddress ? plsAddress : normalizedAddress;
+    
     // Check if we have a price for this token
-    const price = tokenPrices[tokenAddress?.toLowerCase()];
+    const price = tokenPrices[addressToUse];
+    
+    // For debugging
+    console.log('Calculate USD Value:', { 
+      valueRaw: value,
+      decimals, 
+      tokenAddress: addressToUse,
+      price, 
+      tokenPrices
+    });
+    
     if (!price) return null;
     
-    // Calculate the token amount
+    // Calculate the token amount - use BigInt for large numbers
     const decimalValue = parseInt(decimals);
-    const tokenAmount = parseInt(value) / (10 ** decimalValue);
+    const divisor = Math.pow(10, decimalValue);
+    
+    // Handle potential overflow with large numbers
+    let tokenAmount: number;
+    try {
+      // For very large numbers, use a different approach
+      if (value.length > 15) {
+        // Parse with decimal point instead of division
+        const integerPart = value.substring(0, value.length - decimalValue) || '0';
+        const decimalPart = value.substring(value.length - decimalValue) || '0';
+        tokenAmount = parseFloat(`${integerPart}.${decimalPart}`);
+      } else {
+        tokenAmount = parseFloat(value) / divisor;
+      }
+    } catch (e) {
+      console.error('Error calculating token amount:', e);
+      tokenAmount = 0;
+    }
     
     // Calculate USD value
     const usdValue = tokenAmount * price;
+    console.log('Calculated USD value:', { tokenAmount, price, usdValue });
+    
     return usdValue;
   };
 
