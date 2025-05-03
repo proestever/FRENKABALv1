@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Link } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -27,10 +27,10 @@ function Header() {
   return (
     <header className="backdrop-blur-md bg-black/10 shadow-md border-b border-white/15 sticky top-0 z-30">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center">
-          <FrenKabalLogo size="md" className="mr-3" />
+        <Link href="/" className="flex items-center group">
+          <FrenKabalLogo size="md" className="mr-3 transition-transform duration-200 group-hover:scale-105" />
           <div className="flex items-center">
-            <h1 className="text-xl md:text-2xl font-bold text-white">FrenKabal</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-white group-hover:text-white/90 transition-colors duration-200">FrenKabal</h1>
             <span className="ml-2 text-[0.6rem] font-bold px-1.5 py-0.5 rounded-[4px] uppercase tracking-wider relative bg-black"
                   style={{
                     background: 'linear-gradient(45deg, #00faff, #0088ff, #5500ff, #aa00ff, #ff00aa, #ff0055)',
@@ -47,7 +47,7 @@ function Header() {
                 Beta
             </span>
           </div>
-        </div>
+        </Link>
         
         <div className="flex space-x-4 items-center">
           <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
@@ -110,6 +110,7 @@ function Router() {
       <div className="flex-grow relative z-10">
         <Switch>
           <Route path="/" component={Home} />
+          <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
         </Switch>
       </div>

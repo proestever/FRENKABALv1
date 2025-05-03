@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useParams, useLocation } from 'wouter';
 import { SearchSection } from '@/components/search-section';
 import { WalletOverview } from '@/components/wallet-overview';
 import { TokenList } from '@/components/token-list';
