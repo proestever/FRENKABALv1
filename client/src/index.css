@@ -4,8 +4,8 @@
 
 /* FrenKabal Theme - Dark Grey with PulseChain Gradients */
 :root {
-  /* Dark grey base with PulseChain gradient accents */
-  --background: 220 10% 4%;
+  /* Very dark base with PulseChain gradient accents */
+  --background: 220 15% 2%;
   --foreground: 0 0% 98%;
   --muted: 220 10% 8%;
   --muted-foreground: 220 10% 70%;

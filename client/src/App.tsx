@@ -85,8 +85,8 @@ function Footer() {
 function Router() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,0,100,0.12),transparent_70%),radial-gradient(ellipse_at_bottom_left,rgba(100,50,255,0.12),transparent_70%),radial-gradient(ellipse_at_center,rgba(0,180,255,0.05),transparent_100%)] pointer-events-none"></div>
-      <div className="fixed inset-0 bg-gradient-to-b from-black/70 to-black/30 pointer-events-none"></div>
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,150,255,0.25)_0%,transparent_60%),radial-gradient(ellipse_at_bottom,rgba(200,0,255,0.25)_0%,transparent_60%),radial-gradient(circle_at_center,rgba(0,120,255,0.1)_0%,transparent_45%)] pointer-events-none"></div>
+      <div className="fixed inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70 pointer-events-none"></div>
       <Header />
       <div className="flex-grow relative z-10">
         <Switch>
