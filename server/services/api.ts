@@ -289,7 +289,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
   try {
     // Always get native PLS balance directly from PulseChain Scan API (most reliable method)
     console.log(`Getting native PLS balance for ${walletAddress} using direct API call`);
-    const nativePlsBalance = await getNativePlsBalance(walletAddress);
+    let nativePlsBalance = await getNativePlsBalance(walletAddress);
     console.log(`Native PLS balance from direct API call: ${nativePlsBalance?.balanceFormatted || 'Not found'}`);
     
     // Try to get token data from Moralis (includes other tokens with prices)
@@ -548,7 +548,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       tokens: tokensWithPrice,
       totalValue,
       tokenCount: tokens.length,
-      plsBalance: plsToken?.balanceFormatted || null,
+      plsBalance: nativePlsBalance?.balanceFormatted || plsToken?.balanceFormatted || null,
       plsPriceChange: plsToken?.priceChange24h || null,
       networkCount: 1, // Default to PulseChain network
     };

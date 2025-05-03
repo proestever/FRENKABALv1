@@ -91,7 +91,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
           <div className="bg-secondary rounded-lg p-4 border border-border">
             <div className="flex items-center mb-2">
               <TokenLogo 
-                address="0x5616458eb2bAc88dD60a4b08F815F37335215f9B" /* PLS token address */
+                address="0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" /* PLS native token address */
                 symbol="PLS"
                 size="sm"
               />

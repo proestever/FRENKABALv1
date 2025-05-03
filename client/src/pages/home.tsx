@@ -25,6 +25,10 @@ export default function Home() {
     enabled: !!searchedAddress,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
+    onSuccess: (data) => {
+      console.log('Wallet data loaded:', data);
+      console.log('PLS Balance:', data.plsBalance);
+    },
     onError: (err) => {
       toast({
         title: "Error loading wallet data",
