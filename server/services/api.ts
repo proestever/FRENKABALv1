@@ -85,6 +85,8 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
  */
 export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenPriceResponse | null> {
   try {
+    console.log(`Fetching price for token ${tokenAddress} from Moralis using chain 0x171 (PulseChain)`);
+    
     // Using Moralis SDK to get token price with PulseChain's chain ID (369 or 0x171)
     const response = await Moralis.EvmApi.token.getTokenPrice({
       chain: "0x171", // PulseChain's chain ID in hex
@@ -92,9 +94,24 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
       address: tokenAddress
     });
     
+    // Log successful price fetch
+    console.log(`Successfully fetched price for ${tokenAddress}: ${response.raw.usdPrice} USD`);
+    
+    if (response.raw.tokenLogo) {
+      console.log(`Token ${tokenAddress} has logo URL: ${response.raw.tokenLogo}`);
+    } else {
+      console.log(`Token ${tokenAddress} does not have a logo URL from Moralis`);
+    }
+    
     return response.raw as MoralisTokenPriceResponse;
-  } catch (error) {
-    console.error(`Error fetching price for token ${tokenAddress}:`, error);
+  } catch (error: any) {
+    // More detailed error logging
+    if (error.response && error.response.status === 404) {
+      console.log(`Token ${tokenAddress} not found on Moralis with chain 0x171 (PulseChain)`);
+    } else {
+      console.error(`Error fetching price for token ${tokenAddress}:`, 
+        error.message || 'Unknown error');
+    }
     return null;
   }
 }

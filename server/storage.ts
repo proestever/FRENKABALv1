@@ -49,24 +49,45 @@ export class DatabaseStorage implements IStorage {
       tokenAddress: logo.tokenAddress.toLowerCase()
     };
 
+    console.log(`Saving logo for token ${processedLogo.tokenAddress}:`, {
+      url: processedLogo.logoUrl.substring(0, 30) + '...',
+      symbol: processedLogo.symbol,
+      name: processedLogo.name
+    });
+
     try {
-      // Try to insert, but if the token already exists, update it
-      const [savedLogo] = await db
-        .insert(tokenLogos)
-        .values(processedLogo)
-        .onConflictDoUpdate({
-          target: tokenLogos.tokenAddress,
-          set: {
+      // First check if this token already exists
+      const existingLogo = await this.getTokenLogo(processedLogo.tokenAddress);
+      
+      if (existingLogo) {
+        console.log(`Token ${processedLogo.tokenAddress} already has a logo, updating it`);
+        // Update the existing logo
+        const [updatedLogo] = await db
+          .update(tokenLogos)
+          .set({
             logoUrl: processedLogo.logoUrl,
             symbol: processedLogo.symbol,
             name: processedLogo.name,
             lastUpdated: processedLogo.lastUpdated
-          }
-        })
-        .returning();
-      return savedLogo;
+          })
+          .where(eq(tokenLogos.tokenAddress, processedLogo.tokenAddress))
+          .returning();
+        
+        console.log(`Successfully updated logo for token ${processedLogo.tokenAddress}`);
+        return updatedLogo;
+      } else {
+        console.log(`Token ${processedLogo.tokenAddress} doesn't have a logo yet, inserting new one`);
+        // Insert a new logo
+        const [newLogo] = await db
+          .insert(tokenLogos)
+          .values(processedLogo)
+          .returning();
+        
+        console.log(`Successfully inserted new logo for token ${processedLogo.tokenAddress}`);
+        return newLogo;
+      }
     } catch (error) {
-      console.error('Error saving token logo:', error);
+      console.error(`Error saving token logo for ${processedLogo.tokenAddress}:`, error);
       throw error;
     }
   }
