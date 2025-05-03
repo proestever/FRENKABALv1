@@ -304,17 +304,25 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     if (moralisTokens.length > 0) {
       console.log(`Got wallet data from Moralis with ${moralisTokens.length} tokens`);
       
-      // Process tokens from Moralis
-      const processedTokens = await Promise.all(moralisTokens.map(async (item: any) => {
-        try {
-          // Check if this is the native PLS token (has address 0xeeee...eeee and native_token flag)
-          const isNative = item.native_token === true || 
-                          (item.token_address && item.token_address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
-          
-          // Fix the incorrect label of native PLS token (Moralis returns it as WPLS)
-          // Fix incorrect labeling for the native PLS token
-          let symbol = item.symbol || 'UNKNOWN';
-          let name = item.name || 'Unknown Token';
+      // Process tokens in batches to avoid overwhelming API
+      const BATCH_SIZE = 5; // Process 5 tokens at a time
+      const processedTokens: ProcessedToken[] = [];
+      
+      // Process tokens in batches
+      for (let i = 0; i < moralisTokens.length; i += BATCH_SIZE) {
+        console.log(`Processing token batch ${i/BATCH_SIZE + 1}/${Math.ceil(moralisTokens.length/BATCH_SIZE)}`);
+        
+        const batch = moralisTokens.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(batch.map(async (item: any) => {
+          try {
+            // Check if this is the native PLS token (has address 0xeeee...eeee and native_token flag)
+            const isNative = item.native_token === true || 
+                            (item.token_address && item.token_address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+            
+            // Fix the incorrect label of native PLS token (Moralis returns it as WPLS)
+            // Fix incorrect labeling for the native PLS token
+            let symbol = item.symbol || 'UNKNOWN';
+            let name = item.name || 'Unknown Token';
           
           if (isNative && symbol.toLowerCase() === 'wpls') {
             symbol = 'PLS'; // Correct the symbol for native token
@@ -370,6 +378,16 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
           return null;
         }
       }));
+      
+      // Add batch results to processed tokens array
+      processedTokens.push(...batchResults.filter(Boolean) as ProcessedToken[]);
+        
+      // Add a delay between batches to avoid rate limiting
+      if (i + BATCH_SIZE < moralisTokens.length) {
+        console.log("Waiting 500ms before processing next batch...");
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
       
       // Filter out any null items from processing errors
       const tokens = processedTokens.filter(t => t !== null);
@@ -445,9 +463,17 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       };
     }
     
-    // Get prices for each token
-    const tokensWithPrice = await Promise.all(
-      tokens.map(async (token) => {
+    // Process tokens in batches to avoid overwhelming API
+    console.log(`Processing ${tokens.length} tokens in batches for price data...`);
+    const BATCH_SIZE = 5; // Process 5 tokens at a time
+    const tokensWithPrice: ProcessedToken[] = [];
+    
+    // Process tokens in batches
+    for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+      console.log(`Processing fallback token batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(tokens.length/BATCH_SIZE)}`);
+      
+      const batch = tokens.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(batch.map(async (token) => {
         try {
           // First, try to get logo from our database
           let logoUrl = token.logo;
@@ -516,8 +542,17 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
           console.error(`Error processing price for token ${token.symbol}:`, error);
           return token;
         }
-      })
-    );
+      }));
+      
+      // Add batch results to processed tokens array
+      tokensWithPrice.push(...batchResults);
+      
+      // Add a delay between batches to avoid rate limiting
+      if (i + BATCH_SIZE < tokens.length) {
+        console.log("Waiting 500ms before processing next batch...");
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
     
     // Calculate total value
     let totalValue = 0;
