@@ -285,23 +285,52 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
 }
 
 /**
- * Get wallet transaction history from Moralis API
+ * Get wallet transaction history from Moralis API with pagination support
  */
-export async function getWalletTransactionHistory(walletAddress: string): Promise<any> {
+export async function getWalletTransactionHistory(
+  walletAddress: string, 
+  limit: number = 100, 
+  cursorParam: string | null = null
+): Promise<any> {
   try {
-    console.log(`Fetching transaction history for ${walletAddress} from Moralis`);
+    console.log(`Fetching transaction history for ${walletAddress} from Moralis (limit: ${limit}, cursor: ${cursorParam || 'none'})`);
     
-    const response = await Moralis.EvmApi.wallets.getWalletHistory({
+    const params: any = {
       chain: "0x171", // PulseChain chain hex ID
       address: walletAddress,
-      order: "DESC"
-    });
+      order: "DESC",
+      limit: limit
+    };
     
-    console.log(`Successfully fetched transaction history for ${walletAddress}`);
-    return response.raw;
+    // Add cursor for pagination if provided
+    if (cursorParam) {
+      params.cursor = cursorParam;
+    }
+    
+    const response = await Moralis.EvmApi.wallets.getWalletHistory(params);
+    
+    // Extract data from the raw response (which is returned as a plain object)
+    const responseData = response.raw as any;
+    const result = responseData?.result || [];
+    const cursor = responseData?.cursor || null;
+    const page = responseData?.page || 0;
+    const page_size = responseData?.page_size || limit;
+    
+    console.log(`Successfully fetched transaction history for ${walletAddress} - ${result.length} transactions`);
+    
+    return {
+      result,
+      cursor,
+      page,
+      page_size
+    };
   } catch (error: any) {
     console.error('Error fetching wallet transaction history from Moralis:', error.message);
-    return null;
+    return {
+      result: [],
+      cursor: null,
+      error: error.message
+    };
   }
 }
 

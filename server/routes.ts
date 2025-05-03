@@ -96,6 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/wallet/:address/transactions", async (req, res) => {
     try {
       const { address } = req.params;
+      const { limit = '100', cursor = null } = req.query;
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -107,10 +108,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid wallet address format" });
       }
       
-      const transactionHistory = await getWalletTransactionHistory(address);
+      // Parse limit to integer with a maximum value to prevent abuse
+      const parsedLimit = Math.min(parseInt(limit as string, 10) || 100, 100);
       
-      if (!transactionHistory) {
-        return res.status(404).json({ message: "Transaction history not found" });
+      // Call the API service with pagination parameters
+      const transactionHistory = await getWalletTransactionHistory(
+        address, 
+        parsedLimit, 
+        cursor as string | null
+      );
+      
+      // Return structured response even if there are no transactions
+      if (!transactionHistory || transactionHistory.error) {
+        return res.status(500).json({ 
+          message: "Failed to fetch transaction history",
+          error: transactionHistory?.error || "Unknown error"
+        });
       }
       
       return res.json(transactionHistory);
