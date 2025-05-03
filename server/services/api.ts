@@ -302,9 +302,9 @@ export async function getWalletTransactionHistory(
       });
     }
     
-    // Use the exact parameters shown to match the working example
+    // Use parameters with proper chain format
     const params: any = {
-      chain: "pulse", // Use "pulse" instead of hex ID
+      chain: "0x171", // PulseChain chain hex ID
       order: "DESC",
       address: walletAddress,
       limit: limit
