@@ -280,10 +280,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
   if (isLoading) {
     return (
-      <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm bg-card/70">
+      <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
         <div className="flex flex-col items-center justify-center min-h-[300px]">
           <Loader2 size={40} className="animate-spin text-primary mb-4" />
-          <h3 className="text-xl font-bold">Loading Transaction History...</h3>
+          <h3 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Loading Transaction History...</h3>
           <p className="text-muted-foreground mt-2">
             This may take a moment depending on your transaction count
           </p>
@@ -294,7 +294,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
   if (isError) {
     return (
-      <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm bg-card/70">
+      <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
         <div className="text-error text-6xl mb-4">
           <div className="flex justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16">
@@ -333,7 +333,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   // Empty state
   if (!transactions || transactions.length === 0) {
     return (
-      <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm bg-card/70">
+      <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
         <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           No transactions found
         </h3>
