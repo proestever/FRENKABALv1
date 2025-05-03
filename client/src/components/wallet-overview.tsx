@@ -68,7 +68,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
       <Card className="p-6 glass-card glass-highlight shadow-lg">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-xl font-bold pulse-gradient-text">Wallet Overview</h2>
+            <h2 className="text-xl font-bold text-white">Wallet Overview</h2>
             <div className="flex items-center mt-1">
               <span className="text-sm text-muted-foreground mr-2">{wallet.address}</span>
               <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-foreground hover:text-primary">

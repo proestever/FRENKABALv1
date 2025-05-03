@@ -15,7 +15,7 @@ function Header() {
         <div className="flex items-center">
           <FrenKabalLogo size="md" className="mr-3" />
           <div className="flex flex-col">
-            <h1 className="text-xl md:text-2xl font-bold pulse-gradient-text">FrenKabal</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-white">FrenKabal</h1>
             <p className="text-xs md:text-sm text-muted-foreground">PulseChain Wallet Tracker</p>
           </div>
         </div>
@@ -48,24 +48,24 @@ function Footer() {
             <FrenKabalLogo size="sm" className="mr-3" />
             <div>
               <div className="flex items-center">
-                <span className="font-semibold pulse-gradient-text">FrenKabal</span>
+                <span className="font-semibold text-white">FrenKabal</span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">Track any wallet on the PulseChain network</p>
             </div>
           </div>
           
           <div className="flex gap-x-6">
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:pulse-gradient-text transition-colors">
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-white transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
               </svg>
             </a>
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:pulse-gradient-text transition-colors">
+            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-white transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
               </svg>
             </a>
-            <a href="https://t.me/frenkabal" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:pulse-gradient-text transition-colors">
+            <a href="https://t.me/frenkabal" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-white transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M21.5 8.9L4.2 16.8c-1.2.6-1.5 1.4-.3 1.9l4.3 1.3 1.7 5.5c.2.6.8.8 1.2.4l2.2-2 4.5 3.4c.9.7 1.9.3 2.2-1l4-19.3c.3-1.7-.7-2.4-2.5-1.1z" />
               </svg>
@@ -85,8 +85,8 @@ function Footer() {
 function Router() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,0,100,0.03),transparent_70%),radial-gradient(ellipse_at_bottom_left,rgba(100,50,255,0.03),transparent_70%),radial-gradient(ellipse_at_center,rgba(0,180,255,0.02),transparent_100%)] pointer-events-none"></div>
-      <div className="fixed inset-0 bg-[linear-gradient(to_right,rgba(255,0,0,0.005),rgba(255,0,255,0.005),rgba(100,100,255,0.005),rgba(0,200,255,0.005))] opacity-40 pointer-events-none"></div>
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,0,100,0.08),transparent_70%),radial-gradient(ellipse_at_bottom_left,rgba(100,50,255,0.08),transparent_70%),radial-gradient(ellipse_at_center,rgba(0,180,255,0.03),transparent_100%)] pointer-events-none"></div>
+      <div className="fixed inset-0 bg-gradient-to-b from-black/60 to-black/20 pointer-events-none"></div>
       <Header />
       <div className="flex-grow relative z-10">
         <Switch>

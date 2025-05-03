@@ -48,12 +48,12 @@
 
 /* Glass card styles and PulseChain gradient utilities */
 .glass-card {
-  @apply bg-secondary/50 backdrop-blur-md border border-border/50;
+  @apply bg-black/20 backdrop-blur-md border border-white/10;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
 .glass-card-active {
-  @apply bg-secondary/70 backdrop-blur-md border border-border;
+  @apply bg-black/30 backdrop-blur-md border border-white/20;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
 }
 

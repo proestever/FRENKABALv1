@@ -117,7 +117,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
     <Card className="shadow-lg glass-card glass-highlight">
       <div className="p-6 border-b border-border">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-xl font-bold pulse-gradient-text">
+          <h2 className="text-xl font-bold text-white">
             Token Holdings
           </h2>
           <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
@@ -127,7 +127,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                 placeholder="Filter tokens..." 
                 value={filterText}
                 onChange={(e) => setFilterText(e.target.value)}
-                className="pl-8 w-full md:w-48 bg-secondary border-border text-foreground"
+                className="pl-8 w-full md:w-48 glass-card border-border/50 text-foreground bg-black/30"
               />
               <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
             </div>
@@ -136,13 +136,13 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
               value={sortBy}
               onValueChange={(value) => setSortBy(value as SortOption)}
             >
-              <SelectTrigger className="w-full md:w-48 bg-secondary border-border text-foreground">
+              <SelectTrigger className="w-full md:w-48 glass-card border-border/50 text-foreground bg-black/30">
                 <div className="flex items-center">
                   <span>Sort by: </span>
                   <SelectValue placeholder="Value" />
                 </div>
               </SelectTrigger>
-              <SelectContent className="bg-card border-border text-foreground">
+              <SelectContent className="bg-black/80 border-white/10 text-white backdrop-blur-md">
                 <SelectItem value="value">Value</SelectItem>
                 <SelectItem value="balance">Balance</SelectItem>
                 <SelectItem value="name">Name</SelectItem>
