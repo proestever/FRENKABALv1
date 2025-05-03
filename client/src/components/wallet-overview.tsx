@@ -94,8 +94,44 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
   const plsPriceChangeClass = getAdvancedChangeClass(wallet.plsPriceChange || 0);
   const totalValueChangeClass = 'text-success border border-success/30 bg-success/10 px-1.5 py-0.5 rounded'; // This would be dynamic if we had portfolio change data
 
+  // Handle bookmark creation/update
+  const handleBookmarkCreated = (bookmark: Bookmark) => {
+    setIsBookmarked(true);
+    setExistingBookmark(bookmark);
+  };
+  
+  const handleBookmarkUpdated = (bookmark: Bookmark) => {
+    setExistingBookmark(bookmark);
+  };
+  
+  const handleBookmarkDeleted = () => {
+    setIsBookmarked(false);
+    setExistingBookmark(null);
+  };
+  
+  // Get user ID from wallet address
+  const getUserId = () => {
+    if (!connectedWalletAddress) return null;
+    // Simple hash of address as user ID
+    return parseInt(connectedWalletAddress.slice(2, 10), 16) % 1000000;
+  };
+
   return (
     <section className="mb-8">
+      {/* Bookmark Dialog */}
+      {isConnected && (
+        <BookmarkDialog
+          isOpen={bookmarkDialogOpen}
+          onClose={() => setBookmarkDialogOpen(false)}
+          walletAddress={wallet.address}
+          userId={getUserId()}
+          existingBookmark={existingBookmark}
+          onBookmarkCreated={handleBookmarkCreated}
+          onBookmarkUpdated={handleBookmarkUpdated}
+          onBookmarkDeleted={handleBookmarkDeleted}
+        />
+      )}
+      
       <Card className="p-6 glass-card shadow-lg border-white/15">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
@@ -118,6 +154,28 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               <ExternalLink className="h-4 w-4 mr-1" />
               View on PulseScan
             </a>
+            {isConnected && (
+              <Button
+                variant="outline"
+                onClick={() => setBookmarkDialogOpen(true)}
+                disabled={isCheckingBookmark}
+                className={`glass-card border-white/15 text-sm h-8 hover:bg-black/20 hover:text-white flex items-center px-2 ${
+                  isBookmarked ? 'bg-green-500/10 text-green-300 hover:text-green-200' : ''
+                }`}
+              >
+                {isBookmarked ? (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Bookmarked
+                  </>
+                ) : (
+                  <>
+                    <BookmarkIcon className="h-4 w-4 mr-1" />
+                    Bookmark
+                  </>
+                )}
+              </Button>
+            )}
             <Button 
               variant="outline" 
               size="icon" 
