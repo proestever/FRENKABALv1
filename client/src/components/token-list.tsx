@@ -114,10 +114,10 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
   }
 
   return (
-    <Card className="shadow-lg border-border backdrop-blur-sm bg-card/70">
+    <Card className="shadow-lg glass-card glass-highlight">
       <div className="p-6 border-b border-border">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h2 className="text-xl font-bold pulse-gradient-text">
             Token Holdings
           </h2>
           <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
@@ -170,7 +170,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
             const isHidden = hiddenTokens.includes(token.address);
             
             return (
-              <div key={token.address} className="p-5 border border-border rounded-lg hover:bg-secondary/30 transition-colors">
+              <div key={token.address} className="p-5 glass-card rounded-lg hover:bg-secondary/60 transition-colors glass-highlight">
                 <div className="flex items-center justify-between">
                   {/* Token Info */}
                   <div className="flex items-center flex-grow">
@@ -236,9 +236,9 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
       {/* Desktop View - Only shown on medium screens and up */}
       <div className="hidden md:block overflow-x-auto">
         <table className="min-w-full divide-y divide-border">
-          <thead className="bg-secondary">
+          <thead className="bg-secondary/60 backdrop-blur-sm">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/5">
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/5 first:rounded-tl-md">
                 Token
               </th>
               <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/6">
@@ -253,7 +253,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
               <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/6">
                 24h Change
               </th>
-              <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/12">
+              <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/12 last:rounded-tr-md">
                 Visibility
               </th>
             </tr>
