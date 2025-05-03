@@ -126,7 +126,6 @@ function Footer() {
     <footer className="backdrop-blur-md bg-black/10 border-t border-white/15 py-6 mt-12">
       <div className="container mx-auto px-4">
         <div className="text-sm text-muted-foreground text-center">
-          <p>Built with PulseChain Scan API and Moralis. This is not a financial tool. Use at your own risk.</p>
           <p className="mt-1">© {new Date().getFullYear()} FrenKabal. All rights reserved.</p>
         </div>
       </div>
