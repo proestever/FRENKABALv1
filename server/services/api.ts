@@ -26,6 +26,14 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
     const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/token-balances`);
     
     if (!response.ok) {
+      console.log(`PulseChain API response status: ${response.status} ${response.statusText}`);
+      
+      // If wallet has no tokens, return an empty array instead of throwing error
+      if (response.status === 404) {
+        console.log(`No tokens found for wallet ${walletAddress}`);
+        return [];
+      }
+      
       throw new Error(`PulseChain Scan API error: ${response.status} ${response.statusText}`);
     }
     
@@ -38,19 +46,33 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
     }
     
     return tokenBalances.map((item: PulseChainTokenBalance) => {
-      const decimals = parseInt(item.token.decimals) || 18;
-      const balance = item.value;
-      const balanceFormatted = parseFloat(balance) / Math.pow(10, decimals);
-      
-      return {
-        address: item.token.address,
-        symbol: item.token.symbol,
-        name: item.token.name,
-        decimals,
-        balance,
-        balanceFormatted,
-        logo: item.token.icon_url || getDefaultLogo(item.token.symbol),
-      };
+      try {
+        const decimals = parseInt(item.token?.decimals || '18') || 18;
+        const balance = item.value || '0';
+        const balanceFormatted = parseFloat(balance) / Math.pow(10, decimals);
+        
+        return {
+          address: item.token?.address || '0x0000000000000000000000000000000000000000',
+          symbol: item.token?.symbol || 'UNKNOWN',
+          name: item.token?.name || 'Unknown Token',
+          decimals,
+          balance,
+          balanceFormatted,
+          logo: (item.token?.icon_url) ? item.token.icon_url : getDefaultLogo(item.token?.symbol),
+        };
+      } catch (itemError) {
+        console.error('Error processing token item:', itemError);
+        // Return a placeholder for this token if we can't process it
+        return {
+          address: '0x0000000000000000000000000000000000000000',
+          symbol: 'ERROR',
+          name: 'Error Processing Token',
+          decimals: 18,
+          balance: '0',
+          balanceFormatted: 0,
+          logo: getDefaultLogo(null),
+        };
+      }
     });
   } catch (error) {
     console.error('Error fetching token balances:', error);
@@ -80,7 +102,11 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
 /**
  * Get default logo URL for common tokens
  */
-function getDefaultLogo(symbol: string): string {
+function getDefaultLogo(symbol: string | null | undefined): string {
+  if (!symbol) {
+    return 'https://cryptologos.cc/logos/placeholder-logo.png';
+  }
+
   const symbolLower = symbol.toLowerCase();
   const defaultLogos: Record<string, string> = {
     pls: 'https://cryptologos.cc/logos/pulse-pls-logo.png',
@@ -100,6 +126,20 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
   try {
     // Get token balances
     const tokens = await getTokenBalances(walletAddress);
+    
+    // If no tokens found, still return a valid response with empty tokens
+    if (tokens.length === 0) {
+      console.log(`No tokens found for wallet ${walletAddress}, returning empty data`);
+      return {
+        address: walletAddress,
+        tokens: [],
+        totalValue: 0,
+        tokenCount: 0,
+        plsBalance: null,
+        plsPriceChange: null,
+        networkCount: 1
+      };
+    }
     
     // Get prices for each token
     const tokensWithPrice = await Promise.all(
