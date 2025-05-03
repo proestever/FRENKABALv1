@@ -2,10 +2,12 @@ import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from "@/components/ui/switch";
 import { Token } from '@shared/schema';
-import { Search, ArrowDownUp } from 'lucide-react';
+import { Search, ArrowDownUp, Eye, EyeOff } from 'lucide-react';
 import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass } from '@/lib/utils';
 import { TokenLogo } from '@/components/token-logo';
+import { getHiddenTokens, toggleHiddenToken, isTokenHidden } from '@/lib/api';
 
 interface TokenListProps {
   tokens: Token[];
@@ -18,14 +20,25 @@ type SortOption = 'value' | 'balance' | 'name' | 'price' | 'change';
 export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
   const [filterText, setFilterText] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('value');
+  const [showHidden, setShowHidden] = useState(false);
+  const [hiddenTokens, setHiddenTokens] = useState<string[]>(getHiddenTokens());
+
+  // Handle toggling token visibility
+  const handleToggleVisibility = (tokenAddress: string) => {
+    const isNowHidden = toggleHiddenToken(tokenAddress);
+    setHiddenTokens(getHiddenTokens());
+  };
 
   // Filter tokens
   const filteredTokens = useMemo(() => {
     return tokens.filter(token => 
-      token.name.toLowerCase().includes(filterText.toLowerCase()) || 
-      token.symbol.toLowerCase().includes(filterText.toLowerCase())
+      // Text filter
+      (token.name.toLowerCase().includes(filterText.toLowerCase()) || 
+       token.symbol.toLowerCase().includes(filterText.toLowerCase())) &&
+      // Hidden filter
+      (showHidden || !hiddenTokens.includes(token.address))
     );
-  }, [tokens, filterText]);
+  }, [tokens, filterText, hiddenTokens, showHidden]);
 
   // Sort tokens
   const sortedTokens = useMemo(() => {
@@ -128,6 +141,19 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                 <SelectItem value="change">24h Change</SelectItem>
               </SelectContent>
             </Select>
+            
+            <div className="flex items-center gap-2 px-3 h-10 rounded-md border border-border bg-secondary">
+              <div className="flex items-center text-sm gap-2">
+                <div className="text-purple-400">
+                  {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+                </div>
+                <span>{showHidden ? "Show Hidden" : "Hide Hidden"}</span>
+              </div>
+              <Switch
+                checked={showHidden}
+                onCheckedChange={setShowHidden}
+              />
+            </div>
           </div>
         </div>
       </div>

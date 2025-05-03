@@ -56,3 +56,66 @@ export function clearRecentAddresses(): void {
     console.error('Error clearing recent addresses from localStorage:', error);
   }
 }
+
+/**
+ * Get hidden tokens from local storage
+ */
+export function getHiddenTokens(): string[] {
+  try {
+    const hiddenTokens = localStorage.getItem('hiddenTokens');
+    return hiddenTokens ? JSON.parse(hiddenTokens) : [];
+  } catch (error) {
+    console.error('Error getting hidden tokens from localStorage:', error);
+    return [];
+  }
+}
+
+/**
+ * Toggle token visibility in local storage
+ * @returns boolean - true if token is now hidden, false if visible
+ */
+export function toggleHiddenToken(tokenAddress: string): boolean {
+  try {
+    const hiddenTokens = getHiddenTokens();
+    const isCurrentlyHidden = hiddenTokens.includes(tokenAddress);
+    
+    if (isCurrentlyHidden) {
+      // Remove token from hidden list
+      const updatedHiddenTokens = hiddenTokens.filter(address => address !== tokenAddress);
+      localStorage.setItem('hiddenTokens', JSON.stringify(updatedHiddenTokens));
+      return false; // Now visible
+    } else {
+      // Add token to hidden list
+      hiddenTokens.push(tokenAddress);
+      localStorage.setItem('hiddenTokens', JSON.stringify(hiddenTokens));
+      return true; // Now hidden
+    }
+  } catch (error) {
+    console.error('Error toggling hidden token in localStorage:', error);
+    return false;
+  }
+}
+
+/**
+ * Check if token is hidden
+ */
+export function isTokenHidden(tokenAddress: string): boolean {
+  try {
+    const hiddenTokens = getHiddenTokens();
+    return hiddenTokens.includes(tokenAddress);
+  } catch (error) {
+    console.error('Error checking if token is hidden:', error);
+    return false;
+  }
+}
+
+/**
+ * Clear all hidden tokens from local storage
+ */
+export function clearHiddenTokens(): void {
+  try {
+    localStorage.removeItem('hiddenTokens');
+  } catch (error) {
+    console.error('Error clearing hidden tokens from localStorage:', error);
+  }
+}
