@@ -43,14 +43,24 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
 
         // Handle special case for native PLS token
         if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+          console.log('Using native PLS token logo for:', address);
           setLogoUrl('/assets/pls-logo.png');
           setIsLoading(false);
           return;
         }
         
         // Handle special case for Frenkabal placeholder logo
-        if (symbol && ['pDAI', 'frpl'].includes(symbol)) {
+        if (symbol && ['pDAI', 'pDAI', 'frpl'].includes(symbol)) {
+          console.log('Using Frenkabal logo for:', address, symbol);
           setLogoUrl('/assets/100xfrenlogo.png');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Handle token logos directly provided by the server
+        if (fallbackLogo && (fallbackLogo.startsWith('/assets/') || fallbackLogo.startsWith('https://') || fallbackLogo.startsWith('http://'))) {
+          console.log('Using provided fallback logo:', fallbackLogo);
+          setLogoUrl(fallbackLogo);
           setIsLoading(false);
           return;
         }

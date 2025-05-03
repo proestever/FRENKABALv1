@@ -63,12 +63,19 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
   const { data: transactions, isLoading, isError } = useQuery({
     queryKey: ['transactions', walletAddress],
-    queryFn: () => {
+    queryFn: async () => {
       console.log('Fetching transaction history for:', walletAddress);
-      // Use the native token address for transactions (0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
-      // as the server expects this format
-      const nativeTokenAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-      return fetchTransactionHistory(nativeTokenAddress);
+      try {
+        // Use the native token address for transactions (0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
+        // as the server expects this format
+        const nativeTokenAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+        const txHistory = await fetchTransactionHistory(nativeTokenAddress);
+        console.log('Transaction history fetched:', txHistory ? 'yes' : 'no', txHistory ? txHistory.length + ' transactions' : '');
+        return txHistory;
+      } catch (error) {
+        console.error('Error fetching transaction history:', error);
+        throw error;
+      }
     },
     enabled: !!walletAddress,
     staleTime: 60 * 1000, // 1 minute
