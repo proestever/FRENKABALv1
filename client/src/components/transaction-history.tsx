@@ -794,16 +794,45 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       
       {/* Load More Button (if there are more transactions) */}
       {hasMore && (
-        <div className="p-6 flex justify-center">
+        <div className="p-6 flex flex-col items-center">
+          {loadingTimeout && isLoadingMore && (
+            <div className="mb-4 px-4 py-3 glass-card border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 rounded-md max-w-md text-center">
+              <p className="text-sm mb-2">
+                The request is taking longer than expected. This may be due to:
+              </p>
+              <ul className="text-xs text-left list-disc pl-5 mb-2">
+                <li>Moralis API rate limits (100 transactions per request)</li>
+                <li>Network congestion on PulseChain</li>
+                <li>Server-side timeouts</li>
+              </ul>
+              <p className="text-xs">You can wait or try again.</p>
+            </div>
+          )}
+          
           <button 
-            onClick={loadMoreTransactions}
-            disabled={isLoadingMore}
+            onClick={() => {
+              if (loadingTimeout) {
+                // If in timeout state, clear it and retry
+                setLoadingTimeout(false);
+                if (requestTimeoutId) clearTimeout(requestTimeoutId);
+                loadMoreTransactions();
+              } else {
+                // Normal load more
+                loadMoreTransactions();
+              }
+            }}
+            disabled={isLoadingMore && !loadingTimeout}
             className="w-full max-w-md flex items-center justify-center px-3 py-2 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoadingMore ? (
+            {isLoadingMore && !loadingTimeout ? (
               <span className="flex items-center">
                 <Loader2 size={18} className="mr-2 animate-spin" /> 
                 Loading more transactions...
+              </span>
+            ) : isLoadingMore && loadingTimeout ? (
+              <span className="flex items-center">
+                <RefreshCw size={18} className="mr-2" /> 
+                Try Again
               </span>
             ) : (
               <span className="flex items-center">
