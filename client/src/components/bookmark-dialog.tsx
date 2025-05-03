@@ -154,7 +154,7 @@ export function BookmarkDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px] dialog-content">
+      <DialogContent className="sm:max-w-[425px] bg-opacity-20 backdrop-blur-xl bg-black/20 border-white/10 shadow-xl">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="text-white">{existingBookmark ? 'Edit Bookmark' : 'Save Bookmark'}</DialogTitle>
