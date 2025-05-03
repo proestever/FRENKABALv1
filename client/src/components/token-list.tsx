@@ -168,14 +168,21 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
                 <tr key={token.address} className="hover:bg-secondary-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <img 
-                        src={token.logo || 'https://cryptologos.cc/logos/placeholder-logo.png'} 
-                        alt={token.symbol} 
-                        className="w-8 h-8 mr-3 rounded-full"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://cryptologos.cc/logos/placeholder-logo.png';
-                        }}
-                      />
+                      <div className="w-8 h-8 mr-3 rounded-full flex items-center justify-center bg-secondary-200 overflow-hidden">
+                        {token.logo ? (
+                          <img 
+                            src={token.logo} 
+                            alt={token.symbol} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://cryptologos.cc/logos/placeholder-logo.png';
+                            }}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span className="text-xs font-bold text-secondary-600">{token.symbol.substring(0, 2).toUpperCase()}</span>
+                        )}
+                      </div>
                       <div>
                         <div className="text-sm font-medium">{token.name}</div>
                         <div className="text-xs text-secondary-500">{token.symbol}</div>

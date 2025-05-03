@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { ProcessedToken, PulseChainTokenBalanceResponse, MoralisTokenPriceResponse, WalletData } from '../types';
+import { ProcessedToken, PulseChainTokenBalanceResponse, PulseChainTokenBalance, MoralisTokenPriceResponse, WalletData } from '../types';
 
 // Constants
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
@@ -52,7 +52,8 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
  */
 export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenPriceResponse | null> {
   try {
-    const response = await fetch(`${MORALIS_API_BASE}/token/${tokenAddress}/price?chain=pulse&include=percent_change`, {
+    // Using the v2.2 endpoint with erc20 format
+    const response = await fetch(`${MORALIS_API_BASE}/v2.2/erc20/${tokenAddress}/price?chain=pulse&include=percent_change`, {
       headers: {
         'X-API-Key': MORALIS_API_KEY,
       },
@@ -104,11 +105,15 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
           const priceData = await getTokenPrice(token.address);
           
           if (priceData) {
+            // Use tokenLogo from Moralis if available and our token doesn't have a logo
+            const logo = token.logo || priceData.tokenLogo || getDefaultLogo(token.symbol);
+            
             return {
               ...token,
               price: priceData.usdPrice,
               value: token.balanceFormatted * priceData.usdPrice,
-              priceChange24h: priceData.priceChange?.['24h'] || 0,
+              priceChange24h: priceData.usdPrice24hrPercentChange || 0,
+              logo,
             };
           }
           

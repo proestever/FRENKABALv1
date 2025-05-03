@@ -20,21 +20,26 @@ export interface PulseChainTokenBalance {
 
 // Moralis API response types
 export interface MoralisTokenPriceResponse {
-  tokenAddress: string;
-  usdPrice: number;
+  tokenName: string;
+  tokenSymbol: string;
+  tokenLogo?: string;
+  tokenDecimals: string;
   nativePrice: {
     value: string;
     decimals: number;
     name: string;
     symbol: string;
+    address: string;
   };
-  exchangeAddress: string;
+  usdPrice: number;
+  usdPriceFormatted: string;
   exchangeName: string;
-  priceChange: {
-    '24h': number;
-    '7d': number;
-    '30d': number;
-  };
+  exchangeAddress: string;
+  tokenAddress: string;
+  blockTimestamp: string;
+  usdPrice24hr?: number;
+  usdPrice24hrPercentChange?: number;
+  '24hrPercentChange'?: string;
 }
 
 // Combined wallet data types
