@@ -76,10 +76,10 @@ export default function Home() {
     <main className="container mx-auto px-4 py-6">
       <SearchSection onSearch={handleSearch} isLoading={isLoading} />
       
-      {/* Loading Progress Bar - only shows during loading */}
+      {/* Loading Progress Bar - shows during loading */}
       <LoadingProgress isLoading={isLoading || isFetching} />
       
-      {searchedAddress && !isLoading && !isFetching && walletData && !isError && (
+      {searchedAddress && walletData && !isError && (
         <>
           <div className="mt-4">
             <WalletOverview 

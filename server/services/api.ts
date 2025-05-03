@@ -626,6 +626,9 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       message: 'Data loaded successfully'
     });
     
+    // Give clients time to see the completed progress
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     return {
       address: walletAddress,
       tokens: tokensWithPrice,

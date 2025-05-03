@@ -13,9 +13,11 @@ export function LoadingProgress({ isLoading }: LoadingProgressProps) {
   const [animatedProgress, setAnimatedProgress] = useState(0);
   
   // Calculate the progress percentage
-  const progressPercent = progress.totalBatches > 0 
-    ? Math.min(Math.round((progress.currentBatch / progress.totalBatches) * 100), 100)
-    : 0;
+  const progressPercent = progress.status === 'complete' 
+    ? 100 
+    : progress.totalBatches > 0 
+      ? Math.min(Math.round((progress.currentBatch / progress.totalBatches) * 100), 100)
+      : 0;
   
   // Smooth animation for progress updates
   useEffect(() => {
@@ -39,8 +41,8 @@ export function LoadingProgress({ isLoading }: LoadingProgressProps) {
     }
   }, [progressPercent, animatedProgress]);
   
-  // Check loading state and progress
-  const shouldShow = isLoading && progress.status !== 'idle' && progress.totalBatches > 0 && progress.status !== 'complete';
+  // Check loading state and progress - only hide if we're not loading or if we're idle with no batches
+  const shouldShow = isLoading && (progress.status !== 'idle' || progress.totalBatches > 0);
   
   // Don't show anything if not in loading state
   if (!shouldShow) {
