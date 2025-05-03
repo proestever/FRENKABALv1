@@ -56,34 +56,40 @@ function Header() {
   return (
     <header className="backdrop-blur-md bg-black/10 shadow-md border-b border-white/15 sticky top-0 z-30">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <a 
-          href="/" 
-          onClick={handleLogoClick} 
-          className="flex items-center group cursor-pointer"
-        >
-          <FrenKabalLogo size="md" className="mr-3 transition-transform duration-200 group-hover:scale-105" />
-          <div className="flex items-center">
-            <h1 className="text-xl md:text-2xl font-bold text-white group-hover:text-white/90 transition-colors duration-200">FrenKabal</h1>
-            <span className="ml-2 text-[0.6rem] font-bold px-1.5 py-0.5 rounded-[4px] uppercase tracking-wider relative bg-black"
-                  style={{
-                    background: 'linear-gradient(45deg, #00faff, #0088ff, #5500ff, #aa00ff, #ff00aa, #ff0055)',
-                    backgroundSize: '200% 200%',
-                    WebkitBackgroundClip: 'text',
-                    backgroundClip: 'text',
-                    color: 'transparent',
-                    filter: 'brightness(1.3) contrast(1.3) saturate(1.2)',
-                    textShadow: '0 0 2px rgba(255,255,255,0.5)',
-                    border: 'none',
-                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.15), 0 0 4px rgba(85,0,255,0.5)',
-                    animation: 'gradient-x 4s ease infinite, beta-glow 2s ease-in-out infinite'
-                  }}>
-                Beta
-            </span>
-          </div>
-        </a>
+        <div className="flex items-center">
+          <button className="md:hidden flex p-2 mr-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
+            <Menu className="w-6 h-6" />
+          </button>
+          
+          <a 
+            href="/" 
+            onClick={handleLogoClick} 
+            className="flex items-center group cursor-pointer"
+          >
+            <FrenKabalLogo size="md" className="transition-transform duration-200 group-hover:scale-105" />
+            <div className="hidden md:flex items-center ml-3">
+              <h1 className="text-xl md:text-2xl font-bold text-white group-hover:text-white/90 transition-colors duration-200">FrenKabal</h1>
+              <span className="ml-2 text-[0.6rem] font-bold px-1.5 py-0.5 rounded-[4px] uppercase tracking-wider relative bg-black"
+                    style={{
+                      background: 'linear-gradient(45deg, #00faff, #0088ff, #5500ff, #aa00ff, #ff00aa, #ff0055)',
+                      backgroundSize: '200% 200%',
+                      WebkitBackgroundClip: 'text',
+                      backgroundClip: 'text',
+                      color: 'transparent',
+                      filter: 'brightness(1.3) contrast(1.3) saturate(1.2)',
+                      textShadow: '0 0 2px rgba(255,255,255,0.5)',
+                      border: 'none',
+                      boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.15), 0 0 4px rgba(85,0,255,0.5)',
+                      animation: 'gradient-x 4s ease infinite, beta-glow 2s ease-in-out infinite'
+                    }}>
+                  Beta
+              </span>
+            </div>
+          </a>
+        </div>
         
         <div className="flex space-x-4 items-center">
-          <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
+          <button className="hidden md:flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
             <Menu className="w-6 h-6" />
           </button>
           
@@ -104,12 +110,12 @@ function Header() {
               {isConnecting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Connecting...
+                  <span className="md:inline">Connecting...</span>
                 </>
               ) : (
                 <>
                   <Wallet className="w-4 h-4 mr-2" />
-                  Connect
+                  <span className="md:inline">Connect</span>
                 </>
               )}
             </button>
