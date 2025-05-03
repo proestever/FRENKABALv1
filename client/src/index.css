@@ -187,6 +187,17 @@
   }
 }
 
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px 1px #e81cff, inset 0 0 6px 1px #e81cff;
+    text-shadow: 0 0 8px #e81cff;
+  }
+  50% {
+    box-shadow: 0 0 15px 2px #e81cff, inset 0 0 8px 1px #e81cff;
+    text-shadow: 0 0 12px #e81cff, 0 0 20px #e81cff;
+  }
+}
+
 .connect-button::after {
   content: '';
   position: absolute;
