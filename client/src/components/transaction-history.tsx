@@ -373,6 +373,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         <TokenLogo 
                           address="0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
                           symbol="PLS"
+                          fallbackLogo="/assets/pls-logo.png"
                           size="sm"
                         />
                         <div className="ml-2 flex items-center">

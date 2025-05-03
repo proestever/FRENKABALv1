@@ -42,15 +42,15 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
         setError(false);
 
         // Handle special case for native PLS token
-        if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-          console.log('Using native PLS token logo for:', address);
+        if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || symbol === 'PLS') {
+          console.log('Using native PLS token logo for:', address, symbol);
           setLogoUrl('/assets/pls-logo.png');
           setIsLoading(false);
           return;
         }
         
         // Handle special case for Frenkabal placeholder logo
-        if (symbol && ['pDAI', 'pDAI', 'frpl'].includes(symbol)) {
+        if (symbol && ['pDAI', 'frpl', 'PDAI'].includes(symbol)) {
           console.log('Using Frenkabal logo for:', address, symbol);
           setLogoUrl('/assets/100xfrenlogo.png');
           setIsLoading(false);

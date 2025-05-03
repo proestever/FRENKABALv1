@@ -55,11 +55,13 @@ export function useBatchTokenLogos(addresses: string[], symbols?: string[]): Rec
           const symbol = symbols && symbols[index] ? symbols[index] : null;
           
           // Special case for native token
-          if (address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+          if (address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || symbol === 'PLS') {
             fallbackUrls[address.toLowerCase()] = '/assets/pls-logo.png';
-          } else if (symbol && ['pDAI', 'frpl'].includes(symbol)) {
+            console.log('Using PLS logo for address in batch:', address, symbol);
+          } else if (symbol && ['pDAI', 'frpl', 'PDAI'].includes(symbol)) {
             // Special case for Frenkabal tokens
             fallbackUrls[address.toLowerCase()] = '/assets/100xfrenlogo.png';
+            console.log('Using Frenkabal logo for address in batch:', address, symbol);
           } else {
             // Default to Frenkabal logo
             fallbackUrls[address.toLowerCase()] = '/assets/100xfrenlogo.png';
