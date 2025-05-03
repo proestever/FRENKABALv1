@@ -12,6 +12,13 @@ export interface IStorage {
   getTokenLogo(tokenAddress: string): Promise<TokenLogo | undefined>;
   saveTokenLogo(logo: InsertTokenLogo): Promise<TokenLogo>;
   getTokenLogos(): Promise<TokenLogo[]>;
+  
+  // Bookmark methods
+  getBookmarks(userId: number): Promise<Bookmark[]>;
+  getBookmarkByAddress(userId: number, walletAddress: string): Promise<Bookmark | undefined>;
+  createBookmark(bookmark: InsertBookmark): Promise<Bookmark>;
+  updateBookmark(id: number, data: Partial<InsertBookmark>): Promise<Bookmark>;
+  deleteBookmark(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -94,6 +101,82 @@ export class DatabaseStorage implements IStorage {
 
   async getTokenLogos(): Promise<TokenLogo[]> {
     return db.select().from(tokenLogos);
+  }
+  
+  // Bookmark methods implementation
+  async getBookmarks(userId: number): Promise<Bookmark[]> {
+    return db
+      .select()
+      .from(bookmarks)
+      .where(eq(bookmarks.userId, userId))
+      .orderBy(bookmarks.createdAt);
+  }
+  
+  async getBookmarkByAddress(userId: number, walletAddress: string): Promise<Bookmark | undefined> {
+    const addressLower = walletAddress.toLowerCase();
+    const [bookmark] = await db
+      .select()
+      .from(bookmarks)
+      .where(
+        eq(bookmarks.userId, userId)
+      );
+      
+    // Filter for the wallet address in JavaScript since we're having issues with the SQL query
+    return bookmark && bookmark.walletAddress.toLowerCase() === addressLower ? bookmark : undefined;
+  }
+  
+  async createBookmark(bookmark: InsertBookmark): Promise<Bookmark> {
+    // Ensure wallet address is lowercase for consistent storage
+    const processedBookmark = {
+      ...bookmark,
+      walletAddress: bookmark.walletAddress.toLowerCase()
+    };
+    
+    try {
+      const [newBookmark] = await db
+        .insert(bookmarks)
+        .values(processedBookmark)
+        .returning();
+        
+      return newBookmark;
+    } catch (error) {
+      console.error(`Error creating bookmark for address ${processedBookmark.walletAddress}:`, error);
+      throw error;
+    }
+  }
+  
+  async updateBookmark(id: number, data: Partial<InsertBookmark>): Promise<Bookmark> {
+    // If wallet address is provided, ensure it's lowercase
+    const processedData = data.walletAddress
+      ? { ...data, walletAddress: data.walletAddress.toLowerCase() }
+      : data;
+      
+    try {
+      const [updatedBookmark] = await db
+        .update(bookmarks)
+        .set(processedData)
+        .where(eq(bookmarks.id, id))
+        .returning();
+        
+      return updatedBookmark;
+    } catch (error) {
+      console.error(`Error updating bookmark with id ${id}:`, error);
+      throw error;
+    }
+  }
+  
+  async deleteBookmark(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(bookmarks)
+        .where(eq(bookmarks.id, id))
+        .returning({ id: bookmarks.id });
+        
+      return result.length > 0;
+    } catch (error) {
+      console.error(`Error deleting bookmark with id ${id}:`, error);
+      throw error;
+    }
   }
 }
 

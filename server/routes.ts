@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice } from "./services/api";
 import { z } from "zod";
-import { TokenLogo } from "@shared/schema";
+import { TokenLogo, insertBookmarkSchema } from "@shared/schema";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -427,6 +427,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error saving token logo:", error);
       return res.status(500).json({ 
         message: "Failed to save token logo",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Bookmark API Routes
+  
+  // Get all bookmarks for a user
+  app.get("/api/bookmarks/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const bookmarks = await storage.getBookmarks(userId);
+      return res.json(bookmarks);
+    } catch (error) {
+      console.error("Error fetching bookmarks:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch bookmarks",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Get a specific bookmark by wallet address
+  app.get("/api/bookmarks/:userId/address/:walletAddress", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { walletAddress } = req.params;
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      if (!walletAddress || typeof walletAddress !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      const bookmark = await storage.getBookmarkByAddress(userId, walletAddress);
+      
+      if (!bookmark) {
+        return res.status(404).json({ message: "Bookmark not found" });
+      }
+      
+      return res.json(bookmark);
+    } catch (error) {
+      console.error("Error fetching bookmark:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch bookmark",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Create a new bookmark
+  app.post("/api/bookmarks", async (req, res) => {
+    try {
+      // Validate request body using Zod schema
+      const validationResult = insertBookmarkSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid bookmark data", 
+          details: validationResult.error.errors 
+        });
+      }
+      
+      const bookmarkData = validationResult.data;
+      
+      // Check if this wallet is already bookmarked by this user
+      const existingBookmark = await storage.getBookmarkByAddress(
+        Number(bookmarkData.userId), 
+        bookmarkData.walletAddress
+      );
+      
+      if (existingBookmark) {
+        return res.status(409).json({ 
+          message: "This wallet address is already bookmarked by this user",
+          bookmark: existingBookmark
+        });
+      }
+      
+      // Create the new bookmark
+      const newBookmark = await storage.createBookmark(bookmarkData);
+      return res.status(201).json(newBookmark);
+    } catch (error) {
+      console.error("Error creating bookmark:", error);
+      return res.status(500).json({ 
+        message: "Failed to create bookmark",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Update an existing bookmark
+  app.patch("/api/bookmarks/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid bookmark ID" });
+      }
+      
+      // Define update schema (subset of insert schema)
+      const updateSchema = z.object({
+        label: z.string().optional(),
+        notes: z.string().optional(),
+      });
+      
+      // Validate request body
+      const validationResult = updateSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid update data", 
+          details: validationResult.error.errors 
+        });
+      }
+      
+      const updateData = validationResult.data;
+      
+      // Update the bookmark
+      const updatedBookmark = await storage.updateBookmark(id, updateData);
+      return res.json(updatedBookmark);
+    } catch (error) {
+      console.error("Error updating bookmark:", error);
+      return res.status(500).json({ 
+        message: "Failed to update bookmark",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Delete a bookmark
+  app.delete("/api/bookmarks/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid bookmark ID" });
+      }
+      
+      const success = await storage.deleteBookmark(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Bookmark not found" });
+      }
+      
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting bookmark:", error);
+      return res.status(500).json({ 
+        message: "Failed to delete bookmark",
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
