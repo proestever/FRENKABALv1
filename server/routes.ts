@@ -114,16 +114,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "addresses must be an array" });
       }
       
-      // Limit batch size to prevent abuse
-      const MAX_BATCH_SIZE = 50;
+      // Limit batch size but don't fail - just process a subset
+      const MAX_BATCH_SIZE = 100;
+      let addressesToProcess = addresses;
+      
       if (addresses.length > MAX_BATCH_SIZE) {
-        return res.status(400).json({ 
-          message: `Batch size too large. Maximum allowed: ${MAX_BATCH_SIZE}`
-        });
+        console.log(`Batch size ${addresses.length} exceeds maximum (${MAX_BATCH_SIZE}). Processing first ${MAX_BATCH_SIZE} addresses.`);
+        addressesToProcess = addresses.slice(0, MAX_BATCH_SIZE);
       }
       
       // Normalize addresses
-      const normalizedAddresses = addresses.map(addr => 
+      const normalizedAddresses = addressesToProcess.map(addr => 
         typeof addr === 'string' ? addr.toLowerCase() : addr);
       
       // Get all existing logos from storage
@@ -204,9 +205,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Add to response map
               logoMap[address] = savedLogo;
+            } else {
+              // If Moralis doesn't have a logo, use Frenkabal as default
+              const defaultLogo = {
+                tokenAddress: address,
+                logoUrl: '/assets/100xfrenlogo.png',
+                symbol: tokenData?.tokenSymbol || "",
+                name: tokenData?.tokenName || "",
+                lastUpdated: new Date().toISOString()
+              };
+              
+              // Store default logo in database to prevent future API calls
+              const savedLogo = await storage.saveTokenLogo(defaultLogo);
+              
+              // Add to response map
+              logoMap[address] = savedLogo;
+              console.log(`Saved default Frenkabal logo for token ${address} in batch request`);
             }
           } catch (error) {
             console.error(`Error fetching logo for ${address} in batch:`, error);
+            
+            // Even on error, save a default logo to prevent future API calls
+            try {
+              const defaultLogo = {
+                tokenAddress: address,
+                logoUrl: '/assets/100xfrenlogo.png',
+                symbol: "",
+                name: "",
+                lastUpdated: new Date().toISOString()
+              };
+              
+              // Store default logo in database
+              const savedLogo = await storage.saveTokenLogo(defaultLogo);
+              
+              // Add to response map
+              logoMap[address] = savedLogo;
+              console.log(`Saved error fallback logo for token ${address} in batch request`);
+            } catch (saveErr) {
+              console.error(`Failed to save fallback logo for ${address}:`, saveErr);
+            }
           }
         }));
       }
@@ -279,9 +316,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             logo = await storage.saveTokenLogo(newLogo);
             console.log(`Saved new token logo for ${address}: ${tokenData.tokenLogo}`);
+          } else {
+            // If Moralis doesn't have a logo, save a default logo
+            // This prevents having to check Moralis again in the future for this token
+            
+            // Store Frenkabal logo as default for unknown tokens
+            const defaultLogo = {
+              tokenAddress: address,
+              logoUrl: '/assets/100xfrenlogo.png', // Path to static asset
+              symbol: tokenData?.tokenSymbol || "",
+              name: tokenData?.tokenName || "",
+              lastUpdated: new Date().toISOString()
+            };
+            
+            logo = await storage.saveTokenLogo(defaultLogo);
+            console.log(`Saved default logo for token ${address} with no Moralis logo`);
           }
         } catch (err) {
           console.error(`Error fetching token data from Moralis: ${err}`);
+          
+          // Even on error, we should store a default logo to prevent future API calls
+          const defaultLogo = {
+            tokenAddress: address,
+            logoUrl: '/assets/100xfrenlogo.png', // Path to static asset
+            symbol: "",
+            name: "",
+            lastUpdated: new Date().toISOString()
+          };
+          
+          logo = await storage.saveTokenLogo(defaultLogo);
+          console.log(`Saved fallback logo for token ${address} after Moralis error`);
         }
       }
       
