@@ -35,7 +35,7 @@ export function SearchSection({ onSearch, isLoading }: SearchSectionProps) {
 
   return (
     <section className="mb-8">
-      <Card className="shadow-lg glass-card glass-highlight">
+      <Card className="shadow-lg glass-card">
         <CardContent className="pt-6">
           <h2 className="text-lg font-semibold mb-4 text-white">
             Track Any PulseChain Wallet

@@ -29,7 +29,7 @@ function Header() {
             </svg>
             Help
           </button>
-          <button className="px-4 py-2 text-sm font-medium relative glass-highlight overflow-hidden border border-transparent bg-gradient-to-r from-[rgba(255,0,150,0.8)] to-[rgba(0,150,255,0.8)] text-white rounded-md hover:opacity-90 transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+          <button className="px-4 py-2 text-sm font-medium relative overflow-hidden border border-transparent bg-gradient-to-r from-[rgba(255,0,150,0.8)] to-[rgba(0,150,255,0.8)] text-white rounded-md hover:opacity-90 transition focus:outline-none">
             Connect Wallet
           </button>
         </div>
@@ -41,7 +41,7 @@ function Header() {
 // Footer component
 function Footer() {
   return (
-    <footer className="backdrop-blur-md bg-black/10 border-t border-white/15 py-6 mt-12 glass-highlight">
+    <footer className="backdrop-blur-md bg-black/10 border-t border-white/15 py-6 mt-12">
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0 flex items-center">

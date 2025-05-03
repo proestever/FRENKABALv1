@@ -99,27 +99,7 @@
   opacity: 0.5;
 }
 
-.glass-highlight {
-  position: relative;
-  overflow: hidden;
-}
-
-.glass-highlight::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    transparent, 
-    rgba(255, 255, 255, 0.01), 
-    transparent
-  );
-  transform: rotate(30deg);
-  pointer-events: none;
-  filter: blur(4px);
-}
+/* Glass highlight effect has been completely removed */
 
 /* Shimmer effect for progress bar */
 @keyframes shimmer {
