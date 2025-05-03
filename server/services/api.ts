@@ -295,33 +295,43 @@ export async function getWalletTransactionHistory(
   try {
     console.log(`Fetching transaction history for ${walletAddress} from Moralis (limit: ${limit}, cursor: ${cursorParam || 'none'})`);
     
-    // Ensure Moralis is initialized with the API key
-    if (!Moralis.Core.isStarted) {
-      await Moralis.start({
-        apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98"
-      });
-    }
+    // Direct API call to Moralis as shown in the working example
+    // First ensure we have an API key
+    const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98";
     
-    // Use parameters with proper chain format
-    const params: any = {
-      chain: "0x171", // PulseChain chain hex ID
-      order: "DESC",
-      address: walletAddress,
-      limit: limit
-    };
+    // Build URL with parameters
+    let url = `https://deep-index.moralis.io/api/v2.2/wallets/${walletAddress}/history`;
     
-    // Add cursor for pagination if provided
+    // Add query parameters
+    const queryParams = new URLSearchParams();
+    queryParams.append('chain', '0x171'); // PulseChain chain ID
+    queryParams.append('order', 'DESC');
+    queryParams.append('limit', limit.toString());
+    
     if (cursorParam) {
-      params.cursor = cursorParam;
+      queryParams.append('cursor', cursorParam);
     }
     
-    // Log the exact parameters we're using to help debug
-    console.log("Fetching transactions with params:", JSON.stringify(params));
+    url = `${url}?${queryParams.toString()}`;
+    console.log(`Making direct Moralis API call to: ${url}`);
     
-    const response = await Moralis.EvmApi.wallets.getWalletHistory(params);
+    // Make the direct API call
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'X-API-Key': apiKey
+      }
+    });
     
-    // Extract data from the raw response
-    const responseData = response.raw as any;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Moralis API error (${response.status}): ${errorText}`);
+      throw new Error(`Moralis API error: ${response.status} ${response.statusText}`);
+    }
+    
+    // Parse the JSON response
+    const responseData = await response.json();
     console.log(`Transaction response cursor: ${responseData?.cursor || 'none'}`);
     
     const result = responseData?.result || [];
