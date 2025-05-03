@@ -47,6 +47,13 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
           setIsLoading(false);
           return;
         }
+        
+        // Handle special case for Frenkabal placeholder logo
+        if (symbol && ['pDAI', 'frpl'].includes(symbol)) {
+          setLogoUrl('/assets/100xfrenlogo.png');
+          setIsLoading(false);
+          return;
+        }
 
         const response = await fetch(`/api/token-logo/${normalizedAddress}`);
         

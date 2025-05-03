@@ -63,7 +63,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
   const { data: transactions, isLoading, isError } = useQuery({
     queryKey: ['transactions', walletAddress],
-    queryFn: () => fetchTransactionHistory(walletAddress),
+    queryFn: () => {
+      console.log('Fetching transaction history for:', walletAddress);
+      // Use the native token address for transactions (0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
+      // as the server expects this format
+      const nativeTokenAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      return fetchTransactionHistory(nativeTokenAddress);
+    },
     enabled: !!walletAddress,
     staleTime: 60 * 1000, // 1 minute
   });
