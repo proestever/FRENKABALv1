@@ -35,7 +35,7 @@ export function TokenLogo({ address, symbol, size = 'md', fallbackLogo, rounded 
         <img 
           src={plsLogo} 
           alt="PLS" 
-          className="w-full h-full object-contain p-1"
+          className="w-full h-full object-cover p-1"
           loading="lazy"
         />
       ) : logoUrl ? (
@@ -43,14 +43,14 @@ export function TokenLogo({ address, symbol, size = 'md', fallbackLogo, rounded 
         <img 
           src={logoUrl} 
           alt={symbol} 
-          className="w-full h-full object-contain p-1"
+          className="w-full h-full object-cover p-1"
           onError={(e) => {
             (e.target as HTMLImageElement).src = customTokenLogo;
           }}
           loading="lazy"
         />
       ) : (
-        // Fallback for tokens without a logo
+        // Fallback for tokens without a logo - use object-contain only for this one
         <img 
           src={customTokenLogo} 
           alt={symbol} 
