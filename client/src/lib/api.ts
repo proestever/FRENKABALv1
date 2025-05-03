@@ -142,13 +142,13 @@ export interface TransactionResponse {
 /**
  * Fetch transaction history for a wallet address with pagination support
  * @param address - Wallet address to fetch transactions for
- * @param limit - Number of transactions per page (default: 200)
+ * @param limit - Number of transactions per page (default: 100, Moralis free plan limit)
  * @param cursor - Pagination cursor for fetching next page of results
  * @returns Paginated transaction response
  */
 export async function fetchTransactionHistory(
   address: string,
-  limit: number = 200,
+  limit: number = 100,
   cursor: string | null = null
 ): Promise<TransactionResponse> {
   try {

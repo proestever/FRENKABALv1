@@ -289,7 +289,7 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
  */
 export async function getWalletTransactionHistory(
   walletAddress: string, 
-  limit: number = 200, 
+  limit: number = 100, // Moralis free plan limits to max 100 transactions per call
   cursorParam: string | null = null
 ): Promise<any> {
   try {

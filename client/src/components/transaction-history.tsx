@@ -58,8 +58,8 @@ interface TransactionHistoryProps {
   onClose: () => void;
 }
 
-// Number of transactions to load per batch
-const TRANSACTIONS_PER_BATCH = 200;
+// Number of transactions to load per batch (Moralis free plan limit is 100)
+const TRANSACTIONS_PER_BATCH = 100;
 
 export function TransactionHistory({ walletAddress, onClose }: TransactionHistoryProps) {
   const [visibleTokenAddresses, setVisibleTokenAddresses] = useState<string[]>([]);
