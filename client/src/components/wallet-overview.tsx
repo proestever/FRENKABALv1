@@ -143,7 +143,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               href={`https://scan.pulsechain.com/address/${wallet.address}`}
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-white glass-card hover:bg-black/20 transition-all text-sm flex items-center px-2 py-1 rounded-md border-white/15"
+              className="text-white glass-card hover:bg-black/20 transition-all text-sm flex items-center h-8 px-3 rounded-md border border-white/15"
             >
               <ExternalLink className="h-4 w-4 mr-1" />
               View on PulseScan
@@ -153,7 +153,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
                 variant="outline"
                 onClick={() => setBookmarkDialogOpen(true)}
                 disabled={isCheckingBookmark || !userId}
-                className={`glass-card border-white/15 text-sm h-8 hover:bg-black/20 hover:text-white flex items-center px-2 ${
+                className={`glass-card border-white/15 text-sm h-8 hover:bg-black/20 hover:text-white flex items-center ${
                   isBookmarked ? 'bg-green-500/10 text-green-300 hover:text-green-200' : ''
                 }`}
                 title={!userId ? "Wallet authentication required" : ""}
