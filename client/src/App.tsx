@@ -36,8 +36,8 @@ function Header() {
         </div>
         
         <div className="flex space-x-4 items-center">
-          <button className="flex px-4 py-2 text-sm glass-card border-white/15 rounded-md hover:bg-black/20 transition text-white">
-            <Menu className="w-4 h-4" />
+          <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
+            <Menu className="w-6 h-6" />
           </button>
           
           {isConnected && account ? (
