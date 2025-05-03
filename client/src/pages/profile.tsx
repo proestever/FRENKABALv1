@@ -35,25 +35,6 @@ export function Profile() {
   const [editedLabel, setEditedLabel] = useState("");
   const [editedNotes, setEditedNotes] = useState("");
   
-  // Redirect to home if not connected - with a delay to ensure wallet state is fully loaded
-  useEffect(() => {
-    // Add a small delay to allow the wallet state to fully load
-    const checkConnection = setTimeout(() => {
-      if (!isConnected || !account) {
-        toast({
-          title: "Authentication Required",
-          description: "Please connect your wallet to view your profile.",
-          variant: "destructive"
-        });
-        setLocation("/");
-      } else {
-        console.log("Profile accessed with wallet:", account);
-      }
-    }, 500);
-    
-    return () => clearTimeout(checkConnection);
-  }, [isConnected, account, setLocation]);
-
   // Fetch user's bookmarks
   const { 
     data: bookmarks, 
@@ -183,6 +164,27 @@ export function Profile() {
     }
   };
   
+  // Redirect to home if not connected - with a delay to ensure wallet state is fully loaded
+  useEffect(() => {
+    // Add a small delay to allow the wallet state to fully load
+    const checkConnection = setTimeout(() => {
+      if (!isConnected || !account) {
+        toast({
+          title: "Authentication Required",
+          description: "Please connect your wallet to view your profile.",
+          variant: "destructive"
+        });
+        setLocation("/");
+      } else {
+        console.log("Profile accessed with wallet:", account);
+        // Refresh bookmarks data whenever we visit the profile page
+        refetch();
+      }
+    }, 500);
+    
+    return () => clearTimeout(checkConnection);
+  }, [isConnected, account, setLocation, refetch]);
+  
   // Format date in a user-friendly way
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -254,7 +256,7 @@ export function Profile() {
                     <th className="py-3 px-2 text-sm text-white/60 font-medium w-[50px]"></th>
                     <th className="py-3 px-2 text-sm text-white/60 font-medium">Name</th>
                     <th className="py-3 px-2 text-sm text-white/60 font-medium hidden md:table-cell">Address</th>
-                    <th className="py-3 px-2 text-sm text-white/60 font-medium hidden md:table-cell">Date Added</th>
+                    <th className="py-3 px-2 text-sm text-white/60 font-medium hidden md:table-cell">Notes</th>
                     <th className="py-3 px-2 text-sm text-white/60 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
@@ -294,17 +296,14 @@ export function Profile() {
                             {formatAccount(bookmark.walletAddress)}
                           </span>
                           
-                          {/* Mobile-only date */}
-                          <span className="text-xs text-muted-foreground mt-1 md:hidden flex items-center">
-                            <Calendar className="h-3 w-3 mr-1 opacity-70 inline" />
-                            {formatDate(bookmark.createdAt.toString())}
+                          {/* Mobile-only notes */}
+                          <span className="text-xs text-muted-foreground mt-1 md:hidden">
+                            {bookmark.notes ? (
+                              <span className="italic">"{bookmark.notes}"</span>
+                            ) : (
+                              <span className="text-muted-foreground/50">No notes</span>
+                            )}
                           </span>
-                          
-                          {bookmark.notes && (
-                            <span className="text-xs text-muted-foreground mt-1 italic max-w-[200px] truncate">
-                              "{bookmark.notes}"
-                            </span>
-                          )}
                         </div>
                       </td>
                       
@@ -315,9 +314,13 @@ export function Profile() {
                         </span>
                       </td>
                       
-                      {/* Date - Desktop only */}
+                      {/* Notes - Desktop only */}
                       <td className="py-2 px-2 text-sm text-muted-foreground hidden md:table-cell">
-                        {formatDate(bookmark.createdAt.toString())}
+                        {bookmark.notes ? (
+                          <span className="italic">"{bookmark.notes}"</span>
+                        ) : (
+                          <span className="text-muted-foreground/50">No notes</span>
+                        )}
                       </td>
                       
                       {/* Actions */}
