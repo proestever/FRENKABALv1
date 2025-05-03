@@ -83,11 +83,19 @@ export function toggleHiddenToken(tokenAddress: string): boolean {
       // Remove token from hidden list
       const updatedHiddenTokens = hiddenTokens.filter(address => address !== tokenAddress);
       localStorage.setItem('hiddenTokens', JSON.stringify(updatedHiddenTokens));
+      
+      // Dispatch a custom event to notify other components
+      window.dispatchEvent(new CustomEvent('tokenVisibilityChanged'));
+      
       return false; // Now visible
     } else {
       // Add token to hidden list
       hiddenTokens.push(tokenAddress);
       localStorage.setItem('hiddenTokens', JSON.stringify(hiddenTokens));
+      
+      // Dispatch a custom event to notify other components
+      window.dispatchEvent(new CustomEvent('tokenVisibilityChanged'));
+      
       return true; // Now hidden
     }
   } catch (error) {

@@ -23,6 +23,18 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
   useEffect(() => {
     // Get hidden tokens from localStorage
     setHiddenTokens(getHiddenTokens());
+    
+    // Listen for token visibility changes
+    const handleTokenVisibilityChange = () => {
+      setHiddenTokens(getHiddenTokens());
+    };
+    
+    window.addEventListener('tokenVisibilityChanged', handleTokenVisibilityChange);
+    
+    // Clean up event listener
+    return () => {
+      window.removeEventListener('tokenVisibilityChanged', handleTokenVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {

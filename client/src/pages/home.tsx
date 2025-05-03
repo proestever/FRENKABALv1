@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { SearchSection } from '@/components/search-section';
 import { WalletOverview } from '@/components/wallet-overview';
@@ -6,7 +6,7 @@ import { TokenList } from '@/components/token-list';
 import { EmptyState } from '@/components/empty-state';
 import { fetchWalletData, saveRecentAddress } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { Wallet } from '@shared/schema';
+import { Wallet, Token } from '@shared/schema';
 
 // Example wallet address
 const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
@@ -22,21 +22,25 @@ export default function Home() {
     error, 
     refetch,
     isFetching 
-  } = useQuery<Wallet>({
+  } = useQuery<Wallet, Error>({
     queryKey: searchedAddress ? [`/api/wallet/${searchedAddress}`] : [],
     enabled: !!searchedAddress,
     staleTime: 60 * 1000, // 1 minute
     gcTime: 2 * 60 * 1000, // 2 minutes (previously cacheTime in v4)
     retry: 1,
-    refetchOnWindowFocus: false, // Don't refetch when window gets focus
-    onError: (err: unknown) => {
+    refetchOnWindowFocus: false // Don't refetch when window gets focus
+  });
+  
+  // Handle errors
+  useEffect(() => {
+    if (isError && error) {
       toast({
         title: "Error loading wallet data",
-        description: err instanceof Error ? err.message : "An unknown error occurred",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
     }
-  });
+  }, [isError, error, toast]);
 
   const handleSearch = (address: string) => {
     if (!address) return;
