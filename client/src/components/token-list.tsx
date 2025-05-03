@@ -186,7 +186,7 @@ export function TokenList({ tokens, isLoading, hasError }: TokenListProps) {
 
       {showTransactions ? (
         <TransactionHistory 
-          walletAddress={walletAddress} 
+          walletAddress={tokens.length > 0 ? tokens[0].address.replace(/:.+$/, '') : ''} 
           onClose={() => setShowTransactions(false)} 
         />
       ) : (

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
  * This is much more efficient than individual requests for each token
  */
 export function useBatchTokenLogos(addresses: string[], symbols?: string[]): Record<string, string> {
+  console.log('Processing logo batch 1/1, size:', addresses.length);
   const [logoUrls, setLogoUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -56,6 +57,9 @@ export function useBatchTokenLogos(addresses: string[], symbols?: string[]): Rec
           // Special case for native token
           if (address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
             fallbackUrls[address.toLowerCase()] = '/assets/pls-logo.png';
+          } else if (symbol && ['pDAI', 'frpl'].includes(symbol)) {
+            // Special case for Frenkabal tokens
+            fallbackUrls[address.toLowerCase()] = '/assets/100xfrenlogo.png';
           } else {
             // Default to Frenkabal logo
             fallbackUrls[address.toLowerCase()] = '/assets/100xfrenlogo.png';
