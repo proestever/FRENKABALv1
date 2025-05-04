@@ -838,7 +838,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             {transfer.token_symbol}
                             <span className="text-xs text-muted-foreground ml-2">
                               {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                              {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
+                              <a
+                                href={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-primary hover:underline transition-colors"
+                                title="View address details in FrenKabal"
+                              >
+                                {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
+                              </a>
                             </span>
                           </span>
                         </div>
@@ -865,7 +873,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             {transfer.token_symbol || 'PLS'}
                             <span className="text-xs text-muted-foreground ml-2">
                               {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                              {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
+                              <a
+                                href={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-primary hover:underline transition-colors"
+                                title="View address details in FrenKabal"
+                              >
+                                {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
+                              </a>
                             </span>
                           </span>
                         </div>
