@@ -354,37 +354,11 @@ export function Donations() {
                   </div>
                   
                   {/* Profile information */}
-                  {topDonor.profile && (
+                  {topDonor.profile && topDonor.profile.bio && (
                     <div className="mt-4 space-y-2 border-t border-white/10 pt-3">
-                      {topDonor.profile.website && (
-                        <a 
-                          href={topDonor.profile.website} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
-                        >
-                          <Globe className="h-4 w-4" />
-                          <span className="truncate">{topDonor.profile.website.replace(/^https?:\/\//, '')}</span>
-                        </a>
-                      )}
-                      
-                      {topDonor.profile.twitterHandle && (
-                        <a 
-                          href={`https://x.com/${topDonor.profile.twitterHandle.replace('@', '')}`}
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
-                        >
-                          <Twitter className="h-4 w-4" />
-                          <span>{topDonor.profile.twitterHandle}</span>
-                        </a>
-                      )}
-                      
-                      {topDonor.profile.bio && (
-                        <p className="text-xs text-white/60 italic">
-                          "{topDonor.profile.bio}"
-                        </p>
-                      )}
+                      <p className="text-xs text-white/60 italic">
+                        "{topDonor.profile.bio}"
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -417,32 +391,18 @@ export function Donations() {
                     {donor.donations.length} donation{donor.donations.length !== 1 ? 's' : ''}
                   </p>
                   
-                  {/* Profile links */}
-                  {donor.profile && (
+                  {/* Show only Twitter handle icon if available */}
+                  {donor.profile?.twitterHandle && (
                     <div className="flex space-x-2 pt-2 border-t border-white/10">
-                      {donor.profile.website && (
-                        <a 
-                          href={donor.profile.website} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-white/60 hover:text-white transition-colors"
-                          title={donor.profile.website}
-                        >
-                          <Globe className="h-3 w-3" />
-                        </a>
-                      )}
-                      
-                      {donor.profile.twitterHandle && (
-                        <a 
-                          href={`https://x.com/${donor.profile.twitterHandle.replace('@', '')}`}
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-white/60 hover:text-white transition-colors"
-                          title={donor.profile.twitterHandle}
-                        >
-                          <Twitter className="h-3 w-3" />
-                        </a>
-                      )}
+                      <a 
+                        href={`https://x.com/${donor.profile.twitterHandle.replace('@', '')}`}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-white/60 hover:text-white transition-colors"
+                        title={donor.profile.twitterHandle}
+                      >
+                        <Twitter className="h-3 w-3" />
+                      </a>
                     </div>
                   )}
                 </CardContent>
@@ -529,18 +489,6 @@ export function Donations() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex space-x-2">
-                        {donor.profile?.website && (
-                          <a 
-                            href={donor.profile.website} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-white/60 hover:text-white transition-colors"
-                            title={donor.profile.website}
-                          >
-                            <Globe className="h-4 w-4" />
-                          </a>
-                        )}
-                        
                         {donor.profile?.twitterHandle && (
                           <a 
                             href={`https://x.com/${donor.profile.twitterHandle.replace('@', '')}`}
