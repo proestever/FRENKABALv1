@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
 import { useAuth } from '@/providers/auth-provider';
-import { Loader2, ExternalLink, Copy, CheckCircle2, Globe, Twitter, Search } from 'lucide-react';
+import { Loader2, ExternalLink, Copy, CheckCircle2, Globe, Twitter, Search, RefreshCw } from 'lucide-react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { DonorProfileButton } from '@/components/donor-profile-button';
@@ -48,6 +48,7 @@ export function Donations() {
   const { toast } = useToast();
   const { isConnected, account } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [donors, setDonors] = useState<Donor[]>([]);
   const [topDonor, setTopDonor] = useState<Donor | null>(null);
@@ -55,73 +56,92 @@ export function Donations() {
   const [userDonationRank, setUserDonationRank] = useState<number | null>(null);
   const [userTotalDonated, setUserTotalDonated] = useState<number>(0);
 
-  // Fetch donation data
-  useEffect(() => {
-    const fetchDonationData = async () => {
-      try {
+  // Function to fetch donation data
+  const fetchDonationData = async (shouldRefresh = false) => {
+    try {
+      if (shouldRefresh) {
+        setIsRefreshing(true);
+      } else {
         setIsLoading(true);
-        setError(null);
+      }
+      setError(null);
+      
+      // Make API call to fetch donation data with refresh parameter to clear cache
+      const timestamp = Date.now(); // Add timestamp to prevent browser caching
+      const response = await fetch(`/api/donations/${DONATIONS_ADDRESS}?refresh=true&_t=${timestamp}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch donation data');
+      }
+      
+      // Get donation records from API
+      const donationRecords = await response.json();
+      
+      // Map the API response to our Donor type
+      const mappedDonors: Donor[] = donationRecords.map((record: any) => ({
+        address: record.donorAddress,
+        totalDonated: record.totalValueUsd,
+        donations: record.donations.map((donation: any) => ({
+          txHash: donation.txHash,
+          tokenAddress: donation.tokenAddress,
+          tokenSymbol: donation.tokenSymbol || 'Unknown',
+          amount: donation.amount,
+          valueUsd: donation.valueUsd,
+          timestamp: donation.timestamp
+        })),
+        rank: record.rank
+      }));
+      
+      // If no donations found yet, use an empty array
+      const processedDonors = mappedDonors.length > 0 ? mappedDonors : [];
+      
+      // Set top donor if available
+      if (processedDonors.length > 0) {
+        setTopDonor(processedDonors[0]);
+      }
+      
+      // Set all donors
+      setDonors(processedDonors);
+      
+      // If user is connected, find their rank
+      if (isConnected && account) {
+        const userDonor = processedDonors.find(
+          donor => donor.address.toLowerCase() === account.toLowerCase()
+        );
         
-        // Make API call to fetch donation data with refresh parameter to clear cache
-        const timestamp = Date.now(); // Add timestamp to prevent browser caching
-        const response = await fetch(`/api/donations/${DONATIONS_ADDRESS}?refresh=true&_t=${timestamp}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch donation data');
+        if (userDonor) {
+          setUserDonationRank(userDonor.rank || null);
+          setUserTotalDonated(userDonor.totalDonated);
+        } else {
+          setUserDonationRank(null);
+          setUserTotalDonated(0);
         }
-        
-        // Get donation records from API
-        const donationRecords = await response.json();
-        
-        // Map the API response to our Donor type
-        const mappedDonors: Donor[] = donationRecords.map((record: any) => ({
-          address: record.donorAddress,
-          totalDonated: record.totalValueUsd,
-          donations: record.donations.map((donation: any) => ({
-            txHash: donation.txHash,
-            tokenAddress: donation.tokenAddress,
-            tokenSymbol: donation.tokenSymbol || 'Unknown',
-            amount: donation.amount,
-            valueUsd: donation.valueUsd,
-            timestamp: donation.timestamp
-          })),
-          rank: record.rank
-        }));
-        
-        // If no donations found yet, use an empty array
-        const processedDonors = mappedDonors.length > 0 ? mappedDonors : [];
-        
-        // Set top donor if available
-        if (processedDonors.length > 0) {
-          setTopDonor(processedDonors[0]);
-        }
-        
-        // Set all donors
-        setDonors(processedDonors);
-        
-        // If user is connected, find their rank
-        if (isConnected && account) {
-          const userDonor = processedDonors.find(
-            donor => donor.address.toLowerCase() === account.toLowerCase()
-          );
-          
-          if (userDonor) {
-            setUserDonationRank(userDonor.rank || null);
-            setUserTotalDonated(userDonor.totalDonated);
-          } else {
-            setUserDonationRank(null);
-            setUserTotalDonated(0);
-          }
-        }
-        
-        setIsLoading(false);
-      } catch (err) {
-        console.error('Error fetching donation data:', err);
-        setError('Failed to load donation data. Please try again later.');
+      }
+      
+      if (shouldRefresh) {
+        setIsRefreshing(false);
+        toast({
+          title: 'Donation data refreshed',
+          description: 'Latest donation data has been loaded',
+        });
+      } else {
         setIsLoading(false);
       }
-    };
-    
+    } catch (err) {
+      console.error('Error fetching donation data:', err);
+      setError('Failed to load donation data. Please try again later.');
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+  
+  // Refresh button handler
+  const handleRefresh = () => {
+    fetchDonationData(true);
+  };
+  
+  // Initial data fetch on component mount
+  useEffect(() => {
     fetchDonationData();
   }, [isConnected, account]);
   
@@ -326,7 +346,19 @@ export function Donations() {
         <div>
           {topDonor && (
             <>
-              <div className="text-center mb-3">
+              <div className="text-center mb-3 relative">
+                <div className="absolute top-0 right-0">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="text-white/50 hover:text-white hover:bg-white/10"
+                    title="Refresh donation data"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
                 <h3 className="text-lg text-white/70">Total Donations Received</h3>
                 <p className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-amber-500">
                   {formatCurrency(donors.reduce((sum, donor) => sum + donor.totalDonated, 0))}
@@ -443,7 +475,19 @@ export function Donations() {
       
       {/* Donor leaderboard - Full width, Top 10 only */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Donation Leaderboard</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Donation Leaderboard</h2>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="glass-card bg-black/20 border border-white/15 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-105"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
+        </div>
         <div className="glass-card bg-black/20 border border-white/15 backdrop-blur-md rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
