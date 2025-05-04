@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
 import { SearchSection } from '@/components/search-section';
 import { WalletOverview } from '@/components/wallet-overview';
@@ -7,8 +6,9 @@ import { TokenList } from '@/components/token-list';
 import { EmptyState } from '@/components/empty-state';
 import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
-import { fetchWalletData, saveRecentAddress, ProcessedToken } from '@/lib/api';
+import { saveRecentAddress, ProcessedToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { usePagedWallet } from '@/hooks/use-paged-wallet';
 import { Wallet, Token } from '@shared/schema';
 
 // Example wallet address
@@ -51,38 +51,17 @@ export default function Home() {
     }
   }, [params.walletAddress, searchedAddress]);
 
-  // Track current page for pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  
+  // Use our optimized hook for paginated wallet data
   const { 
-    data: walletData, 
+    walletData, 
     isLoading, 
     isError, 
     error, 
     refetch,
-    isFetching 
-  } = useQuery<Wallet, Error>({
-    queryKey: searchedAddress ? [`/api/wallet/${searchedAddress}`, currentPage] : [],
-    queryFn: () => {
-      if (!searchedAddress) throw new Error('No address provided');
-      console.log('Fetching wallet data for:', searchedAddress, 'page:', currentPage);
-      return fetchWalletData(searchedAddress, currentPage)
-        .then(data => {
-          console.log('Wallet data fetched successfully');
-          return data;
-        })
-        .catch(error => {
-          console.error('Error fetching wallet data:', error);
-          throw error;
-        });
-    },
-    enabled: !!searchedAddress,
-    staleTime: 0, // Always treat data as stale - will always fetch fresh data
-    gcTime: 2 * 60 * 1000, // 2 minutes (previously cacheTime in v4)
-    retry: 1,
-    refetchOnWindowFocus: false, // Don't refetch when window gets focus
-    refetchOnMount: 'always' // Always fetch fresh data when component mounts
-  });
+    isFetching,
+    currentPage,
+    changePage
+  } = usePagedWallet(searchedAddress, 1); // Start at page 1
   
   // Debug wallet data
   useEffect(() => {
@@ -180,7 +159,7 @@ export default function Home() {
               pagination={walletData?.pagination}
               onPageChange={(page) => {
                 console.log('Changing to page:', page);
-                setCurrentPage(page);
+                changePage(page);
               }}
             />
             
