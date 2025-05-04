@@ -5,6 +5,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { Loader2, ExternalLink, Copy, CheckCircle2, Globe, Twitter, Search, RefreshCw } from 'lucide-react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
+import { ethers } from 'ethers';
 import { DonorProfileButton } from '@/components/donor-profile-button';
 import { getUserProfileByWallet } from '@/lib/api';
 import {
@@ -298,14 +299,70 @@ export function Donations() {
               <Button 
                 variant="outline"
                 className="glass-card bg-black/20 border border-white/15 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-105"
-                onClick={() => {
-                  toast({
-                    title: "Send tokens directly from your wallet",
-                    description: "Coming soon!",
-                  });
+                onClick={async () => {
+                  try {
+                    // Predefined amount to donate: 2,000,000 PLS
+                    const donationAmount = "2000000";
+                    
+                    // Convert to wei (PLS has 18 decimals)
+                    const donationAmountWei = ethers.utils.parseEther(donationAmount);
+                    
+                    // Show status toast
+                    toast({
+                      title: "Wallet Prompt",
+                      description: `Requesting to send ${donationAmount} PLS to the donation address`,
+                    });
+                    
+                    // Request transaction from wallet
+                    if (!window.ethereum) {
+                      throw new Error("No wallet detected");
+                    }
+                    
+                    // The transaction parameters
+                    const transactionParameters = {
+                      to: DONATIONS_ADDRESS,
+                      from: account, // Connected account
+                      value: donationAmountWei.toHexString(),
+                      // Optional parameters
+                      gas: ethers.utils.hexValue(21000), // Basic transaction gas limit
+                    };
+                    
+                    // Send the transaction
+                    const txHash = await window.ethereum.request({
+                      method: 'eth_sendTransaction',
+                      params: [transactionParameters],
+                    });
+                    
+                    // Show success message with transaction hash
+                    toast({
+                      title: "Donation Sent!",
+                      description: (
+                        <div className="flex flex-col gap-2">
+                          <p>Thank you for your donation of {donationAmount} PLS!</p>
+                          <a 
+                            href={`https://scan.pulsechain.com/tx/${txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 underline flex items-center"
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View on PulseScan
+                          </a>
+                        </div>
+                      ),
+                      duration: 8000,
+                    });
+                  } catch (error: any) {
+                    console.error("Donation transaction error:", error);
+                    toast({
+                      title: "Transaction Failed",
+                      description: error?.message || "Failed to send donation. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
                 }}
               >
-                Donate Now
+                Donate 2M PLS Now
               </Button>
             )}
           </div>
