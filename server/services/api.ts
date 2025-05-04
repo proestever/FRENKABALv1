@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import Moralis from 'moralis';
+import { utils } from 'ethers';
 import { 
   ProcessedToken, 
   PulseChainTokenBalanceResponse, 
@@ -12,6 +13,7 @@ import {
 import { storage } from '../storage';
 import { InsertTokenLogo } from '@shared/schema';
 import { updateLoadingProgress } from '../routes';
+import { getWalletBalancesFromPulseChainScan } from './dexscreener';
 
 // Initialize Moralis
 try {
@@ -524,10 +526,56 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     if (moralisTokens.length > 0) {
       console.log(`Got wallet data from Moralis with ${moralisTokens.length} tokens`);
       
+      // Now also try to get PulseChain Scan API data to ensure we have all tokens
+      updateLoadingProgress({
+        currentBatch: 4,
+        message: 'Fetching additional token data from PulseChain Scan...'
+      });
+      
+      console.log('Fetching supplemental token data from PulseChain Scan API for maximum coverage');
+      
+      let tokenMap = new Map();
+      
+      // First add Moralis tokens to our map (they have more detailed info)
+      moralisTokens.forEach(token => {
+        if (token.token_address) {
+          tokenMap.set(token.token_address.toLowerCase(), token);
+        }
+      });
+      
+      // Also add PulseChain Scan data for maximum coverage
+      try {
+        const { tokenBalances } = await getWalletBalancesFromPulseChainScan(walletAddress);
+        console.log(`Got ${tokenBalances.length} tokens from PulseChain Scan API for ${walletAddress}`);
+        
+        // Add any new tokens from PulseChain Scan
+        tokenBalances.forEach(item => {
+          const tokenAddress = item.address.toLowerCase();
+          if (!tokenMap.has(tokenAddress)) {
+            // Create Moralis-like structure for PulseChain tokens
+            tokenMap.set(tokenAddress, {
+              token_address: item.address,
+              symbol: item.symbol || 'UNKNOWN',
+              name: item.name || 'Unknown Token',
+              decimals: item.decimals || '18',
+              balance: item.balance,
+              balance_formatted: formatUnits(item.balance, parseInt(item.decimals || '18', 10)),
+              source: 'pulsechain' // Add source for debugging
+            });
+          }
+        });
+      } catch (error) {
+        console.error('Error getting supplemental token balances from PulseChain Scan:', error);
+      }
+      
+      // Convert map back to array and update the tokens array
+      const combinedTokens = Array.from(tokenMap.values());
+      console.log(`Combined ${moralisTokens.length} Moralis tokens with PulseChain Scan data for total of ${combinedTokens.length} tokens`);
+      
       // Process tokens in batches to avoid overwhelming API
       const BATCH_SIZE = 15; // Process 15 tokens at a time (increased from 5 for faster loading)
       const processedTokens: ProcessedToken[] = [];
-      const totalBatches = Math.ceil(moralisTokens.length/BATCH_SIZE);
+      const totalBatches = Math.ceil(combinedTokens.length/BATCH_SIZE);
       
       // Update existing loading progress with the new batch count
       // But maintain the overall progress count by starting at 5
@@ -540,7 +588,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       });
       
       // Process tokens in batches
-      for (let i = 0; i < moralisTokens.length; i += BATCH_SIZE) {
+      for (let i = 0; i < combinedTokens.length; i += BATCH_SIZE) {
         const currentBatch = Math.floor(i/BATCH_SIZE) + 1;
         console.log(`Processing token batch ${currentBatch}/${totalBatches}`);
         
@@ -550,7 +598,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
           message: `Processing token batch ${currentBatch}/${totalBatches}...`
         });
         
-        const batch = moralisTokens.slice(i, i + BATCH_SIZE);
+        const batch = combinedTokens.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(batch.map(async (item: any) => {
           try {
             // Check if this is the native PLS token (either with is_native flag or by address)
@@ -673,7 +721,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       processedTokens.push(...batchResults.filter(Boolean) as ProcessedToken[]);
         
       // Add a delay between batches to avoid rate limiting
-      if (i + BATCH_SIZE < moralisTokens.length) {
+      if (i + BATCH_SIZE < combinedTokens.length) {
         console.log("Waiting 500ms before processing next batch...");
         await new Promise(resolve => setTimeout(resolve, 500));
       }
@@ -722,8 +770,8 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       };
     }
     
-    // Fallback to the PulseChain Scan API for token balances (we already have the native PLS)
-    console.log('Falling back to PulseChain Scan API for token balances');
+    // Use hybrid approach by combining Moralis data with PulseChain Scan API data
+    console.log('Using hybrid approach with both Moralis and PulseChain Scan data');
     
     // Update progress
     updateLoadingProgress({
@@ -732,7 +780,23 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     });
     
     // Get token balances from PulseChain Scan API
-    const tokens = await getTokenBalances(walletAddress);
+    const pulseChainTokens = await getTokenBalances(walletAddress);
+    
+    // Create a map of token addresses to avoid duplicates
+    const tokenMap = new Map();
+    
+    // Add tokens from PulseChain Scan API to our map
+    pulseChainTokens.forEach(token => {
+      if (token.address) {
+        tokenMap.set(token.address.toLowerCase(), {
+          ...token,
+          source: 'pulsechain'
+        });
+      }
+    });
+    
+    // Convert map back to array
+    const tokens = Array.from(tokenMap.values());
     
     // If we have a native PLS balance, add it as a token at the top of the list
     if (nativePlsBalance) {
