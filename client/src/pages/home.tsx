@@ -6,7 +6,8 @@ import { WalletOverview } from '@/components/wallet-overview';
 import { TokenList } from '@/components/token-list';
 import { EmptyState } from '@/components/empty-state';
 import { LoadingProgress } from '@/components/loading-progress';
-import { fetchWalletData, saveRecentAddress } from '@/lib/api';
+import { ManualTokenEntry } from '@/components/manual-token-entry';
+import { fetchWalletData, saveRecentAddress, ProcessedToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Wallet, Token } from '@shared/schema';
 
@@ -15,6 +16,7 @@ const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
 
 export default function Home() {
   const [searchedAddress, setSearchedAddress] = useState<string | null>(null);
+  const [manualTokens, setManualTokens] = useState<ProcessedToken[]>([]);
   const params = useParams<{ walletAddress?: string }>();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
@@ -105,6 +107,45 @@ export default function Home() {
     handleSearch(EXAMPLE_WALLET);
   };
 
+  // Handle when a token is manually added
+  const handleTokenAdded = (token: ProcessedToken) => {
+    // Check if token already exists in manual tokens list
+    const exists = manualTokens.some(t => t.address.toLowerCase() === token.address.toLowerCase());
+    
+    if (!exists) {
+      // Add the new token to our manual tokens list
+      setManualTokens(prev => [...prev, token]);
+      
+      // Show success toast notification
+      toast({
+        title: "Token Added",
+        description: `${token.name} (${token.symbol}) was successfully added to your wallet view.`,
+        variant: "default",
+      });
+    } else {
+      // Update the existing token with fresh data
+      setManualTokens(prev => 
+        prev.map(t => 
+          t.address.toLowerCase() === token.address.toLowerCase() ? token : t
+        )
+      );
+      
+      // Show update toast notification
+      toast({
+        title: "Token Updated",
+        description: `${token.name} (${token.symbol}) was refreshed with the latest data.`,
+        variant: "default",
+      });
+    }
+  };
+
+  // Combine all tokens - standard API tokens + manually added tokens
+  const allTokens = walletData 
+    ? [...walletData.tokens, ...manualTokens.filter(t => 
+        !walletData.tokens.some(wt => wt.address.toLowerCase() === t.address.toLowerCase())
+      )]
+    : manualTokens;
+
   return (
     <main className="container mx-auto px-4 py-6">
       <SearchSection 
@@ -116,16 +157,28 @@ export default function Home() {
       {/* Loading Progress Bar - shows during loading */}
       <LoadingProgress isLoading={isLoading || isFetching} />
       
-      {searchedAddress && walletData && !isError && (
+      {searchedAddress && !isError && (
         <>
           <div className="mt-4">
-            <WalletOverview 
-              wallet={walletData} 
-              isLoading={isLoading || isFetching} 
-              onRefresh={handleRefresh} 
-            />
+            {walletData && (
+              <WalletOverview 
+                wallet={walletData} 
+                isLoading={isLoading || isFetching} 
+                onRefresh={handleRefresh} 
+              />
+            )}
+            
+            {/* Manual Token Entry Section */}
+            <div className="mt-4 mb-2">
+              <ManualTokenEntry 
+                walletAddress={searchedAddress} 
+                onTokenAdded={handleTokenAdded}
+              />
+            </div>
+            
+            {/* Token List with combined tokens */}
             <TokenList 
-              tokens={walletData.tokens} 
+              tokens={allTokens} 
               isLoading={isLoading || isFetching} 
               hasError={isError}
               walletAddress={searchedAddress || ''}
@@ -135,12 +188,24 @@ export default function Home() {
       )}
       
       {searchedAddress && isError && (
-        <TokenList 
-          tokens={[]} 
-          isLoading={false} 
-          hasError={true}
-          walletAddress={searchedAddress} 
-        />
+        <>
+          <div className="mt-4">
+            {/* Still show manual token entry even if API had an error */}
+            <div className="mt-4 mb-2">
+              <ManualTokenEntry 
+                walletAddress={searchedAddress} 
+                onTokenAdded={handleTokenAdded}
+              />
+            </div>
+            
+            <TokenList 
+              tokens={manualTokens} 
+              isLoading={false} 
+              hasError={true}
+              walletAddress={searchedAddress} 
+            />
+          </div>
+        </>
       )}
       
       {/* Empty state card hidden as requested */}

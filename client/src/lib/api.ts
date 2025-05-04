@@ -1,6 +1,18 @@
 import { Token, Wallet, Bookmark, User } from '@shared/schema';
 
 /**
+ * Interface for extended token with additional properties
+ */
+export interface ProcessedToken extends Token {
+  balanceFormatted: number;
+  price?: number;
+  value?: number;
+  priceChange24h?: number;
+  logo?: string;
+  verified?: boolean;
+}
+
+/**
  * Fetch wallet data from the server API
  */
 export function fetchWalletData(address: string): Promise<Wallet> {
@@ -441,6 +453,46 @@ export async function updateUserProfile(userId: number, profileData: Partial<{
     return response.json();
   } catch (error) {
     console.error('Error updating user profile:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch specific token data for a wallet
+ * This API is used to get tokens that might not be detected by the standard wallet API
+ * @param walletAddress Wallet address to check for the token
+ * @param tokenAddress Token contract address to look up
+ * @returns Token data including balance and price if available
+ */
+export async function fetchSpecificToken(
+  walletAddress: string,
+  tokenAddress: string
+): Promise<ProcessedToken | null> {
+  try {
+    console.log(`Fetching specific token ${tokenAddress} for wallet ${walletAddress}`);
+    
+    // Validate addresses
+    if (!walletAddress.match(/^0x[a-fA-F0-9]{40}$/) || !tokenAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+      throw new Error('Invalid wallet or token address format');
+    }
+    
+    const response = await fetch(`/api/wallet/${walletAddress}/token/${tokenAddress}`);
+    
+    if (response.status === 404) {
+      console.log(`No balance found for token ${tokenAddress} in wallet ${walletAddress}`);
+      return null;
+    }
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch token data');
+    }
+    
+    const tokenData = await response.json();
+    console.log(`Successfully fetched token data:`, tokenData);
+    return tokenData;
+  } catch (error) {
+    console.error('Error fetching specific token:', error);
     return null;
   }
 }

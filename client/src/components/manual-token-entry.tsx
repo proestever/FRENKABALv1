@@ -6,16 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Token } from '@shared/schema';
 import { TokenLogo } from './token-logo';
 import { formatTokenAmount } from '@/lib/format';
-
-// Define a token interface for what we expect from API
-interface ProcessedToken extends Token {
-  balanceFormatted: number;
-  price?: number;
-  value?: number;
-  priceChange24h?: number;
-  logo?: string;
-  verified?: boolean;
-}
+import { ProcessedToken, fetchSpecificToken } from '@/lib/api';
 
 interface ManualTokenEntryProps {
   walletAddress: string;
@@ -43,20 +34,15 @@ export function ManualTokenEntry({ walletAddress, onTokenAdded }: ManualTokenEnt
     setError(null);
 
     try {
-      const response = await fetch(`/api/wallet/${walletAddress}/token/${tokenAddress}`);
+      // Use our new API function
+      const tokenData = await fetchSpecificToken(walletAddress, tokenAddress);
       
-      if (!response.ok) {
-        if (response.status === 404) {
-          setError('Token not found or you have no balance of this token');
-        } else {
-          const errorData = await response.json();
-          setError(errorData.message || 'Failed to fetch token data');
-        }
+      if (!tokenData) {
+        setError('Token not found or you have no balance of this token');
         setToken(null);
         return;
       }
       
-      const tokenData = await response.json();
       setToken(tokenData);
       onTokenAdded(tokenData);
     } catch (err) {

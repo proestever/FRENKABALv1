@@ -4,13 +4,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from "@/components/ui/switch";
 import { Token } from '@shared/schema';
-import { Search, ArrowDownUp, Eye, EyeOff, Wallet, History, PlusCircle } from 'lucide-react';
+import { Search, ArrowDownUp, Eye, EyeOff, Wallet, History } from 'lucide-react';
 import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass } from '@/lib/utils';
 import { TokenLogo } from '@/components/token-logo';
 import { getHiddenTokens, toggleHiddenToken, isTokenHidden } from '@/lib/api';
 import { useBatchTokenLogos } from '@/hooks/use-batch-token-logos';
 import { TransactionHistory } from '@/components/transaction-history';
-import { ManualTokenEntry } from '@/components/manual-token-entry';
 // Import PLS logo directly for consistent rendering
 import plsLogo from '../assets/pls-logo-optimized.png';
 
