@@ -4,6 +4,7 @@ import { TokenLogo } from '@/components/token-logo';
 import { useAuth } from '@/providers/auth-provider';
 import { Loader2, ExternalLink, Copy, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DonorProfileButton } from '@/components/donor-profile-button';
 import {
   Card,
   CardContent,
@@ -172,6 +173,13 @@ export function Donations() {
           Your contributions help keep this service free for everyone. 
           All donations go directly toward hosting, development, and new features.
         </p>
+        
+        {/* Donor Profile Button */}
+        {isConnected && (
+          <div className="flex justify-center mt-2 mb-4">
+            <DonorProfileButton />
+          </div>
+        )}
       </div>
       
       {/* Two column layout */}

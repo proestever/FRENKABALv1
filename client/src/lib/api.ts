@@ -352,12 +352,12 @@ export async function getUserProfile(userId: number): Promise<User | null> {
 /**
  * Update user profile information
  */
-export async function updateUserProfile(userId: number, profileData: {
-  displayName?: string;
-  website?: string;
-  twitterHandle?: string;
-  bio?: string;
-}): Promise<User | null> {
+export async function updateUserProfile(userId: number, profileData: Partial<{
+  displayName: string | null;
+  website: string | null;
+  twitterHandle: string | null;
+  bio: string | null;
+}>): Promise<User | null> {
   try {
     const response = await fetch(`/api/users/${userId}/profile`, {
       method: 'PATCH',

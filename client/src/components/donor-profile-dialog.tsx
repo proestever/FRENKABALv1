@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { UpdateUserProfile } from '@shared/schema';
+import { updateUserProfile } from '@/lib/api';
 
 interface DonorProfileDialogProps {
   isOpen: boolean;
@@ -36,7 +37,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export function DonorProfileDialog({ isOpen, onClose, onProfileUpdated }: DonorProfileDialogProps) {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, refreshUserProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<ProfileFormValues>({
@@ -83,16 +84,10 @@ export function DonorProfileDialog({ isOpen, onClose, onProfileUpdated }: DonorP
       if (values.twitterHandle) profileData.twitterHandle = values.twitterHandle;
       if (values.bio) profileData.bio = values.bio;
 
-      // Make API call to update profile
-      const response = await fetch(`/api/users/${user.id}/profile`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(profileData),
-      });
-
-      if (!response.ok) {
+      // Use the API helper to update the profile
+      const updatedUser = await updateUserProfile(user.id, profileData);
+      
+      if (!updatedUser) {
         throw new Error('Failed to update profile');
       }
 
@@ -101,6 +96,11 @@ export function DonorProfileDialog({ isOpen, onClose, onProfileUpdated }: DonorP
         title: 'Profile Updated',
         description: 'Your donor profile has been updated successfully',
       });
+      
+      // Refresh user data in the wallet hook
+      if (refreshUserProfile) {
+        await refreshUserProfile();
+      }
 
       // Notify parent component
       if (onProfileUpdated) {
