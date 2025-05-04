@@ -27,9 +27,14 @@ export function useBatchTokenPrices(tokenAddresses: string[]) {
       return;
     }
     
-    // Filter out duplicate addresses and normalize them
+    // Filter out duplicate addresses and normalize them using alternative approach to avoid Set iteration issues
     const normalizedAddresses = tokenAddresses.map(addr => addr.toLowerCase());
-    const uniqueAddresses = Array.from(new Set(normalizedAddresses));
+    const uniqueAddresses: string[] = [];
+    normalizedAddresses.forEach(address => {
+      if (!uniqueAddresses.includes(address)) {
+        uniqueAddresses.push(address);
+      }
+    });
     
     // Check cache first and use cached prices if available
     const now = Date.now();

@@ -1087,9 +1087,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const normalizedAddresses = addressesToProcess.map(addr => 
         typeof addr === 'string' ? addr.toLowerCase() : addr);
       
-      // Remove duplicates for efficiency
-      const uniqueAddressesSet = new Set(normalizedAddresses);
-      const uniqueAddresses = Array.from(uniqueAddressesSet);
+      // Remove duplicates for efficiency using alternative approach to avoid Set iteration issues
+      const uniqueAddresses: string[] = [];
+      normalizedAddresses.forEach(address => {
+        if (!uniqueAddresses.includes(address)) {
+          uniqueAddresses.push(address);
+        }
+      });
       
       console.log(`Processing batch price request for ${uniqueAddresses.length} unique tokens`);
       

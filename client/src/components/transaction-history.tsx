@@ -447,28 +447,36 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return counts;
   }, {} as Record<string, number>);
   
-  // Extract token addresses for logos
+  // Extract token addresses for logos and prices
   useEffect(() => {
     if (transactions) {
-      const addresses = new Set<string>();
+      // Use array instead of Set to avoid iteration issues
+      const addresses: string[] = [];
+      const addUniqueAddress = (address: string) => {
+        const normalizedAddress = address.toLowerCase();
+        if (!addresses.includes(normalizedAddress)) {
+          addresses.push(normalizedAddress);
+        }
+      };
       
       transactions.forEach((tx: Transaction) => {
         // Get token addresses from ERC20 transfers
         if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
           tx.erc20_transfers.forEach((transfer: any) => {
             if (transfer.address) {
-              addresses.add(transfer.address);
+              addUniqueAddress(transfer.address);
             }
           });
         }
         
         // Add native token address for native transfers
         if (tx.native_transfers && tx.native_transfers.length > 0) {
-          addresses.add('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+          addUniqueAddress('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
         }
       });
       
-      setVisibleTokenAddresses(Array.from(addresses));
+      console.log(`Collected ${addresses.length} unique token addresses from transactions`);
+      setVisibleTokenAddresses(addresses);
     }
   }, [transactions]);
 
@@ -931,17 +939,25 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         {transfer.direction === 'receive' ? '+' : '-'}
                         {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol && transfer.token_symbol.length > 15 ? `${transfer.token_symbol.substring(0, 15)}...` : transfer.token_symbol}
                       </div>
-                      {/* Add USD value display */}
-                      {calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') && (
-                        <div className="text-xs text-muted-foreground flex items-center justify-end">
-                          {(calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') || 0).toLocaleString('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                            maximumFractionDigits: 2,
-                            minimumFractionDigits: 2
-                          })}
-                        </div>
-                      )}
+                      {/* Add USD value display using batch token prices */}
+                      {(() => {
+                        const tokenAddress = (transfer.address || '').toLowerCase();
+                        // Check if we have a price from our batch hook
+                        const hasBatchPrice = !!batchPrices[tokenAddress];
+                        const usdValue = calculateUsdValue(transfer.value, transfer.token_decimals, tokenAddress);
+                        
+                        return usdValue ? (
+                          <div className="text-xs text-muted-foreground flex items-center justify-end">
+                            {usdValue.toLocaleString('en-US', {
+                              style: 'currency',
+                              currency: 'USD',
+                              maximumFractionDigits: 2,
+                              minimumFractionDigits: 2
+                            })}
+                            {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   ))}
                   
@@ -951,33 +967,49 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         {transfer.direction === 'receive' ? '+' : '-'}
                         {transfer.value_formatted || formatTokenValue(transfer.value)} {(transfer.token_symbol && transfer.token_symbol.length > 15) ? `${transfer.token_symbol.substring(0, 15)}...` : (transfer.token_symbol || 'PLS')}
                       </div>
-                      {/* Add USD value display for native PLS token */}
-                      {calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
-                        <div className="text-xs text-muted-foreground flex items-center justify-end">
-                          {(calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                            maximumFractionDigits: 2,
-                            minimumFractionDigits: 2
-                          })}
-                        </div>
-                      )}
+                      {/* Add USD value display for native PLS token using batch token prices */}
+                      {(() => {
+                        const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+                        // Check if we have a price from our batch hook
+                        const hasBatchPrice = !!batchPrices[plsAddress];
+                        const usdValue = calculateUsdValue(transfer.value, '18', plsAddress);
+                        
+                        return usdValue ? (
+                          <div className="text-xs text-muted-foreground flex items-center justify-end">
+                            {usdValue.toLocaleString('en-US', {
+                              style: 'currency',
+                              currency: 'USD',
+                              maximumFractionDigits: 2,
+                              minimumFractionDigits: 2
+                            })}
+                            {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   ))}
                   
                   <div className="text-xs font-semibold text-white mt-2">
                     Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
-                    {/* Add USD value for gas fee if available */}
-                    {calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
-                      <div className="flex items-center justify-end mt-0.5">
-                        {(calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                          maximumFractionDigits: 2,
-                          minimumFractionDigits: 2
-                        })}
-                      </div>
-                    )}
+                    {/* Add USD value for gas fee using batch prices */}
+                    {(() => {
+                      const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+                      // Check if we have a price from our batch hook
+                      const hasBatchPrice = !!batchPrices[plsAddress];
+                      const usdValue = calculateUsdValue(tx.transaction_fee.toString(), '18', plsAddress);
+                      
+                      return usdValue ? (
+                        <div className="flex items-center justify-end mt-0.5">
+                          {usdValue.toLocaleString('en-US', {
+                            style: 'currency',
+                            currency: 'USD',
+                            maximumFractionDigits: 2,
+                            minimumFractionDigits: 2
+                          })}
+                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -1135,16 +1167,23 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       {transfer.direction === 'receive' ? '+' : '-'}
                       {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)}
                     </div>
-                    {calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') && (
-                      <div className="text-xs text-muted-foreground">
-                        {(calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') || 0).toLocaleString('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                          maximumFractionDigits: 2,
-                          minimumFractionDigits: 2
-                        })}
-                      </div>
-                    )}
+                    {(() => {
+                      const tokenAddress = (transfer.address || '').toLowerCase();
+                      const hasBatchPrice = !!batchPrices[tokenAddress];
+                      const usdValue = calculateUsdValue(transfer.value, transfer.token_decimals, tokenAddress);
+                      
+                      return usdValue ? (
+                        <div className="text-xs text-muted-foreground flex items-center justify-end">
+                          {usdValue.toLocaleString('en-US', {
+                            style: 'currency',
+                            currency: 'USD',
+                            maximumFractionDigits: 2,
+                            minimumFractionDigits: 2
+                          })}
+                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               ))}
