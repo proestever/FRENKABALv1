@@ -1,6 +1,5 @@
 import fetch from 'node-fetch';
 import Moralis from 'moralis';
-import { utils } from 'ethers';
 import { 
   ProcessedToken, 
   PulseChainTokenBalanceResponse, 
@@ -13,7 +12,6 @@ import {
 import { storage } from '../storage';
 import { InsertTokenLogo } from '@shared/schema';
 import { updateLoadingProgress } from '../routes';
-import { getWalletBalancesFromPulseChainScan } from './dexscreener';
 
 // Initialize Moralis
 try {
@@ -319,25 +317,13 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
             // For non-native tokens, try to get price from Moralis
             const priceData = await getTokenPrice(token.token_address);
             if (priceData && priceData.usdPrice) {
-              // Only include verified_contract and security_score if they are actually provided by the API
-              const enhancedToken = {
+              return {
                 ...token,
                 usd_price: priceData.usdPrice,
                 usd_value: parseFloat(token.balance_formatted || '0') * priceData.usdPrice,
                 usd_price_24hr_percent_change: priceData.usdPrice24hrPercentChange,
+                verified_contract: priceData.verifiedContract
               };
-              
-              // Only add verified_contract if it's explicitly defined
-              if (priceData.verifiedContract !== undefined) {
-                enhancedToken.verified_contract = priceData.verifiedContract;
-              }
-              
-              // Only add security_score if it's explicitly defined
-              if (priceData.securityScore !== undefined) {
-                enhancedToken.security_score = priceData.securityScore;
-              }
-              
-              return enhancedToken;
             }
             
             return token;
@@ -526,56 +512,10 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     if (moralisTokens.length > 0) {
       console.log(`Got wallet data from Moralis with ${moralisTokens.length} tokens`);
       
-      // Now also try to get PulseChain Scan API data to ensure we have all tokens
-      updateLoadingProgress({
-        currentBatch: 4,
-        message: 'Fetching additional token data from PulseChain Scan...'
-      });
-      
-      console.log('Fetching supplemental token data from PulseChain Scan API for maximum coverage');
-      
-      let tokenMap = new Map();
-      
-      // First add Moralis tokens to our map (they have more detailed info)
-      moralisTokens.forEach(token => {
-        if (token.token_address) {
-          tokenMap.set(token.token_address.toLowerCase(), token);
-        }
-      });
-      
-      // Also add PulseChain Scan data for maximum coverage
-      try {
-        const { tokenBalances } = await getWalletBalancesFromPulseChainScan(walletAddress);
-        console.log(`Got ${tokenBalances.length} tokens from PulseChain Scan API for ${walletAddress}`);
-        
-        // Add any new tokens from PulseChain Scan
-        tokenBalances.forEach(item => {
-          const tokenAddress = item.address.toLowerCase();
-          if (!tokenMap.has(tokenAddress)) {
-            // Create Moralis-like structure for PulseChain tokens
-            tokenMap.set(tokenAddress, {
-              token_address: item.address,
-              symbol: item.symbol || 'UNKNOWN',
-              name: item.name || 'Unknown Token',
-              decimals: item.decimals || '18',
-              balance: item.balance,
-              balance_formatted: formatUnits(item.balance, parseInt(item.decimals || '18', 10)),
-              source: 'pulsechain' // Add source for debugging
-            });
-          }
-        });
-      } catch (error) {
-        console.error('Error getting supplemental token balances from PulseChain Scan:', error);
-      }
-      
-      // Convert map back to array and update the tokens array
-      const combinedTokens = Array.from(tokenMap.values());
-      console.log(`Combined ${moralisTokens.length} Moralis tokens with PulseChain Scan data for total of ${combinedTokens.length} tokens`);
-      
       // Process tokens in batches to avoid overwhelming API
       const BATCH_SIZE = 15; // Process 15 tokens at a time (increased from 5 for faster loading)
       const processedTokens: ProcessedToken[] = [];
-      const totalBatches = Math.ceil(combinedTokens.length/BATCH_SIZE);
+      const totalBatches = Math.ceil(moralisTokens.length/BATCH_SIZE);
       
       // Update existing loading progress with the new batch count
       // But maintain the overall progress count by starting at 5
@@ -588,7 +528,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       });
       
       // Process tokens in batches
-      for (let i = 0; i < combinedTokens.length; i += BATCH_SIZE) {
+      for (let i = 0; i < moralisTokens.length; i += BATCH_SIZE) {
         const currentBatch = Math.floor(i/BATCH_SIZE) + 1;
         console.log(`Processing token batch ${currentBatch}/${totalBatches}`);
         
@@ -598,7 +538,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
           message: `Processing token batch ${currentBatch}/${totalBatches}...`
         });
         
-        const batch = combinedTokens.slice(i, i + BATCH_SIZE);
+        const batch = moralisTokens.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(batch.map(async (item: any) => {
           try {
             // Check if this is the native PLS token (either with is_native flag or by address)
@@ -661,56 +601,26 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
             const price = item.usd_price || undefined;
             const value = item.usd_value || (price ? balanceFormatted * price : undefined);
             
-            // Create the base token object with required fields
-            const processedToken: any = {
+            // Always set a default security score for all tokens
+            // Native tokens get 100, verified tokens get 90, other tokens get 50 as a base
+            const defaultScore = isNative ? 100 : (item.verified_contract === true || item.possible_spam === false) ? 90 : 50;
+            
+            return {
               address: item.token_address,
               symbol,
               name,
               decimals: parseInt(item.decimals || '18'),
               balance: item.balance || '0',
               balanceFormatted, // Use our properly formatted balance
+              price,
+              value,
+              priceChange24h: item.usd_price_24hr_percent_change,
               logo: logoUrl,
+              exchange: item.exchangeName || '', 
+              verified: item.verified_contract === true || item.possible_spam === false,
+              securityScore: item.securityScore || defaultScore,
               isNative
-            };
-            
-            // Only add optional fields if they exist or have meaningful values
-            if (price !== undefined) {
-              processedToken.price = price;
-            }
-            
-            if (value !== undefined) {
-              processedToken.value = value;
-            }
-            
-            if (item.usd_price_24hr_percent_change !== undefined) {
-              processedToken.priceChange24h = item.usd_price_24hr_percent_change;
-            }
-            
-            // Only add exchange if it's explicitly defined
-            if (item.exchangeName) {
-              processedToken.exchange = item.exchangeName;
-            }
-            
-            // Only add verified if it's explicitly defined from API
-            if (item.verified_contract !== undefined) {
-              processedToken.verified = item.verified_contract;
-            } else if (item.possible_spam !== undefined) {
-              // Use possible_spam as a fallback for verification status
-              processedToken.verified = !item.possible_spam;
-            } else if (isNative) {
-              // Native tokens are always verified
-              processedToken.verified = true;
-            }
-            
-            // Only add security score if it's explicitly defined or for native token
-            if (item.securityScore !== undefined) {
-              processedToken.securityScore = item.securityScore;
-            } else if (isNative) {
-              // Native tokens always get 100 security score
-              processedToken.securityScore = 100;
-            }
-            
-            return processedToken;
+          };
         } catch (error) {
           console.error(`Error processing token from Moralis:`, error);
           return null;
@@ -721,7 +631,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       processedTokens.push(...batchResults.filter(Boolean) as ProcessedToken[]);
         
       // Add a delay between batches to avoid rate limiting
-      if (i + BATCH_SIZE < combinedTokens.length) {
+      if (i + BATCH_SIZE < moralisTokens.length) {
         console.log("Waiting 500ms before processing next batch...");
         await new Promise(resolve => setTimeout(resolve, 500));
       }
@@ -770,8 +680,8 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       };
     }
     
-    // Use hybrid approach by combining Moralis data with PulseChain Scan API data
-    console.log('Using hybrid approach with both Moralis and PulseChain Scan data');
+    // Fallback to the PulseChain Scan API for token balances (we already have the native PLS)
+    console.log('Falling back to PulseChain Scan API for token balances');
     
     // Update progress
     updateLoadingProgress({
@@ -780,23 +690,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     });
     
     // Get token balances from PulseChain Scan API
-    const pulseChainTokens = await getTokenBalances(walletAddress);
-    
-    // Create a map of token addresses to avoid duplicates
-    const tokenMap = new Map();
-    
-    // Add tokens from PulseChain Scan API to our map
-    pulseChainTokens.forEach(token => {
-      if (token.address) {
-        tokenMap.set(token.address.toLowerCase(), {
-          ...token,
-          source: 'pulsechain'
-        });
-      }
-    });
-    
-    // Convert map back to array
-    const tokens = Array.from(tokenMap.values());
+    const tokens = await getTokenBalances(walletAddress);
     
     // If we have a native PLS balance, add it as a token at the top of the list
     if (nativePlsBalance) {
@@ -932,32 +826,17 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
             const percentChangeStr = priceData['24hrPercentChange'] || '0';
             const percentChange = parseFloat(percentChangeStr.replace(/-/g, '')) * (percentChangeStr.includes('-') ? -1 : 1);
             
-            // Create the base enhanced token
-            const enhancedToken = {
+            return {
               ...token,
               name: priceData.tokenName || token.name, // Use Moralis name if available
               price: priceData.usdPrice,
               value: token.balanceFormatted * priceData.usdPrice,
               priceChange24h: priceData.usdPrice24hrPercentChange || percentChange || 0,
               logo: logoUrl,
+              exchange: priceData.exchangeName,
+              verified: priceData.verifiedContract,
+              securityScore: priceData.securityScore,
             };
-            
-            // Only add exchange if explicitly defined
-            if (priceData.exchangeName) {
-              enhancedToken.exchange = priceData.exchangeName;
-            }
-            
-            // Only add verified if explicitly defined
-            if (priceData.verifiedContract !== undefined) {
-              enhancedToken.verified = priceData.verifiedContract;
-            }
-            
-            // Only add security score if explicitly defined
-            if (priceData.securityScore !== undefined) {
-              enhancedToken.securityScore = priceData.securityScore;
-            }
-            
-            return enhancedToken;
           }
           
           // If we don't have price data, but have a stored logo, use it
