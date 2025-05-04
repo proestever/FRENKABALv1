@@ -536,6 +536,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // Update user profile data
+  app.patch("/api/users/:id/profile", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { displayName, website, twitterHandle, bio } = req.body;
+      
+      // Validate user ID
+      const userId = parseInt(id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Verify user exists
+      const existingUser = await storage.getUser(userId);
+      if (!existingUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Update profile with provided data
+      const updatedUser = await storage.updateUserProfile(userId, {
+        displayName,
+        website,
+        twitterHandle,
+        bio
+      });
+      
+      return res.status(200).json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      return res.status(500).json({ 
+        message: "Failed to update user profile",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
 
   // Bookmark API Routes
   

@@ -1,4 +1,4 @@
-import { users, type User, type InsertUser, tokenLogos, type InsertTokenLogo, type TokenLogo, bookmarks, type InsertBookmark, type Bookmark } from "@shared/schema";
+import { users, type User, type InsertUser, type UpdateUserProfile, tokenLogos, type InsertTokenLogo, type TokenLogo, bookmarks, type InsertBookmark, type Bookmark } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
