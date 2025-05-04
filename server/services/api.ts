@@ -35,40 +35,68 @@ const PLS_PRICE_USD = 0.000025; // Initial placeholder price if API fails - upda
 // Note: Moralis is already initialized at the top of the file
 
 /**
- * Get native PLS balance for a wallet address directly from PulseChain Scan API
+ * Get native PLS balance for a wallet address directly from Moralis API
  */
 export async function getNativePlsBalance(walletAddress: string): Promise<{balance: string, balanceFormatted: number} | null> {
   try {
-    console.log(`Fetching native PLS balance for ${walletAddress} from PulseChain Scan API`);
+    console.log(`Fetching native PLS balance for ${walletAddress} from Moralis API`);
     
-    // Using the direct address endpoint which includes the native PLS balance
-    const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}`);
+    // Using Moralis SDK to get the native balance with PulseChain's chain ID (369 or 0x171)
+    const response = await Moralis.EvmApi.balance.getNativeBalance({
+      chain: "pulse", // PulseChain chain identifier
+      address: walletAddress
+    });
     
-    if (!response.ok) {
-      console.log(`PulseChain API response status for native balance: ${response.status} ${response.statusText}`);
-      return null;
-    }
-    
-    const data = await response.json() as PulseChainAddressResponse;
-    
-    // Extract the coin balance which represents native PLS
-    const coinBalance = data.coin_balance;
-    if (coinBalance === undefined) {
-      console.log('Could not find coin_balance in PulseChain Scan API response');
+    // Extract the balance from the response
+    const balanceWei = response.raw.balance;
+    if (!balanceWei) {
+      console.log('Could not find balance in Moralis API response');
       return null;
     }
     
     // Format the balance from wei to PLS (divide by 10^18)
-    const balanceFormatted = parseFloat(coinBalance) / Math.pow(10, PLS_DECIMALS);
-    console.log(`Native PLS balance for ${walletAddress}: ${balanceFormatted} PLS (raw: ${coinBalance})`);
+    const balanceFormatted = parseFloat(balanceWei) / Math.pow(10, PLS_DECIMALS);
+    console.log(`Native PLS balance for ${walletAddress}: ${balanceFormatted} PLS (raw: ${balanceWei})`);
     
     return {
-      balance: coinBalance,
+      balance: balanceWei,
       balanceFormatted
     };
   } catch (error) {
-    console.error('Error fetching native PLS balance:', error);
-    return null;
+    console.error('Error fetching native PLS balance from Moralis:', error);
+    
+    // If Moralis fails, try falling back to PulseChain Scan API
+    console.log('Falling back to PulseChain Scan API for native balance');
+    try {
+      // Using the direct address endpoint which includes the native PLS balance
+      const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}`);
+      
+      if (!response.ok) {
+        console.log(`PulseChain API response status for native balance: ${response.status} ${response.statusText}`);
+        return null;
+      }
+      
+      const data = await response.json() as PulseChainAddressResponse;
+      
+      // Extract the coin balance which represents native PLS
+      const coinBalance = data.coin_balance;
+      if (coinBalance === undefined) {
+        console.log('Could not find coin_balance in PulseChain Scan API response');
+        return null;
+      }
+      
+      // Format the balance from wei to PLS (divide by 10^18)
+      const balanceFormatted = parseFloat(coinBalance) / Math.pow(10, PLS_DECIMALS);
+      console.log(`Native PLS balance from fallback API for ${walletAddress}: ${balanceFormatted} PLS (raw: ${coinBalance})`);
+      
+      return {
+        balance: coinBalance,
+        balanceFormatted
+      };
+    } catch (fallbackError) {
+      console.error('Error in fallback method for fetching native PLS balance:', fallbackError);
+      return null;
+    }
   }
 }
 
@@ -472,8 +500,8 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       message: 'Initializing wallet data fetch...'
     });
     
-    // Always get native PLS balance directly from PulseChain Scan API (most reliable method)
-    console.log(`Getting native PLS balance for ${walletAddress} using direct API call`);
+    // Get native PLS balance directly from Moralis API (more reliable and faster)
+    console.log(`Getting native PLS balance for ${walletAddress}`);
     
     // Update progress
     updateLoadingProgress({
