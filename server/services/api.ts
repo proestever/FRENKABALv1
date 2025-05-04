@@ -35,17 +35,18 @@ const PLS_PRICE_USD = 0.000025; // Initial placeholder price if API fails - upda
 // Note: Moralis is already initialized at the top of the file
 
 /**
- * Get native PLS balance for a wallet address directly from PulseChain Scan API
+ * Get native PLS balance for a wallet address directly from PulseChain blockchain
  */
 export async function getNativePlsBalance(walletAddress: string): Promise<{balance: string, balanceFormatted: number} | null> {
   try {
-    console.log(`Fetching native PLS balance for ${walletAddress} from PulseChain Scan API`);
+    console.log(`Fetching native PLS balance for ${walletAddress} from PulseChain blockchain`);
     
     // Add timestamp to URL as cache-busting parameter
     const timestamp = Date.now();
-    const url = `${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}?_=${timestamp}`;
+    // Use RPC endpoint to get real-time balance
+    const url = `https://rpc.pulsechain.com/balance/${walletAddress}?_=${timestamp}`;
     
-    // Using the direct address endpoint which includes the native PLS balance with cache busting
+    // Using direct RPC endpoint for the most up-to-date balance with cache busting
     const response = await fetch(url, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -55,22 +56,58 @@ export async function getNativePlsBalance(walletAddress: string): Promise<{balan
     });
     
     if (!response.ok) {
-      console.log(`PulseChain API response status for native balance: ${response.status} ${response.statusText}`);
-      return null;
+      console.log(`PulseChain RPC response status for native balance: ${response.status} ${response.statusText}`);
+      
+      // Fall back to PulseChain Scan API if RPC endpoint fails
+      console.log('Falling back to PulseChain Scan API for native balance');
+      const fallbackTimestamp = Date.now();
+      const fallbackUrl = `${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}?_=${fallbackTimestamp}`;
+      
+      const fallbackResponse = await fetch(fallbackUrl, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      
+      if (!fallbackResponse.ok) {
+        console.log(`PulseChain API fallback response status: ${fallbackResponse.status} ${fallbackResponse.statusText}`);
+        return null;
+      }
+      
+      const fallbackData = await fallbackResponse.json() as PulseChainAddressResponse;
+      
+      // Extract the coin balance which represents native PLS
+      const fallbackCoinBalance = fallbackData.coin_balance;
+      if (fallbackCoinBalance === undefined) {
+        console.log('Could not find coin_balance in PulseChain Scan API response');
+        return null;
+      }
+      
+      // Format the balance from wei to PLS (divide by 10^18)
+      const fallbackBalanceFormatted = parseFloat(fallbackCoinBalance) / Math.pow(10, PLS_DECIMALS);
+      console.log(`Native PLS balance from fallback API: ${fallbackBalanceFormatted} PLS (raw: ${fallbackCoinBalance})`);
+      
+      return {
+        balance: fallbackCoinBalance,
+        balanceFormatted: fallbackBalanceFormatted
+      };
     }
     
-    const data = await response.json() as PulseChainAddressResponse;
+    // Parse the balance response from our RPC endpoint
+    const data = await response.json();
     
-    // Extract the coin balance which represents native PLS
-    const coinBalance = data.coin_balance;
+    // Extract the balance from the response
+    const coinBalance = data.balance;
     if (coinBalance === undefined) {
-      console.log('Could not find coin_balance in PulseChain Scan API response');
+      console.log('Could not find balance in RPC response');
       return null;
     }
     
     // Format the balance from wei to PLS (divide by 10^18)
     const balanceFormatted = parseFloat(coinBalance) / Math.pow(10, PLS_DECIMALS);
-    console.log(`Native PLS balance for ${walletAddress}: ${balanceFormatted} PLS (raw: ${coinBalance})`);
+    console.log(`Native PLS balance from direct RPC call: ${balanceFormatted}`);
     
     return {
       balance: coinBalance,
