@@ -933,11 +933,139 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       console.log(`PLS token not found in fallback. Tokens: ${tokensWithPrice.map(t => t.symbol).join(', ')}`);
     }
     
+    // ENHANCEMENT: Check recent transactions for tokens that may not appear in the balance yet
+    try {
+      console.log("Checking recent transactions for additional tokens...");
+      updateLoadingProgress({
+        currentBatch: totalBatches + 6, // Add an extra step
+        totalBatches: totalBatches + 7, // Update total batches
+        message: 'Checking transactions for additional tokens...'
+      });
+      
+      // Get recent transactions to look for recent token transfers
+      const recentTransactions = await getWalletTransactionHistory(walletAddress, 50);
+      
+      if (recentTransactions && recentTransactions.result && recentTransactions.result.length > 0) {
+        console.log(`Found ${recentTransactions.result.length} recent transactions, checking for missing tokens...`);
+        
+        const existingTokenAddresses = tokensWithPrice.map(t => t.address.toLowerCase());
+        const missingTokens: ProcessedToken[] = [];
+        
+        // Extract token addresses from ERC20 transfers in recent transactions
+        for (const tx of recentTransactions.result) {
+          if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+            for (const transfer of tx.erc20_transfers) {
+              // Only consider tokens where this wallet is the recipient
+              if (transfer.to_address.toLowerCase() === walletAddress.toLowerCase() && 
+                  transfer.address && 
+                  !existingTokenAddresses.includes(transfer.address.toLowerCase())) {
+                
+                console.log(`Found token ${transfer.token_symbol || 'Unknown'} (${transfer.address}) in transaction history that's not in balance list`);
+                
+                // Try to get token price
+                let price: number | undefined;
+                let priceChange: number | undefined;
+                let logoUrl = transfer.token_logo || null;
+                
+                try {
+                  const priceData = await getTokenPrice(transfer.address);
+                  if (priceData) {
+                    price = priceData.usdPrice;
+                    priceChange = priceData.usdPrice24hrPercentChange;
+                    
+                    // If no logo yet, use from price data
+                    if (!logoUrl && priceData.tokenLogo) {
+                      logoUrl = priceData.tokenLogo;
+                    }
+                  }
+                } catch (priceError) {
+                  console.log(`Could not get price for token ${transfer.address}: ${priceError}`);
+                  // Continue without price data
+                }
+                
+                // If no logo yet, try from our database
+                if (!logoUrl) {
+                  try {
+                    const storedLogo = await storage.getTokenLogo(transfer.address);
+                    if (storedLogo) {
+                      logoUrl = storedLogo.logoUrl;
+                    } else {
+                      // Use default logo as last resort
+                      logoUrl = getDefaultLogo(transfer.token_symbol);
+                    }
+                  } catch (logoError) {
+                    console.log(`Error getting logo for token ${transfer.address}: ${logoError}`);
+                    // Use default logo as last resort
+                    logoUrl = getDefaultLogo(transfer.token_symbol);
+                  }
+                }
+                
+                // Add to missing tokens list - note we set balance to a minimum non-zero value 
+                // to ensure it appears (actual balance will be updated next time)
+                const tokenDecimals = parseInt(transfer.token_decimals || '18', 10);
+                const minimumBalance = '1'; // Just 1 unit in smallest denomination
+                const minimumBalanceFormatted = 1 / Math.pow(10, tokenDecimals);
+                
+                missingTokens.push({
+                  address: transfer.address,
+                  symbol: transfer.token_symbol || 'Unknown',
+                  name: transfer.token_name || 'Unknown Token',
+                  decimals: tokenDecimals,
+                  balance: minimumBalance,
+                  balanceFormatted: minimumBalanceFormatted,
+                  price,
+                  value: price ? minimumBalanceFormatted * price : undefined,
+                  priceChange24h: priceChange,
+                  logo: logoUrl,
+                  verified: transfer.verified_contract === true,
+                  isNative: false
+                });
+                
+                // Store logo in our database if we have one
+                if (logoUrl && !logoUrl.startsWith('/assets/')) {
+                  try {
+                    const newLogo: InsertTokenLogo = {
+                      tokenAddress: transfer.address,
+                      logoUrl,
+                      symbol: transfer.token_symbol || 'Unknown',
+                      name: transfer.token_name || 'Unknown Token',
+                      lastUpdated: new Date().toISOString()
+                    };
+                    
+                    await storage.saveTokenLogo(newLogo);
+                  } catch (storageError) {
+                    console.error(`Error storing logo for token ${transfer.address}:`, storageError);
+                  }
+                }
+                
+                // Add to existing addresses to avoid duplicates
+                existingTokenAddresses.push(transfer.address.toLowerCase());
+              }
+            }
+          }
+        }
+        
+        // Add missing tokens to the main list
+        if (missingTokens.length > 0) {
+          console.log(`Adding ${missingTokens.length} tokens from transaction history to balance list`);
+          tokensWithPrice.push(...missingTokens);
+          
+          // Recalculate total value including new tokens
+          totalValue = tokensWithPrice.reduce((sum, token) => {
+            return sum + (token.value || 0);
+          }, 0);
+        }
+      }
+    } catch (txError) {
+      console.error("Error checking transactions for additional tokens:", txError);
+      // Continue with the tokens we already have
+    }
+  
     // Update loading progress to complete
     updateLoadingProgress({
       status: 'complete',
-      currentBatch: totalBatches + 5, // Add 5 to account for previous steps
-      totalBatches: totalBatches + 5, // Ensure we have the right total
+      currentBatch: totalBatches + 7, // Account for the extra step
+      totalBatches: totalBatches + 7, // Ensure we have the right total
       message: 'Data loaded successfully'
     });
     
@@ -948,7 +1076,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       address: walletAddress,
       tokens: tokensWithPrice,
       totalValue,
-      tokenCount: tokens.length,
+      tokenCount: tokensWithPrice.length,
       plsBalance: nativePlsBalance?.balanceFormatted || plsToken?.balanceFormatted || null,
       plsPriceChange: plsToken?.priceChange24h || null,
       networkCount: 1, // Default to PulseChain network
