@@ -768,7 +768,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           <div className="flex flex-col">
                             <div className="flex items-center">
                               <div className="group relative">
-                                <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30">{transfer.token_symbol}</span>
+                                <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30" title={transfer.token_symbol}>
+                                  {transfer.token_symbol && transfer.token_symbol.length > 15 
+                                    ? `${transfer.token_symbol.substring(0, 15)}...` 
+                                    : transfer.token_symbol}
+                                </span>
                                 <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                                   <div className="mb-2 text-xs">
                                     <span className="text-muted-foreground">Contract:</span>
@@ -859,7 +863,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           <div className="flex flex-col">
                             <div className="flex items-center">
                               <div className="group relative">
-                                <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30">{transfer.token_symbol || 'PLS'}</span>
+                                <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30" title={transfer.token_symbol || 'PLS'}>
+                                  {(transfer.token_symbol && transfer.token_symbol.length > 15) 
+                                    ? `${transfer.token_symbol.substring(0, 15)}...` 
+                                    : (transfer.token_symbol || 'PLS')}
+                                </span>
                                 <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                                   <div className="mb-2 text-xs">
                                     <span className="text-muted-foreground">Type:</span>
@@ -937,7 +945,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     <div key={`${tx.hash}-erc20-value-${i}`} className={`${i > 0 ? 'mt-2' : ''}`}>
                       <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
                         {transfer.direction === 'receive' ? '+' : '-'}
-                        {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol}
+                        {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol && transfer.token_symbol.length > 15 ? `${transfer.token_symbol.substring(0, 15)}...` : transfer.token_symbol}
                       </div>
                       {/* Add USD value display */}
                       {calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') && (
@@ -957,7 +965,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     <div key={`${tx.hash}-native-value-${i}`} className={`${(tx.erc20_transfers && tx.erc20_transfers.length > 0) || i > 0 ? 'mt-2' : ''}`}>
                       <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
                         {transfer.direction === 'receive' ? '+' : '-'}
-                        {transfer.value_formatted || formatTokenValue(transfer.value)} {transfer.token_symbol || 'PLS'}
+                        {transfer.value_formatted || formatTokenValue(transfer.value)} {(transfer.token_symbol && transfer.token_symbol.length > 15) ? `${transfer.token_symbol.substring(0, 15)}...` : (transfer.token_symbol || 'PLS')}
                       </div>
                       {/* Add USD value display for native PLS token */}
                       {calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
@@ -1064,7 +1072,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           <ArrowUpRight size={14} className="text-red-400 mr-1" />
                         )}
                         <div className="group relative">
-                          <span className="text-sm font-medium border-b border-dotted border-white/30">{transfer.token_symbol}</span>
+                          <span className="text-sm font-medium border-b border-dotted border-white/30" title={transfer.token_symbol}>
+                            {transfer.token_symbol && transfer.token_symbol.length > 15 
+                              ? `${transfer.token_symbol.substring(0, 15)}...` 
+                              : transfer.token_symbol}
+                          </span>
                           <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                             <div className="mb-2 text-xs">
                               <span className="text-muted-foreground">Contract:</span>
@@ -1169,7 +1181,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           <ArrowUpRight size={14} className="text-red-400 mr-1" />
                         )}
                         <div className="group relative">
-                          <span className="text-sm font-medium border-b border-dotted border-white/30">{transfer.token_symbol || 'PLS'}</span>
+                          <span className="text-sm font-medium border-b border-dotted border-white/30" title={transfer.token_symbol || 'PLS'}>
+                            {(transfer.token_symbol && transfer.token_symbol.length > 15) 
+                              ? `${transfer.token_symbol.substring(0, 15)}...` 
+                              : (transfer.token_symbol || 'PLS')}
+                          </span>
                           <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                             <div className="mb-2 text-xs">
                               <span className="text-muted-foreground">Type:</span>
