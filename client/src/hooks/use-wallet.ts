@@ -68,8 +68,26 @@ export function useWallet(): UseWalletReturn {
             
             console.log("Restored wallet connection from localStorage:", savedAddress);
             
-            // Get or create user ID for this wallet
-            const user = await getUserFromWallet(savedAddress);
+            // Check if we have a saved signature for this address
+            const savedSignature = localStorage.getItem('walletSignature');
+            const signatureTimestamp = localStorage.getItem('signatureTimestamp');
+            
+            // Get or create user ID for this wallet, using signature if available
+            let user;
+            if (savedSignature && signatureTimestamp) {
+              // If we have a saved signature, use it for authentication
+              const authData = {
+                signature: savedSignature,
+                message: `Sign this message to verify you own this wallet address:\n\n${savedAddress}\n\nTimestamp: ${signatureTimestamp}\n\nThis signature doesn't cost any gas or send a transaction.`,
+                timestamp: parseInt(signatureTimestamp),
+                walletAddress: savedAddress
+              };
+              user = await getUserFromWallet(savedAddress, authData);
+            } else {
+              // Otherwise just get the user ID without signature verification
+              user = await getUserFromWallet(savedAddress);
+            }
+            
             if (user) {
               setUserId(user);
               localStorage.setItem('userId', String(user));
@@ -270,14 +288,12 @@ export function useWallet(): UseWalletReturn {
           console.log("Connected to network:", chainId);
           
           // Create or get user ID for this wallet - pass signature for verification
-          const userData = {
-            walletAddress: address,
+          const user = await getUserFromWallet(address, {
             signature: signature,
             message: message,
-            timestamp: timestamp
-          };
-          
-          const user = await getUserFromWallet(address, userData);
+            timestamp: timestamp,
+            walletAddress: address
+          });
           if (user) {
             setUserId(user);
             localStorage.setItem('userId', String(user));
@@ -345,12 +361,15 @@ export function useWallet(): UseWalletReturn {
     setAccount(null);
     setChainId(null);
     setUserId(null);
+    setUser(null);
     
     // Clear localStorage data
     localStorage.removeItem('walletConnected');
     localStorage.removeItem('walletAddress');
     localStorage.removeItem('userId');
     localStorage.removeItem('lastLoginTimestamp');
+    localStorage.removeItem('walletSignature');
+    localStorage.removeItem('signatureTimestamp');
     
     toast({
       title: "Wallet Disconnected",

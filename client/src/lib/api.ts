@@ -369,11 +369,21 @@ export async function getUserProfile(userId: number): Promise<User | null> {
 /**
  * Get user profile by wallet address
  * This is a convenience function that gets the user ID from wallet address and then gets the user profile
+ * @param walletAddress The wallet address
+ * @param authData Optional authentication data with signature
  */
-export async function getUserProfileByWallet(walletAddress: string): Promise<User | null> {
+export async function getUserProfileByWallet(
+  walletAddress: string,
+  authData?: { 
+    signature: string;
+    message: string;
+    timestamp: number;
+    walletAddress: string;
+  }
+): Promise<User | null> {
   try {
     // First get the user ID from wallet address
-    const userId = await getUserFromWallet(walletAddress);
+    const userId = await getUserFromWallet(walletAddress, authData);
     
     if (!userId) {
       return null;
