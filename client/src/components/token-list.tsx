@@ -65,6 +65,13 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
 
   // Sort tokens
   const sortedTokens = useMemo(() => {
+    // If we're paginating, don't re-sort on the client side for 'value'
+    // because the server already did the sorting properly across all pages
+    if (pagination && sortBy === 'value') {
+      return [...filteredTokens];
+    }
+    
+    // For other sort criteria or when not paginating, do client-side sort
     return [...filteredTokens].sort((a, b) => {
       switch (sortBy) {
         case 'value':
@@ -81,7 +88,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
           return 0;
       }
     });
-  }, [filteredTokens, sortBy]);
+  }, [filteredTokens, sortBy, pagination]);
 
   // Skip loading state as we already have a progress bar at the top of the page
   // We'll let the parent component handle the loading state entirely
