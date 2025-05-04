@@ -376,126 +376,192 @@ export async function getWalletTransactionHistory(
   limit: number = 100, // Moralis free plan limits to max 100 transactions per call
   cursorParam: string | null = null
 ): Promise<any> {
-  // Add retry logic - maximum 3 attempts with increasing delay
-  const MAX_RETRIES = 3;
-  const INITIAL_RETRY_DELAY = 1000; // 1 second
-  
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  // We'll use SDK for this operation to make it more reliable
+  try {
+    console.log(`Fetching transaction history for ${walletAddress} from Moralis API (limit: ${limit}, cursor: ${cursorParam || 'none'})`);
+    
+    // Create a standardized response format in case of errors/empty data
+    const emptyResponse = {
+      result: [],
+      cursor: null,
+      page: 0,
+      page_size: limit
+    };
+    
+    // For specific test wallet, return a hardcoded first page response if needed
+    if (walletAddress === "0x87315173fC0B7A3766761C8d199B803697179434" && !cursorParam) {
+      // This could be replaced with actual cached data if we wanted to optimize further
+      // But for now let's still try the real API first
+    }
+    
+    // Use the SDK with proper parameters and rate limit handling
     try {
-      console.log(`Fetching transaction history for ${walletAddress} from Moralis (attempt ${attempt}/${MAX_RETRIES}, limit: ${limit}, cursor: ${cursorParam || 'none'})`);
-      
-      // Direct API call to Moralis as shown in the working example
-      const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98";
-      
-      // Build URL with parameters
-      let url = `https://deep-index.moralis.io/api/v2.2/wallets/${walletAddress}/history`;
-      
-      // Add query parameters
-      const queryParams = new URLSearchParams();
-      queryParams.append('chain', '0x171'); // PulseChain chain ID
-      queryParams.append('order', 'DESC');
-      queryParams.append('limit', limit.toString());
-      
-      // Add timestamp to prevent caching
-      queryParams.append('_', Date.now().toString());
-      
-      if (cursorParam) {
-        queryParams.append('cursor', cursorParam);
-      }
-      
-      url = `${url}?${queryParams.toString()}`;
-      console.log(`Making direct Moralis API call to: ${url}`);
-      
-      // Make the direct API call with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'X-API-Key': apiKey,
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-        signal: controller.signal
-      });
-      
-      // Clear the timeout
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Moralis API error (${response.status}): ${errorText}`);
-        
-        // If this is a timeout (504) or internal server error (500), retry
-        if ((response.status === 504 || response.status === 500) && attempt < MAX_RETRIES) {
-          const retryDelay = INITIAL_RETRY_DELAY * attempt;
-          console.log(`${response.status} error received, retrying in ${retryDelay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
-          continue; // Try again
-        }
-        
-        throw new Error(`Moralis API error: ${response.status} ${response.statusText}`);
-      }
-      
-      // Parse the JSON response
-      const responseData = await response.json();
-      console.log(`Transaction response cursor: ${responseData?.cursor || 'none'}`);
-      console.log('Response data keys:', Object.keys(responseData));
-      
-      const result = responseData?.result || [];
-      const cursor = responseData?.cursor || null;
-      const page = responseData?.page || 0;
-      const page_size = responseData?.page_size || limit;
-      
-      console.log(`Successfully fetched transaction history for ${walletAddress} - ${result.length} transactions`);
-      console.log('First transaction sample:', result.length > 0 ? JSON.stringify(result[0]).substring(0, 300) : 'No transactions');
-      
-      // Success - return the data
-      return {
-        result,
-        cursor,
-        page,
-        page_size
+      // Using the official SDK is more reliable for pagination
+      const options: any = {
+        chain: "0x171", // PulseChain ID
+        limit: limit    // Number of transactions
       };
       
-    } catch (error: any) {
-      // Handle AbortController timeout
-      if (error.name === 'AbortError') {
-        console.error('Request timed out');
-        if (attempt < MAX_RETRIES) {
-          const retryDelay = INITIAL_RETRY_DELAY * attempt;
-          console.log(`Request timed out, retrying in ${retryDelay}ms...`);
+      // Add cursor if we have one
+      if (cursorParam) {
+        options.cursor = cursorParam;
+      }
+      
+      console.log(`Calling Moralis SDK with options:`, options);
+      
+      // Get transactions using SDK
+      const response = await Moralis.EvmApi.wallets.getWalletTransactions(
+        {
+          address: walletAddress,
+          ...options
+        }
+      );
+      
+      console.log(`Successfully fetched transaction history for ${walletAddress} - SDK method`);
+      
+      // Return structured data in expected format
+      return {
+        result: response.raw.result || [],
+        cursor: response.raw.cursor || null,
+        page: response.raw.page || 0,
+        page_size: response.raw.page_size || limit
+      };
+    } catch (sdkError: any) {
+      console.error(`Error using Moralis SDK: ${sdkError.message}`);
+      
+      // Fall back to direct API call if SDK fails
+      console.log('Falling back to direct API call method');
+      
+      // Add retry logic - maximum 3 attempts with increasing delay
+      const MAX_RETRIES = 3;
+      const INITIAL_RETRY_DELAY = 1000; // 1 second
+      
+      let lastError: any = null;
+      
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          console.log(`Fetching transaction history (direct API) - attempt ${attempt}/${MAX_RETRIES}`);
+          
+          // Direct API call to Moralis
+          const apiKey = process.env.MORALIS_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98";
+          
+          // Build URL with query parameters
+          let url = `https://deep-index.moralis.io/api/v2.2/wallets/${walletAddress}/history`;
+          
+          const queryParams = new URLSearchParams();
+          queryParams.append('chain', '0x171'); // PulseChain chain ID
+          queryParams.append('order', 'DESC');
+          queryParams.append('limit', limit.toString());
+          
+          // Add cache-busting timestamp parameter
+          const timestamp = Date.now();
+          queryParams.append('_', timestamp.toString());
+          
+          // Add cursor if we have one
+          if (cursorParam) {
+            queryParams.append('cursor', cursorParam);
+          }
+          
+          url = `${url}?${queryParams.toString()}`;
+          
+          // Make the API call with a timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+          
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'X-API-Key': apiKey,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            },
+            signal: controller.signal
+          });
+          
+          // Clear the timeout
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Moralis API error (${response.status}): ${errorText}`);
+            
+            // For 5xx errors, retry
+            if ((response.status >= 500) && attempt < MAX_RETRIES) {
+              const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1); // Exponential backoff
+              console.log(`Server error ${response.status} received, retrying in ${retryDelay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              continue; // Try again
+            }
+            
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+          }
+          
+          // Parse the JSON response
+          const responseData = await response.json();
+          
+          const result = responseData?.result || [];
+          const cursor = responseData?.cursor || null;
+          const page = responseData?.page || 0;
+          const page_size = responseData?.page_size || limit;
+          
+          console.log(`Fetched ${result.length} transactions via direct API call`);
+          
+          // Return the data in expected format
+          return {
+            result,
+            cursor,
+            page,
+            page_size
+          };
+          
+        } catch (apiError: any) {
+          lastError = apiError;
+          
+          // Handle AbortController timeout
+          if (apiError.name === 'AbortError') {
+            console.error('Request timed out');
+            if (attempt < MAX_RETRIES) {
+              const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1);
+              console.log(`Request timed out, retrying in ${retryDelay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              continue; // Try again
+            }
+          }
+          
+          // For the final attempt, don't retry
+          if (attempt >= MAX_RETRIES) {
+            console.error(`Error in direct API call after ${MAX_RETRIES} attempts:`, apiError.message);
+            break;
+          }
+          
+          // For other errors on non-final attempts, retry with backoff
+          const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1);
+          console.log(`Error: ${apiError.message}, retrying in ${retryDelay}ms...`);
           await new Promise(resolve => setTimeout(resolve, retryDelay));
-          continue; // Try again
         }
       }
       
-      // If we've exhausted all retries or it's a different error
-      if (attempt >= MAX_RETRIES) {
-        console.error(`Error fetching wallet transaction history after ${MAX_RETRIES} attempts:`, error.message);
-        return {
-          result: [],
-          cursor: null,
-          error: error.message
-        };
-      }
-      
-      // For other errors on non-final attempts, retry
-      const retryDelay = INITIAL_RETRY_DELAY * attempt;
-      console.log(`Error: ${error.message}, retrying in ${retryDelay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      // If we get here after retries, return the empty response with error
+      return {
+        ...emptyResponse,
+        error: lastError ? lastError.message : "Failed to fetch transaction history after multiple attempts"
+      };
     }
+    
+  } catch (error: any) {
+    console.error(`Unexpected error fetching transaction history:`, error.message);
+    
+    // Return empty data structure with error
+    return {
+      result: [],
+      cursor: null,
+      page: 0,
+      page_size: limit,
+      error: error.message
+    };
   }
-  
-  // This should not be reached due to the return in the final attempt catch block
-  return {
-    result: [],
-    cursor: null,
-    error: "Maximum retry attempts exceeded"
-  };
 }
 
 /**

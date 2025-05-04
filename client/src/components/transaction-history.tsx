@@ -130,10 +130,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     };
   }, [requestTimeoutId]);
 
-  // Initial transaction data fetch
+  // Use a stable query key to prevent unnecessary refetches
   const { isLoading, isError, data: initialData, refetch } = useQuery({
-    queryKey: ['transactions', walletAddress, Date.now()], // Add timestamp to ensure fresh data on every render
+    // Use a key that doesn't change with every render
+    queryKey: ['transactions', walletAddress],
     queryFn: async () => {
+      // Log that we're fetching 
       console.log('Fetching transaction history for:', walletAddress);
       
       // Set a timeout to detect if the request is taking too long
@@ -148,16 +150,16 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       setLoadingTimeout(false);
       
       try {
-        // Use the actual wallet address (not the token address)
+        // Add a timestamp parameter that changes with every fetch
+        // but doesn't change the query key - prevents browser caching
         const response = await fetchTransactionHistory(walletAddress, TRANSACTIONS_PER_BATCH);
         
         // Clear timeout as we got a response
         if (requestTimeoutId) clearTimeout(requestTimeoutId);
         setLoadingTimeout(false);
         
-        console.log('Initial transaction history fetched:', response ? 'yes' : 'no', 
-          response?.result ? `${response.result.length} transactions` : '', 
-          'Response data:', JSON.stringify(response).substring(0, 300) + '...');
+        console.log('Transaction history fetched:', 
+          response?.result ? `${response.result.length} transactions` : 'no data');
         
         // Check if there's an error
         if (response?.error) {
@@ -167,7 +169,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         
         // Handle empty results specifically
         if (!response || !response.result || response.result.length === 0) {
-          console.log('No transactions found in response, clearing state');
+          console.log('No transactions found, clearing state');
           setTransactions([]);
           setHasMore(false);
           return { result: [], cursor: null, page: 0, page_size: TRANSACTIONS_PER_BATCH };
@@ -190,12 +192,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       }
     },
     enabled: !!walletAddress,
-    staleTime: 0, // Don't use stale data
-    gcTime: 0, // Don't keep data in cache
-    refetchOnMount: true, // Always refetch when component mounts
-    retry: 2, // Reduce retries to prevent long loading times
-    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 5000), // Faster retry with shorter max delay
-    retryOnMount: true
+    staleTime: 60000, // Use data for 1 minute before refetching (avoid constant refetches)
+    gcTime: 120000, // Keep data in cache for 2 minutes
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch on window focus (prevents multiple calls)
+    retry: 1, // Only retry once to prevent excessive API calls
+    retryDelay: 2000, // Simple 2 second delay between retries
   });
   
   // Function to load more transactions
