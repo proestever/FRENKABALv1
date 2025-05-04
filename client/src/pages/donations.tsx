@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
 import { useAuth } from '@/providers/auth-provider';
-import { Loader2, ExternalLink, Copy, CheckCircle2, Globe, Twitter } from 'lucide-react';
+import { Loader2, ExternalLink, Copy, CheckCircle2, Globe, Twitter, Search } from 'lucide-react';
+import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { DonorProfileButton } from '@/components/donor-profile-button';
 import { getUserProfileByWallet } from '@/lib/api';
@@ -190,9 +191,10 @@ export function Donations() {
     });
   };
   
-  const openInExplorer = () => {
-    window.open(`https://scan.pulsechain.com/address/${DONATIONS_ADDRESS}`, '_blank');
-  };
+  // Function to open in PulseChain explorer (commented out as we're using FrenKabal link now)
+  // const openInExplorer = () => {
+  //   window.open(`https://scan.pulsechain.com/address/${DONATIONS_ADDRESS}`, '_blank');
+  // };
 
   if (isLoading) {
     return (
@@ -261,14 +263,16 @@ export function Donations() {
             </Button>
           </div>
           <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
-              className="glass-card bg-black/20 border border-white/15 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-105"
-              onClick={openInExplorer}
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View on Explorer
-            </Button>
+            <Link href={`/${DONATIONS_ADDRESS}`}>
+              <Button 
+                variant="outline" 
+                className="glass-card bg-black/20 border border-white/15 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-105"
+                type="button"
+              >
+                <Search className="mr-2 h-4 w-4" />
+                View on FrenKabal
+              </Button>
+            </Link>
             
             {isConnected && (
               <Button 
