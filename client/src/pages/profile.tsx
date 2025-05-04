@@ -526,43 +526,29 @@ export function Profile() {
               />
               <div className="text-xs text-muted-foreground mt-1 space-y-1">
                 <p>Format: <span className="font-mono">Wallet Address, Label, Notes, Is Favorite</span></p>
-                <p>Example: <span className="font-mono">0x123...abc, "My Trading Wallet", "Used for DEX trading", true</span></p>
+                <p>Example: <span className="font-mono">0x123...abc, My Trading Wallet, Used for DEX trading, true</span></p>
                 <p className="italic">Download the example file below for a ready-to-use template</p>
               </div>
             </div>
             
             <div className="flex justify-between">
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // Load sample CSV
-                    setImportCsvText(getExampleCSV());
-                  }}
-                  className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
-                >
-                  <FileDown className="w-4 h-4 mr-2" />
-                  Load Example
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // Download example CSV
-                    const exampleCsv = getExampleCSV();
-                    downloadAsFile(exampleCsv, "example-wallets.csv", "text/csv");
-                    toast({
-                      title: "Example Downloaded",
-                      description: "Edit this file and import it back to add your wallets.",
-                    });
-                  }}
-                  className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Example
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Download example CSV
+                  const exampleCsv = getExampleCSV();
+                  downloadAsFile(exampleCsv, "example-wallets.csv", "text/csv");
+                  toast({
+                    title: "Example Downloaded",
+                    description: "Edit this file and import it back to add your wallets.",
+                  });
+                }}
+                className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download Example
+              </Button>
               
               <input
                 type="file"

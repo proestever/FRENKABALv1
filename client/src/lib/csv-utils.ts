@@ -130,8 +130,8 @@ function isValidEthereumAddress(address: string): boolean {
 export function getExampleCSV(): string {
   // Create example data in CSV format directly to avoid type issues
   return `Wallet Address,Label,Notes,Is Favorite
-0x1234567890123456789012345678901234567890,"My Main Wallet","This is my primary wallet for daily transactions",true
-0xabcdefabcdefabcdefabcdefabcdefabcdefabcd,"Investment Wallet","Long-term holdings and staking",false`;
+0x1234567890123456789012345678901234567890,My Main Wallet,This is my primary wallet for daily transactions,true
+0xabcdefabcdefabcdefabcdefabcdefabcdefabcd,Investment Wallet,Long-term holdings and staking,false`;
 }
 
 /**
