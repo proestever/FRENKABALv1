@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
-import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw, Filter, Plus } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
@@ -117,9 +117,28 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   const [loadingTimeout, setLoadingTimeout] = useState<boolean>(false);
   const [requestTimeoutId, setRequestTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [tokenPrices, setTokenPrices] = useState<Record<string, number>>({});
+  // State to track copied addresses
+  const [copiedAddresses, setCopiedAddresses] = useState<Record<string, boolean>>({});
   
   // Add state for transaction type filter
   const [selectedType, setSelectedType] = useState<TransactionType>('all');
+  
+  // Function to copy text to clipboard
+  const copyToClipboard = useCallback((text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        // Set the copied state for this specific address
+        setCopiedAddresses(prev => ({ ...prev, [text]: true }));
+        
+        // Reset the copied state after 2 seconds
+        setTimeout(() => {
+          setCopiedAddresses(prev => ({ ...prev, [text]: false }));
+        }, 2000);
+      })
+      .catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+  }, []);
 
   // Set up a timeout to show an error message if the transactions don't load within reasonable time
   useEffect(() => {
@@ -685,9 +704,25 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48">
                                   <div className="mb-2 text-xs">
                                     <span className="text-muted-foreground">Contract:</span>
-                                    <span className="ml-1 bg-black/20 px-1 py-0.5 rounded text-white">
-                                      {shortenAddress(transfer.address || '')}
-                                    </span>
+                                    <div className="flex items-center mt-1">
+                                      <span className="bg-black/20 px-1 py-0.5 rounded text-white">
+                                        {shortenAddress(transfer.address || '')}
+                                      </span>
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          copyToClipboard(transfer.address || '');
+                                        }}
+                                        className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
+                                        title="Copy contract address"
+                                      >
+                                        {copiedAddresses[transfer.address || ''] ? (
+                                          <Check size={12} className="text-green-400" />
+                                        ) : (
+                                          <Copy size={12} className="text-white/70 hover:text-white" />
+                                        )}
+                                      </button>
+                                    </div>
                                   </div>
                                   <div className="flex flex-col space-y-1 text-xs">
                                     <a 
@@ -760,9 +795,25 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48">
                                   <div className="mb-2 text-xs">
                                     <span className="text-muted-foreground">Type:</span>
-                                    <span className="ml-1 bg-black/20 px-1 py-0.5 rounded text-white">
-                                      Native Token
-                                    </span>
+                                    <div className="flex items-center mt-1">
+                                      <span className="bg-black/20 px-1 py-0.5 rounded text-white">
+                                        Native Token
+                                      </span>
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          copyToClipboard('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+                                        }}
+                                        className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
+                                        title="Copy PLS token address"
+                                      >
+                                        {copiedAddresses['0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'] ? (
+                                          <Check size={12} className="text-green-400" />
+                                        ) : (
+                                          <Copy size={12} className="text-white/70 hover:text-white" />
+                                        )}
+                                      </button>
+                                    </div>
                                   </div>
                                   <div className="flex flex-col space-y-1 text-xs">
                                     <a 
@@ -949,9 +1000,25 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48">
                             <div className="mb-2 text-xs">
                               <span className="text-muted-foreground">Contract:</span>
-                              <span className="ml-1 bg-black/20 px-1 py-0.5 rounded text-white">
-                                {shortenAddress(transfer.address || '')}
-                              </span>
+                              <div className="flex items-center mt-1">
+                                <span className="bg-black/20 px-1 py-0.5 rounded text-white">
+                                  {shortenAddress(transfer.address || '')}
+                                </span>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyToClipboard(transfer.address || '');
+                                  }}
+                                  className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
+                                  title="Copy contract address"
+                                >
+                                  {copiedAddresses[transfer.address || ''] ? (
+                                    <Check size={12} className="text-green-400" />
+                                  ) : (
+                                    <Copy size={12} className="text-white/70 hover:text-white" />
+                                  )}
+                                </button>
+                              </div>
                             </div>
                             <div className="flex flex-col space-y-1 text-xs">
                               <a 
@@ -1038,9 +1105,25 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48">
                             <div className="mb-2 text-xs">
                               <span className="text-muted-foreground">Type:</span>
-                              <span className="ml-1 bg-black/20 px-1 py-0.5 rounded text-white">
-                                Native Token
-                              </span>
+                              <div className="flex items-center mt-1">
+                                <span className="bg-black/20 px-1 py-0.5 rounded text-white">
+                                  Native Token
+                                </span>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyToClipboard('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+                                  }}
+                                  className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
+                                  title="Copy PLS token address"
+                                >
+                                  {copiedAddresses['0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'] ? (
+                                    <Check size={12} className="text-green-400" />
+                                  ) : (
+                                    <Copy size={12} className="text-white/70 hover:text-white" />
+                                  )}
+                                </button>
+                              </div>
                             </div>
                             <div className="flex flex-col space-y-1 text-xs">
                               <a 
