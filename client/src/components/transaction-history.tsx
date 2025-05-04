@@ -577,6 +577,31 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               </DropdownMenuContent>
             </DropdownMenu>
             
+            {/* Load More Button */}
+            {hasMore && (
+              <button
+                onClick={() => {
+                  if (loadingTimeout) {
+                    // If in timeout state, clear it and retry
+                    setLoadingTimeout(false);
+                    if (requestTimeoutId) clearTimeout(requestTimeoutId);
+                    loadMoreTransactions();
+                  } else {
+                    // Normal load more
+                    loadMoreTransactions();
+                  }
+                }}
+                disabled={isLoadingMore && !loadingTimeout}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoadingMore && !loadingTimeout ? (
+                  <Loader2 size={16} className="animate-spin text-white" />
+                ) : (
+                  <Plus size={16} />
+                )}
+              </button>
+            )}
+            
             {/* Close Button */}
             <button
               onClick={onClose}
