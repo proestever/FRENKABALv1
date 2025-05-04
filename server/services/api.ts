@@ -481,12 +481,103 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       message: 'Fetching token data from Moralis...'
     });
     
+    // Get token data directly from Moralis API using ERC20 endpoint
+    // This provides the most complete token list including DAI and others that might be missing
+    console.log(`Fetching ERC20 token data directly from Moralis API for ${walletAddress}`);
+    
+    // Initialize arrays to store our data from different sources
+    let erc20Tokens: any[] = [];
+    let standardMoralisTokens: any[] = [];
+    
+    try {
+      const moralisErc20Response = await fetch(`https://deep-index.moralis.io/api/v2.2/${walletAddress}/erc20?chain=0x171`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'X-API-Key': MORALIS_API_KEY
+        }
+      });
+      
+      if (moralisErc20Response.ok) {
+        const erc20Data = await moralisErc20Response.json();
+        if (Array.isArray(erc20Data) && erc20Data.length > 0) {
+          console.log(`Found ${erc20Data.length} ERC20 tokens using direct Moralis API call`);
+          // Log some token examples for debugging
+          if (erc20Data.length > 0) {
+            console.log(`First token from direct API call: ${erc20Data[0].symbol}, balance: ${erc20Data[0].balance}`);
+            
+            // Look for DAI specifically for debugging
+            const daiToken = erc20Data.find((t: any) => 
+              t.token_address && t.token_address.toLowerCase() === '0x6b175474e89094c44da98b954eedeac495271d0f'
+            );
+            
+            if (daiToken) {
+              console.log(`Found DAI token with balance: ${daiToken.balance}, formatted: ${parseFloat(daiToken.balance) / Math.pow(10, parseInt(daiToken.decimals))}`);
+            }
+          }
+          
+          // Store the ERC20 tokens for processing
+          erc20Tokens = erc20Data;
+        }
+      }
+    } catch (erc20Error) {
+      console.error('Error fetching ERC20 tokens directly:', erc20Error);
+    }
+    
+    // Also get token data from the standard Moralis wallet balances endpoint
     const moralisData = await getWalletTokenBalancesFromMoralis(walletAddress);
     
-    // If we have Moralis data, use it
     // Check if moralisData is an array (direct result) or has a result property
-    const moralisTokens = Array.isArray(moralisData) ? moralisData : 
+    standardMoralisTokens = Array.isArray(moralisData) ? moralisData : 
                          (moralisData && moralisData.result) ? moralisData.result : [];
+    
+    // Combine both token sources, prioritizing the standard endpoint for price data
+    // but ensuring we include all tokens from the ERC20 endpoint
+    const combinedTokens: any[] = [];
+    
+    // Add all standard Moralis tokens first
+    if (standardMoralisTokens.length > 0) {
+      combinedTokens.push(...standardMoralisTokens);
+    }
+    
+    // Then add any tokens from ERC20 endpoint that aren't already included
+    if (erc20Tokens.length > 0) {
+      for (const erc20Token of erc20Tokens) {
+        // Skip if token address is not present
+        if (!erc20Token.token_address) continue;
+        
+        // Check if this token already exists in combinedTokens
+        const existingToken = combinedTokens.find(t => 
+          t.token_address && 
+          t.token_address.toLowerCase() === erc20Token.token_address.toLowerCase()
+        );
+        
+        if (!existingToken) {
+          // Add this token with a transformed format to match standard Moralis response
+          combinedTokens.push({
+            token_address: erc20Token.token_address,
+            symbol: erc20Token.symbol,
+            name: erc20Token.name,
+            logo: erc20Token.logo,
+            thumbnail: erc20Token.thumbnail,
+            decimals: erc20Token.decimals,
+            balance: erc20Token.balance,
+            balance_formatted: parseFloat(erc20Token.balance) / Math.pow(10, parseInt(erc20Token.decimals)),
+            verified_contract: erc20Token.verified_contract,
+            possible_spam: erc20Token.possible_spam,
+            security_score: erc20Token.security_score,
+            // These might not be available from ERC20 endpoint
+            usd_price: undefined, 
+            usd_value: undefined
+          });
+        }
+      }
+    }
+    
+    console.log(`Combined ${standardMoralisTokens.length} standard tokens with ${erc20Tokens.length} ERC20 tokens for total of ${combinedTokens.length} unique tokens`);
+    
+    // Use the combined token list for processing
+    const moralisTokens = combinedTokens;
                          
     if (moralisTokens.length > 0) {
       console.log(`Got wallet data from Moralis with ${moralisTokens.length} tokens`);
@@ -576,6 +667,48 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
             }
           }
           
+          // Check if the token doesn't have price data (likely from the ERC20 endpoint)
+          // and try to get price data for it
+          let priceInfo = {
+            price: item.usd_price,
+            value: item.usd_value,
+            priceChange24h: item.usd_price_24hr_percent_change
+          };
+          
+          // If the token doesn't have price data (likely from the ERC20 endpoint)
+          // then try to get prices
+          if (item.usd_price === undefined) {
+            try {
+              // Skip price lookup for known valueless tokens
+              const skipPriceLookup = 
+                symbol.includes('CLAIM') || 
+                name.toLowerCase().includes('claim') || 
+                name.toLowerCase().includes('free') ||
+                symbol === 'pDAI'; // Skip the fake pDAI token
+                
+              if (!skipPriceLookup) {
+                console.log(`Fetching price for ${symbol} (${item.token_address}) that has no price data`);
+                
+                const priceData = await getTokenPrice(item.token_address);
+                if (priceData) {
+                  console.log(`Got price for ${symbol}: $${priceData.usdPrice}`);
+                  
+                  // Calculate the token value based on balance
+                  const tokenBalance = parseFloat(item.balance_formatted || '0');
+                  const tokenValue = tokenBalance * priceData.usdPrice;
+                  
+                  priceInfo = {
+                    price: priceData.usdPrice,
+                    value: tokenValue,
+                    priceChange24h: priceData.usdPrice24hrPercentChange || 0
+                  };
+                }
+              }
+            } catch (priceError) {
+              console.error(`Error fetching price for ${symbol}:`, priceError);
+            }
+          }
+          
           return {
             address: item.token_address,
             symbol,
@@ -583,9 +716,9 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
             decimals: parseInt(item.decimals || '18'),
             balance: item.balance || '0',
             balanceFormatted: parseFloat(item.balance_formatted || '0'),
-            price: item.usd_price,
-            value: item.usd_value,
-            priceChange24h: item.usd_price_24hr_percent_change,
+            price: priceInfo.price,
+            value: priceInfo.value,
+            priceChange24h: priceInfo.priceChange24h,
             logo: logoUrl,
             exchange: '', // Moralis doesn't provide exchange info in this endpoint
             verified: item.verified_contract === true,
