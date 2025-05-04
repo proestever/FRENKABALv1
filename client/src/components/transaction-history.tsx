@@ -142,7 +142,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       const timeoutId = setTimeout(() => {
         console.log('Transaction history request is taking too long');
         setLoadingTimeout(true);
-      }, 20000); // 20 seconds timeout
+      }, 15000); // 15 seconds timeout (reduced from 20)
       
       setRequestTimeoutId(timeoutId);
       setLoadingTimeout(false);
@@ -162,7 +162,16 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         // Check if there's an error
         if (response?.error) {
           console.error('Error in transaction history response:', response.error);
-          throw new Error(response.error);
+          // Instead of throwing, return a valid response with empty data
+          setTransactions([]);
+          setHasMore(false);
+          return { 
+            result: [], 
+            cursor: null, 
+            page: 0, 
+            page_size: TRANSACTIONS_PER_BATCH,
+            error: response.error
+          };
         }
         
         // Handle empty results specifically
@@ -186,15 +195,25 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         setLoadingTimeout(false);
         
         console.error('Error fetching transaction history:', error);
-        throw error;
+        
+        // Return empty result instead of throwing
+        setTransactions([]);
+        setHasMore(false);
+        return { 
+          result: [], 
+          cursor: null, 
+          page: 0, 
+          page_size: TRANSACTIONS_PER_BATCH,
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        };
       }
     },
     enabled: !!walletAddress,
     staleTime: 0, // Don't use stale data
     gcTime: 0, // Don't keep data in cache
     refetchOnMount: true, // Always refetch when component mounts
-    retry: 2, // Reduce retries to prevent long loading times
-    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 5000), // Faster retry with shorter max delay
+    retry: 1, // Reduce retries even further to prevent long loading times
+    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 3000), // Faster retry with shorter max delay
     retryOnMount: true
   });
   
@@ -212,7 +231,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       setLoadingTimeout(true);
       setIsLoadingMore(false);
       // Don't set hasMore to false to allow retry
-    }, 20000); // 20 seconds timeout
+    }, 15000); // 15 seconds timeout (reduced from 20)
     
     setRequestTimeoutId(timeoutId);
     
@@ -229,7 +248,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       
       if (moreData?.error) {
         console.error('Error in load more transaction response:', moreData.error);
-        throw new Error(moreData.error);
+        // Don't throw, just handle the error and allow retry
+        setIsLoadingMore(false);
+        return;
       }
       
       if (moreData?.result && moreData.result.length > 0) {

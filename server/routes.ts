@@ -114,27 +114,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Allow up to 200 transactions per request (as requested)
       const parsedLimit = Math.min(parseInt(limit as string, 10) || 200, 200);
       
-      // Call the API service with pagination parameters
-      const transactionHistory = await getWalletTransactionHistory(
-        address, 
-        parsedLimit, 
-        cursor as string | null
-      );
-      
-      // Return structured response even if there are no transactions
-      if (!transactionHistory || transactionHistory.error) {
-        return res.status(500).json({ 
-          message: "Failed to fetch transaction history",
-          error: transactionHistory?.error || "Unknown error"
+      try {
+        // Call the API service with pagination parameters
+        const transactionHistory = await getWalletTransactionHistory(
+          address, 
+          parsedLimit, 
+          cursor as string | null
+        );
+        
+        // Check if there's an error in the transaction history response
+        if (transactionHistory?.error) {
+          // Return a more graceful error response with HTTP 200 instead of 500
+          // This allows the frontend to handle the error and show empty state
+          return res.json({
+            result: [],
+            cursor: null,
+            page: 0,
+            page_size: parsedLimit,
+            error: transactionHistory.error
+          });
+        }
+        
+        // Return the transaction history data
+        return res.json(transactionHistory);
+      } catch (historyError) {
+        // Handle specific errors from the transaction history service
+        console.error("Error in transaction history service:", historyError);
+        
+        // Return a graceful error response
+        return res.json({
+          result: [],
+          cursor: null,
+          page: 0,
+          page_size: parsedLimit,
+          error: historyError instanceof Error ? historyError.message : "Failed to fetch transaction history"
         });
       }
-      
-      return res.json(transactionHistory);
     } catch (error) {
-      console.error("Error fetching transaction history:", error);
-      return res.status(500).json({ 
-        message: "Failed to fetch transaction history",
-        error: error instanceof Error ? error.message : "Unknown error" 
+      console.error("Error in transaction history route handler:", error);
+      
+      // Return a graceful error response
+      return res.json({ 
+        result: [],
+        cursor: null,
+        page: 0,
+        page_size: parseInt(limit as string, 10) || 100,
+        error: error instanceof Error ? error.message : "Unknown error occurred"
       });
     }
   });
