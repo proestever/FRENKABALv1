@@ -794,7 +794,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/donations/:address", async (req, res) => {
     try {
       const { address } = req.params;
-      const { limit = '100' } = req.query;
+      const { limit = '100', refresh = 'false' } = req.query;
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid donation address" });
@@ -809,8 +809,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse limit to integer with a maximum value to prevent abuse
       const parsedLimit = Math.min(parseInt(limit as string, 10) || 100, 200);
       
+      // Clear cache if refresh is requested
+      if (refresh === 'true') {
+        clearDonationCache();
+        console.log("Cleared donation cache due to refresh request");
+      }
+      
       // Fetch donations for the specified address
       const donationRecords = await getDonations(address);
+      
+      // Debug and ensure all tokens are included in totals
+      console.log(`Found ${donationRecords.length} donors for address ${address}`);
+      
+      // Calculate total donated across all donors for all token types
+      let allTokensSum = 0;
+      for (const record of donationRecords) {
+        let donorTotal = 0;
+        // Log token types and recalculate total for each donor
+        for (const donation of record.donations) {
+          donorTotal += donation.valueUsd;
+          console.log(`Donor ${record.donorAddress} donated ${donation.amount} ${donation.tokenSymbol} worth $${donation.valueUsd.toFixed(4)}`);
+        }
+        
+        // Ensure the total is accurate by setting it to our recalculated value
+        record.totalValueUsd = donorTotal;
+        allTokensSum += donorTotal;
+        
+        console.log(`Donor ${record.donorAddress} total: $${donorTotal.toFixed(4)} from ${record.donations.length} donations`);
+      }
+      console.log(`Total across all donors: $${allTokensSum.toFixed(4)}`);
       
       // Get top donors ranked by total donation value
       const topDonors = getTopDonors(donationRecords, parsedLimit);

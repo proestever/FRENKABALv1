@@ -61,8 +61,9 @@ export function Donations() {
         setIsLoading(true);
         setError(null);
         
-        // Make API call to fetch donation data
-        const response = await fetch(`/api/donations/${DONATIONS_ADDRESS}`);
+        // Make API call to fetch donation data with refresh parameter to clear cache
+        const timestamp = Date.now(); // Add timestamp to prevent browser caching
+        const response = await fetch(`/api/donations/${DONATIONS_ADDRESS}?refresh=true&_t=${timestamp}`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch donation data');
