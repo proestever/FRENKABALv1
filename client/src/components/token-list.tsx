@@ -29,8 +29,6 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
   const [hiddenTokens, setHiddenTokens] = useState<string[]>(getHiddenTokens());
   const [showTransactions, setShowTransactions] = useState(false);
   const [txHistoryKey, setTxHistoryKey] = useState(Date.now());
-  const [manualTokens, setManualTokens] = useState<Token[]>([]);
-  const [showManualTokenEntry, setShowManualTokenEntry] = useState(false);
 
   // Extract token addresses and symbols for batch logo loading
   const tokenAddresses = useMemo(() => tokens.map(t => t.address), [tokens]);
@@ -195,13 +193,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
                 {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
               
-              <button
-                onClick={() => setShowManualTokenEntry(!showManualTokenEntry)}
-                className={`p-2 rounded-md glass-card hover:bg-black/20 border-white/15 ${showManualTokenEntry ? 'text-green-400' : 'text-white/70'}`}
-                title={showManualTokenEntry ? "Hide token entry" : "Add token manually"}
-              >
-                <PlusCircle size={18} />
-              </button>
+
             </div>
           )}
         </div>
