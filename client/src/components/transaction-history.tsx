@@ -6,7 +6,6 @@ import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, Dollar
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
-import { ClickableAddress } from './clickable-address';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -143,7 +142,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       const timeoutId = setTimeout(() => {
         console.log('Transaction history request is taking too long');
         setLoadingTimeout(true);
-      }, 10000); // 10 seconds timeout (reduced further)
+      }, 20000); // 20 seconds timeout
       
       setRequestTimeoutId(timeoutId);
       setLoadingTimeout(false);
@@ -163,16 +162,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         // Check if there's an error
         if (response?.error) {
           console.error('Error in transaction history response:', response.error);
-          // Instead of throwing, return a valid response with empty data
-          setTransactions([]);
-          setHasMore(false);
-          return { 
-            result: [], 
-            cursor: null, 
-            page: 0, 
-            page_size: TRANSACTIONS_PER_BATCH,
-            error: response.error
-          };
+          throw new Error(response.error);
         }
         
         // Handle empty results specifically
@@ -196,24 +186,16 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         setLoadingTimeout(false);
         
         console.error('Error fetching transaction history:', error);
-        
-        // Return empty result instead of throwing
-        setTransactions([]);
-        setHasMore(false);
-        return { 
-          result: [], 
-          cursor: null, 
-          page: 0, 
-          page_size: TRANSACTIONS_PER_BATCH,
-          error: error instanceof Error ? error.message : 'Unknown error' 
-        };
+        throw error;
       }
     },
     enabled: !!walletAddress,
     staleTime: 0, // Don't use stale data
     gcTime: 0, // Don't keep data in cache
     refetchOnMount: true, // Always refetch when component mounts
-    retry: 0 // No retries at all - we handle that in our own code
+    retry: 2, // Reduce retries to prevent long loading times
+    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 5000), // Faster retry with shorter max delay
+    retryOnMount: true
   });
   
   // Function to load more transactions
@@ -230,32 +212,24 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       setLoadingTimeout(true);
       setIsLoadingMore(false);
       // Don't set hasMore to false to allow retry
-    }, 10000); // 10 seconds timeout (same as initial load)
+    }, 20000); // 20 seconds timeout
     
     setRequestTimeoutId(timeoutId);
     
     try {
-      // Use AbortController to set a timeout on the fetch
-      const controller = new AbortController();
-      const abortTimeoutId = setTimeout(() => controller.abort(), 8000); // Even shorter internal timeout
-      
-      // Use the internal fetch timeout
       const moreData = await fetchTransactionHistory(
         walletAddress, 
         TRANSACTIONS_PER_BATCH, 
         nextCursor
       );
       
-      // Clear timeouts as we got a response
-      clearTimeout(abortTimeoutId);
+      // Clear timeout as we got a response
       if (requestTimeoutId) clearTimeout(requestTimeoutId);
       setLoadingTimeout(false);
       
       if (moreData?.error) {
         console.error('Error in load more transaction response:', moreData.error);
-        // Don't throw, just handle the error and allow retry
-        setIsLoadingMore(false);
-        return;
+        throw new Error(moreData.error);
       }
       
       if (moreData?.result && moreData.result.length > 0) {
@@ -511,37 +485,18 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
         <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          {initialData?.error ? 'Unable to load transactions' : 'No transactions found'}
+          No transactions found
         </h3>
         <p className="text-muted-foreground mb-4">
-          {initialData?.error ? (
-            <>
-              The Moralis API is currently experiencing high load or temporary issues.<br />
-              This is common during peak usage times. You can try again in a moment.
-            </>
-          ) : (
-            'No transaction history was found for this wallet.'
-          )}
+          No transaction history was found for this wallet.
         </p>
-        <div className="flex justify-center gap-3 my-4">
-          {initialData?.error && (
-            <button
-              onClick={() => refetch()}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
-            >
-              <RefreshCw size={16} className="mr-1" />
-              <span className="text-sm font-medium">Try Again</span>
-            </button>
-          )}
-          
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
-          >
-            <Wallet size={16} className="mr-1" />
-            <span className="text-sm font-medium">View Tokens</span>
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 mx-auto"
+        >
+          <Wallet size={16} className="mr-1" />
+          <span className="text-sm font-medium">View Tokens</span>
+        </button>
       </Card>
     );
   }
@@ -883,15 +838,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             {transfer.token_symbol}
                             <span className="text-xs text-muted-foreground ml-2">
                               {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                              <a
-                                href={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:text-blue-300 hover:underline transition-colors"
-                                title="View address details in FrenKabal"
-                              >
-                                {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
-                              </a>
+                              {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                             </span>
                           </span>
                         </div>
@@ -918,15 +865,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             {transfer.token_symbol || 'PLS'}
                             <span className="text-xs text-muted-foreground ml-2">
                               {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                              <a
-                                href={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:text-blue-300 hover:underline transition-colors"
-                                title="View address details in FrenKabal"
-                              >
-                                {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
-                              </a>
+                              {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                             </span>
                           </span>
                         </div>

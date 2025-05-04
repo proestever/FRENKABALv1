@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getRecentAddresses } from '@/lib/api';
 import { truncateAddress } from '@/lib/utils';
-import { ClickableAddress } from './clickable-address';
 import { Search } from 'lucide-react';
 import { FrenKabalLogo } from '@/components/frenklabal-logo';
 
@@ -84,7 +83,7 @@ export function SearchSection({ onSearch, isLoading, hasSearched = false }: Sear
                       onClick={() => handleRecentAddressClick(address)}
                       className="px-3 py-1.5 text-xs glass-card rounded-md hover:bg-white/5 transition text-white border-white/20"
                     >
-                      <ClickableAddress address={address} />
+                      {truncateAddress(address)}
                     </button>
                   ))}
                 </div>

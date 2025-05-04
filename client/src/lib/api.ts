@@ -160,60 +160,18 @@ export async function fetchTransactionHistory(
     }
     
     console.log(`Fetching transaction history: ${url}`);
+    const response = await fetch(url);
     
-    // Set timeout for fetch request (10 seconds)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
-    try {
-      const response = await fetch(url, {
-        signal: controller.signal
-      });
-      
-      // Clear timeout as we got a response
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Failed to fetch transaction history:', errorData);
-        return {
-          result: [],
-          cursor: null,
-          page: 0,
-          page_size: limit,
-          error: errorData.message || 'Failed to fetch transaction history'
-        };
-      }
-      
-      return response.json();
-    } catch (error) {
-      // Clear timeout
-      clearTimeout(timeoutId);
-      
-      // Handle AbortController timeout
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.error('Transaction history request timed out');
-        return {
-          result: [],
-          cursor: null,
-          page: 0,
-          page_size: limit,
-          error: 'Request timed out. The server is busy or experiencing temporary issues.'
-        };
-      }
-      
-      // Handle other fetch errors
-      throw error;
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Failed to fetch transaction history:', errorData);
+      throw new Error(errorData.message || 'Failed to fetch transaction history');
     }
+    
+    return response.json();
   } catch (error) {
     console.error('Error fetching transaction history:', error);
-    return {
-      result: [],
-      cursor: null,
-      page: 0,
-      page_size: limit,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
+    throw error;
   }
 }
 
