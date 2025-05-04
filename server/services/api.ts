@@ -216,6 +216,66 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
 }
 
 /**
+ * Get specific token balance for a wallet address
+ * This is useful for tokens that might not be picked up by the standard APIs
+ */
+export async function getSpecificTokenBalance(walletAddress: string, tokenAddress: string): Promise<ProcessedToken | null> {
+  try {
+    console.log(`Fetching specific token balance for ${tokenAddress} in wallet ${walletAddress}`);
+    
+    // Try using the Moralis SDK to get the token metadata and balance
+    const response = await Moralis.EvmApi.token.getWalletTokenBalances({
+      address: walletAddress,
+      chain: "0x171", // PulseChain's chain ID in hex
+      tokenAddresses: [tokenAddress]
+    });
+    
+    if (response && response.raw && response.raw.length > 0) {
+      const tokenData = response.raw[0];
+      const decimals = parseInt(tokenData.decimals);
+      const balance = tokenData.balance;
+      const balanceFormatted = parseInt(balance) / Math.pow(10, decimals);
+      
+      // Try to get price data
+      let price = null;
+      let value = null;
+      let priceChange24h = null;
+      
+      try {
+        const priceData = await getTokenPrice(tokenAddress);
+        if (priceData) {
+          price = priceData.usdPrice || 0;
+          value = price * balanceFormatted;
+          priceChange24h = priceData.usdPrice24hrPercentChange || 0;
+        }
+      } catch (priceError) {
+        console.log(`Could not get price for token ${tokenAddress}: ${priceError.message}`);
+      }
+      
+      return {
+        address: tokenAddress,
+        symbol: tokenData.symbol || 'UNKNOWN',
+        name: tokenData.name || 'Unknown Token',
+        decimals,
+        balance,
+        balanceFormatted,
+        price,
+        value,
+        priceChange24h,
+        logo: tokenData.logo || getDefaultLogo(tokenData.symbol),
+        verified: tokenData.verified_contract || false
+      };
+    }
+    
+    console.log(`No balance found for token ${tokenAddress} in wallet ${walletAddress}`);
+    return null;
+  } catch (error) {
+    console.error(`Error fetching specific token balance:`, error);
+    return null;
+  }
+}
+
+/**
  * Get PLS price using wPLS contract address
  * This provides more accurate price data for the native PLS token
  */
