@@ -406,8 +406,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
         <div className="flex flex-col items-center justify-center min-h-[300px]">
-          <Loader2 size={40} className="animate-spin text-primary mb-4" />
-          <h3 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <Loader2 size={40} className="animate-spin text-white mb-4" />
+          <h3 className="text-xl font-bold text-white">
             {loadingTimeout ? 'Still Loading...' : 'Loading Transaction History...'}
           </h3>
           <p className="text-muted-foreground mt-2">
@@ -477,7 +477,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   if (!transactions || transactions.length === 0) {
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
-        <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+        <h3 className="text-xl font-bold mb-2 text-white">
           No transactions found
         </h3>
         <p className="text-muted-foreground mb-4">
@@ -974,7 +974,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           >
             {isLoadingMore && !loadingTimeout ? (
               <span className="flex items-center">
-                <Loader2 size={18} className="mr-2 animate-spin" /> 
+                <Loader2 size={18} className="mr-2 animate-spin text-white" /> 
                 Loading more transactions...
               </span>
             ) : isLoadingMore && loadingTimeout ? (
