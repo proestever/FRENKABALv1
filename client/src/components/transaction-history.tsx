@@ -587,7 +587,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           {/* Filter dropdown */}
           <div className="flex flex-wrap gap-2 items-center">
             {!isPricesFetching && Object.keys(batchPrices).length > 0 && (
-              <span className="px-2 py-0.5 bg-primary/20 text-xs rounded-md text-primary mr-2">
+              <span className="px-2 py-0.5 bg-green-500/20 text-xs rounded-md text-green-400 mr-2">
                 Batch Prices
               </span>
             )}
