@@ -154,11 +154,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error in transaction history route handler:", error);
       
       // Return a graceful error response
+      // Get limit parameter or use default
+      const parsedLimit = req.query.limit ? parseInt(req.query.limit as string, 10) || 100 : 100;
+      
       return res.json({ 
         result: [],
         cursor: null,
         page: 0,
-        page_size: parseInt(limit as string, 10) || 100,
+        page_size: parsedLimit,
         error: error instanceof Error ? error.message : "Unknown error occurred"
       });
     }

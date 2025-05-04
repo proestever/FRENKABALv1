@@ -142,7 +142,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       const timeoutId = setTimeout(() => {
         console.log('Transaction history request is taking too long');
         setLoadingTimeout(true);
-      }, 15000); // 15 seconds timeout (reduced from 20)
+      }, 10000); // 10 seconds timeout (reduced further)
       
       setRequestTimeoutId(timeoutId);
       setLoadingTimeout(false);
@@ -212,9 +212,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     staleTime: 0, // Don't use stale data
     gcTime: 0, // Don't keep data in cache
     refetchOnMount: true, // Always refetch when component mounts
-    retry: 1, // Reduce retries even further to prevent long loading times
-    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 3000), // Faster retry with shorter max delay
-    retryOnMount: true
+    retry: 0 // No retries at all - we handle that in our own code
   });
   
   // Function to load more transactions
@@ -231,18 +229,24 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       setLoadingTimeout(true);
       setIsLoadingMore(false);
       // Don't set hasMore to false to allow retry
-    }, 15000); // 15 seconds timeout (reduced from 20)
+    }, 10000); // 10 seconds timeout (same as initial load)
     
     setRequestTimeoutId(timeoutId);
     
     try {
+      // Use AbortController to set a timeout on the fetch
+      const controller = new AbortController();
+      const abortTimeoutId = setTimeout(() => controller.abort(), 8000); // Even shorter internal timeout
+      
+      // Use the internal fetch timeout
       const moreData = await fetchTransactionHistory(
         walletAddress, 
         TRANSACTIONS_PER_BATCH, 
         nextCursor
       );
       
-      // Clear timeout as we got a response
+      // Clear timeouts as we got a response
+      clearTimeout(abortTimeoutId);
       if (requestTimeoutId) clearTimeout(requestTimeoutId);
       setLoadingTimeout(false);
       
@@ -506,18 +510,37 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
         <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          No transactions found
+          {initialData?.error ? 'Unable to load transactions' : 'No transactions found'}
         </h3>
         <p className="text-muted-foreground mb-4">
-          No transaction history was found for this wallet.
+          {initialData?.error ? (
+            <>
+              The Moralis API is currently experiencing high load or temporary issues.<br />
+              This is common during peak usage times. You can try again in a moment.
+            </>
+          ) : (
+            'No transaction history was found for this wallet.'
+          )}
         </p>
-        <button
-          onClick={onClose}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 mx-auto"
-        >
-          <Wallet size={16} className="mr-1" />
-          <span className="text-sm font-medium">View Tokens</span>
-        </button>
+        <div className="flex justify-center gap-3 my-4">
+          {initialData?.error && (
+            <button
+              onClick={() => refetch()}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
+            >
+              <RefreshCw size={16} className="mr-1" />
+              <span className="text-sm font-medium">Try Again</span>
+            </button>
+          )}
+          
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
+          >
+            <Wallet size={16} className="mr-1" />
+            <span className="text-sm font-medium">View Tokens</span>
+          </button>
+        </div>
       </Card>
     );
   }
