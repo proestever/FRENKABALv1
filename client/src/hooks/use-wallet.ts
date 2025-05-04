@@ -212,132 +212,78 @@ export function useWallet(): UseWalletReturn {
           description: "Please install MetaMask or another compatible wallet",
           variant: "destructive",
         });
-        clearTimeout(connectionTimeout);
-        setIsConnecting(false);
         return;
       }
       
       console.log("Ethereum object found:", typeof window.ethereum);
       
-      let provider;
-      try {
-        // Create a fresh provider for each connection attempt
-        console.log("Initializing Web3Provider...");
-        provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
-        console.log("Provider initialized successfully:", provider);
-      } catch (providerError) {
-        console.error("Error creating provider:", providerError);
-        clearTimeout(connectionTimeout);
-        setIsConnecting(false);
-        toast({
-          title: "Connection Error",
-          description: "Failed to initialize Web3 provider. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-      console.log("Requesting accounts from wallet...");
+      // Use direct window.ethereum request instead of ethers
+      console.log("Directly requesting accounts from wallet...");
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      console.log("Accounts received:", accounts);
       
-      // Request wallet connection
-      const accounts = await provider.send("eth_requestAccounts", []);
-      
-      if (accounts.length > 0) {
+      if (accounts && accounts.length > 0) {
         const address = accounts[0];
         console.log("Wallet connected:", address);
         
-        // Create a welcoming signature message with features
-        const message = `🌟 Welcome to FrenKabal! 🌟\n
-🔑 Wallet Authentication
-This signature proves you own this wallet address: ${address}
-
-🔒 Security Note
-This signature will not trigger any blockchain transaction or cost any gas fees.
-
-✨ Unlock FrenKabal Premium Features ✨
-• Real-time wallet tracking and portfolio monitoring
-• Advanced token sniping tools and alerts
-• Deep dive transaction history analysis
-• Cross-chain asset visualization
-• Custom price alerts and notifications
-• And much more coming soon!
-
-Become part of the FrenKabal community today.
-Timestamp: ${new Date().toISOString()}`;
+        // Set the account without waiting for signature
+        setAccount(address);
         
-        try {
-          console.log("Requesting signature...");
-          // Request signature to verify wallet ownership
-          const signer = provider.getSigner();
-          await signer.signMessage(message);
-          
-          console.log("Signature verified successfully");
-          
-          // Set the account if signature was successful
-          setAccount(address);
-          
-          // Store wallet info in localStorage for persistence
-          localStorage.setItem('walletConnected', 'true');
-          localStorage.setItem('walletAddress', address);
-          localStorage.setItem('lastLoginTimestamp', Date.now().toString());
-          
-          // Get network
-          const network = await provider.getNetwork();
-          setChainId(network.chainId);
-          
-          console.log("Connected to network:", network.chainId);
-          
-          // Create or get user ID for this wallet
-          const user = await getUserFromWallet(address);
-          if (user) {
-            setUserId(user);
-            localStorage.setItem('userId', String(user));
-          }
-          
-          // Check if on PulseChain
-          if (network.chainId !== PULSE_CHAIN_ID) {
-            console.log("Not on PulseChain, prompting to switch...");
-            // Prompt to switch to PulseChain
-            try {
-              await window.ethereum.request({
-                method: 'wallet_switchEthereumChain',
-                params: [{ chainId: `0x${PULSE_CHAIN_ID.toString(16)}` }],
-              });
-            } catch (switchError: any) {
-              // If PulseChain not added, add it
-              if (switchError.code === 4902) {
-                try {
-                  await window.ethereum.request({
-                    method: 'wallet_addEthereumChain',
-                    params: [{
-                      chainId: `0x${PULSE_CHAIN_ID.toString(16)}`,
-                      chainName: 'PulseChain',
-                      nativeCurrency: {
-                        name: 'Pulse',
-                        symbol: 'PLS',
-                        decimals: 18
-                      },
-                      rpcUrls: ['https://rpc.pulsechain.com'],
-                      blockExplorerUrls: ['https://scan.pulsechain.com']
-                    }],
-                  });
-                } catch (addError) {
-                  console.error("Error adding PulseChain:", addError);
-                }
+        // Store wallet info in localStorage for persistence
+        localStorage.setItem('walletConnected', 'true');
+        localStorage.setItem('walletAddress', address);
+        localStorage.setItem('lastLoginTimestamp', Date.now().toString());
+        
+        // Get chain ID directly from ethereum
+        const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+        const chainId = parseInt(chainIdHex, 16);
+        setChainId(chainId);
+        console.log("Connected to network:", chainId);
+        
+        // Create or get user ID for this wallet
+        const user = await getUserFromWallet(address);
+        if (user) {
+          setUserId(user);
+          localStorage.setItem('userId', String(user));
+        }
+        
+        toast({
+          title: "Wallet Connected! 🌟",
+          description: `Account ${address.substring(0, 6)}...${address.substring(address.length - 4)} successfully connected!`,
+        });
+        
+        // Check if on PulseChain
+        if (chainId !== PULSE_CHAIN_ID) {
+          console.log("Not on PulseChain, prompting to switch...");
+          // Prompt to switch to PulseChain
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: `0x${PULSE_CHAIN_ID.toString(16)}` }],
+            });
+          } catch (switchError: any) {
+            // If PulseChain not added, add it
+            if (switchError.code === 4902) {
+              try {
+                await window.ethereum.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [{
+                    chainId: `0x${PULSE_CHAIN_ID.toString(16)}`,
+                    chainName: 'PulseChain',
+                    nativeCurrency: {
+                      name: 'Pulse',
+                      symbol: 'PLS',
+                      decimals: 18
+                    },
+                    rpcUrls: ['https://rpc.pulsechain.com'],
+                    blockExplorerUrls: ['https://scan.pulsechain.com']
+                  }],
+                });
+              } catch (addError) {
+                console.error("Error adding PulseChain:", addError);
               }
             }
           }
-          
-          toast({
-            title: "Welcome to FrenKabal! 🌟",
-            description: `Account ${address.substring(0, 6)}...${address.substring(38)} successfully connected and verified. Enjoy all premium features!`,
-          });
-        } catch (signError) {
-          console.error("Error signing verification message:", signError);
-          toast({
-            title: "Signature Required",
-            description: "Please sign the message to verify wallet ownership",
-            variant: "destructive",
-          });
         }
       }
     } catch (error) {
