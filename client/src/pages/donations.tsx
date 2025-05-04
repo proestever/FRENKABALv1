@@ -321,9 +321,9 @@ export function Donations() {
           {topDonor && (
             <>
               <div className="text-center mb-3">
-                <h3 className="text-lg text-white/70">Top Donation Amount</h3>
+                <h3 className="text-lg text-white/70">Total Donations Received</h3>
                 <p className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-amber-500">
-                  {formatCurrency(topDonor.totalDonated)}
+                  {formatCurrency(donors.reduce((sum, donor) => sum + donor.totalDonated, 0))}
                 </p>
               </div>
               
