@@ -594,6 +594,10 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
             const price = item.usd_price || undefined;
             const value = item.usd_value || (price ? balanceFormatted * price : undefined);
             
+            // Always set a default security score for all tokens
+            // Native tokens get 100, verified tokens get 90, other tokens get 50 as a base
+            const defaultScore = isNative ? 100 : (item.verified_contract === true || item.possible_spam === false) ? 90 : 50;
+            
             return {
               address: item.token_address,
               symbol,
@@ -607,7 +611,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
               logo: logoUrl,
               exchange: item.exchangeName || '', 
               verified: item.verified_contract === true || item.possible_spam === false,
-              securityScore: item.securityScore || (isNative ? 100 : undefined),
+              securityScore: item.securityScore || defaultScore,
               isNative
           };
         } catch (error) {

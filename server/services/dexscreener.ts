@@ -128,13 +128,17 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
       return null;
     }
     
-    // Cache the price
+    // Include price change in the cached data
+    const priceChange24h = bestPair.priceChange?.h24 || 0;
+    
+    // Cache the price and price change
     priceCache[normalizedAddress] = {
       price,
+      priceChange24h,
       timestamp: now
     };
     
-    console.log(`Got price for ${normalizedAddress} from DexScreener: $${price}`);
+    console.log(`Got price for ${normalizedAddress} from DexScreener: $${price} (24h change: ${priceChange24h}%)`);
     return price;
   } catch (error) {
     console.error(`Error fetching price from DexScreener:`, error);
