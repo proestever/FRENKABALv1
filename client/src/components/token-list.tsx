@@ -462,10 +462,10 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
                       <div>
                         <div className="font-medium">{token.name} ({token.symbol})</div>
                         <div className="text-sm text-muted-foreground flex items-center gap-2">
-                          <span>{formatTokenAmount(token.balanceFormatted)} {token.symbol}</span>
+                          <span>{formatTokenAmount(token.balanceFormatted || 0)} {token.symbol}</span>
                           {token.price && (
                             <span className="text-green-400">
-                              ≈ {formatCurrency(token.balanceFormatted * token.price)}
+                              ≈ {formatCurrency((token.balanceFormatted || 0) * token.price)}
                             </span>
                           )}
                         </div>

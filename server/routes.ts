@@ -966,6 +966,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // API route to get a specific token balance for a wallet
+  app.get("/api/wallet/:walletAddress/token/:tokenAddress", async (req, res) => {
+    try {
+      const { walletAddress, tokenAddress } = req.params;
+      
+      // Validate wallet address
+      if (!walletAddress || typeof walletAddress !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate token address
+      if (!tokenAddress || typeof tokenAddress !== 'string') {
+        return res.status(400).json({ message: "Invalid token address" });
+      }
+      
+      // Validate ethereum address format for both addresses
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(walletAddress)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      if (!addressRegex.test(tokenAddress)) {
+        return res.status(400).json({ message: "Invalid token address format" });
+      }
+      
+      console.log(`Fetching specific token ${tokenAddress} for wallet ${walletAddress}`);
+      
+      // Get token balance using the specialized function
+      const tokenData = await getSpecificTokenBalance(walletAddress, tokenAddress);
+      
+      if (!tokenData) {
+        return res.status(404).json({ message: "Token not found or no balance" });
+      }
+      
+      return res.json(tokenData);
+    } catch (error) {
+      console.error("Error fetching specific token:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch token data",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

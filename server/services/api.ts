@@ -232,7 +232,8 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
     
     if (response && response.raw && response.raw.length > 0) {
       const tokenData = response.raw[0];
-      const decimals = parseInt(tokenData.decimals || "18", 10);
+      const decimalsStr = typeof tokenData.decimals === 'number' ? String(tokenData.decimals) : (tokenData.decimals || "18");
+      const decimals = parseInt(decimalsStr, 10);
       const balance = tokenData.balance;
       const balanceFormatted = parseFloat(balance) / Math.pow(10, decimals);
       
