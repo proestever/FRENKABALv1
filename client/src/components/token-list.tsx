@@ -30,6 +30,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
   const [hiddenTokens, setHiddenTokens] = useState<string[]>(getHiddenTokens());
   const [showTransactions, setShowTransactions] = useState(false);
   const [txHistoryKey, setTxHistoryKey] = useState(Date.now());
+  const [manualTokens, setManualTokens] = useState<Token[]>([]);
+  const [showManualTokenEntry, setShowManualTokenEntry] = useState(false);
 
   // Extract token addresses and symbols for batch logo loading
   const tokenAddresses = useMemo(() => tokens.map(t => t.address), [tokens]);
@@ -192,6 +194,14 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
                 title={showHidden ? "Hide hidden tokens" : "Show hidden tokens"}
               >
                 {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+              
+              <button
+                onClick={() => setShowManualTokenEntry(!showManualTokenEntry)}
+                className={`p-2 rounded-md glass-card hover:bg-black/20 border-white/15 ${showManualTokenEntry ? 'text-green-400' : 'text-white/70'}`}
+                title={showManualTokenEntry ? "Hide token entry" : "Add token manually"}
+              >
+                <PlusCircle size={18} />
               </button>
             </div>
           )}
@@ -410,10 +420,70 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
             </table>
           </div>
           
+          {/* Manual Token Entry */}
+          {showManualTokenEntry && effectiveWalletAddress && (
+            <div className="p-4 border-t border-white/10">
+              <ManualTokenEntry 
+                walletAddress={effectiveWalletAddress}
+                onTokenAdded={(token) => {
+                  // Add the token to our manual tokens list
+                  setManualTokens(prev => {
+                    // Check if token already exists
+                    const exists = prev.some(t => t.address === token.address);
+                    if (exists) {
+                      // Update existing token
+                      return prev.map(t => t.address === token.address ? token : t);
+                    } else {
+                      // Add new token
+                      return [...prev, token];
+                    }
+                  });
+                }}
+              />
+            </div>
+          )}
+          
+          {/* Display manually added tokens if any */}
+          {manualTokens.length > 0 && (
+            <div className="px-6 py-3 border-t border-white/10 bg-green-500/5">
+              <div className="text-green-400 text-sm font-medium mb-2 flex items-center">
+                <PlusCircle size={14} className="mr-1" />
+                Manually Added Tokens
+              </div>
+              <div className="space-y-2">
+                {manualTokens.map(token => (
+                  <div key={token.address} className="p-3 rounded-lg glass-card backdrop-blur-sm border border-green-500/20">
+                    <div className="flex items-center gap-2">
+                      <TokenLogo
+                        address={token.address}
+                        symbol={token.symbol}
+                        fallbackLogo={token.logo}
+                      />
+                      <div>
+                        <div className="font-medium">{token.name} ({token.symbol})</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                          <span>{formatTokenAmount(token.balanceFormatted)} {token.symbol}</span>
+                          {token.price && (
+                            <span className="text-green-400">
+                              ≈ {formatCurrency(token.balanceFormatted * token.price)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           <div className="p-4 border-t border-white/10">
             <div className="text-muted-foreground text-sm flex justify-between items-center">
               <div>
                 Showing {sortedTokens.length} token{sortedTokens.length !== 1 ? 's' : ''}
+                {manualTokens.length > 0 && (
+                  <span className="ml-1 text-green-400">+ {manualTokens.length} manual token{manualTokens.length !== 1 ? 's' : ''}</span>
+                )}
               </div>
               {hiddenTokens.length > 0 && (
                 <div className="flex items-center gap-2">

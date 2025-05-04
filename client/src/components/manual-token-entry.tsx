@@ -3,10 +3,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-// Import the Token type from schema
 import { Token } from '@shared/schema';
 import { TokenLogo } from './token-logo';
 import { formatTokenAmount } from '@/lib/format';
+
+// Define a token interface for what we expect from API
+interface ProcessedToken extends Token {
+  balanceFormatted: number;
+  price?: number;
+  value?: number;
+  priceChange24h?: number;
+  logo?: string;
+  verified?: boolean;
+}
 
 interface ManualTokenEntryProps {
   walletAddress: string;
