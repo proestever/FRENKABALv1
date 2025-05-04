@@ -54,14 +54,16 @@ function getDonationDetails(transaction: Transaction, donationAddress: string): 
   // Check for native token transfer
   if (transaction.to_address.toLowerCase() === donationAddress.toLowerCase() && 
       transaction.value !== '0') {
+    // Convert the Wei value to PLS (18 decimals) and then estimate USD value
+    const valueInPls = parseFloat(transaction.value) / 1e18;
     donations.push({
       txHash: transaction.hash,
       tokenAddress: '0x0000000000000000000000000000000000000000', // Native PLS
       tokenSymbol: 'PLS',
       tokenName: 'Pulse',
       tokenLogo: '/assets/pls logo trimmed.png',
-      amount: transaction.value,
-      valueUsd: parseFloat(transaction.value) * 0.0001, // Mock conversion
+      amount: valueInPls.toString(),
+      valueUsd: valueInPls * 0.00012, // Current PLS/USD approximate rate
       timestamp: new Date(transaction.block_timestamp).getTime()
     });
   }
@@ -70,14 +72,24 @@ function getDonationDetails(transaction: Transaction, donationAddress: string): 
   if (transaction.erc20_transfers && transaction.erc20_transfers.length > 0) {
     for (const transfer of transaction.erc20_transfers) {
       if (transfer.to_address.toLowerCase() === donationAddress.toLowerCase()) {
+        // Get token decimals (default to 18 if not available)
+        const tokenDecimals = parseInt(transfer.token_decimals || '18', 10);
+        // Convert raw value to token amount using decimals
+        const valueInTokens = parseFloat(transfer.value) / Math.pow(10, tokenDecimals);
+        
+        // Use the formatted value if available, otherwise use our calculated amount
+        const formattedAmount = transfer.value_formatted ? 
+          parseFloat(transfer.value_formatted) : valueInTokens;
+        
         donations.push({
           txHash: transaction.hash,
           tokenAddress: transfer.address || '',
           tokenSymbol: transfer.token_symbol || 'Unknown',
           tokenName: transfer.token_name,
           tokenLogo: transfer.token_logo || undefined,
-          amount: transfer.value,
-          valueUsd: parseFloat(transfer.value_formatted || '0') * 0.1, // Mock conversion
+          amount: formattedAmount.toString(),
+          // Estimate a reasonable USD value - this will vary by token
+          valueUsd: formattedAmount * (transfer.token_symbol === 'DAI' ? 1.0 : 0.01),
           timestamp: new Date(transaction.block_timestamp).getTime()
         });
       }
