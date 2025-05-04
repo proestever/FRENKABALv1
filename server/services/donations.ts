@@ -51,11 +51,12 @@ function isDonation(transaction: Transaction, donationAddress: string): boolean 
  * Get token price using DexScreener API
  * Using DexScreener provides more accurate and up-to-date pricing data
  */
-async function getTokenPriceFromDexScreener(tokenAddress: string): Promise<number> {
+async function getTokenPriceForDonations(tokenAddress: string): Promise<number> {
   try {
-    // First attempt to get price from DexScreener
+    // First attempt to get price from DexScreener API service
     console.log(`Getting price for ${tokenAddress} using DexScreener API`);
     
+    // Use imported function from dexscreener.ts
     const price = await getTokenPriceFromDexScreener(tokenAddress);
     
     if (price !== null) {
@@ -121,7 +122,7 @@ async function getDonationDetails(transaction: Transaction, donationAddress: str
     
     // Add promise to get the price and update the donation
     pricePromises.push(
-      getTokenPriceFromMoralis('0x0000000000000000000000000000000000000000').then(price => {
+      getTokenPriceForDonations('0x0000000000000000000000000000000000000000').then(price => {
         nativeDonation.valueUsd = valueInPls * price;
       })
     );
@@ -156,7 +157,7 @@ async function getDonationDetails(transaction: Transaction, donationAddress: str
         
         // Add promise to get the price and update the donation
         pricePromises.push(
-          getTokenPriceFromMoralis(transfer.address || '').then(price => {
+          getTokenPriceForDonations(transfer.address || '').then(price => {
             tokenDonation.valueUsd = formattedAmount * price;
           })
         );
