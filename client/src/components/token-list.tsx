@@ -65,8 +65,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
 
   // Sort tokens
   const sortedTokens = useMemo(() => {
-    // If we're paginating, don't re-sort on the client side for 'value'
-    // because the server already did the sorting properly across all pages
+    // When pagination is active, we should respect the server's sorting order
+    // for the default 'value' sort. This ensures high-value tokens appear on page 1.
     if (pagination && sortBy === 'value') {
       return [...filteredTokens];
     }
@@ -75,7 +75,9 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
     return [...filteredTokens].sort((a, b) => {
       switch (sortBy) {
         case 'value':
-          return (b.value || 0) - (a.value || 0);
+          const aValue = a.value ?? 0; // Use nullish coalescing to handle undefined
+          const bValue = b.value ?? 0;
+          return bValue - aValue;
         case 'balance':
           return (b.balanceFormatted || 0) - (a.balanceFormatted || 0);
         case 'name':

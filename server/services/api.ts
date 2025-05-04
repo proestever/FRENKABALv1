@@ -1203,16 +1203,22 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
     
     // First, sort all tokens by value (descending) so most valuable appear first
     tokensWithPrice.sort((a, b) => {
-      // For tokens with value, sort by value (highest first)
-      if (a.value !== undefined && b.value !== undefined) {
-        return b.value - a.value;
-      }
-      // If only one token has value, prioritize it
-      if (a.value !== undefined) return -1;
-      if (b.value !== undefined) return 1;
+      const aValue = a.value || 0;
+      const bValue = b.value || 0;
       
-      // For tokens without value, sort by balance (highest first)
+      // Primary sort by value - ensures high value tokens always come first
+      if (aValue !== bValue) {
+        return bValue - aValue;
+      }
+      
+      // Secondary sort by balance for tokens with equal value (including zero value tokens)
       return b.balanceFormatted - a.balanceFormatted;
+    });
+    
+    // Log the top 10 tokens by value for debugging
+    console.log('Top tokens sorted by value:');
+    tokensWithPrice.slice(0, 10).forEach((token, i) => {
+      console.log(`${i+1}. ${token.symbol}: ${token.value || 0} USD (balance: ${token.balanceFormatted})`);
     });
     
     // Now apply pagination to the sorted tokens
