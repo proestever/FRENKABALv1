@@ -1201,22 +1201,49 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
     // Give clients time to see the completed progress
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // First, sort all tokens by value (descending) so most valuable appear first
-    tokensWithPrice.sort((a, b) => {
-      const aValue = a.value || 0;
-      const bValue = b.value || 0;
+    // First, ensure all tokens have a proper value field for sorting
+    tokensWithPrice.forEach(token => {
+      // Explicitly calculate the value if not already set
+      if (token.value === undefined && token.price !== undefined && token.balanceFormatted !== undefined) {
+        token.value = token.price * token.balanceFormatted;
+        console.log(`Calculated missing value for ${token.symbol}: ${token.value} USD`);
+      }
       
-      // Primary sort by value - ensures high value tokens always come first
+      // If still undefined after calculation, set to 0 to enable proper sorting
+      if (token.value === undefined) {
+        token.value = 0; 
+      }
+    });
+    
+    // Now sort all tokens by value (descending) so most valuable appear first
+    tokensWithPrice.sort((a, b) => {
+      // Ensure we have definite numbers to sort by (null/undefined protection)
+      const aValue = typeof a.value === 'number' ? a.value : 0;
+      const bValue = typeof b.value === 'number' ? b.value : 0;
+      
+      // First, sort by value (highest first)
       if (aValue !== bValue) {
         return bValue - aValue;
       }
       
-      // Secondary sort by balance for tokens with equal value (including zero value tokens)
+      // For tokens with equal value, sort by balance (highest first)
       return b.balanceFormatted - a.balanceFormatted;
     });
     
-    // Log the top 10 tokens by value for debugging
+    // Log tokens with significant value for debugging
     console.log('Top tokens sorted by value:');
+    
+    // Debug all tokens with value over $10
+    const significantTokens = tokensWithPrice.filter(t => typeof t.value === 'number' && t.value > 10);
+    significantTokens.forEach((token, i) => {
+      // Safely handle value and balance formatting with nullish checks
+      const value = typeof token.value === 'number' ? token.value : 0;
+      const balance = typeof token.balanceFormatted === 'number' ? token.balanceFormatted : 0;
+      console.log(`Token ${i+1}: ${token.symbol} = $${value.toFixed(2)} (balance: ${balance.toFixed(4)})`);
+    });
+    
+    // Also log the top 10 tokens
+    console.log('First 10 tokens in sorted list:');
     tokensWithPrice.slice(0, 10).forEach((token, i) => {
       console.log(`${i+1}. ${token.symbol}: ${token.value || 0} USD (balance: ${token.balanceFormatted})`);
     });

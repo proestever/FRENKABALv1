@@ -65,8 +65,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
 
   // Sort tokens
   const sortedTokens = useMemo(() => {
-    // When pagination is active, we should respect the server's sorting order
-    // for the default 'value' sort. This ensures high-value tokens appear on page 1.
+    // When pagination is active and using 'value' sort, preserve server's sort order
+    // The server has already sorted ALL tokens by value before pagination
     if (pagination && sortBy === 'value') {
       return [...filteredTokens];
     }
@@ -75,17 +75,24 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
     return [...filteredTokens].sort((a, b) => {
       switch (sortBy) {
         case 'value':
-          const aValue = a.value ?? 0; // Use nullish coalescing to handle undefined
-          const bValue = b.value ?? 0;
+          // Ensure proper number comparison with fallbacks for undefined values
+          const aValue = typeof a.value === 'number' ? a.value : 0; 
+          const bValue = typeof b.value === 'number' ? b.value : 0;
           return bValue - aValue;
         case 'balance':
-          return (b.balanceFormatted || 0) - (a.balanceFormatted || 0);
+          const aBalance = typeof a.balanceFormatted === 'number' ? a.balanceFormatted : 0;
+          const bBalance = typeof b.balanceFormatted === 'number' ? b.balanceFormatted : 0;
+          return bBalance - aBalance;
         case 'name':
           return a.name.localeCompare(b.name);
         case 'price':
-          return (b.price || 0) - (a.price || 0);
+          const aPrice = typeof a.price === 'number' ? a.price : 0;
+          const bPrice = typeof b.price === 'number' ? b.price : 0;
+          return bPrice - aPrice;
         case 'change':
-          return (b.priceChange24h || 0) - (a.priceChange24h || 0);
+          const aChange = typeof a.priceChange24h === 'number' ? a.priceChange24h : 0;
+          const bChange = typeof b.priceChange24h === 'number' ? b.priceChange24h : 0;
+          return bChange - aChange;
         default:
           return 0;
       }
