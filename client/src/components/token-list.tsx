@@ -219,12 +219,12 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
           {/* Mobile View - Only shown on small screens */}
           <div className="block md:hidden">
             <div className="space-y-2">
-              {sortedTokens.map((token) => {
+              {sortedTokens.map((token, index) => {
                 const priceChangeClass = getChangeColorClass(token.priceChange24h);
                 const isHidden = hiddenTokens.includes(token.address);
                 
                 return (
-                  <div key={token.address} className="p-5 glass-card rounded-lg hover:bg-black/20 transition-colors">
+                  <div key={`mobile-${token.address}-${index}`} className="p-5 glass-card rounded-lg hover:bg-black/20 transition-colors">
                     <div className="flex items-center justify-between">
                       {/* Token Info */}
                       <div className="flex items-center flex-grow">
@@ -324,12 +324,13 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {sortedTokens.map((token) => {
+                {sortedTokens.map((token, index) => {
                   const priceChangeClass = getAdvancedChangeClass(token.priceChange24h);
                   const isHidden = hiddenTokens.includes(token.address);
                   
+                  // Create a unique key using address and index to avoid duplicate keys
                   return (
-                    <tr key={token.address} className="hover:bg-black/20 transition-colors">
+                    <tr key={`desktop-${token.address}-${index}`} className="hover:bg-black/20 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="mr-3 flex-shrink-0">
