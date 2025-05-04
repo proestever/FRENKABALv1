@@ -701,7 +701,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             <div className="flex items-center">
                               <div className="group relative">
                                 <span className="text-sm whitespace-nowrap cursor-pointer border-b border-dotted border-white/30">{transfer.token_symbol}</span>
-                                <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48">
+                                <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                                   <div className="mb-2 text-xs">
                                     <span className="text-muted-foreground">Contract:</span>
                                     <div className="flex items-center mt-1">
@@ -792,7 +792,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             <div className="flex items-center">
                               <div className="group relative">
                                 <span className="text-sm whitespace-nowrap cursor-pointer border-b border-dotted border-white/30">{transfer.token_symbol || 'PLS'}</span>
-                                <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48">
+                                <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                                   <div className="mb-2 text-xs">
                                     <span className="text-muted-foreground">Type:</span>
                                     <div className="flex items-center mt-1">
@@ -997,7 +997,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         )}
                         <div className="group relative">
                           <span className="text-sm font-medium border-b border-dotted border-white/30">{transfer.token_symbol}</span>
-                          <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48">
+                          <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                             <div className="mb-2 text-xs">
                               <span className="text-muted-foreground">Contract:</span>
                               <div className="flex items-center mt-1">
@@ -1102,7 +1102,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         )}
                         <div className="group relative">
                           <span className="text-sm font-medium border-b border-dotted border-white/30">{transfer.token_symbol || 'PLS'}</span>
-                          <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48">
+                          <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                             <div className="mb-2 text-xs">
                               <span className="text-muted-foreground">Type:</span>
                               <div className="flex items-center mt-1">
