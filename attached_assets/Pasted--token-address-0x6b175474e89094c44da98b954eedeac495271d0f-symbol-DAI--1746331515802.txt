@@ -1,0 +1,47 @@
+[
+  {
+    "token_address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+    "symbol": "DAI",
+    "name": "Dai Stablecoin",
+    "logo": "https://logo.moralis.io/0x171_0x6b175474e89094c44da98b954eedeac495271d0f_c5818f8b96f5407f8a9a8dd32b0673d2.png",
+    "thumbnail": "https://logo.moralis.io/0x171_0x6b175474e89094c44da98b954eedeac495271d0f_c5818f8b96f5407f8a9a8dd32b0673d2.png",
+    "decimals": 18,
+    "balance": "3727139013829114452059",
+    "possible_spam": false,
+    "verified_contract": true,
+    "total_supply": "44365068791205307604005915460",
+    "total_supply_formatted": "44365068791.20530760400591546",
+    "percentage_relative_to_total_supply": 0.000008401066684625,
+    "security_score": 99
+  },
+  {
+    "token_address": "0x52347c33cf6ca8d2cfb864aec5aa0184c8fd4c9b",
+    "symbol": "SPARTA",
+    "name": "Sparta",
+    "logo": "https://logo.moralis.io/0x171_0x52347c33cf6ca8d2cfb864aec5aa0184c8fd4c9b_dbce30bd5cf92cdf36e381f800dfd57b.jpg",
+    "thumbnail": "https://logo.moralis.io/0x171_0x52347c33cf6ca8d2cfb864aec5aa0184c8fd4c9b_dbce30bd5cf92cdf36e381f800dfd57b.jpg",
+    "decimals": 18,
+    "balance": "1200000000000000000000",
+    "possible_spam": false,
+    "verified_contract": true,
+    "total_supply": "1997452229926592347971673195",
+    "total_supply_formatted": "1997452229.926592347971673195",
+    "percentage_relative_to_total_supply": 0.00006007653059338,
+    "security_score": 92
+  },
+  {
+    "token_address": "0x2fa878ab3f87cc1c9737fc071108f904c0b0c95d",
+    "symbol": "INC",
+    "name": "Incentive",
+    "logo": "https://logo.moralis.io/0x171_0x2fa878ab3f87cc1c9737fc071108f904c0b0c95d_f1dfeb26bcf54143859d6bcbcd2e08cc.png",
+    "thumbnail": "https://logo.moralis.io/0x171_0x2fa878ab3f87cc1c9737fc071108f904c0b0c95d_f1dfeb26bcf54143859d6bcbcd2e08cc.png",
+    "decimals": 18,
+    "balance": "2000000000000000000",
+    "possible_spam": false,
+    "verified_contract": true,
+    "total_supply": "55227593611032003136779619",
+    "total_supply_formatted": "55227593.611032003136779619",
+    "percentage_relative_to_total_supply": 0.000003621378135875,
+    "security_score": 99
+  }
+]

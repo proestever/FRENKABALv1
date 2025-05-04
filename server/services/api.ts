@@ -241,7 +241,7 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
     
     // Fetch token balances using the general token balances endpoint
     const response = await Moralis.EvmApi.token.getWalletTokenBalances({
-      chain: "pulse", // Use the chain name "pulse" instead of the hex ID
+      chain: "0x171", // Use the hex ID for PulseChain
       address: walletAddress
     });
     
