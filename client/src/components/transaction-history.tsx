@@ -499,7 +499,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       {/* Header */}
       <div className="p-4 md:p-6 border-b border-border">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent flex items-center">
+          <h2 className="text-xl font-bold text-white flex items-center">
             Transaction History
             <span className="text-white text-sm ml-2 opacity-60">
               {transactions.length} transactions
