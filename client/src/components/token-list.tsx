@@ -258,7 +258,9 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-muted-foreground font-medium">{token.symbol}</div>
+                          <div className="text-sm text-muted-foreground font-medium" title={token.symbol}>
+                            {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                          </div>
                         </div>
                       </div>
                       
@@ -288,7 +290,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                     
                     {/* Balance */}
                     <div className="mt-3 text-sm text-muted-foreground">
-                      Balance: <span className="font-medium">{formatTokenAmount(token.balanceFormatted || 0)} {token.symbol}</span>
+                      Balance: <span className="font-medium">{formatTokenAmount(token.balanceFormatted || 0)} {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}</span>
                     </div>
                   </div>
                 );
@@ -360,7 +362,9 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               )}
                             </div>
                             <div className="flex items-center gap-2 overflow-hidden">
-                              <div className="text-xs text-muted-foreground">{token.symbol}</div>
+                              <div className="text-xs text-muted-foreground" title={token.symbol}>
+                                {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                              </div>
                               {token.exchange && (
                                 <div className="text-xs bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded-md border border-purple-500/30 flex-shrink-0">
                                   {token.exchange === "PancakeSwap v3" ? "9mm v3" : token.exchange}
@@ -381,7 +385,9 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="text-sm font-medium text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
-                        <div className="text-xs text-muted-foreground">{token.symbol}</div>
+                        <div className="text-xs text-muted-foreground" title={token.symbol}>
+                          {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="text-sm font-medium text-white">
