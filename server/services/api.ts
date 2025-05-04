@@ -29,7 +29,7 @@ const MORALIS_API_KEY = process.env.MORALIS_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5
 const PLS_TOKEN_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'; // PulseChain native token is 0xeee...eee 
 const PLS_CONTRACT_ADDRESS = '0x5616458eb2bAc88dD60a4b08F815F37335215f9B'; // Alternative PLS contract address
 const PLS_DECIMALS = 18; // Native PLS has 18 decimals
-const PLS_PRICE_USD = 0.000029; // Approximate placeholder price if API fails
+const PLS_PRICE_USD = 0.000020; // Approximate placeholder price if API fails - updated May 2023
 
 // Note: Moralis is already initialized at the top of the file
 
@@ -156,8 +156,8 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
         symbol: "PLS",
         address: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
       },
-      usdPrice: 0.000029, // Approximate value - the real price will come from Moralis wallet balances
-      usdPriceFormatted: "0.000029",
+      usdPrice: 0.000020, // Approximate value - the real price will come from Moralis wallet balances
+      usdPriceFormatted: "0.000020",
       exchangeName: "PulseX",
       exchangeAddress: "",
       tokenAddress: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",

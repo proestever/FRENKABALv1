@@ -56,9 +56,10 @@ async function getTokenPriceFromMoralis(tokenAddress: string): Promise<number> {
         tokenAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
       // Use Moralis to get the PLS price
       try {
+        // Using the correct WPLS address on PulseChain
         const response = await Moralis.EvmApi.token.getTokenPrice({
           chain: "0x171", // PulseChain chain ID
-          address: "0x8a810ea8B121d08342E9e7696f4a9915cBE494B7" // WPLS contract address
+          address: "0x5fd55a1b9fc24967c4db09c513c3ba0dfa7ff687" // WPLS contract address
         });
         
         if (response && response.raw && response.raw.usdPrice) {
@@ -69,8 +70,8 @@ async function getTokenPriceFromMoralis(tokenAddress: string): Promise<number> {
         console.log("Error getting PLS price from Moralis:", plsError);
       }
       
-      // Fallback to default value if API call fails
-      return 0.00012; // Default PLS price estimate
+      // Fallback to default value if API call fails - using lower value based on current market
+      return 0.000020; // Default PLS price estimate (0.00002 USD)
     }
     
     // For other tokens
@@ -88,22 +89,22 @@ async function getTokenPriceFromMoralis(tokenAddress: string): Promise<number> {
       console.log(`Error getting price for token ${tokenAddress} from Moralis:`, tokenError);
     }
     
-    // Fallback values based on common tokens
+    // Fallback values based on common tokens - current as of May 2023
     if (tokenAddress.toLowerCase() === '0xca9ba905926e4592632d11827edc47607c92e585') {
-      return 1.0; // DAI
+      return 0.9999; // DAI - stable coin close to 1 USD
     }
     if (tokenAddress.toLowerCase() === '0x95b303987a60c71504d99aa1b13b4da07b0790ab') {
-      return 0.000067; // PLSX
+      return 0.000038; // PLSX - using current market rate
     }
     if (tokenAddress.toLowerCase() === '0x2b591e99afe9f32eaa6214f7b7629768c40eeb39') {
-      return 0.00725; // HEX
+      return 0.0072; // HEX - using approximate current market rate
     }
     
-    // Default fallback
-    return 0.001;
+    // Default fallback - conservative estimate for unknown tokens
+    return 0.0001;
   } catch (error) {
     console.error('Error getting token price:', error);
-    return 0.001; // Default fallback price
+    return 0.0001; // Default fallback price - conservative estimate
   }
 }
 
