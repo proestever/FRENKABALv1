@@ -436,7 +436,7 @@ export function Donations() {
         </div>
       </div>
       
-      {/* Donor leaderboard - Full width */}
+      {/* Donor leaderboard - Full width, Top 10 only */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">Donation Leaderboard</h2>
         <div className="glass-card bg-black/20 border border-white/15 backdrop-blur-md rounded-xl overflow-hidden">
@@ -452,7 +452,7 @@ export function Donations() {
                 </tr>
               </thead>
               <tbody>
-                {donors.map((donor, index) => (
+                {donors.slice(0, 10).map((donor, index) => (
                   <tr 
                     key={donor.address} 
                     className={`
@@ -517,6 +517,11 @@ export function Donations() {
               </tbody>
             </table>
           </div>
+          {donors.length > 10 && (
+            <div className="py-3 px-4 text-center text-sm text-white/50 border-t border-white/10 bg-white/5">
+              Only the top 10 donors are displayed on the leaderboard. Make a donation to join the elite!
+            </div>
+          )}
         </div>
       </div>
     </div>
