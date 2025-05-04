@@ -253,9 +253,9 @@ export function Donations() {
             </div>
             <Button 
               size="icon" 
-              variant="ghost" 
+              variant="outline" 
               onClick={copyAddressToClipboard}
-              className="transition-all hover:scale-105 shrink-0"
+              className="glass-card bg-black/20 border border-white/15 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-105 shrink-0"
             >
               {copiedAddress ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <Copy className="h-5 w-5" />}
             </Button>
@@ -263,7 +263,7 @@ export function Donations() {
           <div className="flex items-center gap-4">
             <Button 
               variant="outline" 
-              className="transition-all hover:scale-105"
+              className="glass-card bg-black/20 border border-white/15 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-105"
               onClick={openInExplorer}
             >
               <ExternalLink className="mr-2 h-4 w-4" />
@@ -272,7 +272,8 @@ export function Donations() {
             
             {isConnected && (
               <Button 
-                className="transition-all hover:scale-105"
+                variant="outline"
+                className="glass-card bg-black/20 border border-white/15 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-105"
                 onClick={() => {
                   toast({
                     title: "Send tokens directly from your wallet",
