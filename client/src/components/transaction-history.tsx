@@ -660,6 +660,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                               <Link 
                                 to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
                                 className="text-white hover:text-gray-300 underline"
+                                target="_blank"
+                                rel="noopener noreferrer"
                               >
                                 {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                               </Link>
@@ -692,6 +694,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                               <Link 
                                 to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
                                 className="text-white hover:text-gray-300 underline"
+                                target="_blank"
+                                rel="noopener noreferrer"
                               >
                                 {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                               </Link>
@@ -840,6 +844,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         <Link 
                           to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
                           className="text-white hover:text-gray-300 underline"
+                                target="_blank"
+                                rel="noopener noreferrer"
                         >
                           {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                         </Link>
@@ -888,6 +894,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         <Link 
                           to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
                           className="text-white hover:text-gray-300 underline"
+                                target="_blank"
+                                rel="noopener noreferrer"
                         >
                           {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                         </Link>
