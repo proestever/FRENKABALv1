@@ -176,13 +176,15 @@ export default function Home() {
               walletAddress={searchedAddress || ''}
             />
             
-            {/* Manual Token Entry Section (moved below token list) */}
-            <div className="mt-6">
-              <ManualTokenEntry 
-                walletAddress={searchedAddress} 
-                onTokenAdded={handleTokenAdded}
-              />
-            </div>
+            {/* Manual Token Entry Section (only show when not loading) */}
+            {!isLoading && !isFetching && (
+              <div className="mt-6">
+                <ManualTokenEntry 
+                  walletAddress={searchedAddress} 
+                  onTokenAdded={handleTokenAdded}
+                />
+              </div>
+            )}
           </div>
         </>
       )}
