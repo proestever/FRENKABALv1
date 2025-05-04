@@ -327,7 +327,7 @@ export function Donations() {
                 </p>
               </div>
               
-              <Card className="glass-card bg-gradient-to-br from-amber-500/10 to-yellow-500/20 border border-yellow-500/25 backdrop-blur-md overflow-hidden mb-4">
+              <Card className="glass-card bg-gradient-to-br from-amber-500/5 to-yellow-500/10 border border-yellow-500/15 backdrop-blur-sm overflow-hidden mb-4">
                 <div className="absolute top-0 right-0 m-4">
                   <Badge className="bg-yellow-500 hover:bg-yellow-600">Top Donor</Badge>
                 </div>
