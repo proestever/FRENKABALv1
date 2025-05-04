@@ -446,32 +446,24 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   if (isError) {
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
-        <div className="text-error text-6xl mb-4">
-          <div className="flex justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-            </svg>
-          </div>
-        </div>
-        <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Unable to load transaction history
-        </h3>
-        <p className="text-muted-foreground mb-4">
-          The Moralis API is experiencing high volume or temporary issues. 
-          This is common during peak times or network congestion. Please try again in a few moments.
-        </p>
-        <div className="flex justify-center gap-3 my-4">
+        <div className="flex flex-col items-center justify-center min-h-[300px]">
+          <h3 className="text-xl font-bold text-red-400 mb-2">Error Loading Transactions</h3>
+          <p className="text-muted-foreground mb-4">
+            There was an error loading the transaction history.
+            <br />Please try again later or check your connection.
+          </p>
           <button
-            onClick={() => refetch()}
+            onClick={() => {
+              refetch();
+            }}
             className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
           >
             <RefreshCw size={16} className="mr-1" />
             <span className="text-sm font-medium">Try Again</span>
           </button>
-          
           <button
             onClick={onClose}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 mt-2"
           >
             <Wallet size={16} className="mr-1" />
             <span className="text-sm font-medium">View Tokens</span>
@@ -480,7 +472,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       </Card>
     );
   }
-
+  
   // Empty state
   if (!transactions || transactions.length === 0) {
     return (
@@ -503,317 +495,143 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   }
 
   return (
-    <Card className="shadow-lg glass-card">
-      <div className="p-6 border-b border-border">
+    <Card className="border-border shadow-lg backdrop-blur-sm glass-card">
+      {/* Header */}
+      <div className="p-4 md:p-6 border-b border-border">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center">
-            <h2 className="text-xl font-bold text-white mr-2">
-              Transaction History
-            </h2>
-            <span className="text-sm bg-secondary/40 text-white px-2 py-1 rounded-md">
-              {filteredTransactions.length} 
-              {selectedType !== 'all' ? ' / ' + transactions.length : ''} Transactions
+          <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent flex items-center">
+            Transaction History
+            <span className="text-white text-sm ml-2 opacity-60">
+              {transactions.length} transactions
             </span>
-          </div>
-          <div className="flex gap-2">
-            {/* Transaction Type Filter */}
+          </h2>
+          
+          {/* Filter dropdown */}
+          <div className="flex flex-wrap gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200">
-                  <Filter size={16} className="mr-1" />
+                  <Filter size={16} />
                   <span className="text-sm font-medium capitalize">
-                    {selectedType === 'all' ? 'All Types' : selectedType}
+                    {selectedType === 'all' ? 'All Transactions' : selectedType}
                   </span>
-                  <ChevronDown size={14} className="ml-1" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="glass-card bg-black/90 border border-white/10">
+              <DropdownMenuContent align="end" className="w-56 glass-card border border-white/10 bg-black/60 backdrop-blur-lg">
                 <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-white/10" />
-                
-                {/* All Transactions */}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem 
+                  className={`cursor-pointer ${selectedType === 'all' ? 'bg-primary/20 text-primary' : ''}`}
                   onClick={() => setSelectedType('all')}
-                  className={`capitalize ${selectedType === 'all' ? 'bg-primary/20' : ''}`}
                 >
-                  <div className="flex justify-between w-full">
-                    <span>All Types</span>
-                    <span className="text-muted-foreground">{transactions.length}</span>
-                  </div>
+                  All Transactions
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {transactions.length}
+                  </span>
                 </DropdownMenuItem>
-                
-                {/* Swaps */}
-                {transactionCounts['swap'] > 0 && (
-                  <DropdownMenuItem 
-                    onClick={() => setSelectedType('swap')}
-                    className={`capitalize ${selectedType === 'swap' ? 'bg-primary/20' : ''}`}
-                  >
-                    <div className="flex justify-between w-full">
-                      <span>Swaps</span>
-                      <span className="text-muted-foreground">{transactionCounts['swap']}</span>
-                    </div>
-                  </DropdownMenuItem>
-                )}
-                
-                {/* Sends */}
-                {transactionCounts['send'] > 0 && (
-                  <DropdownMenuItem 
-                    onClick={() => setSelectedType('send')}
-                    className={`capitalize ${selectedType === 'send' ? 'bg-primary/20' : ''}`}
-                  >
-                    <div className="flex justify-between w-full">
-                      <span>Sends</span>
-                      <span className="text-muted-foreground">{transactionCounts['send']}</span>
-                    </div>
-                  </DropdownMenuItem>
-                )}
-                
-                {/* Receives */}
-                {transactionCounts['receive'] > 0 && (
-                  <DropdownMenuItem 
-                    onClick={() => setSelectedType('receive')}
-                    className={`capitalize ${selectedType === 'receive' ? 'bg-primary/20' : ''}`}
-                  >
-                    <div className="flex justify-between w-full">
-                      <span>Receives</span>
-                      <span className="text-muted-foreground">{transactionCounts['receive']}</span>
-                    </div>
-                  </DropdownMenuItem>
-                )}
-                
-                {/* Approvals */}
-                {transactionCounts['approval'] > 0 && (
-                  <DropdownMenuItem 
-                    onClick={() => setSelectedType('approval')}
-                    className={`capitalize ${selectedType === 'approval' ? 'bg-primary/20' : ''}`}
-                  >
-                    <div className="flex justify-between w-full">
-                      <span>Approvals</span>
-                      <span className="text-muted-foreground">{transactionCounts['approval']}</span>
-                    </div>
-                  </DropdownMenuItem>
-                )}
-                
-                {/* Contract Interactions */}
-                {transactionCounts['contract'] > 0 && (
-                  <DropdownMenuItem 
-                    onClick={() => setSelectedType('contract')}
-                    className={`capitalize ${selectedType === 'contract' ? 'bg-primary/20' : ''}`}
-                  >
-                    <div className="flex justify-between w-full">
-                      <span>Contract</span>
-                      <span className="text-muted-foreground">{transactionCounts['contract']}</span>
-                    </div>
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem 
+                  className={`cursor-pointer ${selectedType === 'swap' ? 'bg-primary/20 text-primary' : ''}`}
+                  onClick={() => setSelectedType('swap')}
+                >
+                  Swaps
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {transactionCounts.swap || 0}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className={`cursor-pointer ${selectedType === 'send' ? 'bg-primary/20 text-primary' : ''}`}
+                  onClick={() => setSelectedType('send')}
+                >
+                  Sends
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {transactionCounts.send || 0}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className={`cursor-pointer ${selectedType === 'receive' ? 'bg-primary/20 text-primary' : ''}`}
+                  onClick={() => setSelectedType('receive')}
+                >
+                  Receives
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {transactionCounts.receive || 0}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className={`cursor-pointer ${selectedType === 'approval' ? 'bg-primary/20 text-primary' : ''}`}
+                  onClick={() => setSelectedType('approval')}
+                >
+                  Approvals
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {transactionCounts.approval || 0}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className={`cursor-pointer ${selectedType === 'contract' ? 'bg-primary/20 text-primary' : ''}`}
+                  onClick={() => setSelectedType('contract')}
+                >
+                  Contract Interactions
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {transactionCounts.contract || 0}
+                  </span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             
-            {/* View Tokens Button */}
+            {/* Close Button */}
             <button
               onClick={onClose}
               className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
             >
-              <Wallet size={16} className="mr-1" />
+              <Wallet size={16} />
               <span className="text-sm font-medium">View Tokens</span>
             </button>
           </div>
         </div>
       </div>
       
-      {/* Mobile View */}
-      <div className="block md:hidden">
-        <div className="p-4 space-y-4">
-          {filteredTransactions.map((tx: Transaction) => (
-            <div key={tx.hash} className="p-4 glass-card rounded-lg hover:bg-black/20 transition-colors">
-              <div className="flex justify-between items-start mb-3">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {formatTimestamp(tx.block_timestamp)}
-                </span>
-                <a 
-                  href={`https://scan.pulsechain.com/tx/${tx.hash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:text-primary/80 transition-colors"
-                >
-                  <ExternalLink size={16} />
-                </a>
-              </div>
-              
-              {/* Transaction Summary */}
-              <div className="mb-3">
-                <div className="text-sm font-medium">
-                  {tx.summary || tx.method_label || 'Transaction'}
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-xs text-muted-foreground">
-                    {tx.category || 'Unknown type'}
-                  </div>
-                  {tx.method_label && (
-                    <div className="text-xs px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary-foreground">
-                      {tx.method_label}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* ERC20 Transfers */}
-              {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
-                <div key={`${tx.hash}-erc20-${i}`} className="flex items-center justify-between mb-2 p-2 bg-secondary/20 rounded-md">
-                  <div className="flex items-center">
-                    <TokenLogo 
-                      address={transfer.address || ''}
-                      symbol={transfer.token_symbol || ''}
-                      size="sm"
-                    />
-                    <div className="ml-2">
-                      <div className="flex items-center">
-                        <div className="mr-1">
-                          {transfer.direction === 'receive' ? (
-                            <ArrowDownLeft size={14} className="text-green-400" />
-                          ) : (
-                            <ArrowUpRight size={14} className="text-red-400" />
-                          )}
-                        </div>
-                        <span className="text-sm font-medium">
-                          {transfer.token_symbol}
-                        </span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                        {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`text-sm font-medium ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
-                      {transfer.direction === 'receive' ? '+' : '-'}
-                      {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)}
-                    </div>
-                    {/* Display USD value if available */}
-                    {calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') && (
-                      <div className="text-xs text-muted-foreground flex items-center justify-end">
-                        {(calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') || 0).toLocaleString('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                          maximumFractionDigits: 2,
-                          minimumFractionDigits: 2
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-              
-              {/* Native Transfers */}
-              {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
-                <div key={`${tx.hash}-native-${i}`} className="flex items-center justify-between mb-2 p-2 bg-secondary/20 rounded-md">
-                  <div className="flex items-center">
-                    <TokenLogo 
-                      address="0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-                      symbol="PLS"
-                      size="sm"
-                    />
-                    <div className="ml-2">
-                      <div className="flex items-center">
-                        <div className="mr-1">
-                          {transfer.direction === 'receive' ? (
-                            <ArrowDownLeft size={14} className="text-green-400" />
-                          ) : (
-                            <ArrowUpRight size={14} className="text-red-400" />
-                          )}
-                        </div>
-                        <span className="text-sm font-medium">
-                          {transfer.token_symbol || 'PLS'}
-                        </span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                        {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`text-sm font-medium ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
-                      {transfer.direction === 'receive' ? '+' : '-'}
-                      {transfer.value_formatted || formatTokenValue(transfer.value)}
-                    </div>
-                    {/* Display USD value if available for native PLS token */}
-                    {calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
-                      <div className="text-xs text-muted-foreground flex items-center justify-end">
-                        {(calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                          maximumFractionDigits: 2,
-                          minimumFractionDigits: 2
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-              
-              {/* Gas Fee */}
-              <div className="mt-2 text-xs text-right text-muted-foreground">
-                Gas Fee: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
-                {/* Add USD value for gas fee if available */}
-                {calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
-                  <div className="flex items-center justify-end mt-0.5">
-                    {(calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                      maximumFractionDigits: 2,
-                      minimumFractionDigits: 2
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Desktop View */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-white/10">
-          <thead className="bg-black/20 backdrop-blur-md">
+      {/* Transactions Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/6 first:rounded-tl-md">
-                Time
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Date
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/6">
-                Type
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-2/6">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Details
               </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/6">
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Value
               </th>
-              <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/12 last:rounded-tr-md">
-                Block
+              <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Link
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/10">
-            {filteredTransactions.map((tx: Transaction) => (
-              <tr key={tx.hash} className="hover:bg-black/20 transition-colors">
+          <tbody className="bg-black/20 backdrop-blur-sm divide-y divide-border">
+            {filteredTransactions.map((tx, index) => (
+              <tr key={tx.hash + index} className="hover:bg-white/5 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-foreground">
+                  <div className="text-sm">
                     {formatTimestamp(tx.block_timestamp)}
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-foreground">
-                    {tx.category || 'Transaction'}
-                  </div>
-                  {tx.method_label && (
-                    <div className="mt-1">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary-foreground">
-                        {tx.method_label}
+                  <div className="text-xs text-muted-foreground mt-1 flex flex-col">
+                    <div className="flex items-center">
+                      <span className={`
+                        mr-1 px-1 py-0.5 text-xs rounded-sm ${
+                          tx.receipt_status === '1' 
+                            ? 'bg-green-500/20 text-green-400' 
+                            : 'bg-red-500/20 text-red-400'
+                        }`}>
+                        {tx.receipt_status === '1' ? 'Success' : 'Failed'}
                       </span>
                     </div>
-                  )}
+                    <div className="flex items-center mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        Type: {getTransactionType(tx).charAt(0).toUpperCase() + getTransactionType(tx).slice(1)}
+                      </span>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm">
@@ -839,7 +657,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             {transfer.token_symbol}
                             <span className="text-xs text-muted-foreground ml-2">
                               {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                              {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
+                              <Link 
+                                to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
+                                className="text-primary hover:text-primary/80 underline"
+                              >
+                                {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
+                              </Link>
                             </span>
                           </span>
                         </div>
@@ -866,7 +689,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             {transfer.token_symbol || 'PLS'}
                             <span className="text-xs text-muted-foreground ml-2">
                               {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                              {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
+                              <Link 
+                                to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
+                                className="text-primary hover:text-primary/80 underline"
+                              >
+                                {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
+                              </Link>
                             </span>
                           </span>
                         </div>
