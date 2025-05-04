@@ -867,14 +867,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse limit to integer with a maximum value to prevent abuse
       const parsedLimit = Math.min(parseInt(limit as string, 10) || 100, 200);
       
+      let forceRefresh = refresh === 'true';
+      
       // Clear cache if refresh is requested
-      if (refresh === 'true') {
+      if (forceRefresh) {
         clearDonationCache();
         console.log("Cleared donation cache due to refresh request");
       }
       
-      // Fetch donations for the specified address
-      const donationRecords = await getDonations(address);
+      // Fetch donations for the specified address, force refresh if requested
+      const donationRecords = await getDonations(address, forceRefresh);
       
       // Debug and ensure all tokens are included in totals
       console.log(`Found ${donationRecords.length} donors for address ${address}`);

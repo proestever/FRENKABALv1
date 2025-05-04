@@ -41,8 +41,18 @@ export async function getNativePlsBalance(walletAddress: string): Promise<{balan
   try {
     console.log(`Fetching native PLS balance for ${walletAddress} from PulseChain Scan API`);
     
-    // Using the direct address endpoint which includes the native PLS balance
-    const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}`);
+    // Add timestamp to URL as cache-busting parameter
+    const timestamp = Date.now();
+    const url = `${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}?_=${timestamp}`;
+    
+    // Using the direct address endpoint which includes the native PLS balance with cache busting
+    const response = await fetch(url, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
     
     if (!response.ok) {
       console.log(`PulseChain API response status for native balance: ${response.status} ${response.statusText}`);
@@ -78,7 +88,19 @@ export async function getNativePlsBalance(walletAddress: string): Promise<{balan
 export async function getTokenBalances(walletAddress: string): Promise<ProcessedToken[]> {
   try {
     console.log(`Fetching token balances for ${walletAddress} from PulseChain Scan API`);
-    const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/token-balances`);
+    
+    // Add timestamp to URL as cache-busting parameter
+    const timestamp = Date.now();
+    const url = `${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/token-balances?_=${timestamp}`;
+    
+    // Use cache: 'no-cache' to bypass browser cache completely
+    const response = await fetch(url, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
     
     if (!response.ok) {
       console.log(`PulseChain API response status: ${response.status} ${response.statusText}`);
@@ -362,6 +384,9 @@ export async function getWalletTransactionHistory(
       queryParams.append('order', 'DESC');
       queryParams.append('limit', limit.toString());
       
+      // Add timestamp to prevent caching
+      queryParams.append('_', Date.now().toString());
+      
       if (cursorParam) {
         queryParams.append('cursor', cursorParam);
       }
@@ -377,7 +402,10 @@ export async function getWalletTransactionHistory(
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'X-API-Key': apiKey
+          'X-API-Key': apiKey,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
         signal: controller.signal
       });
