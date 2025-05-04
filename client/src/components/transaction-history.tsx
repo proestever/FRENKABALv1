@@ -8,6 +8,7 @@ import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@
 import { formatDate, shortenAddress } from '@/lib/utils';
 import { Link } from 'wouter';
 import { useTokenDataPrefetch } from '@/hooks/use-token-data-prefetch';
+import { useBatchTokenPrices } from '@/hooks/use-batch-token-prices';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -354,19 +355,27 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return (parseInt(value) / 10 ** decimalValue).toFixed(decimalValue > 8 ? 4 : 2);
   };
 
-  // Use our custom prefetching hook to get token prices and logos
+  // Use our custom hooks for data prefetching - one for logos, one for prices
   const { 
-    prices: prefetchedPrices, 
     logos: prefetchedLogos, 
-    isLoading: isPrefetching 
+    isLoading: isLogosPrefetching 
   } = useTokenDataPrefetch(walletAddress, visibleTokenAddresses);
-
-  // Update token prices whenever prefetched data changes
+  
+  // Use our new batch token prices hook
+  const {
+    prices: batchPrices,
+    isLoading: isPricesFetching
+  } = useBatchTokenPrices(visibleTokenAddresses);
+  
+  // Update token prices whenever batch prices are fetched
   useEffect(() => {
-    if (Object.keys(prefetchedPrices).length > 0) {
-      setTokenPrices(prefetchedPrices);
+    if (Object.keys(batchPrices).length > 0) {
+      setTokenPrices(prevPrices => ({
+        ...prevPrices,
+        ...batchPrices
+      }));
     }
-  }, [prefetchedPrices]);
+  }, [batchPrices]);
 
   // Debug logging flag
   const DEBUG_LOGGING = false;

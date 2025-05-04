@@ -1088,7 +1088,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         typeof addr === 'string' ? addr.toLowerCase() : addr);
       
       // Remove duplicates for efficiency
-      const uniqueAddresses = [...new Set(normalizedAddresses)];
+      const uniqueAddressesSet = new Set(normalizedAddresses);
+      const uniqueAddresses = Array.from(uniqueAddressesSet);
       
       console.log(`Processing batch price request for ${uniqueAddresses.length} unique tokens`);
       
