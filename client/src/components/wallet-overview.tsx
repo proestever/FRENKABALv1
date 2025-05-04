@@ -208,9 +208,11 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               {visibleTokenCount || 0}
             </div>
             <div className="text-sm mt-2 flex items-center">
-              <span className="text-purple-400 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">
-                {hiddenTokens.length > 0 && `(${hiddenTokens.length} hidden)`}
-              </span>
+              {hiddenTokens.length > 0 && (
+                <span className="text-purple-400 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">
+                  ({hiddenTokens.length} hidden)
+                </span>
+              )}
             </div>
           </div>
           
