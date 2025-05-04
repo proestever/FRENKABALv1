@@ -32,6 +32,11 @@ const WPLS_CONTRACT_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'; // w
 const PLS_DECIMALS = 18; // Native PLS has 18 decimals
 const PLS_PRICE_USD = 0.000025; // Initial placeholder price if API fails - updated May 2024
 
+// List of important tokens that should always be included in wallet data
+const IMPORTANT_TOKENS = [
+  '0xec4252e62c6de3d655ca9ce3afc12e553ebba274', // PUMP token
+];
+
 // Note: Moralis is already initialized at the top of the file
 
 /**
