@@ -132,7 +132,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
   // Initial transaction data fetch
   const { isLoading, isError, data: initialData, refetch } = useQuery({
-    queryKey: ['transactions', walletAddress], 
+    queryKey: ['transactions', walletAddress], // Removed timestamp to prevent infinite fetching
     queryFn: async () => {
       console.log('Fetching transaction history for:', walletAddress);
       
@@ -267,7 +267,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
   // Fetch wallet data to get token prices
   const { data: walletData } = useQuery({
-    queryKey: ['wallet', walletAddress, Date.now()], // Add timestamp to ensure fresh data on every render
+    queryKey: ['wallet', walletAddress], // Removed timestamp to prevent infinite fetching
     queryFn: async () => {
       try {
         return await fetchWalletData(walletAddress);
@@ -279,7 +279,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     enabled: !!walletAddress,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: true, // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window gets focus
   });
 
   // Update token prices whenever wallet data changes

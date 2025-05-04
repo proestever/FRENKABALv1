@@ -35,39 +35,17 @@ const PLS_PRICE_USD = 0.000025; // Initial placeholder price if API fails - upda
 // Note: Moralis is already initialized at the top of the file
 
 /**
- * Get native PLS balance for a wallet address
+ * Get native PLS balance for a wallet address directly from PulseChain Scan API
  */
 export async function getNativePlsBalance(walletAddress: string): Promise<{balance: string, balanceFormatted: number} | null> {
   try {
-    console.log(`Getting native PLS balance for ${walletAddress}`);
+    console.log(`Fetching native PLS balance for ${walletAddress} from PulseChain Scan API`);
     
-    // For testing purposes, we know the correct balance for this specific wallet
-    if (walletAddress === "0x87315173fC0B7A3766761C8d199B803697179434") {
-      const hardcodedBalance = "24777388000000000000000000";
-      const balanceFormatted = parseFloat(hardcodedBalance) / Math.pow(10, PLS_DECIMALS);
-      console.log(`Using known native PLS balance for test wallet: ${balanceFormatted} PLS (raw: ${hardcodedBalance})`);
-      
-      return {
-        balance: hardcodedBalance,
-        balanceFormatted
-      };
-    }
-    
-    // Fall back to PulseChain Scan API 
-    console.log('Using PulseChain Scan API for native balance');
-    const timestamp = Date.now();
-    const url = `${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}?_=${timestamp}`;
-    
-    const response = await fetch(url, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    });
+    // Using the direct address endpoint which includes the native PLS balance
+    const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}`);
     
     if (!response.ok) {
-      console.log(`PulseChain API response status: ${response.status} ${response.statusText}`);
+      console.log(`PulseChain API response status for native balance: ${response.status} ${response.statusText}`);
       return null;
     }
     
@@ -82,7 +60,7 @@ export async function getNativePlsBalance(walletAddress: string): Promise<{balan
     
     // Format the balance from wei to PLS (divide by 10^18)
     const balanceFormatted = parseFloat(coinBalance) / Math.pow(10, PLS_DECIMALS);
-    console.log(`Native PLS balance from API: ${balanceFormatted} PLS (raw: ${coinBalance})`);
+    console.log(`Native PLS balance for ${walletAddress}: ${balanceFormatted} PLS (raw: ${coinBalance})`);
     
     return {
       balance: coinBalance,
@@ -100,19 +78,7 @@ export async function getNativePlsBalance(walletAddress: string): Promise<{balan
 export async function getTokenBalances(walletAddress: string): Promise<ProcessedToken[]> {
   try {
     console.log(`Fetching token balances for ${walletAddress} from PulseChain Scan API`);
-    
-    // Add timestamp to URL as cache-busting parameter
-    const timestamp = Date.now();
-    const url = `${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/token-balances?_=${timestamp}`;
-    
-    // Use cache: 'no-cache' to bypass browser cache completely
-    const response = await fetch(url, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    });
+    const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/token-balances`);
     
     if (!response.ok) {
       console.log(`PulseChain API response status: ${response.status} ${response.statusText}`);
@@ -376,192 +342,120 @@ export async function getWalletTransactionHistory(
   limit: number = 100, // Moralis free plan limits to max 100 transactions per call
   cursorParam: string | null = null
 ): Promise<any> {
-  // We'll use SDK for this operation to make it more reliable
-  try {
-    console.log(`Fetching transaction history for ${walletAddress} from Moralis API (limit: ${limit}, cursor: ${cursorParam || 'none'})`);
-    
-    // Create a standardized response format in case of errors/empty data
-    const emptyResponse = {
-      result: [],
-      cursor: null,
-      page: 0,
-      page_size: limit
-    };
-    
-    // For specific test wallet, return a hardcoded first page response if needed
-    if (walletAddress === "0x87315173fC0B7A3766761C8d199B803697179434" && !cursorParam) {
-      // This could be replaced with actual cached data if we wanted to optimize further
-      // But for now let's still try the real API first
-    }
-    
-    // Use the SDK with proper parameters and rate limit handling
+  // Add retry logic - maximum 3 attempts with increasing delay
+  const MAX_RETRIES = 3;
+  const INITIAL_RETRY_DELAY = 1000; // 1 second
+  
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      // Using the official SDK is more reliable for pagination
-      const options: any = {
-        chain: "0x171", // PulseChain ID
-        limit: limit    // Number of transactions
-      };
+      console.log(`Fetching transaction history for ${walletAddress} from Moralis (attempt ${attempt}/${MAX_RETRIES}, limit: ${limit}, cursor: ${cursorParam || 'none'})`);
       
-      // Add cursor if we have one
+      // Direct API call to Moralis as shown in the working example
+      const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98";
+      
+      // Build URL with parameters
+      let url = `https://deep-index.moralis.io/api/v2.2/wallets/${walletAddress}/history`;
+      
+      // Add query parameters
+      const queryParams = new URLSearchParams();
+      queryParams.append('chain', '0x171'); // PulseChain chain ID
+      queryParams.append('order', 'DESC');
+      queryParams.append('limit', limit.toString());
+      
       if (cursorParam) {
-        options.cursor = cursorParam;
+        queryParams.append('cursor', cursorParam);
       }
       
-      console.log(`Calling Moralis SDK with options:`, options);
+      url = `${url}?${queryParams.toString()}`;
+      console.log(`Making direct Moralis API call to: ${url}`);
       
-      // Get transactions using SDK with the correct method name
-      const response = await Moralis.EvmApi.wallets.getWalletHistory(
-        {
-          address: walletAddress,
-          ...options
-        }
-      );
+      // Make the direct API call with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      console.log(`Successfully fetched transaction history for ${walletAddress} - SDK method`);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'X-API-Key': apiKey
+        },
+        signal: controller.signal
+      });
       
-      // Return structured data in expected format
-      return {
-        result: response.raw.result || [],
-        cursor: response.raw.cursor || null,
-        page: response.raw.page || 0,
-        page_size: response.raw.page_size || limit
-      };
-    } catch (sdkError: any) {
-      console.error(`Error using Moralis SDK: ${sdkError.message}`);
+      // Clear the timeout
+      clearTimeout(timeoutId);
       
-      // Fall back to direct API call if SDK fails
-      console.log('Falling back to direct API call method');
-      
-      // Add retry logic - maximum 3 attempts with increasing delay
-      const MAX_RETRIES = 3;
-      const INITIAL_RETRY_DELAY = 1000; // 1 second
-      
-      let lastError: any = null;
-      
-      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          console.log(`Fetching transaction history (direct API) - attempt ${attempt}/${MAX_RETRIES}`);
-          
-          // Direct API call to Moralis
-          const apiKey = process.env.MORALIS_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98";
-          
-          // Build URL with query parameters
-          let url = `https://deep-index.moralis.io/api/v2.2/wallets/${walletAddress}/history`;
-          
-          const queryParams = new URLSearchParams();
-          queryParams.append('chain', '0x171'); // PulseChain chain ID
-          queryParams.append('order', 'DESC');
-          queryParams.append('limit', limit.toString());
-          
-          // Add cache-busting timestamp parameter
-          const timestamp = Date.now();
-          queryParams.append('_', timestamp.toString());
-          
-          // Add cursor if we have one
-          if (cursorParam) {
-            queryParams.append('cursor', cursorParam);
-          }
-          
-          url = `${url}?${queryParams.toString()}`;
-          
-          // Make the API call with a timeout
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
-          
-          const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-              'X-API-Key': apiKey,
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            },
-            signal: controller.signal
-          });
-          
-          // Clear the timeout
-          clearTimeout(timeoutId);
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Moralis API error (${response.status}): ${errorText}`);
-            
-            // For 5xx errors, retry
-            if ((response.status >= 500) && attempt < MAX_RETRIES) {
-              const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1); // Exponential backoff
-              console.log(`Server error ${response.status} received, retrying in ${retryDelay}ms...`);
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
-              continue; // Try again
-            }
-            
-            throw new Error(`API error: ${response.status} ${response.statusText}`);
-          }
-          
-          // Parse the JSON response
-          const responseData = await response.json();
-          
-          const result = responseData?.result || [];
-          const cursor = responseData?.cursor || null;
-          const page = responseData?.page || 0;
-          const page_size = responseData?.page_size || limit;
-          
-          console.log(`Fetched ${result.length} transactions via direct API call`);
-          
-          // Return the data in expected format
-          return {
-            result,
-            cursor,
-            page,
-            page_size
-          };
-          
-        } catch (apiError: any) {
-          lastError = apiError;
-          
-          // Handle AbortController timeout
-          if (apiError.name === 'AbortError') {
-            console.error('Request timed out');
-            if (attempt < MAX_RETRIES) {
-              const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1);
-              console.log(`Request timed out, retrying in ${retryDelay}ms...`);
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
-              continue; // Try again
-            }
-          }
-          
-          // For the final attempt, don't retry
-          if (attempt >= MAX_RETRIES) {
-            console.error(`Error in direct API call after ${MAX_RETRIES} attempts:`, apiError.message);
-            break;
-          }
-          
-          // For other errors on non-final attempts, retry with backoff
-          const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1);
-          console.log(`Error: ${apiError.message}, retrying in ${retryDelay}ms...`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Moralis API error (${response.status}): ${errorText}`);
+        
+        // If this is a timeout (504) or internal server error (500), retry
+        if ((response.status === 504 || response.status === 500) && attempt < MAX_RETRIES) {
+          const retryDelay = INITIAL_RETRY_DELAY * attempt;
+          console.log(`${response.status} error received, retrying in ${retryDelay}ms...`);
           await new Promise(resolve => setTimeout(resolve, retryDelay));
+          continue; // Try again
+        }
+        
+        throw new Error(`Moralis API error: ${response.status} ${response.statusText}`);
+      }
+      
+      // Parse the JSON response
+      const responseData = await response.json();
+      console.log(`Transaction response cursor: ${responseData?.cursor || 'none'}`);
+      console.log('Response data keys:', Object.keys(responseData));
+      
+      const result = responseData?.result || [];
+      const cursor = responseData?.cursor || null;
+      const page = responseData?.page || 0;
+      const page_size = responseData?.page_size || limit;
+      
+      console.log(`Successfully fetched transaction history for ${walletAddress} - ${result.length} transactions`);
+      console.log('First transaction sample:', result.length > 0 ? JSON.stringify(result[0]).substring(0, 300) : 'No transactions');
+      
+      // Success - return the data
+      return {
+        result,
+        cursor,
+        page,
+        page_size
+      };
+      
+    } catch (error: any) {
+      // Handle AbortController timeout
+      if (error.name === 'AbortError') {
+        console.error('Request timed out');
+        if (attempt < MAX_RETRIES) {
+          const retryDelay = INITIAL_RETRY_DELAY * attempt;
+          console.log(`Request timed out, retrying in ${retryDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          continue; // Try again
         }
       }
       
-      // If we get here after retries, return the empty response with error
-      return {
-        ...emptyResponse,
-        error: lastError ? lastError.message : "Failed to fetch transaction history after multiple attempts"
-      };
+      // If we've exhausted all retries or it's a different error
+      if (attempt >= MAX_RETRIES) {
+        console.error(`Error fetching wallet transaction history after ${MAX_RETRIES} attempts:`, error.message);
+        return {
+          result: [],
+          cursor: null,
+          error: error.message
+        };
+      }
+      
+      // For other errors on non-final attempts, retry
+      const retryDelay = INITIAL_RETRY_DELAY * attempt;
+      console.log(`Error: ${error.message}, retrying in ${retryDelay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
     }
-    
-  } catch (error: any) {
-    console.error(`Unexpected error fetching transaction history:`, error.message);
-    
-    // Return empty data structure with error
-    return {
-      result: [],
-      cursor: null,
-      page: 0,
-      page_size: limit,
-      error: error.message
-    };
   }
+  
+  // This should not be reached due to the return in the final attempt catch block
+  return {
+    result: [],
+    cursor: null,
+    error: "Maximum retry attempts exceeded"
+  };
 }
 
 /**
@@ -942,7 +836,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     // Find PLS token (native token) - consistent with the above implementation
     const plsTokenAddress = PLS_TOKEN_ADDRESS.toLowerCase();
     
-    let plsToken = tokensWithPrice.find(token => 
+    const plsToken = tokensWithPrice.find(token => 
       token.isNative === true || 
       token.symbol.toLowerCase() === 'pls' || 
       token.address.toLowerCase() === plsTokenAddress || 
@@ -954,40 +848,6 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       console.log(`Found PLS token (fallback): ${plsToken.symbol} with balance ${plsToken.balanceFormatted}`);
     } else {
       console.log(`PLS token not found in fallback. Tokens: ${tokensWithPrice.map(t => t.symbol).join(', ')}`);
-      
-      // If we have native PLS balance but no PLS token in our list, create one
-      if (nativePlsBalance) {
-        console.log(`Adding native PLS token with balance ${nativePlsBalance.balanceFormatted}`);
-        
-        // Get the native PLS price
-        const plsPrice = await getNativePlsPrice();
-        const price = plsPrice?.price || PLS_PRICE_USD;
-        const priceChange24h = plsPrice?.priceChange24h || 0;
-        
-        // Create a PLS token entry
-        plsToken = {
-          address: PLS_TOKEN_ADDRESS,
-          symbol: "PLS",
-          name: "PulseChain",
-          decimals: PLS_DECIMALS,
-          balance: nativePlsBalance.balance,
-          balanceFormatted: nativePlsBalance.balanceFormatted,
-          price: price,
-          value: nativePlsBalance.balanceFormatted * price,
-          priceChange24h: priceChange24h,
-          logo: getDefaultLogo('pls'),
-          exchange: "PulseX",
-          verified: true,
-          securityScore: 100,
-          isNative: true
-        };
-        
-        // Add the PLS token to our token list
-        tokensWithPrice.unshift(plsToken); // Add at the beginning
-        
-        // Update total value to include PLS
-        totalValue += plsToken.value || 0;
-      }
     }
     
     // Update loading progress to complete
@@ -1005,7 +865,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       address: walletAddress,
       tokens: tokensWithPrice,
       totalValue,
-      tokenCount: tokensWithPrice.length, // Updated to use the correct count
+      tokenCount: tokens.length,
       plsBalance: nativePlsBalance?.balanceFormatted || plsToken?.balanceFormatted || null,
       plsPriceChange: plsToken?.priceChange24h || null,
       networkCount: 1, // Default to PulseChain network

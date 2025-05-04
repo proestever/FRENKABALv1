@@ -110,142 +110,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid wallet address format" });
       }
       
-      // Special case: For demo purposes, hardcode transactions for our test wallet address
-      // This ensures users can always see transactions even if the API fails
-      if (address.toLowerCase() === "0x87315173fc0b7a3766761c8d199b803697179434") {
-        console.log("Using hardcoded transactions for demo wallet");
-        
-        // Return sample transactions that will always work
-        return res.json({
-          result: [
-            {
-              hash: "0x7ed8f1c2d1c8ad4c39b9a71eb2c5258a1cc91fa12eae74f10de7257b63c26a13",
-              nonce: "12345",
-              transaction_index: "10",
-              from_address: "0x87315173fC0B7A3766761C8d199B803697179434",
-              to_address: "0xa1e4c6E57C5bCb32AC0b0cCe7b063c105b767460",
-              value: "1000000000000000000", // 1 PLS
-              gas: "21000",
-              gas_price: "1000000000",
-              receipt_gas_used: "21000",
-              receipt_status: "1", // Success
-              block_timestamp: "2024-02-15T12:00:00Z",
-              block_number: "12345678",
-              method_label: "Transfer",
-              transaction_fee: "21000000000000",
-              native_transfers: [
-                {
-                  from_address: "0x87315173fC0B7A3766761C8d199B803697179434",
-                  to_address: "0xa1e4c6E57C5bCb32AC0b0cCe7b063c105b767460",
-                  value: "1000000000000000000",
-                  token_symbol: "PLS",
-                  token_decimals: "18"
-                }
-              ]
-            },
-            {
-              hash: "0x6ba5c15c33a97e6d02e7eb0d8a1324f9f03aed9a58d9d8d83f69102ead3ea131",
-              nonce: "12344",
-              transaction_index: "5",
-              from_address: "0xEe286554f8C819BEC8A45A4c12777a18D940435b",
-              to_address: "0x87315173fC0B7A3766761C8d199B803697179434",
-              value: "2500000000000000000000", // 2500 PLS
-              gas: "21000",
-              gas_price: "1000000000",
-              receipt_gas_used: "21000",
-              receipt_status: "1", // Success
-              block_timestamp: "2024-02-14T15:30:00Z",
-              block_number: "12345600",
-              method_label: "Transfer",
-              transaction_fee: "21000000000000",
-              native_transfers: [
-                {
-                  from_address: "0xEe286554f8C819BEC8A45A4c12777a18D940435b",
-                  to_address: "0x87315173fC0B7A3766761C8d199B803697179434",
-                  value: "2500000000000000000000",
-                  token_symbol: "PLS",
-                  token_decimals: "18"
-                }
-              ]
-            },
-            {
-              hash: "0x9fc0a7ef88b86ea1058d178da7b1c91c59c880a91fc99e3602e807a5f0f0817c",
-              nonce: "12343",
-              transaction_index: "3",
-              from_address: "0x87315173fC0B7A3766761C8d199B803697179434",
-              to_address: "0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39", // HEX token address
-              value: "0",
-              gas: "65000",
-              gas_price: "1000000000",
-              receipt_gas_used: "65000",
-              receipt_status: "1", // Success
-              block_timestamp: "2024-02-13T10:45:00Z",
-              block_number: "12345500",
-              method_label: "Approve",
-              transaction_fee: "65000000000000",
-              erc20_transfers: [
-                {
-                  token_name: "HEX",
-                  token_symbol: "HEX",
-                  address: "0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39",
-                  token_decimals: "8",
-                  from_address: "0x87315173fC0B7A3766761C8d199B803697179434",
-                  to_address: "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab", // PLSX
-                  value: "100000000", // 1 HEX
-                }
-              ]
-            }
-          ],
-          cursor: null,
-          page: 0,
-          page_size: parseInt(limit as string, 10) || 100
-        });
-      }
-      
-      // For real addresses, try to use the API
       // Parse limit to integer with a maximum value to prevent abuse
-      const parsedLimit = Math.min(parseInt(limit as string, 10) || 100, 200);
+      // Allow up to 200 transactions per request (as requested)
+      const parsedLimit = Math.min(parseInt(limit as string, 10) || 200, 200);
       
-      try {
-        // Call the API service with pagination parameters
-        console.log(`Fetching transaction history for ${address} with limit ${parsedLimit} and cursor ${cursor || 'none'}`);
-        const transactionHistory = await getWalletTransactionHistory(
-          address, 
-          parsedLimit, 
-          cursor as string | null
-        );
-        
-        // If we have a successful response, return it
-        if (transactionHistory && !transactionHistory.error) {
-          return res.json(transactionHistory);
-        }
-        
-        // If there's an error, log it and return an empty result
-        console.error("Error in transaction history:", transactionHistory?.error || "Unknown error");
-        return res.json({
-          result: [],
-          cursor: null,
-          page: 0,
-          page_size: parsedLimit
-        });
-      } catch (apiError) {
-        // If the API call throws an exception, return an empty result
-        console.error("Exception calling transaction history API:", apiError);
-        return res.json({
-          result: [],
-          cursor: null,
-          page: 0,
-          page_size: parsedLimit
+      // Call the API service with pagination parameters
+      const transactionHistory = await getWalletTransactionHistory(
+        address, 
+        parsedLimit, 
+        cursor as string | null
+      );
+      
+      // Return structured response even if there are no transactions
+      if (!transactionHistory || transactionHistory.error) {
+        return res.status(500).json({ 
+          message: "Failed to fetch transaction history",
+          error: transactionHistory?.error || "Unknown error"
         });
       }
+      
+      return res.json(transactionHistory);
     } catch (error) {
-      // Catch-all error handler - return an empty result
-      console.error("Uncaught error in transaction history route:", error);
-      return res.json({
-        result: [],
-        cursor: null,
-        page: 0,
-        page_size: parseInt(limit as string, 10) || 100
+      console.error("Error fetching transaction history:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch transaction history",
+        error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
   });
@@ -978,16 +867,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse limit to integer with a maximum value to prevent abuse
       const parsedLimit = Math.min(parseInt(limit as string, 10) || 100, 200);
       
-      let forceRefresh = refresh === 'true';
-      
       // Clear cache if refresh is requested
-      if (forceRefresh) {
+      if (refresh === 'true') {
         clearDonationCache();
         console.log("Cleared donation cache due to refresh request");
       }
       
-      // Fetch donations for the specified address, force refresh if requested
-      const donationRecords = await getDonations(address, forceRefresh);
+      // Fetch donations for the specified address
+      const donationRecords = await getDonations(address);
       
       // Debug and ensure all tokens are included in totals
       console.log(`Found ${donationRecords.length} donors for address ${address}`);

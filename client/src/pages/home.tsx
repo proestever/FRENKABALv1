@@ -72,10 +72,10 @@ export default function Home() {
         });
     },
     enabled: !!searchedAddress,
-    staleTime: 0, // Always consider data stale to ensure fresh data on every search
+    staleTime: 60 * 1000, // 1 minute
     gcTime: 2 * 60 * 1000, // 2 minutes (previously cacheTime in v4)
     retry: 1,
-    refetchOnWindowFocus: true // Refetch when window gets focus to ensure latest data
+    refetchOnWindowFocus: false // Don't refetch when window gets focus
   });
   
   // Debug wallet data

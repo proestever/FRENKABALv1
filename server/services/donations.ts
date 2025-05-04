@@ -176,15 +176,12 @@ async function getDonationDetails(transaction: Transaction, donationAddress: str
 /**
  * Fetch and process all donations for a donation address
  */
-export async function getDonations(donationAddress: string, forceRefresh: boolean = false): Promise<DonationRecord[]> {
-  // Check cache, but skip if force refresh is requested
+export async function getDonations(donationAddress: string): Promise<DonationRecord[]> {
+  // Check cache
   const now = Date.now();
-  if (!forceRefresh && lastCacheUpdate > 0 && now - lastCacheUpdate < CACHE_TTL) {
-    console.log('Using cached donation data');
+  if (lastCacheUpdate > 0 && now - lastCacheUpdate < CACHE_TTL) {
     return Object.values(donationCache);
   }
-  
-  console.log('Fetching fresh donation data - bypassing cache');
   
   try {
     // Fetch transactions for the donation address
@@ -194,8 +191,7 @@ export async function getDonations(donationAddress: string, forceRefresh: boolea
     let allTransactions: Transaction[] = [];
     
     for (let page = 0; page < maxPages; page++) {
-      // Always pass null for cursor on first page to ensure we get the most recent transactions
-      const response = await getWalletTransactionHistory(donationAddress, txPerPage, page === 0 ? null : cursor);
+      const response = await getWalletTransactionHistory(donationAddress, txPerPage, cursor);
       
       if (!response || !response.result) {
         break;
