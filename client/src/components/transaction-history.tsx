@@ -193,9 +193,42 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           return { result: [], cursor: null, page: 0, page_size: TRANSACTIONS_PER_BATCH };
         }
         
-        // Update state with the response data
-        console.log(`Setting ${response.result.length} transactions`);
-        setTransactions(response.result || []);
+        // Process the response data to add direction property to transfers
+        const processedTransactions = (response.result || []).map(tx => {
+          // Process ERC20 transfers to add direction
+          if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+            tx.erc20_transfers = tx.erc20_transfers.map(transfer => {
+              // Set direction based on from/to addresses
+              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+              
+              return {
+                ...transfer,
+                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+              };
+            });
+          }
+          
+          // Process native transfers to add direction
+          if (tx.native_transfers && tx.native_transfers.length > 0) {
+            tx.native_transfers = tx.native_transfers.map(transfer => {
+              // Set direction based on from/to addresses
+              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+              
+              return {
+                ...transfer,
+                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+              };
+            });
+          }
+          
+          return tx;
+        });
+        
+        // Update state with the processed data
+        console.log(`Setting ${processedTransactions.length} processed transactions`);
+        setTransactions(processedTransactions);
         setNextCursor(response.cursor);
         setHasMore(!!response.cursor); // Has more if cursor exists
         
@@ -253,8 +286,41 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       }
       
       if (moreData?.result && moreData.result.length > 0) {
-        // Append new transactions to existing list
-        setTransactions(prev => [...prev, ...moreData.result]);
+        // Process the additional transactions
+        const processedTransactions = moreData.result.map(tx => {
+          // Process ERC20 transfers to add direction
+          if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+            tx.erc20_transfers = tx.erc20_transfers.map(transfer => {
+              // Set direction based on from/to addresses
+              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+              
+              return {
+                ...transfer,
+                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+              };
+            });
+          }
+          
+          // Process native transfers to add direction
+          if (tx.native_transfers && tx.native_transfers.length > 0) {
+            tx.native_transfers = tx.native_transfers.map(transfer => {
+              // Set direction based on from/to addresses
+              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+              
+              return {
+                ...transfer,
+                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+              };
+            });
+          }
+          
+          return tx;
+        });
+        
+        // Append new processed transactions to existing list
+        setTransactions(prev => [...prev, ...processedTransactions]);
         setNextCursor(moreData.cursor);
         setHasMore(!!moreData.cursor); // Has more if cursor exists
       } else {
