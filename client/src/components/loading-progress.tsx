@@ -6,10 +6,18 @@ import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface LoadingProgressProps {
   isLoading: boolean;
+  customProgress?: {
+    currentBatch: number;
+    totalBatches: number;
+    status: 'idle' | 'loading' | 'complete' | 'error';
+    message: string;
+  };
 }
 
-export function LoadingProgress({ isLoading }: LoadingProgressProps) {
-  const progress = useLoadingProgress(isLoading);
+export function LoadingProgress({ isLoading, customProgress }: LoadingProgressProps) {
+  // If customProgress is provided, use it, otherwise fetch from server
+  const serverProgress = useLoadingProgress(isLoading && !customProgress);
+  const progress = customProgress || serverProgress;
   const [animatedProgress, setAnimatedProgress] = useState(0);
   
   // Calculate the progress percentage

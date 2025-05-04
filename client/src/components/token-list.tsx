@@ -424,53 +424,9 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
             <div className="text-muted-foreground text-sm flex flex-col sm:flex-row justify-between items-center gap-4">
               <div>
                 Showing {sortedTokens.length} token{sortedTokens.length !== 1 ? 's' : ''}
-                {pagination && (
-                  <span className="ml-1">
-                    (Total: {pagination.totalItems})
-                  </span>
-                )}
               </div>
               
-              {/* Pagination Controls */}
-              {pagination && pagination.totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      if (pagination.page > 1 && onPageChange) {
-                        const newPage = pagination.page - 1;
-                        onPageChange(newPage);
-                      }
-                    }}
-                    disabled={pagination.page <= 1}
-                    className={`px-2 py-1 glass-card rounded-md border border-white/15 
-                      ${pagination.page <= 1 
-                        ? 'text-muted-foreground cursor-not-allowed opacity-50' 
-                        : 'text-white hover:bg-black/20'}`}
-                  >
-                    Previous
-                  </button>
-                  
-                  <span className="text-white font-medium">
-                    Page {pagination.page} of {pagination.totalPages}
-                  </span>
-                  
-                  <button
-                    onClick={() => {
-                      if (pagination.page < pagination.totalPages && onPageChange) {
-                        const newPage = pagination.page + 1;
-                        onPageChange(newPage);
-                      }
-                    }}
-                    disabled={pagination.page >= pagination.totalPages}
-                    className={`px-2 py-1 glass-card rounded-md border border-white/15 
-                      ${pagination.page >= pagination.totalPages
-                        ? 'text-muted-foreground cursor-not-allowed opacity-50' 
-                        : 'text-white hover:bg-black/20'}`}
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
+              {/* Pagination Controls Removed - Now loading all tokens at once */}
               
               {hiddenTokens.length > 0 && (
                 <div className="flex items-center gap-2">

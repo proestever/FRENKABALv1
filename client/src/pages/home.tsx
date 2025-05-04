@@ -136,7 +136,10 @@ export default function Home() {
       />
       
       {/* Loading Progress Bar - shows during loading */}
-      <LoadingProgress isLoading={isLoading || isFetching} />
+      <LoadingProgress 
+        isLoading={isLoading || isFetching} 
+        customProgress={progress}
+      />
       
       {searchedAddress && !isError && (
         <>
