@@ -256,27 +256,34 @@ export function Donations() {
         {/* Right column - Top donor highlight */}
         <div>
           {topDonor && (
-            <Card className="glass-card bg-gradient-to-br from-amber-500/10 to-yellow-500/20 border border-yellow-500/25 backdrop-blur-md overflow-hidden mb-4">
-              <div className="absolute top-0 right-0 m-4">
-                <Badge className="bg-yellow-500 hover:bg-yellow-600">Top Donor</Badge>
-              </div>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <span className="text-2xl font-bold text-yellow-400">👑 {shortenAddress(topDonor.address)}</span>
-                </CardTitle>
-                <CardDescription>
-                  <span className="text-white/80">Our biggest supporter - thank you!</span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-amber-500">
+            <>
+              <div className="text-center mb-3">
+                <h3 className="text-lg text-white/70">Top Donation Amount</h3>
+                <p className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-amber-500">
                   {formatCurrency(topDonor.totalDonated)}
                 </p>
-                <p className="text-sm text-white/60 mt-1">
-                  Total donations: {topDonor.donations.length}
-                </p>
-              </CardContent>
-            </Card>
+              </div>
+              
+              <Card className="glass-card bg-gradient-to-br from-amber-500/10 to-yellow-500/20 border border-yellow-500/25 backdrop-blur-md overflow-hidden mb-4">
+                <div className="absolute top-0 right-0 m-4">
+                  <Badge className="bg-yellow-500 hover:bg-yellow-600">Top Donor</Badge>
+                </div>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <span className="text-2xl font-bold text-yellow-400">👑 {shortenAddress(topDonor.address)}</span>
+                  </CardTitle>
+                  <CardDescription>
+                    <span className="text-white/80">Our biggest supporter - thank you!</span>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xl font-bold">{formatCurrency(topDonor.totalDonated)}</p>
+                  <p className="text-sm text-white/60 mt-1">
+                    Total donations: {topDonor.donations.length}
+                  </p>
+                </CardContent>
+              </Card>
+            </>
           )}
           
           {/* Top 2-3 donors side by side */}

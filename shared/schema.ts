@@ -6,14 +6,31 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  displayName: text("display_name"),
+  website: text("website"),
+  twitterHandle: text("twitter_handle"),
+  bio: text("bio"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  displayName: true,
+  website: true,
+  twitterHandle: true,
+  bio: true,
+});
+
+export const updateUserProfileSchema = createInsertSchema(users).pick({
+  displayName: true,
+  website: true,
+  twitterHandle: true,
+  bio: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
 export type User = typeof users.$inferSelect;
 
 // Define schema for PulseChain token data

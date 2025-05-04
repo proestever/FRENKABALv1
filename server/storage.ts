@@ -7,6 +7,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserProfile(id: number, profileData: Partial<UpdateUserProfile>): Promise<User>;
   
   // Token logo methods
   getTokenLogo(tokenAddress: string): Promise<TokenLogo | undefined>;
@@ -38,6 +39,21 @@ export class DatabaseStorage implements IStorage {
       .values(insertUser)
       .returning();
     return user;
+  }
+
+  async updateUserProfile(id: number, profileData: Partial<UpdateUserProfile>): Promise<User> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set(profileData)
+        .where(eq(users.id, id))
+        .returning();
+      
+      return updatedUser;
+    } catch (error) {
+      console.error(`Error updating user profile for id ${id}:`, error);
+      throw error;
+    }
   }
 
   async getTokenLogo(tokenAddress: string): Promise<TokenLogo | undefined> {
