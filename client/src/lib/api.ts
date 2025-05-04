@@ -350,6 +350,27 @@ export async function getUserProfile(userId: number): Promise<User | null> {
 }
 
 /**
+ * Get user profile by wallet address
+ * This is a convenience function that gets the user ID from wallet address and then gets the user profile
+ */
+export async function getUserProfileByWallet(walletAddress: string): Promise<User | null> {
+  try {
+    // First get the user ID from wallet address
+    const userId = await getUserFromWallet(walletAddress);
+    
+    if (!userId) {
+      return null;
+    }
+    
+    // Then get the full user profile using the ID
+    return await getUserProfile(userId);
+  } catch (error) {
+    console.error('Error getting user profile by wallet:', error);
+    return null;
+  }
+}
+
+/**
  * Update user profile information
  */
 export async function updateUserProfile(userId: number, profileData: Partial<{

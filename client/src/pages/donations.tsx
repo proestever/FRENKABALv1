@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
 import { useAuth } from '@/providers/auth-provider';
-import { Loader2, ExternalLink, Copy, CheckCircle2 } from 'lucide-react';
+import { Loader2, ExternalLink, Copy, CheckCircle2, Globe, Twitter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DonorProfileButton } from '@/components/donor-profile-button';
+import { getUserProfileByWallet } from '@/lib/api';
 import {
   Card,
   CardContent,
@@ -23,6 +24,12 @@ interface Donor {
   totalDonated: number;
   donations: Donation[];
   rank?: number;
+  profile?: {
+    displayName?: string | null;
+    website?: string | null;
+    twitterHandle?: string | null;
+    bio?: string | null;
+  };
 }
 
 interface Donation {
