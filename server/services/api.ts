@@ -28,8 +28,9 @@ const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98';
 const PLS_TOKEN_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'; // PulseChain native token is 0xeee...eee 
 const PLS_CONTRACT_ADDRESS = '0x5616458eb2bAc88dD60a4b08F815F37335215f9B'; // Alternative PLS contract address
+const WPLS_CONTRACT_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'; // wPLS contract address for accurate price
 const PLS_DECIMALS = 18; // Native PLS has 18 decimals
-const PLS_PRICE_USD = 0.000020; // Approximate placeholder price if API fails - updated May 2023
+const PLS_PRICE_USD = 0.000025; // Initial placeholder price if API fails - updated May 2024
 
 // Note: Moralis is already initialized at the top of the file
 
@@ -134,17 +135,53 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
 }
 
 /**
+ * Get PLS price using wPLS contract address
+ * This provides more accurate price data for the native PLS token
+ */
+export async function getNativePlsPrice(): Promise<{price: number, priceChange24h: number} | null> {
+  try {
+    console.log(`Fetching native PLS price using wPLS contract: ${WPLS_CONTRACT_ADDRESS}`);
+    
+    // Using Moralis SDK to get wPLS token price with PulseChain's chain ID (369 or 0x171)
+    const response = await Moralis.EvmApi.token.getTokenPrice({
+      chain: "0x171", // PulseChain's chain ID in hex
+      include: "percent_change",
+      address: WPLS_CONTRACT_ADDRESS
+    });
+    
+    // Extract the price and 24h change
+    const price = response.raw.usdPrice || 0;
+    const priceChange = parseFloat(response.raw['24hrPercentChange'] || '0');
+    
+    console.log(`Successfully fetched PLS price from wPLS contract: ${price} USD, 24h change: ${priceChange}%`);
+    
+    return {
+      price: price,
+      priceChange24h: priceChange
+    };
+  } catch (error: any) {
+    console.error('Error fetching native PLS price from wPLS contract:', error.message || 'Unknown error');
+    return null;
+  }
+}
+
+/**
  * Get token price from Moralis API
  */
 export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenPriceResponse | null> {
   // Handle special case for native PLS token (0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
   if (tokenAddress && tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-    console.log('Detected request for native PLS token price, using special handling');
+    console.log('Detected request for native PLS token price, using wPLS contract for accuracy');
     
-    // For native token, we'll check if we have cached token info from Moralis wallet balances
-    // which should already include the native token price
+    // Try to get the current PLS price from wPLS contract
+    const plsPrice = await getNativePlsPrice();
+    const plsPriceUsd = plsPrice?.price || PLS_PRICE_USD;
+    const plsPriceChange = plsPrice?.priceChange24h || 0;
     
-    // Return a default structure with the PLS logo and price if available
+    // Format the price for display
+    const plsPriceFormatted = plsPriceUsd.toString();
+    
+    // Return a structure with the PLS logo and price data
     return {
       tokenName: "PulseChain",
       tokenSymbol: "PLS",
@@ -156,14 +193,14 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
         symbol: "PLS",
         address: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
       },
-      usdPrice: 0.000020, // Approximate value - the real price will come from Moralis wallet balances
-      usdPriceFormatted: "0.000020",
+      usdPrice: plsPriceUsd,
+      usdPriceFormatted: plsPriceFormatted,
       exchangeName: "PulseX",
       exchangeAddress: "",
       tokenAddress: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       blockTimestamp: new Date().toISOString(),
-      '24hrPercentChange': "0", // Default if not available
-      usdPrice24hrPercentChange: 0, // Default if not available
+      '24hrPercentChange': plsPriceChange.toString(),
+      usdPrice24hrPercentChange: plsPriceChange,
       tokenLogo: getDefaultLogo('pls'), // Use our default PLS logo
       verifiedContract: true,
       securityScore: 100 // Highest score for native token
@@ -496,6 +533,19 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
             symbol = 'PLS'; // Correct the symbol for native token
             name = 'PulseChain'; // Correct the name too
             console.log('Corrected native token from WPLS/Wrapped Pulse to PLS/PulseChain');
+            
+            // For native PLS token, try to get more accurate price data from wPLS contract
+            try {
+              const plsPrice = await getNativePlsPrice();
+              if (plsPrice) {
+                // Update the token with more accurate price data
+                item.usd_price = plsPrice.price;
+                item.usd_price_24hr_percent_change = plsPrice.priceChange24h;
+                console.log(`Updated native PLS price to ${plsPrice.price} USD with 24h change of ${plsPrice.priceChange24h}%`);
+              }
+            } catch (plsPriceError) {
+              console.error('Error fetching PLS price from wPLS contract:', plsPriceError);
+            }
           }
           
           let logoUrl = item.logo || null;
@@ -616,7 +666,14 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     if (nativePlsBalance) {
       console.log(`Adding native PLS token with balance: ${nativePlsBalance.balanceFormatted}`);
       
-      // Add native PLS token to the beginning of the token list
+      // Try to get accurate PLS price from wPLS contract
+      const plsPrice = await getNativePlsPrice();
+      const plsPriceUsd = plsPrice?.price || PLS_PRICE_USD;
+      const plsPriceChange = plsPrice?.priceChange24h || 0;
+      
+      console.log(`Using PLS price: ${plsPriceUsd} USD, 24h change: ${plsPriceChange}%`);
+      
+      // Add native PLS token to the beginning of the token list with accurate price
       tokens.unshift({
         address: PLS_TOKEN_ADDRESS,
         symbol: 'PLS',
@@ -624,9 +681,13 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
         decimals: PLS_DECIMALS,
         balance: nativePlsBalance.balance,
         balanceFormatted: nativePlsBalance.balanceFormatted,
-        price: PLS_PRICE_USD, // Use our default price
-        value: nativePlsBalance.balanceFormatted * PLS_PRICE_USD,
+        price: plsPriceUsd,
+        value: nativePlsBalance.balanceFormatted * plsPriceUsd,
+        priceChange24h: plsPriceChange,
         logo: getDefaultLogo('pls'),
+        exchange: 'PulseX',
+        verified: true,
+        securityScore: 100,
         isNative: true
       });
     }
