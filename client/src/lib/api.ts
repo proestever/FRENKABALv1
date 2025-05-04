@@ -2,9 +2,18 @@ import { Token, Wallet, Bookmark, User } from '@shared/schema';
 
 /**
  * Fetch wallet data from the server API
+ * Always add a timestamp to prevent browser caching
  */
 export function fetchWalletData(address: string): Promise<Wallet> {
-  return fetch(`/api/wallet/${address}`)
+  // Add a timestamp to prevent browser caching
+  const timestamp = Date.now();
+  return fetch(`/api/wallet/${address}?_=${timestamp}`, {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  })
     .then(response => {
       if (!response.ok) {
         return response.json().then(errorData => {
@@ -159,8 +168,18 @@ export async function fetchTransactionHistory(
       url += `&cursor=${encodeURIComponent(cursor)}`;
     }
     
+    // Add timestamp to prevent caching
+    const timestamp = Date.now();
+    url += `&_=${timestamp}`;
+    
     console.log(`Fetching transaction history: ${url}`);
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
     
     if (!response.ok) {
       const errorData = await response.json();
