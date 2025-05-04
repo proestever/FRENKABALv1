@@ -409,8 +409,8 @@ export async function getWalletTransactionHistory(
       
       console.log(`Calling Moralis SDK with options:`, options);
       
-      // Get transactions using SDK
-      const response = await Moralis.EvmApi.wallets.getWalletTransactions(
+      // Get transactions using SDK with the correct method name
+      const response = await Moralis.EvmApi.wallets.getWalletHistory(
         {
           address: walletAddress,
           ...options
