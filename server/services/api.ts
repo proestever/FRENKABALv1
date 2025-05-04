@@ -317,13 +317,25 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
             // For non-native tokens, try to get price from Moralis
             const priceData = await getTokenPrice(token.token_address);
             if (priceData && priceData.usdPrice) {
-              return {
+              // Only include verified_contract and security_score if they are actually provided by the API
+              const enhancedToken = {
                 ...token,
                 usd_price: priceData.usdPrice,
                 usd_value: parseFloat(token.balance_formatted || '0') * priceData.usdPrice,
                 usd_price_24hr_percent_change: priceData.usdPrice24hrPercentChange,
-                verified_contract: priceData.verifiedContract
               };
+              
+              // Only add verified_contract if it's explicitly defined
+              if (priceData.verifiedContract !== undefined) {
+                enhancedToken.verified_contract = priceData.verifiedContract;
+              }
+              
+              // Only add security_score if it's explicitly defined
+              if (priceData.securityScore !== undefined) {
+                enhancedToken.security_score = priceData.securityScore;
+              }
+              
+              return enhancedToken;
             }
             
             return token;
@@ -601,26 +613,56 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
             const price = item.usd_price || undefined;
             const value = item.usd_value || (price ? balanceFormatted * price : undefined);
             
-            // Always set a default security score for all tokens
-            // Native tokens get 100, verified tokens get 90, other tokens get 50 as a base
-            const defaultScore = isNative ? 100 : (item.verified_contract === true || item.possible_spam === false) ? 90 : 50;
-            
-            return {
+            // Create the base token object with required fields
+            const processedToken: any = {
               address: item.token_address,
               symbol,
               name,
               decimals: parseInt(item.decimals || '18'),
               balance: item.balance || '0',
               balanceFormatted, // Use our properly formatted balance
-              price,
-              value,
-              priceChange24h: item.usd_price_24hr_percent_change,
               logo: logoUrl,
-              exchange: item.exchangeName || '', 
-              verified: item.verified_contract === true || item.possible_spam === false,
-              securityScore: item.securityScore || defaultScore,
               isNative
-          };
+            };
+            
+            // Only add optional fields if they exist or have meaningful values
+            if (price !== undefined) {
+              processedToken.price = price;
+            }
+            
+            if (value !== undefined) {
+              processedToken.value = value;
+            }
+            
+            if (item.usd_price_24hr_percent_change !== undefined) {
+              processedToken.priceChange24h = item.usd_price_24hr_percent_change;
+            }
+            
+            // Only add exchange if it's explicitly defined
+            if (item.exchangeName) {
+              processedToken.exchange = item.exchangeName;
+            }
+            
+            // Only add verified if it's explicitly defined from API
+            if (item.verified_contract !== undefined) {
+              processedToken.verified = item.verified_contract;
+            } else if (item.possible_spam !== undefined) {
+              // Use possible_spam as a fallback for verification status
+              processedToken.verified = !item.possible_spam;
+            } else if (isNative) {
+              // Native tokens are always verified
+              processedToken.verified = true;
+            }
+            
+            // Only add security score if it's explicitly defined or for native token
+            if (item.securityScore !== undefined) {
+              processedToken.securityScore = item.securityScore;
+            } else if (isNative) {
+              // Native tokens always get 100 security score
+              processedToken.securityScore = 100;
+            }
+            
+            return processedToken;
         } catch (error) {
           console.error(`Error processing token from Moralis:`, error);
           return null;
@@ -826,17 +868,32 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
             const percentChangeStr = priceData['24hrPercentChange'] || '0';
             const percentChange = parseFloat(percentChangeStr.replace(/-/g, '')) * (percentChangeStr.includes('-') ? -1 : 1);
             
-            return {
+            // Create the base enhanced token
+            const enhancedToken = {
               ...token,
               name: priceData.tokenName || token.name, // Use Moralis name if available
               price: priceData.usdPrice,
               value: token.balanceFormatted * priceData.usdPrice,
               priceChange24h: priceData.usdPrice24hrPercentChange || percentChange || 0,
               logo: logoUrl,
-              exchange: priceData.exchangeName,
-              verified: priceData.verifiedContract,
-              securityScore: priceData.securityScore,
             };
+            
+            // Only add exchange if explicitly defined
+            if (priceData.exchangeName) {
+              enhancedToken.exchange = priceData.exchangeName;
+            }
+            
+            // Only add verified if explicitly defined
+            if (priceData.verifiedContract !== undefined) {
+              enhancedToken.verified = priceData.verifiedContract;
+            }
+            
+            // Only add security score if explicitly defined
+            if (priceData.securityScore !== undefined) {
+              enhancedToken.securityScore = priceData.securityScore;
+            }
+            
+            return enhancedToken;
           }
           
           // If we don't have price data, but have a stored logo, use it
