@@ -119,6 +119,12 @@ export interface WalletData {
   plsBalance: number | null;
   plsPriceChange: number | null;
   networkCount: number;
+  pagination?: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+  };
 }
 
 // Transaction history types

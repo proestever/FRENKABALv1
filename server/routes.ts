@@ -38,6 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/wallet/:address", async (req, res) => {
     try {
       const { address } = req.params;
+      const { page = '1', limit = '100' } = req.query; // Default to page 1, limit 100
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -49,7 +50,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid wallet address format" });
       }
       
-      const walletData = await getWalletData(address);
+      // Convert query string parameters to numbers
+      const pageNum = parseInt(page as string, 10);
+      const limitNum = parseInt(limit as string, 10);
+      
+      // Validate pagination parameters
+      if (isNaN(pageNum) || pageNum < 1) {
+        return res.status(400).json({ message: "Invalid page parameter" });
+      }
+      
+      if (isNaN(limitNum) || limitNum < 1 || limitNum > 200) {
+        return res.status(400).json({ message: "Invalid limit parameter. Must be between 1 and 200" });
+      }
+      
+      const walletData = await getWalletData(address, pageNum, limitNum);
       
       // Store this address in recent addresses (for future implementation)
       // For now we're just returning the data

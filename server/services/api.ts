@@ -609,8 +609,11 @@ export async function getWalletTransactionHistory(
 
 /**
  * Get full wallet data including token balances and prices
+ * @param walletAddress The wallet address to fetch data for
+ * @param page Page number for pagination (1-based)
+ * @param limit Number of tokens per page
  */
-export async function getWalletData(walletAddress: string): Promise<WalletData> {
+export async function getWalletData(walletAddress: string, page: number = 1, limit: number = 100): Promise<WalletData> {
   try {
     // Initialize loading progress at the start with a reasonable estimate of total batches
     // Use an initial high count to show progress for the entire process
