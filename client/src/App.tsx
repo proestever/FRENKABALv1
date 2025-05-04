@@ -236,36 +236,74 @@ function Footer() {
   return (
     <footer className="backdrop-blur-md bg-black/10 border-t border-white/15 py-6 mt-12 relative">
       <div className="container mx-auto px-4">
-        <div className="text-sm text-muted-foreground text-center">
-          <p className="mt-1">© {new Date().getFullYear()} FrenKabal. All rights reserved.</p>
+        {/* For desktop: centered text with absolute positioned social icons */}
+        <div className="hidden md:block">
+          <div className="text-sm text-muted-foreground text-center">
+            <p className="mt-1">© {new Date().getFullYear()} FrenKabal. All rights reserved.</p>
+          </div>
+          <div className="absolute top-1/2 -translate-y-1/2 right-6 flex gap-2.5">
+            <a 
+              href="https://t.me/frenkabal" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
+              title="Join our Telegram Channel"
+            >
+              <img 
+                src={telegramLogo} 
+                alt="Telegram" 
+                className="w-6 h-6 object-contain" 
+              />
+            </a>
+            <a 
+              href="https://x.com/giga_pls" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
+              title="Follow @giga_pls on X (Twitter)"
+            >
+              <img 
+                src={xLogo} 
+                alt="X (Twitter)" 
+                className="w-6 h-6 object-contain"
+              />
+            </a>
+          </div>
         </div>
-        <div className="absolute top-1/2 -translate-y-1/2 right-6 flex gap-2.5">
-          <a 
-            href="https://t.me/frenkabal" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
-            title="Join our Telegram Channel"
-          >
-            <img 
-              src={telegramLogo} 
-              alt="Telegram" 
-              className="w-6 h-6 object-contain" 
-            />
-          </a>
-          <a 
-            href="https://x.com/giga_pls" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
-            title="Follow @giga_pls on X (Twitter)"
-          >
-            <img 
-              src={xLogo} 
-              alt="X (Twitter)" 
-              className="w-6 h-6 object-contain"
-            />
-          </a>
+        
+        {/* For mobile: flex layout with left-aligned text and right-aligned social icons */}
+        <div className="md:hidden flex justify-between items-center">
+          <div className="text-sm text-muted-foreground text-left">
+            <p>© {new Date().getFullYear()} FrenKabal. All rights reserved.</p>
+          </div>
+          <div className="flex gap-2.5">
+            <a 
+              href="https://t.me/frenkabal" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
+              title="Join our Telegram Channel"
+            >
+              <img 
+                src={telegramLogo} 
+                alt="Telegram" 
+                className="w-6 h-6 object-contain" 
+              />
+            </a>
+            <a 
+              href="https://x.com/giga_pls" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
+              title="Follow @giga_pls on X (Twitter)"
+            >
+              <img 
+                src={xLogo} 
+                alt="X (Twitter)" 
+                className="w-6 h-6 object-contain"
+              />
+            </a>
+          </div>
         </div>
       </div>
     </footer>
