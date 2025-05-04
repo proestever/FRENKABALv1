@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice, getWalletTransactionHistory } from "./services/api";
+import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 
@@ -718,6 +719,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting bookmark:", error);
       return res.status(500).json({ 
         message: "Failed to delete bookmark",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // API route to get donations for a specific address
+  app.get("/api/donations/:address", async (req, res) => {
+    try {
+      const { address } = req.params;
+      const { limit = '100' } = req.query;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid donation address" });
+      }
+      
+      // Validate ethereum address format (0x followed by 40 hex chars)
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid donation address format" });
+      }
+      
+      // Parse limit to integer with a maximum value to prevent abuse
+      const parsedLimit = Math.min(parseInt(limit as string, 10) || 100, 200);
+      
+      // Fetch donations for the specified address
+      const donationRecords = await getDonations(address);
+      
+      // Get top donors ranked by total donation value
+      const topDonors = getTopDonors(donationRecords, parsedLimit);
+      
+      // Return the top donors
+      return res.json(topDonors);
+    } catch (error) {
+      console.error("Error fetching donations:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch donations",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // API route to clear donation cache (for admin/debug purposes)
+  app.post("/api/donations/clear-cache", (req, res) => {
+    try {
+      // Clear the donation cache to force refresh on next request
+      clearDonationCache();
+      return res.json({ success: true, message: "Donation cache cleared successfully" });
+    } catch (error) {
+      console.error("Error clearing donation cache:", error);
+      return res.status(500).json({ 
+        message: "Failed to clear donation cache",
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }

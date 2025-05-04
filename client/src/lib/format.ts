@@ -9,6 +9,15 @@ export function formatAccount(address: string): string {
 }
 
 /**
+ * Alias for formatAccount - shortens an address for display
+ * @param address The full wallet address
+ * @returns Shortened address format
+ */
+export function shortenAddress(address: string): string {
+  return formatAccount(address);
+}
+
+/**
  * Format a number as currency
  * @param value The number to format
  * @param currency The currency code (default: USD)
