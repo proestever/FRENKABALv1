@@ -8,9 +8,11 @@ interface TokenLogoProps {
 }
 
 export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenLogoProps) {
-  // Debug log the props to see what's being passed in
-  console.log("TokenLogo props:", { address, symbol, fallbackLogo });
-  
+  // Only log debugging information when explicitly enabled
+  const DEBUG_LOGGING = false;
+  if (DEBUG_LOGGING) {
+    console.log("TokenLogo props:", { address, symbol, fallbackLogo });
+  }
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -46,7 +48,9 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
 
         // Handle special case for native PLS token
         if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || symbol === 'PLS') {
-          console.log('Using native PLS token logo for:', address, symbol);
+          if (DEBUG_LOGGING) {
+            console.log('Using native PLS token logo for:', address, symbol);
+          }
           setLogoUrl('/assets/pls-logo-trimmed.png');
           setIsLoading(false);
           return;
@@ -54,7 +58,9 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
         
         // Handle special case for Frenkabal placeholder logo
         if (symbol && ['pDAI', 'frpl', 'PDAI'].includes(symbol)) {
-          console.log('Using Frenkabal logo for:', address, symbol);
+          if (DEBUG_LOGGING) {
+            console.log('Using Frenkabal logo for:', address, symbol);
+          }
           setLogoUrl('/assets/100xfrenlogo.png');
           setIsLoading(false);
           return;
@@ -62,7 +68,9 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
         
         // Handle token logos directly provided by the server
         if (fallbackLogo && (fallbackLogo.startsWith('/assets/') || fallbackLogo.startsWith('https://') || fallbackLogo.startsWith('http://'))) {
-          console.log('Using provided fallback logo:', fallbackLogo);
+          if (DEBUG_LOGGING) {
+            console.log('Using provided fallback logo:', fallbackLogo);
+          }
           setLogoUrl(fallbackLogo);
           setIsLoading(false);
           return;

@@ -1,6 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchWalletData } from '@/lib/api';
-import { ProcessedToken } from '@/lib/api';
+
+// Define token interface here to avoid type conflicts
+interface Token {
+  address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  balance: string;
+  balanceFormatted: number;
+  price?: number;
+  value?: number;
+  priceChange24h?: number;
+  logo?: string;
+  exchange?: string;
+  verified?: boolean;
+  securityScore?: number;
+  isNative?: boolean;
+}
 
 interface TokenDataCache {
   prices: Record<string, number>;
@@ -72,7 +89,7 @@ export function useTokenDataPrefetch(
           const tokenPrices: Record<string, number> = {};
           const tokenLogos: Record<string, string> = {};
           
-          data.tokens.forEach((token: ProcessedToken) => {
+          data.tokens.forEach((token: any) => {
             const address = token.address.toLowerCase();
             
             // Only include tokens with prices

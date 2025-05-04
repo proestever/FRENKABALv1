@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
 import { Link } from 'wouter';
+import { useTokenDataPrefetch } from '@/hooks/use-token-data-prefetch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -353,52 +354,22 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return (parseInt(value) / 10 ** decimalValue).toFixed(decimalValue > 8 ? 4 : 2);
   };
 
-  // Fetch wallet data to get token prices
-  const { data: walletData } = useQuery({
-    queryKey: ['wallet', walletAddress], // Removed timestamp to prevent infinite fetching
-    queryFn: async () => {
-      try {
-        return await fetchWalletData(walletAddress);
-      } catch (error) {
-        console.error('Error fetching wallet data:', error);
-        return null;
-      }
-    },
-    enabled: !!walletAddress,
-    staleTime: 0, // Always fetch fresh data
-    refetchOnMount: true, // Always refetch when component mounts
-  });
+  // Use our custom prefetching hook to get token prices and logos
+  const { 
+    prices: prefetchedPrices, 
+    logos: prefetchedLogos, 
+    isLoading: isPrefetching 
+  } = useTokenDataPrefetch(walletAddress, visibleTokenAddresses);
 
-  // Update token prices whenever wallet data changes
+  // Update token prices whenever prefetched data changes
   useEffect(() => {
-    if (walletData?.tokens) {
-      // Create a map of token addresses to their prices
-      const priceMap: Record<string, number> = {};
-      
-      walletData.tokens.forEach(token => {
-        // Normalize addresses to lowercase for consistent comparison
-        const tokenAddress = token.address.toLowerCase();
-        
-        // Only include tokens that have a price
-        if (token.price) {
-          priceMap[tokenAddress] = token.price;
-        }
-      });
-      
-      // Add PLS token price (using native token address)
-      const plsToken = walletData.tokens.find(t => 
-        t.isNative === true || t.symbol === 'PLS' || 
-        t.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
-      );
-      
-      if (plsToken?.price) {
-        priceMap['0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'] = plsToken.price;
-      }
-      
-      console.log('Updated token prices for transaction history:', priceMap);
-      setTokenPrices(priceMap);
+    if (Object.keys(prefetchedPrices).length > 0) {
+      setTokenPrices(prefetchedPrices);
     }
-  }, [walletData]);
+  }, [prefetchedPrices]);
+
+  // Debug logging flag
+  const DEBUG_LOGGING = false;
 
   // Function to calculate USD value for a transaction
   const calculateUsdValue = (value: string, decimals: string = '18', tokenAddress: string) => {
@@ -413,13 +384,14 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     const price = tokenPrices[addressToUse];
     
     // For debugging
-    console.log('Calculate USD Value:', { 
-      valueRaw: value,
-      decimals, 
-      tokenAddress: addressToUse,
-      price, 
-      tokenPrices
-    });
+    if (DEBUG_LOGGING) {
+      console.log('Calculate USD Value:', { 
+        valueRaw: value,
+        decimals, 
+        tokenAddress: addressToUse,
+        price
+      });
+    }
     
     if (!price) return null;
     
@@ -446,7 +418,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     
     // Calculate USD value
     const usdValue = tokenAmount * price;
-    console.log('Calculated USD value:', { tokenAmount, price, usdValue });
+    if (DEBUG_LOGGING) {
+      console.log('Calculated USD value:', { tokenAmount, price, usdValue });
+    }
     
     return usdValue;
   };
@@ -755,6 +729,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         <TokenLogo 
                           address={transfer.address || ''}
                           symbol={transfer.token_symbol || ''}
+                          fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
                           size="sm"
                         />
                         <div className="ml-2 flex items-center">
@@ -1062,6 +1037,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     <TokenLogo 
                       address={transfer.address || ''}
                       symbol={transfer.token_symbol || ''}
+                      fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
                       size="sm"
                     />
                     <div className="ml-2">
