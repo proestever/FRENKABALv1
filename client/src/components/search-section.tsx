@@ -84,7 +84,7 @@ export function SearchSection({ onSearch, isLoading, hasSearched = false }: Sear
                       onClick={() => handleRecentAddressClick(address)}
                       className="px-3 py-1.5 text-xs glass-card rounded-md hover:bg-white/5 transition text-white border-white/20"
                     >
-                      {truncateAddress(address)}
+                      <ClickableAddress address={address} />
                     </button>
                   ))}
                 </div>
