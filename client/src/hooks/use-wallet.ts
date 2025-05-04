@@ -189,7 +189,7 @@ export function useWallet(): UseWalletReturn {
 
   // Connect to wallet with signature verification
   const connect = useCallback(async () => {
-    console.log("Connect function called");
+    console.log("Connect function called", Date.now());
     // Set connection state
     setIsConnecting(true);
     

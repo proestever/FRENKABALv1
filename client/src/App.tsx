@@ -46,20 +46,26 @@ function Header() {
   
   // Handle Connect wallet click
   const handleConnectClick = async () => {
-    // If we're on a wallet address page, first go back to homepage to avoid state conflicts
-    const currentPath = String(location);
-    const isWalletAddressPage = currentPath.indexOf('/0x') === 0;
-    
-    if (isWalletAddressPage && !isConnected) {
-      console.log("Currently on wallet page, navigating to home before connecting");
-      setLocation("/");
-      // Small delay to let the navigation complete before connecting
-      setTimeout(() => {
-        connect();
-      }, 100);
-    } else {
-      // Otherwise connect normally
-      connect();
+    console.log("handleConnectClick triggered", Date.now());
+    try {
+      // If we're on a wallet address page, first go back to homepage to avoid state conflicts
+      const currentPath = String(location);
+      const isWalletAddressPage = currentPath.indexOf('/0x') === 0;
+      
+      if (isWalletAddressPage && !isConnected) {
+        console.log("Currently on wallet page, navigating to home before connecting");
+        setLocation("/");
+        // Small delay to let the navigation complete before connecting
+        setTimeout(() => {
+          connect();
+        }, 100);
+      } else {
+        // Otherwise connect normally
+        console.log("Calling connect() directly");
+        await connect();
+      }
+    } catch (error) {
+      console.error("Error in handleConnectClick:", error);
     }
   };
 
@@ -75,7 +81,10 @@ function Header() {
     if (isConnected && account) {
       return (
         <button 
-          onClick={disconnect}
+          onClick={() => {
+            console.log("Disconnect button clicked");
+            disconnect();
+          }}
           className={getButtonClass(isMobile)}
         >
           <Wallet className={iconSize} />
@@ -85,7 +94,10 @@ function Header() {
     } else {
       return (
         <button 
-          onClick={handleConnectClick}
+          onClick={() => {
+            console.log("Connect button clicked");
+            handleConnectClick();
+          }}
           disabled={isConnecting}
           className={getButtonClass(isMobile)}
         >
