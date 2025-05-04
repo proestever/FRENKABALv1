@@ -77,6 +77,7 @@ export async function getNativePlsBalance(walletAddress: string): Promise<{balan
  */
 export async function getTokenBalances(walletAddress: string): Promise<ProcessedToken[]> {
   try {
+    console.log(`Fetching token balances for ${walletAddress} from PulseChain Scan API`);
     const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/token-balances`);
     
     if (!response.ok) {
@@ -98,6 +99,13 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
       console.error('Unexpected response format:', tokenBalances);
       return [];
     }
+    
+    console.log(`Retrieved ${tokenBalances.length} tokens from PulseChain Scan for wallet ${walletAddress}`);
+    
+    // Log token details for debugging
+    tokenBalances.forEach(item => {
+      console.log(`Found token: ${item.token?.symbol || 'UNKNOWN'} (${item.token?.address || 'no address'}) - balance: ${item.value || '0'}`);
+    });
     
     return tokenBalances.map((item: PulseChainTokenBalance) => {
       try {
@@ -256,6 +264,8 @@ function getDefaultLogo(symbol: string | null | undefined): string {
     phex: 'https://cryptologos.cc/logos/hex-hex-logo.png',
     peth: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
     pbnb: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
+    dai: 'https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.png', // DAI logo
+    pdai: 'https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.png', // pDAI logo
   };
   
   return defaultLogos[symbolLower] || 'https://cryptologos.cc/logos/placeholder-logo.png';
