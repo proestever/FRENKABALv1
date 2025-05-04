@@ -678,7 +678,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   href={`https://scan.pulsechain.com/tx/${tx.hash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:text-primary/80 transition-colors"
+                  className="text-primary hover:text-teal-400 transition-colors"
                 >
                   <ExternalLink size={16} />
                 </a>
@@ -887,7 +887,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 href={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="hover:text-primary hover:underline transition-colors"
+                                className="hover:text-teal-400 hover:underline transition-colors"
                                 title="View address details in FrenKabal"
                               >
                                 {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
@@ -922,7 +922,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 href={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="hover:text-primary hover:underline transition-colors"
+                                className="hover:text-teal-400 hover:underline transition-colors"
                                 title="View address details in FrenKabal"
                               >
                                 {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
@@ -995,7 +995,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     href={`https://scan.pulsechain.com/tx/${tx.hash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:text-primary/80 transition-colors"
+                    className="text-primary hover:text-teal-400 transition-colors"
                   >
                     <div className="flex justify-center mb-1">
                       <ExternalLink size={16} />
