@@ -636,18 +636,18 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       {/* Transactions Table - Desktop View */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
-          <thead>
+          <thead className="bg-black/40 border-b border-white/20">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                 Date
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                 Details
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-bold text-white uppercase tracking-wider">
                 Value
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-xs font-bold text-white uppercase tracking-wider">
                 Link
               </th>
             </tr>
@@ -656,13 +656,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             {filteredTransactions.map((tx, index) => (
               <tr key={tx.hash + index} className="hover:bg-white/5 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm">
+                  <div className="text-sm font-semibold text-white">
                     {formatTimestamp(tx.block_timestamp)}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1 flex flex-col">
                     <div className="flex items-center">
                       <span className={`
-                        mr-1 px-1 py-0.5 text-xs rounded-sm ${
+                        mr-1 px-1.5 py-0.5 text-xs font-medium rounded-sm ${
                           tx.receipt_status === '1' 
                             ? 'bg-green-500/20 text-green-400' 
                             : 'bg-red-500/20 text-red-400'
@@ -671,14 +671,14 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       </span>
                     </div>
                     <div className="flex items-center mt-1">
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs font-medium text-white/70">
                         Type: {getTransactionType(tx).charAt(0).toUpperCase() + getTransactionType(tx).slice(1)}
                       </span>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm">
+                  <div className="text-sm font-semibold text-white">
                     {tx.summary || 'Transaction details'}
                     
                     {/* ERC20 Transfers */}
@@ -700,7 +700,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           <div className="flex flex-col">
                             <div className="flex items-center">
                               <div className="group relative">
-                                <span className="text-sm whitespace-nowrap cursor-pointer border-b border-dotted border-white/30">{transfer.token_symbol}</span>
+                                <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30">{transfer.token_symbol}</span>
                                 <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                                   <div className="mb-2 text-xs">
                                     <span className="text-muted-foreground">Contract:</span>
@@ -791,7 +791,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           <div className="flex flex-col">
                             <div className="flex items-center">
                               <div className="group relative">
-                                <span className="text-sm whitespace-nowrap cursor-pointer border-b border-dotted border-white/30">{transfer.token_symbol || 'PLS'}</span>
+                                <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30">{transfer.token_symbol || 'PLS'}</span>
                                 <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                                   <div className="mb-2 text-xs">
                                     <span className="text-muted-foreground">Type:</span>
@@ -867,7 +867,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                     <div key={`${tx.hash}-erc20-value-${i}`} className={`${i > 0 ? 'mt-2' : ''}`}>
-                      <div className={`text-sm ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
+                      <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
                         {transfer.direction === 'receive' ? '+' : '-'}
                         {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol}
                       </div>
@@ -887,7 +887,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   
                   {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
                     <div key={`${tx.hash}-native-value-${i}`} className={`${(tx.erc20_transfers && tx.erc20_transfers.length > 0) || i > 0 ? 'mt-2' : ''}`}>
-                      <div className={`text-sm ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
+                      <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
                         {transfer.direction === 'receive' ? '+' : '-'}
                         {transfer.value_formatted || formatTokenValue(transfer.value)} {transfer.token_symbol || 'PLS'}
                       </div>
@@ -905,7 +905,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     </div>
                   ))}
                   
-                  <div className="text-xs text-muted-foreground mt-2">
+                  <div className="text-xs font-semibold text-white mt-2">
                     Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
                     {/* Add USD value for gas fee if available */}
                     {calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
@@ -1066,7 +1066,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className={`text-sm font-medium ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
                       {transfer.direction === 'receive' ? '+' : '-'}
                       {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)}
                     </div>
@@ -1171,7 +1171,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className={`text-sm font-medium ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
                       {transfer.direction === 'receive' ? '+' : '-'}
                       {transfer.value_formatted || formatTokenValue(transfer.value)}
                     </div>
@@ -1190,7 +1190,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               ))}
               
               {/* Gas Fee */}
-              <div className="text-xs text-muted-foreground mt-2 text-right">
+              <div className="text-xs font-semibold text-white mt-2 text-right">
                 Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
                 {calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
                   <span className="ml-2">
