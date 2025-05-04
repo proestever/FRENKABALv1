@@ -177,6 +177,11 @@ export default function Home() {
               isLoading={isLoading || isFetching} 
               hasError={isError}
               walletAddress={searchedAddress || ''}
+              pagination={walletData?.pagination}
+              onPageChange={(page) => {
+                console.log('Changing to page:', page);
+                setCurrentPage(page);
+              }}
             />
             
             {/* Manual Token Entry Section (only show when not loading) */}
