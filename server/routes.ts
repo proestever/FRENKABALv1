@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance } from "./services/api";
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
+import { getTokenPricesFromDexScreener } from "./services/dexscreener";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
@@ -1060,6 +1061,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ 
         message: "Failed to fetch token data",
         error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Batch API for fetching multiple token prices at once
+  app.post("/api/token-prices/batch", async (req, res) => {
+    try {
+      const { addresses } = req.body;
+      
+      if (!Array.isArray(addresses)) {
+        return res.status(400).json({ message: "addresses must be an array" });
+      }
+      
+      // Limit batch size for performance reasons
+      const MAX_BATCH_SIZE = 100;
+      let addressesToProcess = addresses;
+      
+      if (addresses.length > MAX_BATCH_SIZE) {
+        console.log(`Batch size ${addresses.length} exceeds maximum (${MAX_BATCH_SIZE}). Processing first ${MAX_BATCH_SIZE} addresses.`);
+        addressesToProcess = addresses.slice(0, MAX_BATCH_SIZE);
+      }
+      
+      // Normalize addresses
+      const normalizedAddresses = addressesToProcess.map(addr => 
+        typeof addr === 'string' ? addr.toLowerCase() : addr);
+      
+      // Remove duplicates for efficiency
+      const uniqueAddresses = [...new Set(normalizedAddresses)];
+      
+      console.log(`Processing batch price request for ${uniqueAddresses.length} unique tokens`);
+      
+      // Special case for native PLS token - add WPLS to our addresses if PLS is included
+      const nativePulsechainAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      if (uniqueAddresses.includes(nativePulsechainAddress)) {
+        // We don't need to fetch the wPLS price separately as DexScreener will handle that
+        console.log('Batch includes native PLS token, will handle special case');
+      }
+      
+      // Get prices from DexScreener in batch
+      const priceMap = await getTokenPricesFromDexScreener(uniqueAddresses);
+      
+      return res.json(priceMap);
+    } catch (error) {
+      console.error("Error in batch token price fetch:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch token prices in batch",
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });

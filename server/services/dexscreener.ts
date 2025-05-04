@@ -143,20 +143,72 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
 }
 
 /**
- * Get token prices for multiple tokens at once
+ * Get token prices for multiple tokens at once with rate limiting
  * @param tokenAddresses Array of token addresses
  * @returns Object mapping token addresses to prices
  */
 export async function getTokenPricesFromDexScreener(tokenAddresses: string[]): Promise<Record<string, number>> {
   const results: Record<string, number> = {};
   
-  // Fetch prices in parallel
-  await Promise.all(tokenAddresses.map(async (address) => {
-    const price = await getTokenPriceFromDexScreener(address);
-    if (price !== null) {
-      results[address.toLowerCase()] = price;
+  // Check cache first for all addresses
+  for (const address of tokenAddresses) {
+    const normalizedAddress = address.toLowerCase();
+    const now = Date.now();
+    
+    // If we have this price in the cache and it's not expired, use it
+    if (priceCache[normalizedAddress] && now - priceCache[normalizedAddress].timestamp < CACHE_TTL) {
+      console.log(`Using cached price for ${normalizedAddress}: $${priceCache[normalizedAddress].price}`);
+      results[normalizedAddress] = priceCache[normalizedAddress].price;
     }
-  }));
+  }
+  
+  // Filter out addresses that we already have prices for from the cache
+  const uncachedAddresses = tokenAddresses.filter(address => 
+    !results[address.toLowerCase()]
+  );
+  
+  if (uncachedAddresses.length === 0) {
+    console.log('All token prices found in cache, no need to call API');
+    return results;
+  }
+  
+  console.log(`Fetching prices for ${uncachedAddresses.length} uncached tokens from DexScreener`);
+  
+  // Process in smaller batches to avoid overwhelming the API
+  const BATCH_SIZE = 10; 
+  const batches = [];
+  
+  for (let i = 0; i < uncachedAddresses.length; i += BATCH_SIZE) {
+    batches.push(uncachedAddresses.slice(i, i + BATCH_SIZE));
+  }
+  
+  console.log(`Split ${uncachedAddresses.length} tokens into ${batches.length} batches of max ${BATCH_SIZE}`);
+  
+  // Process each batch with a delay between batches
+  for (let i = 0; i < batches.length; i++) {
+    const batch = batches[i];
+    
+    console.log(`Processing batch ${i+1}/${batches.length} with ${batch.length} tokens`);
+    
+    // Process this batch in parallel
+    await Promise.all(batch.map(async (address) => {
+      const normalizedAddress = address.toLowerCase();
+      try {
+        const price = await getTokenPriceFromDexScreener(normalizedAddress);
+        if (price !== null) {
+          results[normalizedAddress] = price;
+        }
+      } catch (error) {
+        console.error(`Error fetching price for ${normalizedAddress}:`, error);
+      }
+    }));
+    
+    // Add a delay between batches to avoid rate limiting
+    if (i < batches.length - 1) {  // No need to delay after the last batch
+      console.log(`Waiting 500ms before processing next batch...`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
   
   return results;
 }
