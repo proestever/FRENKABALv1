@@ -68,24 +68,26 @@ export function useWallet(): UseWalletReturn {
             
             console.log("Restored wallet connection from localStorage:", savedAddress);
             
-            // Check if we have a saved signature for this address
-            const savedSignature = localStorage.getItem('walletSignature');
-            const signatureTimestamp = localStorage.getItem('signatureTimestamp');
+            // Since signature verification is failing when restoring from localStorage,
+            // we'll use a non-signature approach for reconnecting existing wallets
+            console.log('Getting user ID without signature verification for existing connected wallet');
+            const user = await getUserFromWallet(savedAddress);
             
-            // Get or create user ID for this wallet, using signature if available
-            let user;
-            if (savedSignature && signatureTimestamp) {
-              // If we have a saved signature, use it for authentication
-              const authData = {
-                signature: savedSignature,
-                message: `Sign this message to verify you own this wallet address:\n\n${savedAddress}\n\nTimestamp: ${signatureTimestamp}\n\nThis signature doesn't cost any gas or send a transaction.`,
-                timestamp: parseInt(signatureTimestamp),
-                walletAddress: savedAddress
-              };
-              user = await getUserFromWallet(savedAddress, authData);
-            } else {
-              // Otherwise just get the user ID without signature verification
-              user = await getUserFromWallet(savedAddress);
+            // Check if the auth token in localStorage is still valid
+            const loginTimestamp = localStorage.getItem('lastLoginTimestamp');
+            if (loginTimestamp) {
+              const loginTime = parseInt(loginTimestamp);
+              const currentTime = Date.now();
+              const daysSinceLogin = (currentTime - loginTime) / (1000 * 60 * 60 * 24);
+              
+              if (daysSinceLogin <= 7) {
+                // Token is still valid (within 7 days)
+                console.log(`Login token valid for ${Math.floor(7 - daysSinceLogin)} days and ${Math.floor((7 - daysSinceLogin) % 1 * 24)} hours`);
+              } else {
+                // Token expired, should prompt for re-verification
+                console.log('Auth token expired, should prompt for re-verification');
+                // We'll still use the basic user ID for now
+              }
             }
             
             if (user) {

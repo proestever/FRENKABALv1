@@ -59,7 +59,10 @@ export async function getNativePlsBalance(walletAddress: string): Promise<{balan
       throw new Error(`Moralis API error: ${response.status} ${response.statusText}`);
     }
     
-    const data = await response.json();
+    const data = await response.json() as {
+      balance?: string;
+      error?: string;
+    };
     
     // Extract the balance from the response
     const balanceWei = data.balance;
