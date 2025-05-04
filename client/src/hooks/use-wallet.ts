@@ -162,9 +162,18 @@ export function useWallet(): UseWalletReturn {
   // Setup event listeners for wallet and chain changes
   useEffect(() => {
     // Skip if ethereum is not available in window
-    if (typeof window === 'undefined' || !window.ethereum) return;
+    if (typeof window === 'undefined') return;
     
-    const ethereum = window.ethereum;
+    // Safely access ethereum object
+    let ethereum;
+    try {
+      ethereum = window.ethereum;
+    } catch (err) {
+      console.error("Error accessing window.ethereum in effect:", err);
+      return;
+    }
+    
+    if (!ethereum) return;
     
     const handleAccountsChanged = (accounts: string[]) => {
       if (accounts.length === 0) {
@@ -229,7 +238,15 @@ export function useWallet(): UseWalletReturn {
     }, 30000); // 30 second timeout
     
     try {
-      if (!window.ethereum) {
+      // Check if ethereum object exists in a try/catch to handle injection errors
+      let ethereumProvider;
+      try {
+        ethereumProvider = window.ethereum;
+      } catch (err) {
+        console.error("Error accessing window.ethereum:", err);
+      }
+      
+      if (!ethereumProvider) {
         console.log("No ethereum object found in window");
         toast({
           title: "Wallet not found",
@@ -239,12 +256,27 @@ export function useWallet(): UseWalletReturn {
         return;
       }
       
-      console.log("Ethereum object found:", typeof window.ethereum);
+      console.log("Ethereum object found:", typeof ethereumProvider);
       
-      // Use direct window.ethereum request instead of ethers
-      console.log("Directly requesting accounts from wallet...");
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      console.log("Accounts received:", accounts);
+      // Safely call request method with error handling
+      let accounts;
+      try {
+        // Use direct window.ethereum request instead of ethers
+        console.log("Directly requesting accounts from wallet...");
+        accounts = await ethereumProvider.request({ method: 'eth_requestAccounts' });
+        console.log("Accounts received:", accounts);
+      } catch (requestError) {
+        console.error("Error requesting accounts:", requestError);
+        // Don't throw an error, just show toast and continue with null accounts
+        toast({
+          title: "Wallet connection error",
+          description: "Unable to connect to your wallet. Please try again.",
+          variant: "destructive",
+        });
+        clearTimeout(connectionTimeout);
+        setIsConnecting(false);
+        return;
+      }
       
       if (accounts && accounts.length > 0) {
         const address = accounts[0];
@@ -449,6 +481,12 @@ declare global {
       request: (request: { method: string; params?: any[] }) => Promise<any>;
       on: (event: string, listener: (...args: any[]) => void) => void;
       removeListener: (event: string, listener: (...args: any[]) => void) => void;
+      // Add these additional properties that might be present
+      selectedAddress?: string;
+      chainId?: string;
+      networkVersion?: string;
+      // Allow any other properties that might be added by extensions
+      [key: string]: any;
     };
   }
 }

@@ -1,0 +1,89 @@
+inpage.js:1 Uncaught TypeError: Cannot set property ethereum of #<Window> which has only a getter
+    at d (inpage.js:1:43802)
+    at r.initializeProvider (inpage.js:1:43453)
+    at Object.<anonymous> (inpage.js:1:1111)
+    at Object.<anonymous> (inpage.js:1:4932)
+    at 1.../../shared/modules/provider-injection (inpage.js:1:4945)
+    at i (inpage.js:1:254)
+    at e (inpage.js:1:414)
+    at inpage.js:1:431Understand this error
+lockdown-install.js:1 Removing unpermitted intrinsics
+chunk-WERSD76P.js?v=4ef696ca:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+ethers.js?v=4ef696ca:13 Module "buffer" has been externalized for browser compatibility. Cannot access "buffer.Buffer" in client code. See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+get @ ethers.js?v=4ef696ca:13Understand this warning
+home.tsx:67 Wallet data changed: undefined
+home.tsx:68 isLoading: false isFetching: false isError: false
+use-wallet.ts:52 Login token valid for 6 days and 21 hours
+home.tsx:67 Wallet data changed: undefined
+home.tsx:68 isLoading: true isFetching: true isError: false
+use-batch-token-logos.ts:8 Processing logo batch 1/1, size: 269
+home.tsx:67 Wallet data changed: {address: '0x36dc0ce90fd445fa57a15cb69fccb7635dafd718', tokens: Array(269), totalValue: 99258837.60072032, tokenCount: 269, plsBalance: 71570429.90031883, …}
+home.tsx:68 isLoading: false isFetching: false isError: false
+3use-batch-token-logos.ts:8 Processing logo batch 1/1, size: 269
+use-batch-token-logos.ts:8 Processing logo batch 1/1, size: 269
+transaction-history.tsx:159 Fetching transaction history for: 0x36dc0ce90fd445fa57a15cb69fccb7635dafd718
+api.ts:193 Fetching transaction history: /api/wallet/0x36dc0ce90fd445fa57a15cb69fccb7635dafd718/transactions?limit=100
+transaction-history.tsx:478 Collected 0 unique token addresses from transactions []
+transaction-history.tsx:180 Initial transaction history fetched: yes 100 transactions Response data: {"result":[{"hash":"0xc3ea2fca2acf8b8c155c9ed1c068e5f10107841b5785e802330489cc8a3848af","nonce":"38678","transaction_index":"3","from_address_entity":null,"from_address_entity_logo":null,"from_address":"0xd6826bec24803733ab2202a7ffafc755d786d1b3","from_address_label":null,"to_address_entity":null,"t...
+transaction-history.tsx:234 Setting 100 processed transactions
+transaction-history.tsx:478 Collected 24 unique token addresses from transactions (24) ['0x60a5813a72c0fcdea9a658372089635f1e6fec12', '0xa99c95f034cb10b725724f7679d10de1748ad8ca', '0xbbea78397d4d4590882efcc4820f03074ab2ab29', '0x269616d549d7e8eaa82dfb17028d0b212d11232a', '0x8c5687d55adb8db14abf86ec46d1f1244eeb1971', '0x9324c13bd1c447173fc6b3a1af536f9531a6e27f', '0x90ecae7f5ab6ccc1c0e4a8320acb5fb85bc0a245', '0x89444ee382db7bc680a1e875ae70f1068323f060', '0x76a6852a16777d850f426203018b24cf090f7dcd', '0x208614c2db3e24ee2af701538017c6a34030b1e3', '0xca9ba905926e4592632d11827edc47607c92e585', '0xe15ed2b6a72001e5896bbd5b768c5d2b12d482cf', '0x945ac5fda5a97ec85e7778c435064ac217a68d41', '0x0c64ef0a41622c2eb4460e9e34bbf178e0e699f9', '0xff75b594e5b52972c542d3eb548d6530ad3d7236', '0xefba829f4e535f81f0fbf0719b94bd28bd92eeb2', '0xec04770f9fe1429d75a0a12170ffd1e5aa1bab3c', '0x679ea4b3bd965f0e2605a6b7b92617115a12f6ca', '0x0710db4b2d457a04cbbf8c8f00165fbfac08ed1c', '0x2ebcf7e01128cb48bdc2f1fed1218e929aa54645', '0xc647ef5cb6fbe92aa1272c31cc59e36084a829c0', '0x900d3681f4dcd3557abd5adfee9a19e117129428', '0x11c4692ce15dcd0260cf6beb00dd618d16d1c00d', '0xd7343029270ac1cf7d3f968cdb4829990f727236']
+use-batch-token-prices.ts:92 Batch token price fetch success: Received 11 prices
+pageProvider.js:2 Uncaught (in promise) {message: 'User rejected the request.', stack: 'Error: User rejected the request.\n    at a (chrome…gmoleebolmdjonilkdbch/content-script.js:2:168341)', code: 4001}
+onResponse @ pageProvider.js:2
+(anonymous) @ pageProvider.js:2
+o.emit @ pageProvider.js:2
+S @ pageProvider.js:2
+N @ pageProvider.js:2
+C.push @ pageProvider.js:2
+_onData @ pageProvider.js:2
+_onMessage @ pageProvider.js:2
+postMessage
+_postMessage @ content-script.js:2
+_write @ content-script.js:2
+I @ content-script.js:2
+(anonymous) @ content-script.js:2
+O.write @ content-script.js:2
+BroadcastChannelMessage.send @ content-script.js:2
+G.onRequest @ content-script.js:2Understand this error
+0x36dc0ce90fd445fa57…69fccb7635dafd718:1 Uncaught (in promise) {code: 4001, message: 'User rejected the request.'}
+postMessage
+_postMessage @ content-script.js:2
+_write @ content-script.js:2
+I @ content-script.js:2
+(anonymous) @ content-script.js:2
+O.write @ content-script.js:2
+BroadcastChannelMessage.send @ content-script.js:2
+G.onRequest @ content-script.js:2Understand this error
+0x36dc0ce90fd445fa57…69fccb7635dafd718:1 Uncaught (in promise) {code: 4001, message: 'User rejected the request.'}
+postMessage
+_postMessage @ content-script.js:2
+_write @ content-script.js:2
+I @ content-script.js:2
+(anonymous) @ content-script.js:2
+O.write @ content-script.js:2
+BroadcastChannelMessage.send @ content-script.js:2
+G.onRequest @ content-script.js:2Understand this error
+pageProvider.js:2 Uncaught (in promise) {message: 'User rejected the request.', stack: 'Error: User rejected the request.\n    at a (chrome…gmoleebolmdjonilkdbch/content-script.js:2:168341)', code: 4001}
+onResponse @ pageProvider.js:2
+(anonymous) @ pageProvider.js:2
+o.emit @ pageProvider.js:2
+S @ pageProvider.js:2
+N @ pageProvider.js:2
+C.push @ pageProvider.js:2
+_onData @ pageProvider.js:2
+_onMessage @ pageProvider.js:2
+postMessage
+_postMessage @ content-script.js:2
+_write @ content-script.js:2
+I @ content-script.js:2
+(anonymous) @ content-script.js:2
+O.write @ content-script.js:2
+BroadcastChannelMessage.send @ content-script.js:2
+G.onRequest @ content-script.js:2Understand this error
+App.tsx:99 Connect button clicked
+App.tsx:50 handleConnectClick triggered 1746403016286
+App.tsx:65 Calling connect() directly
+use-wallet.ts:216 Connect function called 1746403016287
+use-wallet.ts:242 Ethereum object found: object
+use-wallet.ts:245 Directly requesting accounts from wallet...
+transaction-history.tsx:165
