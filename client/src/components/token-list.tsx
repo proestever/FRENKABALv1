@@ -36,7 +36,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
   const [hiddenTokens, setHiddenTokens] = useState<string[]>(getHiddenTokens());
   const [showTransactions, setShowTransactions] = useState(false);
   const [txHistoryKey, setTxHistoryKey] = useState(Date.now());
-  const [currentPage, setCurrentPage] = useState(1);
+  // NOTE: We don't maintain our own page state, we get it from pagination prop
+  // and use onPageChange callback to request page changes from the parent
 
   // Extract token addresses and symbols for batch logo loading
   const tokenAddresses = useMemo(() => tokens.map(t => t.address), [tokens]);
@@ -435,10 +436,9 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
-                      if (pagination.page > 1) {
+                      if (pagination.page > 1 && onPageChange) {
                         const newPage = pagination.page - 1;
-                        setCurrentPage(newPage);
-                        if (onPageChange) onPageChange(newPage);
+                        onPageChange(newPage);
                       }
                     }}
                     disabled={pagination.page <= 1}
@@ -456,10 +456,9 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                   
                   <button
                     onClick={() => {
-                      if (pagination.page < pagination.totalPages) {
+                      if (pagination.page < pagination.totalPages && onPageChange) {
                         const newPage = pagination.page + 1;
-                        setCurrentPage(newPage);
-                        if (onPageChange) onPageChange(newPage);
+                        onPageChange(newPage);
                       }
                     }}
                     disabled={pagination.page >= pagination.totalPages}
