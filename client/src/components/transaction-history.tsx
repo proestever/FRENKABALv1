@@ -964,7 +964,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                               maximumFractionDigits: 2,
                               minimumFractionDigits: 2
                             })}
-                            {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                            {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
                           </div>
                         ) : null;
                       })()}
@@ -992,7 +992,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                               maximumFractionDigits: 2,
                               minimumFractionDigits: 2
                             })}
-                            {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                            {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
                           </div>
                         ) : null;
                       })()}
@@ -1016,7 +1016,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             maximumFractionDigits: 2,
                             minimumFractionDigits: 2
                           })}
-                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
                         </div>
                       ) : null;
                     })()}
@@ -1190,7 +1190,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             maximumFractionDigits: 2,
                             minimumFractionDigits: 2
                           })}
-                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
                         </div>
                       ) : null;
                     })()}
@@ -1306,7 +1306,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             maximumFractionDigits: 2,
                             minimumFractionDigits: 2
                           })}
-                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
                         </div>
                       ) : null;
                     })()}
@@ -1330,7 +1330,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         maximumFractionDigits: 2,
                         minimumFractionDigits: 2
                       })})
-                      {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                      {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
                     </span>
                   ) : null;
                 })()}
