@@ -1,4 +1,5 @@
-import { getWalletTransactionHistory, getTokenPrice } from './api';
+import { getWalletTransactionHistory } from './api';
+import { getTokenPriceFromDexScreener } from './dexscreener';
 import { Transaction, TransactionTransfer } from '../types';
 import Moralis from 'moralis';
 
@@ -47,41 +48,42 @@ function isDonation(transaction: Transaction, donationAddress: string): boolean 
 }
 
 /**
- * Get token price using the shared token price function from API service
- * This ensures we get consistent prices between the main search tool and donations
+ * Get token price using DexScreener API
+ * Using DexScreener provides more accurate and up-to-date pricing data
  */
-async function getTokenPriceFromMoralis(tokenAddress: string): Promise<number> {
+async function getTokenPriceFromDexScreener(tokenAddress: string): Promise<number> {
   try {
-    // Special handling for native PLS token - standardize format
-    if (tokenAddress === '0x0000000000000000000000000000000000000000') {
-      tokenAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+    // First attempt to get price from DexScreener
+    console.log(`Getting price for ${tokenAddress} using DexScreener API`);
+    
+    const price = await getTokenPriceFromDexScreener(tokenAddress);
+    
+    if (price !== null) {
+      console.log(`Got token price for ${tokenAddress} from DexScreener: $${price}`);
+      return price;
     }
     
-    console.log(`Getting price for ${tokenAddress} using the same method as main search`);
+    console.log(`No price found for ${tokenAddress} from DexScreener, using fallbacks`);
     
-    // Use the same token price function that the main search uses
-    const priceData = await getTokenPrice(tokenAddress);
+    // If DexScreener returns null, use fallbacks
+    // Fallback values based on current market rates 
+    const normalizedAddress = tokenAddress.toLowerCase();
     
-    if (priceData && priceData.usdPrice) {
-      console.log(`Got token price for ${tokenAddress} from main price service: $${priceData.usdPrice}`);
-      return Number(priceData.usdPrice);
+    if (normalizedAddress === '0x0000000000000000000000000000000000000000' || 
+        normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+      return 0.000026; // Native PLS
     }
-    
-    console.log(`No price found for ${tokenAddress} from main price service, using fallbacks`);
-    
-    // If getTokenPrice returns null or no price, use fallbacks
-    // Fallback values based on common tokens - current as of May 2023
-    if (tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-      return 0.000020; // Native PLS - same as main search
+    if (normalizedAddress === '0xa1077a294dde1b09bb078844df40758a5d0f9a27') {
+      return 0.000026; // WPLS (same as PLS)
     }
-    if (tokenAddress.toLowerCase() === '0xca9ba905926e4592632d11827edc47607c92e585') {
+    if (normalizedAddress === '0xca9ba905926e4592632d11827edc47607c92e585') {
       return 0.9999; // DAI - stable coin close to 1 USD
     }
-    if (tokenAddress.toLowerCase() === '0x95b303987a60c71504d99aa1b13b4da07b0790ab') {
-      return 0.000038; // PLSX - using current market rate
+    if (normalizedAddress === '0x95b303987a60c71504d99aa1b13b4da07b0790ab') {
+      return 0.000020; // PLSX
     }
-    if (tokenAddress.toLowerCase() === '0x2b591e99afe9f32eaa6214f7b7629768c40eeb39') {
-      return 0.0072; // HEX - using approximate current market rate
+    if (normalizedAddress === '0x2b591e99afe9f32eaa6214f7b7629768c40eeb39') {
+      return 0.0054; // HEX
     }
     
     // Default fallback - conservative estimate for unknown tokens
