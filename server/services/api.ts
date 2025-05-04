@@ -524,13 +524,6 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       console.error('Error fetching ERC20 tokens directly:', erc20Error);
     }
     
-    // Get native PLS price from wPLS contract for accuracy
-    console.log(`Fetching native PLS price data using wPLS contract...`);
-    const plsPrice = await getNativePlsPrice();
-    const plsPriceUsd = plsPrice?.price || PLS_PRICE_USD;
-    const plsPriceChange = plsPrice?.priceChange24h || 0;
-    console.log(`Retrieved PLS price: $${plsPriceUsd} USD (24h change: ${plsPriceChange}%)`);
-    
     // Also get token data from the standard Moralis wallet balances endpoint
     const moralisData = await getWalletTokenBalancesFromMoralis(walletAddress);
     
@@ -579,29 +572,6 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
           });
         }
       }
-    }
-    
-    // Add native PLS token if we have the balance
-    if (nativePlsBalance) {
-      console.log(`Adding native PLS token with balance: ${nativePlsBalance.balanceFormatted}`);
-      
-      // Create a native PLS token entry to include in our token list
-      combinedTokens.unshift({
-        token_address: PLS_TOKEN_ADDRESS,
-        symbol: 'PLS',
-        name: 'PulseChain',
-        decimals: PLS_DECIMALS.toString(),
-        balance: nativePlsBalance.balance,
-        balance_formatted: nativePlsBalance.balanceFormatted,
-        native_token: true,
-        usd_price: plsPriceUsd,
-        usd_value: nativePlsBalance.balanceFormatted * plsPriceUsd,
-        usd_price_24hr_percent_change: plsPriceChange,
-        verified_contract: true,
-        security_score: 100
-      });
-      
-      console.log(`Added native PLS token with price $${plsPriceUsd} and 24h change ${plsPriceChange}%`);
     }
     
     console.log(`Combined ${standardMoralisTokens.length} standard tokens with ${erc20Tokens.length} ERC20 tokens for total of ${combinedTokens.length} unique tokens`);
