@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
 import { useState, useEffect } from 'react';
 import { getHiddenTokens, isTokenHidden, isAddressBookmarked } from '@/lib/api';
-import { useWallet } from '@/hooks/use-wallet';
+import { useAuth } from '@/providers/auth-provider';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 
 interface WalletOverviewProps {
@@ -18,7 +18,7 @@ interface WalletOverviewProps {
 
 export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewProps) {
   const { toast } = useToast();
-  const { account: connectedWalletAddress, isConnected, userId } = useWallet();
+  const { account: connectedWalletAddress, isConnected, userId } = useAuth();
   const [hiddenTokens, setHiddenTokens] = useState<string[]>([]);
   const [totalVisibleValue, setTotalVisibleValue] = useState<number>(0);
   const [visibleTokenCount, setVisibleTokenCount] = useState<number>(0);

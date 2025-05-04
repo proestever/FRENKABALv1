@@ -48,7 +48,7 @@ import {
 import { formatAccount } from "../lib/format";
 
 export function Profile() {
-  const { isConnected, account, userId } = useWallet();
+  const { isConnected, account, userId } = useAuth();
   const [, setLocation] = useLocation();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
