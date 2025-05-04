@@ -72,10 +72,11 @@ export default function Home() {
         });
     },
     enabled: !!searchedAddress,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 0, // Always treat data as stale - will always fetch fresh data
     gcTime: 2 * 60 * 1000, // 2 minutes (previously cacheTime in v4)
     retry: 1,
-    refetchOnWindowFocus: false // Don't refetch when window gets focus
+    refetchOnWindowFocus: false, // Don't refetch when window gets focus
+    refetchOnMount: 'always' // Always fetch fresh data when component mounts
   });
   
   // Debug wallet data
