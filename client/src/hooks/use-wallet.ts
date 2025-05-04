@@ -189,6 +189,7 @@ export function useWallet(): UseWalletReturn {
 
   // Connect to wallet with signature verification
   const connect = useCallback(async () => {
+    console.log("Connect function called");
     // Set connection state
     setIsConnecting(true);
     
@@ -205,6 +206,7 @@ export function useWallet(): UseWalletReturn {
     
     try {
       if (!window.ethereum) {
+        console.log("No ethereum object found in window");
         toast({
           title: "Wallet not found",
           description: "Please install MetaMask or another compatible wallet",
@@ -215,9 +217,25 @@ export function useWallet(): UseWalletReturn {
         return;
       }
       
-      // Create a fresh provider for each connection attempt
-      const provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+      console.log("Ethereum object found:", typeof window.ethereum);
       
+      let provider;
+      try {
+        // Create a fresh provider for each connection attempt
+        console.log("Initializing Web3Provider...");
+        provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+        console.log("Provider initialized successfully:", provider);
+      } catch (providerError) {
+        console.error("Error creating provider:", providerError);
+        clearTimeout(connectionTimeout);
+        setIsConnecting(false);
+        toast({
+          title: "Connection Error",
+          description: "Failed to initialize Web3 provider. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
       console.log("Requesting accounts from wallet...");
       
       // Request wallet connection
