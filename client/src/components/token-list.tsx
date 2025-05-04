@@ -120,8 +120,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
     );
   }
 
-  // If no tokens
-  if (tokens.length === 0) {
+  // If no tokens and not loading, show empty state
+  if (tokens.length === 0 && !isLoading) {
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm bg-card/70">
         <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">No tokens found</h3>
