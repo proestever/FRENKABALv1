@@ -1,5 +1,6 @@
-import { getWalletTransactionHistory } from './api';
+import { getWalletTransactionHistory, getTokenPrice } from './api';
 import { Transaction, TransactionTransfer } from '../types';
+import Moralis from 'moralis';
 
 // Donation tracker interface
 export interface DonationRecord {
@@ -46,26 +47,99 @@ function isDonation(transaction: Transaction, donationAddress: string): boolean 
 }
 
 /**
+ * Get token price using Moralis API
+ */
+async function getTokenPriceFromMoralis(tokenAddress: string): Promise<number> {
+  try {
+    // Special case for native PLS token
+    if (tokenAddress === '0x0000000000000000000000000000000000000000' || 
+        tokenAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+      // Use Moralis to get the PLS price
+      try {
+        const response = await Moralis.EvmApi.token.getTokenPrice({
+          chain: "0x171", // PulseChain chain ID
+          address: "0x8a810ea8B121d08342E9e7696f4a9915cBE494B7" // WPLS contract address
+        });
+        
+        if (response && response.raw && response.raw.usdPrice) {
+          console.log(`Got PLS price from Moralis: $${response.raw.usdPrice}`);
+          return Number(response.raw.usdPrice);
+        }
+      } catch (plsError) {
+        console.log("Error getting PLS price from Moralis:", plsError);
+      }
+      
+      // Fallback to default value if API call fails
+      return 0.00012; // Default PLS price estimate
+    }
+    
+    // For other tokens
+    try {
+      const response = await Moralis.EvmApi.token.getTokenPrice({
+        chain: "0x171", // PulseChain chain ID
+        address: tokenAddress
+      });
+      
+      if (response && response.raw && response.raw.usdPrice) {
+        console.log(`Got token price for ${tokenAddress} from Moralis: $${response.raw.usdPrice}`);
+        return Number(response.raw.usdPrice);
+      }
+    } catch (tokenError) {
+      console.log(`Error getting price for token ${tokenAddress} from Moralis:`, tokenError);
+    }
+    
+    // Fallback values based on common tokens
+    if (tokenAddress.toLowerCase() === '0xca9ba905926e4592632d11827edc47607c92e585') {
+      return 1.0; // DAI
+    }
+    if (tokenAddress.toLowerCase() === '0x95b303987a60c71504d99aa1b13b4da07b0790ab') {
+      return 0.000067; // PLSX
+    }
+    if (tokenAddress.toLowerCase() === '0x2b591e99afe9f32eaa6214f7b7629768c40eeb39') {
+      return 0.00725; // HEX
+    }
+    
+    // Default fallback
+    return 0.001;
+  } catch (error) {
+    console.error('Error getting token price:', error);
+    return 0.001; // Default fallback price
+  }
+}
+
+/**
  * Get donation amount and token details from a transaction
  */
-function getDonationDetails(transaction: Transaction, donationAddress: string): Donation[] {
+async function getDonationDetails(transaction: Transaction, donationAddress: string): Promise<Donation[]> {
   const donations: Donation[] = [];
+  const pricePromises: Promise<void>[] = [];
   
   // Check for native token transfer
   if (transaction.to_address.toLowerCase() === donationAddress.toLowerCase() && 
       transaction.value !== '0') {
-    // Convert the Wei value to PLS (18 decimals) and then estimate USD value
+    
+    // Convert the Wei value to PLS (18 decimals)
     const valueInPls = parseFloat(transaction.value) / 1e18;
-    donations.push({
+    
+    const nativeDonation: Donation = {
       txHash: transaction.hash,
       tokenAddress: '0x0000000000000000000000000000000000000000', // Native PLS
       tokenSymbol: 'PLS',
       tokenName: 'Pulse',
       tokenLogo: '/assets/pls logo trimmed.png',
       amount: valueInPls.toString(),
-      valueUsd: valueInPls * 0.00012, // Current PLS/USD approximate rate
+      valueUsd: 0, // Will be updated with price
       timestamp: new Date(transaction.block_timestamp).getTime()
-    });
+    };
+    
+    // Add promise to get the price and update the donation
+    pricePromises.push(
+      getTokenPriceFromMoralis('0x0000000000000000000000000000000000000000').then(price => {
+        nativeDonation.valueUsd = valueInPls * price;
+      })
+    );
+    
+    donations.push(nativeDonation);
   }
   
   // Check for ERC20 transfers
@@ -74,6 +148,7 @@ function getDonationDetails(transaction: Transaction, donationAddress: string): 
       if (transfer.to_address.toLowerCase() === donationAddress.toLowerCase()) {
         // Get token decimals (default to 18 if not available)
         const tokenDecimals = parseInt(transfer.token_decimals || '18', 10);
+        
         // Convert raw value to token amount using decimals
         const valueInTokens = parseFloat(transfer.value) / Math.pow(10, tokenDecimals);
         
@@ -81,20 +156,31 @@ function getDonationDetails(transaction: Transaction, donationAddress: string): 
         const formattedAmount = transfer.value_formatted ? 
           parseFloat(transfer.value_formatted) : valueInTokens;
         
-        donations.push({
+        const tokenDonation: Donation = {
           txHash: transaction.hash,
           tokenAddress: transfer.address || '',
           tokenSymbol: transfer.token_symbol || 'Unknown',
           tokenName: transfer.token_name,
           tokenLogo: transfer.token_logo || undefined,
           amount: formattedAmount.toString(),
-          // Estimate a reasonable USD value - this will vary by token
-          valueUsd: formattedAmount * (transfer.token_symbol === 'DAI' ? 1.0 : 0.01),
+          valueUsd: 0, // Will be updated with price
           timestamp: new Date(transaction.block_timestamp).getTime()
-        });
+        };
+        
+        // Add promise to get the price and update the donation
+        pricePromises.push(
+          getTokenPriceFromMoralis(transfer.address || '').then(price => {
+            tokenDonation.valueUsd = formattedAmount * price;
+          })
+        );
+        
+        donations.push(tokenDonation);
       }
     }
   }
+  
+  // Wait for all price promises to complete
+  await Promise.all(pricePromises);
   
   return donations;
 }
@@ -137,9 +223,11 @@ export async function getDonations(donationAddress: string): Promise<DonationRec
     // Process transactions into donations
     const newDonationCache: Record<string, DonationRecord> = {};
     
+    // Process all transactions in sequence
     for (const tx of allTransactions) {
       if (isDonation(tx, donationAddress)) {
-        const donationDetails = getDonationDetails(tx, donationAddress);
+        // Now await the async function call
+        const donationDetails = await getDonationDetails(tx, donationAddress);
         
         for (const donation of donationDetails) {
           const donorAddress = tx.from_address;

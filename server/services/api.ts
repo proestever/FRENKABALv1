@@ -13,6 +13,16 @@ import { storage } from '../storage';
 import { InsertTokenLogo } from '@shared/schema';
 import { updateLoadingProgress } from '../routes';
 
+// Initialize Moralis
+try {
+  Moralis.start({
+    apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98"
+  });
+  console.log("Moralis initialized successfully");
+} catch (error) {
+  console.error("Failed to initialize Moralis:", error);
+}
+
 // Constants
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98';
@@ -21,14 +31,7 @@ const PLS_CONTRACT_ADDRESS = '0x5616458eb2bAc88dD60a4b08F815F37335215f9B'; // Al
 const PLS_DECIMALS = 18; // Native PLS has 18 decimals
 const PLS_PRICE_USD = 0.000029; // Approximate placeholder price if API fails
 
-// Initialize Moralis
-try {
-  Moralis.start({
-    apiKey: MORALIS_API_KEY
-  }).then(() => console.log('Moralis initialized successfully'));
-} catch (error) {
-  console.error('Failed to initialize Moralis:', error);
-}
+// Note: Moralis is already initialized at the top of the file
 
 /**
  * Get native PLS balance for a wallet address directly from PulseChain Scan API
