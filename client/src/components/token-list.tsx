@@ -216,12 +216,21 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
                       {/* Token Info */}
                       <div className="flex items-center flex-grow">
                         <div className="mr-4 flex-shrink-0">
-                          <TokenLogo 
-                            address={token.address}
-                            symbol={token.symbol}
-                            fallbackLogo={token.logo}
-                            size="lg"
-                          />
+                          {/* Force use our PLS logo for PLS token in mobile view too */}
+                          {token.symbol === 'PLS' || token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? (
+                            <img 
+                              src="/assets/pls-logo-trimmed.png" 
+                              alt="PLS" 
+                              className="w-10 h-10 rounded-full object-cover border border-white/10"
+                            />
+                          ) : (
+                            <TokenLogo 
+                              address={token.address}
+                              symbol={token.symbol}
+                              fallbackLogo={token.logo}
+                              size="lg"
+                            />
+                          )}
                         </div>
                         <div className="min-w-0 flex-grow">
                           <div className="flex items-center gap-1">
