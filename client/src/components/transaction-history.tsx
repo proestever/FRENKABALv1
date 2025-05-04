@@ -461,6 +461,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             <RefreshCw size={16} className="mr-1" />
             <span className="text-sm font-medium">Try Again</span>
           </button>
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 mt-2"
+          >
+            <ChevronDown size={16} className="mr-1" />
+            <span className="text-sm font-medium">Close</span>
+          </button>
         </div>
       </Card>
     );
@@ -476,7 +483,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         <p className="text-muted-foreground mb-4">
           No transaction history was found for this wallet.
         </p>
-
+        <button
+          onClick={onClose}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 mx-auto"
+        >
+          <ChevronDown size={16} className="mr-1" />
+          <span className="text-sm font-medium">Close</span>
+        </button>
       </Card>
     );
   }
@@ -588,6 +601,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 )}
               </button>
             )}
+            
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
+            >
+              <ChevronDown size={16} />
+              <span className="text-sm font-medium">Close</span>
+            </button>
           </div>
         </div>
       </div>
