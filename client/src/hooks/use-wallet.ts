@@ -33,8 +33,22 @@ export function useWallet(): UseWalletReturn {
       // First check localStorage for persistent connection
       const walletConnected = localStorage.getItem('walletConnected') === 'true';
       const savedAddress = localStorage.getItem('walletAddress');
+      const lastLoginTimestamp = localStorage.getItem('lastLoginTimestamp');
+      const loginExpirationMs = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
       
-      if (walletConnected && savedAddress && window.ethereum) {
+      // Check if login is still valid (within the last 7 days)
+      const isLoginValid = lastLoginTimestamp && 
+        (Date.now() - parseInt(lastLoginTimestamp, 10)) < loginExpirationMs;
+        
+      // Debug info for login expiration
+      if (lastLoginTimestamp) {
+        const timeLeft = loginExpirationMs - (Date.now() - parseInt(lastLoginTimestamp, 10));
+        const daysLeft = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
+        const hoursLeft = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+        console.log(`Login token valid for ${daysLeft} days and ${hoursLeft} hours`);
+      }
+      
+      if (walletConnected && savedAddress && window.ethereum && isLoginValid) {
         try {
           // Validate that the wallet is still available
           const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -85,6 +99,7 @@ export function useWallet(): UseWalletReturn {
           localStorage.removeItem('walletConnected');
           localStorage.removeItem('walletAddress');
           localStorage.removeItem('userId');
+          localStorage.removeItem('lastLoginTimestamp');
         }
       } else if (window.ethereum) {
         // No localStorage data, check if wallet is connected
@@ -98,6 +113,7 @@ export function useWallet(): UseWalletReturn {
             // Store in localStorage for persistence
             localStorage.setItem('walletConnected', 'true');
             localStorage.setItem('walletAddress', accounts[0]);
+            localStorage.setItem('lastLoginTimestamp', Date.now().toString());
             
             // Get chain ID
             const network = await provider.getNetwork();
@@ -135,12 +151,15 @@ export function useWallet(): UseWalletReturn {
         // Clear localStorage
         localStorage.removeItem('walletConnected');
         localStorage.removeItem('walletAddress');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('lastLoginTimestamp');
       } else {
         setAccount(accounts[0]);
         
         // Update localStorage
         localStorage.setItem('walletConnected', 'true');
         localStorage.setItem('walletAddress', accounts[0]);
+        localStorage.setItem('lastLoginTimestamp', Date.now().toString());
       }
     };
     
@@ -241,6 +260,7 @@ Timestamp: ${new Date().toISOString()}`;
           // Store wallet info in localStorage for persistence
           localStorage.setItem('walletConnected', 'true');
           localStorage.setItem('walletAddress', address);
+          localStorage.setItem('lastLoginTimestamp', Date.now().toString());
           
           // Get network
           const network = await provider.getNetwork();
@@ -326,12 +346,21 @@ Timestamp: ${new Date().toISOString()}`;
     localStorage.removeItem('walletConnected');
     localStorage.removeItem('walletAddress');
     localStorage.removeItem('userId');
+    localStorage.removeItem('lastLoginTimestamp');
     
     toast({
       title: "Wallet Disconnected",
       description: "Successfully disconnected wallet",
     });
   }, [toast]);
+
+  // Debug utility function to simulate an expired session (for testing)
+  const resetLoginTimestamp = useCallback(() => {
+    // Set login timestamp to 8 days ago (expired)
+    const expiredTimestamp = Date.now() - (8 * 24 * 60 * 60 * 1000);
+    localStorage.setItem('lastLoginTimestamp', expiredTimestamp.toString());
+    console.log("Debug: Login timestamp reset to expired state");
+  }, []);
 
   return {
     isConnected: !!account,
@@ -342,6 +371,8 @@ Timestamp: ${new Date().toISOString()}`;
     disconnect,
     isConnecting,
     isPulseChain,
+    // Include debug utility only in development
+    ...(process.env.NODE_ENV === 'development' ? { resetLoginTimestamp } : {})
   };
 }
 
