@@ -1283,16 +1283,23 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       {transfer.direction === 'receive' ? '+' : '-'}
                       {transfer.value_formatted || formatTokenValue(transfer.value)}
                     </div>
-                    {calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
-                      <div className="text-xs text-muted-foreground">
-                        {(calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                          maximumFractionDigits: 2,
-                          minimumFractionDigits: 2
-                        })}
-                      </div>
-                    )}
+                    {(() => {
+                      const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+                      const hasBatchPrice = !!batchPrices[plsAddress];
+                      const usdValue = calculateUsdValue(transfer.value, '18', plsAddress);
+                      
+                      return usdValue ? (
+                        <div className="text-xs text-muted-foreground flex items-center justify-end">
+                          {usdValue.toLocaleString('en-US', {
+                            style: 'currency',
+                            currency: 'USD',
+                            maximumFractionDigits: 2,
+                            minimumFractionDigits: 2
+                          })}
+                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               ))}
@@ -1300,16 +1307,23 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {/* Gas Fee */}
               <div className="text-xs font-semibold text-white mt-2 text-right">
                 Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
-                {calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
-                  <span className="ml-2">
-                    ({(calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                      maximumFractionDigits: 2,
-                      minimumFractionDigits: 2
-                    })})
-                  </span>
-                )}
+                {(() => {
+                  const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+                  const hasBatchPrice = !!batchPrices[plsAddress];
+                  const usdValue = calculateUsdValue(tx.transaction_fee.toString(), '18', plsAddress);
+                  
+                  return usdValue ? (
+                    <span className="ml-2 flex items-center">
+                      ({usdValue.toLocaleString('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                        maximumFractionDigits: 2,
+                        minimumFractionDigits: 2
+                      })})
+                      {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-primary/20 text-[9px] rounded text-primary">✓</span>}
+                    </span>
+                  ) : null;
+                })()}
               </div>
             </div>
           </div>
