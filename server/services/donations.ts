@@ -47,49 +47,33 @@ function isDonation(transaction: Transaction, donationAddress: string): boolean 
 }
 
 /**
- * Get token price using Moralis API
+ * Get token price using the shared token price function from API service
+ * This ensures we get consistent prices between the main search tool and donations
  */
 async function getTokenPriceFromMoralis(tokenAddress: string): Promise<number> {
   try {
-    // Special case for native PLS token
-    if (tokenAddress === '0x0000000000000000000000000000000000000000' || 
-        tokenAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-      // Use Moralis to get the PLS price
-      try {
-        // Using the correct WPLS address on PulseChain
-        const response = await Moralis.EvmApi.token.getTokenPrice({
-          chain: "0x171", // PulseChain chain ID
-          address: "0x5fd55a1b9fc24967c4db09c513c3ba0dfa7ff687" // WPLS contract address
-        });
-        
-        if (response && response.raw && response.raw.usdPrice) {
-          console.log(`Got PLS price from Moralis: $${response.raw.usdPrice}`);
-          return Number(response.raw.usdPrice);
-        }
-      } catch (plsError) {
-        console.log("Error getting PLS price from Moralis:", plsError);
-      }
-      
-      // Fallback to default value if API call fails - using lower value based on current market
-      return 0.000020; // Default PLS price estimate (0.00002 USD)
+    // Special handling for native PLS token - standardize format
+    if (tokenAddress === '0x0000000000000000000000000000000000000000') {
+      tokenAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
     }
     
-    // For other tokens
-    try {
-      const response = await Moralis.EvmApi.token.getTokenPrice({
-        chain: "0x171", // PulseChain chain ID
-        address: tokenAddress
-      });
-      
-      if (response && response.raw && response.raw.usdPrice) {
-        console.log(`Got token price for ${tokenAddress} from Moralis: $${response.raw.usdPrice}`);
-        return Number(response.raw.usdPrice);
-      }
-    } catch (tokenError) {
-      console.log(`Error getting price for token ${tokenAddress} from Moralis:`, tokenError);
+    console.log(`Getting price for ${tokenAddress} using the same method as main search`);
+    
+    // Use the same token price function that the main search uses
+    const priceData = await getTokenPrice(tokenAddress);
+    
+    if (priceData && priceData.usdPrice) {
+      console.log(`Got token price for ${tokenAddress} from main price service: $${priceData.usdPrice}`);
+      return Number(priceData.usdPrice);
     }
     
+    console.log(`No price found for ${tokenAddress} from main price service, using fallbacks`);
+    
+    // If getTokenPrice returns null or no price, use fallbacks
     // Fallback values based on common tokens - current as of May 2023
+    if (tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+      return 0.000020; // Native PLS - same as main search
+    }
     if (tokenAddress.toLowerCase() === '0xca9ba905926e4592632d11827edc47607c92e585') {
       return 0.9999; // DAI - stable coin close to 1 USD
     }
