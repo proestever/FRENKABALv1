@@ -108,6 +108,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // API route to get ALL wallet tokens without pagination
+  app.get("/api/wallet/:address/all", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format (0x followed by 40 hex chars)
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      // Set loading progress to indicate we're fetching all tokens
+      updateLoadingProgress({
+        status: 'loading',
+        message: 'Loading all wallet tokens in batches...',
+        currentBatch: 0,
+        totalBatches: 1
+      });
+      
+      // Get all tokens without pagination (backend will still process in batches)
+      // Pass a very large limit to essentially get all tokens
+      const walletData = await getWalletData(address, 1, 1000);
+      
+      // Store this address in recent addresses (for future implementation)
+      // This would save the recent searches in the database
+      
+      return res.json(walletData);
+    } catch (error) {
+      console.error("Error fetching all wallet tokens:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch wallet tokens",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   // API route to get specific token balance for a wallet
   app.get("/api/wallet/:address/token/:tokenAddress", async (req, res) => {
     try {

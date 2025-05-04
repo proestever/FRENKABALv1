@@ -31,6 +31,22 @@ export function fetchWalletData(address: string, page: number = 1, limit: number
 }
 
 /**
+ * Fetch ALL wallet tokens in a single request (will be loaded in batches on server)
+ * @param address - Wallet address to fetch data for
+ */
+export function fetchAllWalletTokens(address: string): Promise<Wallet> {
+  return fetch(`/api/wallet/${address}/all`)
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(errorData => {
+          throw new Error(errorData.message || 'Failed to fetch all wallet tokens');
+        });
+      }
+      return response.json();
+    });
+}
+
+/**
  * Get recent addresses from local storage
  */
 export function getRecentAddresses(): string[] {

@@ -1,0 +1,75 @@
+import { useQuery } from '@tanstack/react-query';
+import { fetchAllWalletTokens } from '@/lib/api';
+import { useEffect, useState } from 'react';
+
+/**
+ * Hook for retrieving all wallet tokens at once (not paginated)
+ * This loads all tokens in a single request, which might be batched on the server
+ */
+export function useAllWalletTokens(walletAddress: string | null) {
+  const [progress, setProgress] = useState({
+    currentBatch: 0,
+    totalBatches: 1,
+    status: 'idle' as 'idle' | 'loading' | 'complete' | 'error',
+    message: ''
+  });
+  
+  // Fetch wallet data with all tokens
+  const { 
+    data: walletData,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: walletAddress ? [`/api/wallet/${walletAddress}/all`] : null,
+    enabled: !!walletAddress,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+  
+  // Poll loading progress during fetching
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+    
+    // Only poll when we're actively fetching
+    if (isFetching) {
+      // Poll loading progress every 500ms
+      intervalId = setInterval(async () => {
+        try {
+          const response = await fetch('/api/loading-progress');
+          if (response.ok) {
+            const progressData = await response.json();
+            setProgress(progressData);
+          }
+        } catch (error) {
+          console.error('Error fetching loading progress:', error);
+        }
+      }, 500);
+    } else {
+      // When not fetching, set status to complete or error
+      setProgress(prev => ({
+        ...prev,
+        status: isError ? 'error' : (walletData ? 'complete' : prev.status)
+      }));
+    }
+    
+    // Clean up interval on unmount or when fetching status changes
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isFetching, isError, walletData]);
+  
+  return {
+    walletData,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch,
+    progress
+  };
+}
