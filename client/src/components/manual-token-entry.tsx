@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { ProcessedToken } from '../../server/types';
+// Import the Token type from schema
+import { Token } from '@shared/schema';
 import { TokenLogo } from './token-logo';
 import { formatTokenAmount } from '@/lib/format';
 
