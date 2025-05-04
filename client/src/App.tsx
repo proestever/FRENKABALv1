@@ -143,13 +143,13 @@ function Header() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 glass-card bg-black/90 border border-white/10">
-              <DropdownMenuItem onClick={() => setLocation("/")} className="cursor-pointer">
+              <DropdownMenuItem onClick={() => setLocation("/")} className="cursor-pointer dropdown-item-hover">
                 <HomeIcon className="mr-2 h-4 w-4" />
                 <span>Home</span>
               </DropdownMenuItem>
               
               {isConnected && (
-                <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer dropdown-item-hover">
                   <Bookmark className="mr-2 h-4 w-4" />
                   <span>Saved Addresses</span>
                 </DropdownMenuItem>
@@ -188,13 +188,13 @@ function Header() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 glass-card bg-black/90 border border-white/10">
-                <DropdownMenuItem onClick={() => setLocation("/")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => setLocation("/")} className="cursor-pointer dropdown-item-hover">
                   <HomeIcon className="mr-2 h-4 w-4" />
                   <span>Home</span>
                 </DropdownMenuItem>
                 
                 {isConnected && (
-                  <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer dropdown-item-hover">
                     <Bookmark className="mr-2 h-4 w-4" />
                     <span>Saved Addresses</span>
                   </DropdownMenuItem>

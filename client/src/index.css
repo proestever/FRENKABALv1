@@ -19,7 +19,7 @@
   --primary-foreground: 0 0% 100%;
   --secondary: 220 10% 12%;
   --secondary-foreground: 0 0% 98%;
-  --accent: 200 80% 50%;
+  --accent: 220 15% 30%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 90% 60%;
   --destructive-foreground: 60 9.1% 97.8%;
@@ -288,4 +288,14 @@
   backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Dropdown menu hover state - more muted grey instead of blue highlight */
+.dropdown-item-hover:hover,
+.dropdown-item-hover:focus,
+[role="menuitem"]:hover,
+[role="menuitem"]:focus {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  outline: none !important;
 }
