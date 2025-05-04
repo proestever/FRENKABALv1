@@ -678,9 +678,14 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                               <ArrowUpRight size={14} className="text-red-400" />
                             )}
                           </div>
-                          <span className="text-sm whitespace-nowrap overflow-hidden text-ellipsis">
-                            {transfer.token_symbol}
-                            <span className="text-xs text-muted-foreground ml-2">
+                          <div className="flex flex-col">
+                            <div className="flex items-center">
+                              <span className="text-sm whitespace-nowrap">{transfer.token_symbol}</span>
+                              <span className="text-xs text-muted-foreground ml-2 bg-black/20 px-1 py-0.5 rounded">
+                                {shortenAddress(transfer.address || '')}
+                              </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
                               {transfer.direction === 'receive' ? 'From: ' : 'To: '}
                               <Link 
                                 to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
@@ -690,8 +695,37 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                               >
                                 {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                               </Link>
-                            </span>
-                          </span>
+                            </div>
+                            <div className="flex mt-1 space-x-2">
+                              <a 
+                                href={`https://dexscreener.com/pulsechain/${transfer.address}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:text-primary/70"
+                                title="View on DexScreener"
+                              >
+                                DexScrn
+                              </a>
+                              <a 
+                                href={`https://otter.pulsechain.com/address/${transfer.address}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:text-primary/70"
+                                title="View on Otterscan"
+                              >
+                                Otter
+                              </a>
+                              <a 
+                                href={`https://scan.pulsechain.com/token/${transfer.address}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:text-primary/70"
+                                title="View on PulseScan"
+                              >
+                                PulseScan
+                              </a>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -712,9 +746,14 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                               <ArrowUpRight size={14} className="text-red-400" />
                             )}
                           </div>
-                          <span className="text-sm whitespace-nowrap overflow-hidden text-ellipsis">
-                            {transfer.token_symbol || 'PLS'}
-                            <span className="text-xs text-muted-foreground ml-2">
+                          <div className="flex flex-col">
+                            <div className="flex items-center">
+                              <span className="text-sm whitespace-nowrap">{transfer.token_symbol || 'PLS'}</span>
+                              <span className="text-xs text-muted-foreground ml-2 bg-black/20 px-1 py-0.5 rounded">
+                                Native
+                              </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
                               {transfer.direction === 'receive' ? 'From: ' : 'To: '}
                               <Link 
                                 to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
@@ -724,8 +763,37 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                               >
                                 {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                               </Link>
-                            </span>
-                          </span>
+                            </div>
+                            <div className="flex mt-1 space-x-2">
+                              <a 
+                                href="https://dexscreener.com/pulsechain/0x8a810ea8B121d08342E9e7696f4a9915cBE494B7" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:text-primary/70"
+                                title="View on DexScreener"
+                              >
+                                DexScrn
+                              </a>
+                              <a 
+                                href="https://otter.pulsechain.com" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:text-primary/70"
+                                title="View on Otterscan"
+                              >
+                                Otter
+                              </a>
+                              <a 
+                                href="https://scan.pulsechain.com" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:text-primary/70"
+                                title="View on PulseScan"
+                              >
+                                PulseScan
+                              </a>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -863,6 +931,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           <ArrowUpRight size={14} className="text-red-400 mr-1" />
                         )}
                         <span className="text-sm font-medium">{transfer.token_symbol}</span>
+                        <span className="text-xs text-muted-foreground ml-2 bg-black/20 px-1 py-0.5 rounded">
+                          {shortenAddress(transfer.address || '')}
+                        </span>
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         {transfer.direction === 'receive' ? 'From: ' : 'To: '}
@@ -874,6 +945,35 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         >
                           {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                         </Link>
+                      </div>
+                      <div className="flex mt-1 space-x-2">
+                        <a 
+                          href={`https://dexscreener.com/pulsechain/${transfer.address}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:text-primary/70"
+                          title="View on DexScreener"
+                        >
+                          DexScrn
+                        </a>
+                        <a 
+                          href={`https://otter.pulsechain.com/address/${transfer.address}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:text-primary/70"
+                          title="View on Otterscan"
+                        >
+                          Otter
+                        </a>
+                        <a 
+                          href={`https://scan.pulsechain.com/token/${transfer.address}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:text-primary/70"
+                          title="View on PulseScan"
+                        >
+                          PulseScan
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -913,6 +1013,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           <ArrowUpRight size={14} className="text-red-400 mr-1" />
                         )}
                         <span className="text-sm font-medium">{transfer.token_symbol || 'PLS'}</span>
+                        <span className="text-xs text-muted-foreground ml-2 bg-black/20 px-1 py-0.5 rounded">
+                          Native
+                        </span>
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         {transfer.direction === 'receive' ? 'From: ' : 'To: '}
@@ -924,6 +1027,35 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         >
                           {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                         </Link>
+                      </div>
+                      <div className="flex mt-1 space-x-2">
+                        <a 
+                          href="https://dexscreener.com/pulsechain/0x8a810ea8B121d08342E9e7696f4a9915cBE494B7" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:text-primary/70"
+                          title="View on DexScreener"
+                        >
+                          DexScrn
+                        </a>
+                        <a 
+                          href="https://otter.pulsechain.com" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:text-primary/70"
+                          title="View on Otterscan"
+                        >
+                          Otter
+                        </a>
+                        <a 
+                          href="https://scan.pulsechain.com" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:text-primary/70"
+                          title="View on PulseScan"
+                        >
+                          PulseScan
+                        </a>
                       </div>
                     </div>
                   </div>
