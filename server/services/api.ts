@@ -142,14 +142,17 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
   if (tokenAddress && tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
     console.log('Detected request for native PLS token price, using special handling');
     
-    // Use wPLS contract address for price (PLS and wPLS are 1:1)
-    const { getTokenPriceFromDexScreener } = await import('./dexscreener');
+    // Use wPLS contract address for price and price change (PLS and wPLS are 1:1)
+    const { getTokenPriceFromDexScreener, getTokenPriceChange } = await import('./dexscreener');
     const plsPrice = await getTokenPriceFromDexScreener(WPLS_TOKEN_ADDRESS);
+    
+    // Get the 24h price change from DexScreener using wPLS
+    const plsPriceChange = await getTokenPriceChange(WPLS_TOKEN_ADDRESS);
     
     // Use the price from DexScreener or fall back to default
     const usdPrice = plsPrice || PLS_PRICE_USD_FALLBACK;
     
-    console.log(`Native PLS price from DexScreener (using wPLS address): $${usdPrice}`);
+    console.log(`Native PLS price from DexScreener (using wPLS address): $${usdPrice} (24h change: ${plsPriceChange || 0}%)`);
     
     // Return a structure with the PLS logo and price
     return {
@@ -169,8 +172,8 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
       exchangeAddress: "",
       tokenAddress: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       blockTimestamp: new Date().toISOString(),
-      '24hrPercentChange': "0", // Default if not available
-      usdPrice24hrPercentChange: 0, // Default if not available
+      '24hrPercentChange': plsPriceChange ? plsPriceChange.toString() : "0",
+      usdPrice24hrPercentChange: plsPriceChange || 0,
       tokenLogo: getDefaultLogo('pls'), // Use our default PLS logo
       verifiedContract: true,
       securityScore: 100 // Highest score for native token
@@ -264,8 +267,9 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
       
       // We always need to add the native PLS token manually when using Moralis token balances,
       // since the API doesn't return it for PulseChain
-      const { getTokenPriceFromDexScreener } = await import('./dexscreener');
+      const { getTokenPriceFromDexScreener, getTokenPriceChange } = await import('./dexscreener');
       const plsPrice = await getTokenPriceFromDexScreener(WPLS_TOKEN_ADDRESS);
+      const plsPriceChange = await getTokenPriceChange(WPLS_TOKEN_ADDRESS);
       
       // Get native PLS balance directly from PulseChain Scan (most reliable)
       const plsBalance = await getNativePlsBalance(walletAddress);
@@ -276,6 +280,8 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
       // Only add native PLS if we got a balance
       if (plsBalance) {
         console.log(`Adding native PLS token with balance: ${plsBalance.balanceFormatted}`);
+        console.log(`PLS price change (24h): ${plsPriceChange || 0}%`);
+        
         const nativeToken = {
           token_address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
           symbol: 'PLS',
@@ -289,6 +295,7 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
           verified_contract: true,
           usd_price: plsPrice || PLS_PRICE_USD_FALLBACK,
           usd_value: plsBalance.balanceFormatted * (plsPrice || PLS_PRICE_USD_FALLBACK),
+          usd_price_24hr_percent_change: plsPriceChange || 0,
           security_score: 100,
           is_native: true
         };
@@ -689,14 +696,24 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     if (nativePlsBalance) {
       console.log(`Adding native PLS token with balance: ${nativePlsBalance.balanceFormatted}`);
       
-      // Get PLS price from DexScreener using wPLS address
+      // Get PLS price and price change from DexScreener using wPLS address
       let plsPrice = PLS_PRICE_USD_FALLBACK; // Start with fallback price
+      let plsPriceChange = 0; // Default price change
       try {
-        const { getTokenPriceFromDexScreener } = await import('./dexscreener');
+        const { getTokenPriceFromDexScreener, getTokenPriceChange } = await import('./dexscreener');
+        
+        // Get price
         const dexScreenerPrice = await getTokenPriceFromDexScreener(WPLS_TOKEN_ADDRESS);
         if (dexScreenerPrice !== null) {
           plsPrice = dexScreenerPrice;
           console.log(`Got PLS price from DexScreener (using wPLS): $${plsPrice}`);
+          
+          // Get price change
+          const dexScreenerPriceChange = await getTokenPriceChange(WPLS_TOKEN_ADDRESS);
+          if (dexScreenerPriceChange !== null) {
+            plsPriceChange = dexScreenerPriceChange;
+            console.log(`Got PLS price change from DexScreener (using wPLS): ${plsPriceChange}%`);
+          }
         } else {
           console.log(`Couldn't get PLS price from DexScreener, using fallback: $${plsPrice}`);
         }
@@ -717,7 +734,7 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
         value: nativePlsBalance.balanceFormatted * plsPrice,
         logo: getDefaultLogo('pls'),
         isNative: true,
-        priceChange24h: 0, // Default if not available
+        priceChange24h: plsPriceChange, // Use the fetched price change
         exchange: 'PulseX',
         verified: true,
         securityScore: 100 // Highest score for native token
