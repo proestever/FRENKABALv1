@@ -27,9 +27,10 @@ try {
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98';
 const PLS_TOKEN_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'; // PulseChain native token is 0xeee...eee 
+const WPLS_TOKEN_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'; // wPLS contract - used for price
 const PLS_CONTRACT_ADDRESS = '0x5616458eb2bAc88dD60a4b08F815F37335215f9B'; // Alternative PLS contract address
 const PLS_DECIMALS = 18; // Native PLS has 18 decimals
-const PLS_PRICE_USD = 0.000020; // Approximate placeholder price if API fails - updated May 2023
+const PLS_PRICE_USD_FALLBACK = 0.000020; // Fallback price only if all APIs fail
 
 // Note: Moralis is already initialized at the top of the file
 
@@ -141,10 +142,16 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
   if (tokenAddress && tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
     console.log('Detected request for native PLS token price, using special handling');
     
-    // For native token, we'll check if we have cached token info from Moralis wallet balances
-    // which should already include the native token price
+    // Use wPLS contract address for price (PLS and wPLS are 1:1)
+    const { getTokenPriceFromDexScreener } = await import('./dexscreener');
+    const plsPrice = await getTokenPriceFromDexScreener(WPLS_TOKEN_ADDRESS);
     
-    // Return a default structure with the PLS logo and price if available
+    // Use the price from DexScreener or fall back to default
+    const usdPrice = plsPrice || PLS_PRICE_USD_FALLBACK;
+    
+    console.log(`Native PLS price from DexScreener (using wPLS address): $${usdPrice}`);
+    
+    // Return a structure with the PLS logo and price
     return {
       tokenName: "PulseChain",
       tokenSymbol: "PLS",
@@ -156,8 +163,8 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
         symbol: "PLS",
         address: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
       },
-      usdPrice: 0.000020, // Approximate value - the real price will come from Moralis wallet balances
-      usdPriceFormatted: "0.000020",
+      usdPrice: usdPrice,
+      usdPriceFormatted: usdPrice.toString(),
       exchangeName: "PulseX",
       exchangeAddress: "",
       tokenAddress: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
@@ -354,7 +361,7 @@ export async function getWalletTransactionHistory(
       }
       
       // Parse the JSON response
-      const responseData = await response.json();
+      const responseData = await response.json() as any;
       console.log(`Transaction response cursor: ${responseData?.cursor || 'none'}`);
       console.log('Response data keys:', Object.keys(responseData));
       
@@ -616,6 +623,22 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     if (nativePlsBalance) {
       console.log(`Adding native PLS token with balance: ${nativePlsBalance.balanceFormatted}`);
       
+      // Get PLS price from DexScreener using wPLS address
+      let plsPrice = PLS_PRICE_USD_FALLBACK; // Start with fallback price
+      try {
+        const { getTokenPriceFromDexScreener } = await import('./dexscreener');
+        const dexScreenerPrice = await getTokenPriceFromDexScreener(WPLS_TOKEN_ADDRESS);
+        if (dexScreenerPrice !== null) {
+          plsPrice = dexScreenerPrice;
+          console.log(`Got PLS price from DexScreener (using wPLS): $${plsPrice}`);
+        } else {
+          console.log(`Couldn't get PLS price from DexScreener, using fallback: $${plsPrice}`);
+        }
+      } catch (error) {
+        console.error('Error getting PLS price from DexScreener:', error);
+        console.log(`Using fallback PLS price: $${plsPrice}`);
+      }
+      
       // Add native PLS token to the beginning of the token list
       tokens.unshift({
         address: PLS_TOKEN_ADDRESS,
@@ -624,10 +647,14 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
         decimals: PLS_DECIMALS,
         balance: nativePlsBalance.balance,
         balanceFormatted: nativePlsBalance.balanceFormatted,
-        price: PLS_PRICE_USD, // Use our default price
-        value: nativePlsBalance.balanceFormatted * PLS_PRICE_USD,
+        price: plsPrice, // Use dynamically fetched price
+        value: nativePlsBalance.balanceFormatted * plsPrice,
         logo: getDefaultLogo('pls'),
-        isNative: true
+        isNative: true,
+        priceChange24h: 0, // Default if not available
+        exchange: 'PulseX',
+        verified: true,
+        securityScore: 100 // Highest score for native token
       });
     }
     
