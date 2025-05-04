@@ -537,6 +537,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get user profile data
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Validate user ID
+      const userId = parseInt(id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Get user from storage
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Return user data (excluding password)
+      const { password, ...userData } = user;
+      return res.json(userData);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch user data",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   // Update user profile data
   app.patch("/api/users/:id/profile", async (req, res) => {
     try {

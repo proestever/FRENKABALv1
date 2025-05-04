@@ -1,4 +1,4 @@
-import { Token, Wallet, Bookmark } from '@shared/schema';
+import { Token, Wallet, Bookmark, User } from '@shared/schema';
 
 /**
  * Fetch wallet data from the server API
@@ -326,6 +326,55 @@ export async function getUserFromWallet(walletAddress: string): Promise<number |
     return data.id || null;
   } catch (error) {
     console.error('Error getting user from wallet:', error);
+    return null;
+  }
+}
+
+/**
+ * Get full user profile data with all fields
+ */
+export async function getUserProfile(userId: number): Promise<User | null> {
+  try {
+    const response = await fetch(`/api/users/${userId}`);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to get user profile');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    return null;
+  }
+}
+
+/**
+ * Update user profile information
+ */
+export async function updateUserProfile(userId: number, profileData: {
+  displayName?: string;
+  website?: string;
+  twitterHandle?: string;
+  bio?: string;
+}): Promise<User | null> {
+  try {
+    const response = await fetch(`/api/users/${userId}/profile`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(profileData),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update user profile');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error updating user profile:', error);
     return null;
   }
 }

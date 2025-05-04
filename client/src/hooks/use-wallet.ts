@@ -1,23 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useToast } from '@/hooks/use-toast';
-import { getUserFromWallet } from '@/lib/api';
+import { getUserFromWallet, getUserProfile } from '@/lib/api';
+import { User } from '@shared/schema';
 
 interface UseWalletReturn {
   isConnected: boolean;
   account: string | null;
   chainId: number | null;
   userId: number | null;
+  user: User | null;
   connect: () => Promise<void>;
   disconnect: () => void;
   isConnecting: boolean;
   isPulseChain: boolean;
+  refreshUserProfile: () => Promise<User | null>;
 }
 
 export function useWallet(): UseWalletReturn {
   const [account, setAccount] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
 
@@ -318,6 +322,44 @@ export function useWallet(): UseWalletReturn {
     });
   }, [toast]);
 
+  // Load user profile data
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (userId) {
+        try {
+          const profileData = await getUserProfile(userId);
+          if (profileData) {
+            setUser(profileData);
+          }
+        } catch (error) {
+          console.error("Error loading user profile:", error);
+        }
+      } else {
+        // Clear user data if no userId
+        setUser(null);
+      }
+    };
+    
+    loadUserProfile();
+  }, [userId]);
+  
+  // Function to refresh user profile data
+  const refreshUserProfile = useCallback(async (): Promise<User | null> => {
+    if (!userId) return null;
+    
+    try {
+      const profileData = await getUserProfile(userId);
+      if (profileData) {
+        setUser(profileData);
+        return profileData;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error refreshing user profile:", error);
+      return null;
+    }
+  }, [userId]);
+
   // Debug utility function to simulate an expired session (for testing)
   const resetLoginTimestamp = useCallback(() => {
     // Set login timestamp to 8 days ago (expired)
@@ -331,10 +373,12 @@ export function useWallet(): UseWalletReturn {
     account,
     chainId,
     userId,
+    user,
     connect,
     disconnect,
     isConnecting,
     isPulseChain,
+    refreshUserProfile,
     // Include debug utility only in development
     ...(process.env.NODE_ENV === 'development' ? { resetLoginTimestamp } : {})
   };
