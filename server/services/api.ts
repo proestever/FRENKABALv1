@@ -1201,7 +1201,21 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
     // Give clients time to see the completed progress
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Apply pagination to tokens
+    // First, sort all tokens by value (descending) so most valuable appear first
+    tokensWithPrice.sort((a, b) => {
+      // For tokens with value, sort by value (highest first)
+      if (a.value !== undefined && b.value !== undefined) {
+        return b.value - a.value;
+      }
+      // If only one token has value, prioritize it
+      if (a.value !== undefined) return -1;
+      if (b.value !== undefined) return 1;
+      
+      // For tokens without value, sort by balance (highest first)
+      return b.balanceFormatted - a.balanceFormatted;
+    });
+    
+    // Now apply pagination to the sorted tokens
     const totalTokens = tokensWithPrice.length;
     const totalPages = Math.ceil(totalTokens / limit);
     

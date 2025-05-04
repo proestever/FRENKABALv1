@@ -53,6 +53,14 @@ export const TokenSchema = z.object({
 
 export type Token = z.infer<typeof TokenSchema>;
 
+// Define schema for pagination
+export const PaginationSchema = z.object({
+  page: z.number(),
+  limit: z.number(),
+  totalItems: z.number(),
+  totalPages: z.number(),
+});
+
 // Define schema for wallet data
 export const WalletSchema = z.object({
   address: z.string(),
@@ -62,6 +70,7 @@ export const WalletSchema = z.object({
   plsBalance: z.number().optional(),
   plsPriceChange: z.number().optional(),
   networkCount: z.number().optional(),
+  pagination: PaginationSchema.optional(),
 });
 
 export type Wallet = z.infer<typeof WalletSchema>;
