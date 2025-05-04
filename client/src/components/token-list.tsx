@@ -10,6 +10,8 @@ import { TokenLogo } from '@/components/token-logo';
 import { getHiddenTokens, toggleHiddenToken, isTokenHidden } from '@/lib/api';
 import { useBatchTokenLogos } from '@/hooks/use-batch-token-logos';
 import { TransactionHistory } from '@/components/transaction-history';
+// Import PLS logo directly for consistent rendering
+import plsLogo from '../assets/pls-logo-optimized.png';
 
 interface TokenListProps {
   tokens: Token[];
@@ -219,7 +221,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
                           {/* Force use our PLS logo for PLS token in mobile view too */}
                           {token.symbol === 'PLS' || token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? (
                             <img 
-                              src="/assets/pls-logo-trimmed.png" 
+                              src={plsLogo} 
                               alt="PLS" 
                               className="w-10 h-10 rounded-full object-cover border border-white/10"
                             />
@@ -321,7 +323,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
                             {/* Force use our PLS logo for PLS token */}
                           {token.symbol === 'PLS' || token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? (
                             <img 
-                              src="/assets/pls-logo-trimmed.png" 
+                              src={plsLogo} 
                               alt="PLS" 
                               className="w-8 h-8 rounded-full object-cover border border-white/10"
                             />
