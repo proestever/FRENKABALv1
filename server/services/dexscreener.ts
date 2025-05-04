@@ -186,7 +186,7 @@ export async function getWalletBalancesFromPulseChainScan(walletAddress: string)
       throw new Error(`Error fetching address data: ${addressResponse.status} ${addressResponse.statusText}`);
     }
     
-    const addressData = await addressResponse.json();
+    const addressData = await addressResponse.json() as any;
     const nativeBalance = addressData.coin_balance || '0';
     
     // Get token balances
@@ -196,7 +196,7 @@ export async function getWalletBalancesFromPulseChainScan(walletAddress: string)
       throw new Error(`Error fetching token balances: ${tokenBalancesResponse.status} ${tokenBalancesResponse.statusText}`);
     }
     
-    const tokenBalancesData = await tokenBalancesResponse.json();
+    const tokenBalancesData = await tokenBalancesResponse.json() as any[];
     
     const tokenBalances = tokenBalancesData.map((item: any) => ({
       address: item.token.address,
