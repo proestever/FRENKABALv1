@@ -13,10 +13,13 @@ export interface ProcessedToken extends Token {
 }
 
 /**
- * Fetch wallet data from the server API
+ * Fetch wallet data from the server API with pagination support
+ * @param address - Wallet address to fetch data for
+ * @param page - Page number for pagination (default: 1)
+ * @param limit - Number of tokens per page (default: 50)
  */
-export function fetchWalletData(address: string): Promise<Wallet> {
-  return fetch(`/api/wallet/${address}`)
+export function fetchWalletData(address: string, page: number = 1, limit: number = 50): Promise<Wallet> {
+  return fetch(`/api/wallet/${address}?page=${page}&limit=${limit}`)
     .then(response => {
       if (!response.ok) {
         return response.json().then(errorData => {

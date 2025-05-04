@@ -51,6 +51,9 @@ export default function Home() {
     }
   }, [params.walletAddress, searchedAddress]);
 
+  // Track current page for pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  
   const { 
     data: walletData, 
     isLoading, 
@@ -59,11 +62,11 @@ export default function Home() {
     refetch,
     isFetching 
   } = useQuery<Wallet, Error>({
-    queryKey: searchedAddress ? [`/api/wallet/${searchedAddress}`] : [],
+    queryKey: searchedAddress ? [`/api/wallet/${searchedAddress}`, currentPage] : [],
     queryFn: () => {
       if (!searchedAddress) throw new Error('No address provided');
-      console.log('Fetching wallet data for:', searchedAddress);
-      return fetchWalletData(searchedAddress)
+      console.log('Fetching wallet data for:', searchedAddress, 'page:', currentPage);
+      return fetchWalletData(searchedAddress, currentPage)
         .then(data => {
           console.log('Wallet data fetched successfully');
           return data;

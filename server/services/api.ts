@@ -1201,14 +1201,38 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
     // Give clients time to see the completed progress
     await new Promise(resolve => setTimeout(resolve, 1000));
     
+    // Apply pagination to tokens
+    const totalTokens = tokensWithPrice.length;
+    const totalPages = Math.ceil(totalTokens / limit);
+    
+    // Calculate the start and end indices for slicing the tokens array
+    const startIndex = (page - 1) * limit;
+    let endIndex = startIndex + limit;
+    
+    // Ensure endIndex doesn't exceed the array length
+    if (endIndex > totalTokens) {
+      endIndex = totalTokens;
+    }
+    
+    // Get the paginated tokens
+    const paginatedTokens = tokensWithPrice.slice(startIndex, endIndex);
+    
+    console.log(`Pagination: page ${page}, limit ${limit}, showing tokens ${startIndex + 1}-${endIndex} of ${totalTokens}`);
+    
     return {
       address: walletAddress,
-      tokens: tokensWithPrice,
+      tokens: paginatedTokens,
       totalValue,
-      tokenCount: tokensWithPrice.length,
+      tokenCount: totalTokens, // Keep the total count, not just the paginated count
       plsBalance: nativePlsBalance?.balanceFormatted || plsToken?.balanceFormatted || null,
       plsPriceChange: plsToken?.priceChange24h || null,
       networkCount: 1, // Default to PulseChain network
+      pagination: {
+        page,
+        limit,
+        totalItems: totalTokens,
+        totalPages
+      }
     };
   } catch (error) {
     console.error('Error in getWalletData:', error);
