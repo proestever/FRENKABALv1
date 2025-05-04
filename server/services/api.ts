@@ -554,15 +554,48 @@ export async function getWalletTransactionHistory(
         console.log('Response data keys:', Object.keys(responseData));
       }
       
-      const result = responseData?.result || [];
+      let result = responseData?.result || [];
       const cursor = responseData?.cursor || null;
       const page = responseData?.page || 0;
       const page_size = responseData?.page_size || limit;
       
+      // Process transaction data to add direction property to transfers
+      result = result.map((tx: any) => {
+        // Process ERC20 transfers to add direction
+        if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+          tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
+            // Set direction based on from/to addresses
+            const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+            const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+            
+            return {
+              ...transfer,
+              direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+            };
+          });
+        }
+        
+        // Process native transfers to add direction
+        if (tx.native_transfers && tx.native_transfers.length > 0) {
+          tx.native_transfers = tx.native_transfers.map((transfer: any) => {
+            // Set direction based on from/to addresses
+            const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+            const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+            
+            return {
+              ...transfer,
+              direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+            };
+          });
+        }
+        
+        return tx;
+      });
+      
       console.log(`Successfully fetched transaction history for ${walletAddress} - ${result.length} transactions`);
       console.log('First transaction sample:', result.length > 0 ? JSON.stringify(result[0]).substring(0, 300) : 'No transactions');
       
-      // Success - return the data
+      // Success - return the processed data
       return {
         result,
         cursor,
