@@ -5,6 +5,7 @@ import { getWalletData, getTokenPrice, getWalletTransactionHistory } from "./ser
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
+import { ethers } from "ethers";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -478,10 +479,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User API Routes
+// User API Routes
   app.post("/api/users/wallet", async (req, res) => {
     try {
-      const { walletAddress } = req.body;
+      const { walletAddress, signature, message, timestamp } = req.body;
       
       if (!walletAddress || typeof walletAddress !== 'string') {
         return res.status(400).json({ message: "Valid wallet address is required" });
@@ -493,14 +494,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user already exists
       let user = await storage.getUserByUsername(username);
       
-      if (user) {
+      // Verify signature if provided
+      let signatureVerified = false;
+      
+      if (signature && message && timestamp) {
+        try {
+          // Recover the address from the signature
+          const recoveredAddress = ethers.utils.verifyMessage(message, signature);
+          
+          // Check if the recovered address matches the claimed address
+          if (recoveredAddress.toLowerCase() === walletAddress.toLowerCase()) {
+            console.log(`Signature verified for wallet ${walletAddress}`);
+            signatureVerified = true;
+            
+            // Check timestamp freshness (10 minutes)
+            const currentTime = Date.now();
+            const messageTime = parseInt(timestamp.toString());
+            const maxAgeMs = 10 * 60 * 1000; // 10 minutes
+            
+            if (isNaN(messageTime) || (currentTime - messageTime) > maxAgeMs) {
+              console.log(`Signature timestamp too old or invalid: ${messageTime}`);
+              signatureVerified = false;
+              return res.status(401).json({
+                message: "Signature has expired. Please reconnect your wallet."
+              });
+            }
+          } else {
+            console.log(`Signature verification failed for wallet ${walletAddress}. Recovered: ${recoveredAddress}`);
+            return res.status(401).json({
+              message: "Signature verification failed. The signature doesn't match the wallet address."
+            });
+          }
+        } catch (signError) {
+          console.error("Error verifying signature:", signError);
+          return res.status(401).json({
+            message: "Invalid signature format."
+          });
+        }
+      } 
+      // For read-only operations or user lookup without sensitive actions,
+      // we can still return user info without signature if the user exists
+      else if (user) {
+        console.log(`Returning existing user ${user.id} for wallet ${walletAddress} without signature verification`);
+        return res.json({ 
+          id: user.id,
+          username: user.username
+        });
+      } 
+      // But for creating a new user, we require signature verification
+      else if (!signatureVerified) {
+        console.log(`Attempt to create new user for wallet ${walletAddress} without signature verification`);
+        return res.status(401).json({
+          message: "Signature verification required to create a new account."
+        });
+      }
+      
+      // If verification passed and user exists, return the user
+      if (signatureVerified && user) {
         return res.json({ 
           id: user.id,
           username: user.username
         });
       }
       
-      // User doesn't exist, create a new one
+      // User doesn't exist and signature is verified, create a new one
       // Generate a deterministic password (not secure, but suitable for this demo)
       const password = `pwd_${walletAddress.toLowerCase()}`;
       
@@ -510,6 +567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           password
         });
         
+        console.log(`Created new user ${user.id} for verified wallet ${walletAddress}`);
         return res.json({ 
           id: user.id,
           username: user.username

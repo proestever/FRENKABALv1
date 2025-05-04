@@ -303,18 +303,35 @@ export async function deleteBookmark(id: number): Promise<boolean> {
 }
 
 /**
- * Create or get user ID from wallet address
+ * Create or get user ID from wallet address, with signature verification
+ * @param walletAddress The wallet address
+ * @param authData Optional authentication data with signature
  */
-export async function getUserFromWallet(walletAddress: string): Promise<number | null> {
+export async function getUserFromWallet(
+  walletAddress: string, 
+  authData?: { 
+    signature: string;
+    message: string;
+    timestamp: number;
+    walletAddress: string;
+  }
+): Promise<number | null> {
   try {
+    const requestBody: any = { walletAddress };
+    
+    // If authentication data is provided, include it in the request
+    if (authData) {
+      requestBody.signature = authData.signature;
+      requestBody.message = authData.message;
+      requestBody.timestamp = authData.timestamp;
+    }
+    
     const response = await fetch('/api/users/wallet', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        walletAddress
-      }),
+      body: JSON.stringify(requestBody),
     });
     
     if (!response.ok) {

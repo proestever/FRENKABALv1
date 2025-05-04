@@ -230,25 +230,61 @@ export function useWallet(): UseWalletReturn {
         const address = accounts[0];
         console.log("Wallet connected:", address);
         
-        // Set the account without waiting for signature
-        setAccount(address);
+        // Initialize ethers provider and signer
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
         
-        // Store wallet info in localStorage for persistence
-        localStorage.setItem('walletConnected', 'true');
-        localStorage.setItem('walletAddress', address);
-        localStorage.setItem('lastLoginTimestamp', Date.now().toString());
+        // Create a message for the user to sign, including a nonce for security
+        const timestamp = Date.now();
+        const message = `Sign this message to verify you own this wallet address:\n\n${address}\n\nTimestamp: ${timestamp}\n\nThis signature doesn't cost any gas or send a transaction.`;
         
-        // Get chain ID directly from ethereum
-        const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-        const chainId = parseInt(chainIdHex, 16);
-        setChainId(chainId);
-        console.log("Connected to network:", chainId);
-        
-        // Create or get user ID for this wallet
-        const user = await getUserFromWallet(address);
-        if (user) {
-          setUserId(user);
-          localStorage.setItem('userId', String(user));
+        // Request signature from user's wallet
+        console.log("Requesting signature to verify wallet ownership...");
+        let signature;
+        try {
+          // Show a toast to inform the user about the signature request
+          toast({
+            title: "Signature Required",
+            description: "Please sign the message in your wallet to verify ownership.",
+          });
+          
+          signature = await signer.signMessage(message);
+          console.log("Signature received:", signature.substring(0, 20) + "...");
+          
+          // Now we can verify the address owns this wallet through the signature
+          
+          // Set the account after signature verified
+          setAccount(address);
+          
+          // Store wallet info in localStorage for persistence
+          localStorage.setItem('walletConnected', 'true');
+          localStorage.setItem('walletAddress', address);
+          localStorage.setItem('lastLoginTimestamp', Date.now().toString());
+          localStorage.setItem('walletSignature', signature);
+          localStorage.setItem('signatureTimestamp', timestamp.toString());
+          
+          // Get chain ID directly from ethereum
+          const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+          const chainId = parseInt(chainIdHex, 16);
+          setChainId(chainId);
+          console.log("Connected to network:", chainId);
+          
+          // Create or get user ID for this wallet - pass signature for verification
+          const userData = {
+            walletAddress: address,
+            signature: signature,
+            message: message,
+            timestamp: timestamp
+          };
+          
+          const user = await getUserFromWallet(address, userData);
+          if (user) {
+            setUserId(user);
+            localStorage.setItem('userId', String(user));
+          }
+        } catch (signError) {
+          console.error("Signature request was rejected:", signError);
+          throw new Error("You must sign the message to verify wallet ownership");
         }
         
         toast({
