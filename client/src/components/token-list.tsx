@@ -75,22 +75,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress }: TokenL
     });
   }, [filteredTokens, sortBy]);
 
-  // Handle loading state
-  if (isLoading) {
-    return (
-      <Card className="p-6 border-border shadow-lg backdrop-blur-sm bg-card/70">
-        <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-secondary/60 rounded w-1/4"></div>
-          <div className="h-10 bg-secondary/60 rounded w-full"></div>
-          <div className="space-y-2">
-            <div className="h-20 bg-secondary/60 rounded"></div>
-            <div className="h-20 bg-secondary/60 rounded"></div>
-            <div className="h-20 bg-secondary/60 rounded"></div>
-          </div>
-        </div>
-      </Card>
-    );
-  }
+  // Skip loading state as we already have a progress bar at the top of the page
+  // We'll let the parent component handle the loading state entirely
 
   // Handle error state
   if (hasError) {
