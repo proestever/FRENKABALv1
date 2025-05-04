@@ -1155,11 +1155,43 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       // Continue with the tokens we already have
     }
   
+    // Add important tokens that should always be included
+    const existingTokenAddresses = tokensWithPrice.map(token => token.address.toLowerCase());
+    
+    // Update loading progress to indicate we're fetching important tokens
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: totalBatches + 7,
+      totalBatches: totalBatches + 8,
+      message: 'Checking for important tokens...'
+    });
+    
+    // Fetch any important tokens that aren't already in the list
+    for (const tokenAddress of IMPORTANT_TOKENS) {
+      if (!existingTokenAddresses.includes(tokenAddress.toLowerCase())) {
+        console.log(`Adding important token: ${tokenAddress} that wasn't in standard results`);
+        try {
+          const tokenData = await getSpecificTokenBalance(walletAddress, tokenAddress);
+          if (tokenData) {
+            tokensWithPrice.push(tokenData);
+            // Update total value if the token has a price
+            if (tokenData.value) {
+              totalValue += tokenData.value;
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching important token ${tokenAddress}:`, error);
+        }
+      } else {
+        console.log(`Important token ${tokenAddress} already exists in results`);
+      }
+    }
+    
     // Update loading progress to complete
     updateLoadingProgress({
       status: 'complete',
-      currentBatch: totalBatches + 7, // Account for the extra step
-      totalBatches: totalBatches + 7, // Ensure we have the right total
+      currentBatch: totalBatches + 8, // Account for the extra step
+      totalBatches: totalBatches + 8, // Ensure we have the right total
       message: 'Data loaded successfully'
     });
     
