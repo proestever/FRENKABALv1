@@ -12,7 +12,7 @@ export function ClickableAddress({ address, showPrefix = false, className = "" }
       href={`/${address}`}
       target="_blank"
       rel="noopener noreferrer"
-      className={`text-primary hover:text-teal-400 hover:underline ${className}`}
+      className={`text-gray-400 hover:text-teal-400 hover:underline ${className}`}
     >
       {showPrefix && (address === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? 'PLS Native: ' : '')}
       {shortenAddress(address)}
