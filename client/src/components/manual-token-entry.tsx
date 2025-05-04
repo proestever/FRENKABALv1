@@ -70,7 +70,7 @@ export function ManualTokenEntry({ walletAddress, onTokenAdded }: ManualTokenEnt
             <Button 
               onClick={handleSearchToken}
               disabled={isLoading}
-              className="whitespace-nowrap"
+              className="whitespace-nowrap bg-gray-800/50 backdrop-blur-sm border border-white/10 hover:bg-gray-700/50"
             >
               {isLoading ? 'Loading...' : 'Add Token'}
             </Button>
