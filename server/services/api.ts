@@ -933,59 +933,66 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
       console.log(`PLS token not found in fallback. Tokens: ${tokensWithPrice.map(t => t.symbol).join(', ')}`);
     }
     
-    // ENHANCEMENT: Try a more direct API call to make sure we're getting the latest data
-    // This will help ensure we get new tokens faster without using transaction history
+    // ENHANCEMENT: Try a more direct Moralis API call to make sure we're getting the latest data
+    // This is more reliable than PulseChain Explorer API and shows new tokens faster
     try {
-      console.log("Double-checking token balances with direct API call...");
+      console.log("Double-checking token balances with direct Moralis API...");
       updateLoadingProgress({
         currentBatch: totalBatches + 6, 
         totalBatches: totalBatches + 7,
-        message: 'Refreshing token balances...'
+        message: 'Refreshing token balances via Moralis...'
       });
       
-      // Make a direct API call to the PulseChain Explorer API
-      // This API might have more up-to-date information than our regular sources
-      const directTokenUrl = `https://scan.pulsechain.com/api/v2/addresses/${walletAddress}/token-balances`;
-      console.log(`Making direct API call to PulseChain Explorer: ${directTokenUrl}`);
+      // Make a direct API call to Moralis for the most up-to-date token balances
+      console.log(`Making direct Moralis API call for wallet: ${walletAddress}`);
       
       try {
-        const directResponse = await fetch(directTokenUrl, {
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'FrenKabal/1.0'
-          },
-          timeout: 10000
+        // Direct API call to Moralis to get all tokens for the wallet
+        const moralisTokensResponse = await Moralis.EvmApi.token.getWalletTokenBalances({
+          chain: "0x171", // PulseChain chain ID
+          address: walletAddress,
         });
         
-        if (directResponse.ok) {
-          const directTokenData = await directResponse.json();
+        if (moralisTokensResponse && moralisTokensResponse.raw) {
+          const moralisTokens = moralisTokensResponse.raw;
+          console.log(`Moralis direct API call returned ${moralisTokens.length} tokens`);
           
-          if (Array.isArray(directTokenData) && directTokenData.length > 0) {
-            console.log(`Direct API call returned ${directTokenData.length} tokens`);
-            
-            // Get existing token addresses for comparison
-            const existingTokenAddresses = tokensWithPrice.map(t => t.address.toLowerCase());
-            const missingTokens: ProcessedToken[] = [];
-            
-            // Process tokens from direct API call
-            for (const item of directTokenData) {
-              try {
-                if (item && item.token && item.token.address && 
-                    !existingTokenAddresses.includes(item.token.address.toLowerCase())) {
-                  
-                  console.log(`Found token ${item.token.symbol || 'Unknown'} (${item.token.address}) in direct API that's not in balance list`);
-                  
-                  const decimals = parseInt(item.token.decimals || '18') || 18;
-                  const balance = item.value || '0';
-                  const balanceFormatted = parseFloat(balance) / Math.pow(10, decimals);
-                  
-                  // Try to get token price
-                  let price: number | undefined;
-                  let priceChange: number | undefined;
-                  let logoUrl = item.token.icon_url || null;
-                  
+          // Get existing token addresses for comparison
+          const existingTokenAddresses = tokensWithPrice.map(t => t.address.toLowerCase());
+          const missingTokens: ProcessedToken[] = [];
+          
+          // Process tokens from Moralis API call
+          for (const token of moralisTokens) {
+            try {
+              if (token && token.token_address && 
+                  !existingTokenAddresses.includes(token.token_address.toLowerCase())) {
+                
+                console.log(`Found token ${token.symbol || 'Unknown'} (${token.token_address}) in Moralis API that's not in balance list`);
+                
+                // Process token data
+                const decimals = parseInt(String(token.decimals) || '18') || 18;
+                const balance = token.balance || '0';
+                const balanceFormatted = parseFloat(balance) / Math.pow(10, decimals);
+                
+                // Get logo and other details
+                let price: number | undefined = undefined;
+                let priceChange: number | undefined = undefined;
+                
+                // Attempt to get price info if available in Moralis response
+                // These fields might be available in future Moralis API updates
+                if ('usd_price' in token && typeof token.usd_price === 'number') {
+                  price = token.usd_price;
+                }
+                
+                if ('usd_price_24hr_percent_change' in token && typeof token.usd_price_24hr_percent_change === 'number') {
+                  priceChange = token.usd_price_24hr_percent_change;
+                }
+                let logoUrl = token.logo || token.thumbnail || null;
+                
+                // If we don't have price from Moralis, try to get it from our price API
+                if (!price) {
                   try {
-                    const priceData = await getTokenPrice(item.token.address);
+                    const priceData = await getTokenPrice(token.token_address);
                     if (priceData) {
                       price = priceData.usdPrice;
                       priceChange = priceData.usdPrice24hrPercentChange;
@@ -996,85 +1003,86 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
                       }
                     }
                   } catch (priceError) {
-                    console.log(`Could not get price for token ${item.token.address}: ${priceError}`);
+                    console.log(`Could not get price for token ${token.token_address}: ${priceError}`);
                     // Continue without price data
                   }
-                  
-                  // If no logo yet, try from our database
-                  if (!logoUrl) {
-                    try {
-                      const storedLogo = await storage.getTokenLogo(item.token.address);
-                      if (storedLogo) {
-                        logoUrl = storedLogo.logoUrl;
-                      } else {
-                        // Use default logo as last resort
-                        logoUrl = getDefaultLogo(item.token.symbol);
-                      }
-                    } catch (logoError) {
-                      console.log(`Error getting logo for token ${item.token.address}: ${logoError}`);
-                      // Use default logo as last resort
-                      logoUrl = getDefaultLogo(item.token.symbol);
-                    }
-                  }
-                  
-                  missingTokens.push({
-                    address: item.token.address,
-                    symbol: item.token.symbol || 'Unknown',
-                    name: item.token.name || 'Unknown Token',
-                    decimals,
-                    balance,
-                    balanceFormatted,
-                    price,
-                    value: price ? balanceFormatted * price : undefined,
-                    priceChange24h: priceChange,
-                    logo: logoUrl,
-                    verified: item.token.is_verified === true,
-                    isNative: false
-                  });
-                  
-                  // Store logo in our database if we have one
-                  if (logoUrl && !logoUrl.startsWith('/assets/')) {
-                    try {
-                      const newLogo: InsertTokenLogo = {
-                        tokenAddress: item.token.address,
-                        logoUrl,
-                        symbol: item.token.symbol || 'Unknown',
-                        name: item.token.name || 'Unknown Token',
-                        lastUpdated: new Date().toISOString()
-                      };
-                      
-                      await storage.saveTokenLogo(newLogo);
-                    } catch (storageError) {
-                      console.error(`Error storing logo for token ${item.token.address}:`, storageError);
-                    }
-                  }
-                  
-                  // Add to existing addresses to avoid duplicates
-                  existingTokenAddresses.push(item.token.address.toLowerCase());
                 }
-              } catch (tokenError) {
-                console.error('Error processing token from direct API:', tokenError);
+                
+                // If no logo yet, try from our database
+                if (!logoUrl) {
+                  try {
+                    const storedLogo = await storage.getTokenLogo(token.token_address);
+                    if (storedLogo) {
+                      logoUrl = storedLogo.logoUrl;
+                    } else {
+                      // Use default logo as last resort
+                      logoUrl = getDefaultLogo(token.symbol);
+                    }
+                  } catch (logoError) {
+                    console.log(`Error getting logo for token ${token.token_address}: ${logoError}`);
+                    // Use default logo as last resort
+                    logoUrl = getDefaultLogo(token.symbol);
+                  }
+                }
+                
+                // Create processed token object
+                missingTokens.push({
+                  address: token.token_address,
+                  symbol: token.symbol || 'Unknown',
+                  name: token.name || 'Unknown Token',
+                  decimals,
+                  balance,
+                  balanceFormatted,
+                  price,
+                  value: price ? balanceFormatted * price : undefined,
+                  priceChange24h: priceChange,
+                  logo: logoUrl,
+                  verified: token.verified_contract === true,
+                  securityScore: 'security_score' in token ? (token.security_score as number) : undefined,
+                  isNative: false
+                });
+                
+                // Store logo in our database if we have one
+                if (logoUrl && !logoUrl.startsWith('/assets/')) {
+                  try {
+                    const newLogo: InsertTokenLogo = {
+                      tokenAddress: token.token_address,
+                      logoUrl,
+                      symbol: token.symbol || 'Unknown',
+                      name: token.name || 'Unknown Token',
+                      lastUpdated: new Date().toISOString()
+                    };
+                    
+                    await storage.saveTokenLogo(newLogo);
+                  } catch (storageError) {
+                    console.error(`Error storing logo for token ${token.token_address}:`, storageError);
+                  }
+                }
+                
+                // Add to existing addresses to avoid duplicates
+                existingTokenAddresses.push(token.token_address.toLowerCase());
               }
+            } catch (tokenError) {
+              console.error('Error processing token from Moralis API:', tokenError);
             }
+          }
+          
+          // Add missing tokens to the main list
+          if (missingTokens.length > 0) {
+            console.log(`Adding ${missingTokens.length} tokens from Moralis API to balance list`);
+            tokensWithPrice.push(...missingTokens);
             
-            // Add missing tokens to the main list
-            if (missingTokens.length > 0) {
-              console.log(`Adding ${missingTokens.length} tokens from direct API to balance list`);
-              tokensWithPrice.push(...missingTokens);
-              
-              // Recalculate total value including new tokens
-              totalValue = tokensWithPrice.reduce((sum, token) => {
-                return sum + (token.value || 0);
-              }, 0);
-            }
-          } else {
-            console.log('Direct API call did not return any tokens');
+            // Recalculate total value including new tokens
+            totalValue = tokensWithPrice.reduce((sum, token) => {
+              return sum + (token.value || 0);
+            }, 0);
           }
         } else {
-          console.log(`Direct API call failed: ${directResponse.status} ${directResponse.statusText}`);
+          console.log('Moralis API call did not return any tokens or had invalid response format');
         }
-      } catch (directApiError) {
-        console.error("Error with direct API call:", directApiError);
+      } catch (moralisError) {
+        console.error("Error with Moralis API call:", moralisError);
+        // Continue without the Moralis data, we already have tokens from the standard flow
       }
     } catch (tokenError) {
       console.error("Error checking for additional tokens:", tokenError);
