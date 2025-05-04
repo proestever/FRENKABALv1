@@ -659,7 +659,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                               {transfer.direction === 'receive' ? 'From: ' : 'To: '}
                               <Link 
                                 to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
-                                className="text-primary hover:text-primary/80 underline"
+                                className="text-white hover:text-gray-300 underline"
                               >
                                 {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                               </Link>
@@ -691,7 +691,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                               {transfer.direction === 'receive' ? 'From: ' : 'To: '}
                               <Link 
                                 to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
-                                className="text-primary hover:text-primary/80 underline"
+                                className="text-white hover:text-gray-300 underline"
                               >
                                 {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
                               </Link>
