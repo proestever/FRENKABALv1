@@ -101,11 +101,11 @@ export async function getDonations(donationAddress: string): Promise<DonationRec
     // Fetch transactions for the donation address
     const maxPages = 5; // Limit to 5 pages to avoid API overload
     const txPerPage = 100;
-    let cursor = null;
+    let cursor: string | null = null;
     let allTransactions: Transaction[] = [];
     
     for (let page = 0; page < maxPages; page++) {
-      const response = await getWalletTransactionHistory(donationAddress, cursor, txPerPage);
+      const response = await getWalletTransactionHistory(donationAddress, txPerPage, cursor);
       
       if (!response || !response.result) {
         break;

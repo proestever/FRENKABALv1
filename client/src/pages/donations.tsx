@@ -53,108 +53,45 @@ export function Donations() {
         setIsLoading(true);
         setError(null);
         
-        // This would be replaced with actual API call to fetch donation data
-        // For now using mocked data to demonstrate UI
-        const response = await fetch(`/api/wallet/${DONATIONS_ADDRESS}/transactions`);
+        // Make API call to fetch donation data
+        const response = await fetch(`/api/donations/${DONATIONS_ADDRESS}`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch donation data');
         }
         
-        const data = await response.json();
+        // Get donation records from API
+        const donationRecords = await response.json();
         
-        // Process transactions into donations
-        // In a real implementation, this would process transaction data
-        // and identify donations, calculate USD values, etc.
+        // Map the API response to our Donor type
+        const mappedDonors: Donor[] = donationRecords.map((record: any) => ({
+          address: record.donorAddress,
+          totalDonated: record.totalValueUsd,
+          donations: record.donations.map((donation: any) => ({
+            txHash: donation.txHash,
+            tokenAddress: donation.tokenAddress,
+            tokenSymbol: donation.tokenSymbol || 'Unknown',
+            amount: donation.amount,
+            valueUsd: donation.valueUsd,
+            timestamp: donation.timestamp
+          })),
+          rank: record.rank
+        }));
         
-        // For demo, using mock data
-        const mockDonors: Donor[] = [
-          {
-            address: '0x123...abc1',
-            totalDonated: 1200,
-            donations: [
-              { 
-                txHash: '0xabc...123', 
-                tokenAddress: '0x0000000000000000000000000000000000000000', 
-                tokenSymbol: 'PLS',
-                amount: '1000',
-                valueUsd: 1000,
-                timestamp: Date.now() - 86400000 * 2
-              },
-              { 
-                txHash: '0xdef...456', 
-                tokenAddress: '0xCA9bA905926e4592632d11827EDC47607C92e585', 
-                tokenSymbol: 'DAI',
-                amount: '200',
-                valueUsd: 200,
-                timestamp: Date.now() - 86400000 
-              }
-            ],
-            rank: 1
-          },
-          {
-            address: '0x456...def2',
-            totalDonated: 800,
-            donations: [
-              { 
-                txHash: '0xghi...789', 
-                tokenAddress: '0x0000000000000000000000000000000000000000', 
-                tokenSymbol: 'PLS',
-                amount: '800',
-                valueUsd: 800,
-                timestamp: Date.now() - 86400000 * 3
-              }
-            ],
-            rank: 2
-          },
-          {
-            address: '0x789...ghi3',
-            totalDonated: 500,
-            donations: [
-              { 
-                txHash: '0xjkl...012', 
-                tokenAddress: '0x0000000000000000000000000000000000000000', 
-                tokenSymbol: 'PLS',
-                amount: '500',
-                valueUsd: 500,
-                timestamp: Date.now() - 86400000 * 4
-              }
-            ],
-            rank: 3
-          }
-        ];
+        // If no donations found yet, use an empty array
+        const processedDonors = mappedDonors.length > 0 ? mappedDonors : [];
         
-        // Add more mock donors
-        for (let i = 4; i <= 10; i++) {
-          mockDonors.push({
-            address: `0x${i}23...abc${i}`,
-            totalDonated: 1000 - i * 100,
-            donations: [
-              { 
-                txHash: `0xabc...${i}23`, 
-                tokenAddress: '0x0000000000000000000000000000000000000000', 
-                tokenSymbol: 'PLS',
-                amount: `${1000 - i * 100}`,
-                valueUsd: 1000 - i * 100,
-                timestamp: Date.now() - 86400000 * i
-              }
-            ],
-            rank: i
-          });
+        // Set top donor if available
+        if (processedDonors.length > 0) {
+          setTopDonor(processedDonors[0]);
         }
         
-        // Sort by total donated
-        const sortedDonors = mockDonors.sort((a, b) => b.totalDonated - a.totalDonated);
-        
-        // Set top donor
-        setTopDonor(sortedDonors[0]);
-        
         // Set all donors
-        setDonors(sortedDonors);
+        setDonors(processedDonors);
         
         // If user is connected, find their rank
         if (isConnected && account) {
-          const userDonor = sortedDonors.find(
+          const userDonor = processedDonors.find(
             donor => donor.address.toLowerCase() === account.toLowerCase()
           );
           
