@@ -702,7 +702,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       </div>
       
       {/* Transactions Table - Desktop View */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="hidden md:block">
         <table className="w-full">
           <thead className="bg-black/40 border-b border-white/20">
             <tr>
