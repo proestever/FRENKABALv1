@@ -297,11 +297,7 @@ export function Donations() {
                 <span>PLS</span>
               </div>
               
-              <div className="glass-card bg-black/30 border border-white/10 p-2 rounded-lg flex items-center">
-                <TokenLogo address="0xCA9bA905926e4592632d11827EDC47607C92e585" symbol="DAI" size="sm" />
-                <span className="ml-2">DAI</span>
-              </div>
-              
+
               <div className="glass-card bg-black/30 border border-white/10 p-2 rounded-lg flex items-center">
                 <TokenLogo address="0x95B303987A60C71504D99Aa1b13B4DA07b0790ab" symbol="PLSX" size="sm" />
                 <span className="ml-2">PLSX</span>
