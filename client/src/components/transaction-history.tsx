@@ -197,7 +197,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         const processedTransactions = (response.result || []).map(tx => {
           // Process ERC20 transfers to add direction
           if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-            tx.erc20_transfers = tx.erc20_transfers.map(transfer => {
+            // Use type assertion for TransactionTransfer
+            tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
               // Set direction based on from/to addresses
               const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
               const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
@@ -211,7 +212,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           
           // Process native transfers to add direction
           if (tx.native_transfers && tx.native_transfers.length > 0) {
-            tx.native_transfers = tx.native_transfers.map(transfer => {
+            // Use type assertion for TransactionTransfer
+            tx.native_transfers = tx.native_transfers.map((transfer: any) => {
               // Set direction based on from/to addresses
               const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
               const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
@@ -290,7 +292,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         const processedTransactions = moreData.result.map(tx => {
           // Process ERC20 transfers to add direction
           if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-            tx.erc20_transfers = tx.erc20_transfers.map(transfer => {
+            tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
               // Set direction based on from/to addresses
               const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
               const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
@@ -304,7 +306,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           
           // Process native transfers to add direction
           if (tx.native_transfers && tx.native_transfers.length > 0) {
-            tx.native_transfers = tx.native_transfers.map(transfer => {
+            tx.native_transfers = tx.native_transfers.map((transfer: any) => {
               // Set direction based on from/to addresses
               const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
               const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
@@ -470,7 +472,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       transactions.forEach((tx: Transaction) => {
         // Get token addresses from ERC20 transfers
         if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-          tx.erc20_transfers.forEach(transfer => {
+          tx.erc20_transfers.forEach((transfer: any) => {
             if (transfer.address) {
               addresses.add(transfer.address);
             }
