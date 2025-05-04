@@ -694,7 +694,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                       href={`https://dexscreener.com/pulsechain/${transfer.address}`} 
                                       target="_blank" 
                                       rel="noopener noreferrer"
-                                      className="text-primary hover:text-primary/70 flex items-center"
+                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
                                     >
                                       <ExternalLink size={10} className="mr-1" />
                                       DexScreener
@@ -703,7 +703,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                       href={`https://otter.pulsechain.com/address/${transfer.address}`} 
                                       target="_blank" 
                                       rel="noopener noreferrer"
-                                      className="text-primary hover:text-primary/70 flex items-center"
+                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
                                     >
                                       <ExternalLink size={10} className="mr-1" />
                                       Otterscan
@@ -712,7 +712,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                       href={`https://scan.pulsechain.com/token/${transfer.address}`} 
                                       target="_blank" 
                                       rel="noopener noreferrer"
-                                      className="text-primary hover:text-primary/70 flex items-center"
+                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200"
                                     >
                                       <ExternalLink size={10} className="mr-1" />
                                       PulseScan
@@ -769,7 +769,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                       href="https://dexscreener.com/pulsechain/0x8a810ea8B121d08342E9e7696f4a9915cBE494B7" 
                                       target="_blank" 
                                       rel="noopener noreferrer"
-                                      className="text-primary hover:text-primary/70 flex items-center"
+                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
                                     >
                                       <ExternalLink size={10} className="mr-1" />
                                       DexScreener
@@ -778,7 +778,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                       href="https://otter.pulsechain.com" 
                                       target="_blank" 
                                       rel="noopener noreferrer"
-                                      className="text-primary hover:text-primary/70 flex items-center"
+                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
                                     >
                                       <ExternalLink size={10} className="mr-1" />
                                       Otterscan
@@ -787,7 +787,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                       href="https://scan.pulsechain.com" 
                                       target="_blank" 
                                       rel="noopener noreferrer"
-                                      className="text-primary hover:text-primary/70 flex items-center"
+                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200"
                                     >
                                       <ExternalLink size={10} className="mr-1" />
                                       PulseScan
@@ -958,7 +958,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 href={`https://dexscreener.com/pulsechain/${transfer.address}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-primary hover:text-primary/70 flex items-center"
+                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
                               >
                                 <ExternalLink size={10} className="mr-1" />
                                 DexScreener
@@ -967,7 +967,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 href={`https://otter.pulsechain.com/address/${transfer.address}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-primary hover:text-primary/70 flex items-center"
+                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
                               >
                                 <ExternalLink size={10} className="mr-1" />
                                 Otterscan
@@ -976,7 +976,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 href={`https://scan.pulsechain.com/token/${transfer.address}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-primary hover:text-primary/70 flex items-center"
+                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200"
                               >
                                 <ExternalLink size={10} className="mr-1" />
                                 PulseScan
@@ -1047,7 +1047,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 href="https://dexscreener.com/pulsechain/0x8a810ea8B121d08342E9e7696f4a9915cBE494B7" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-primary hover:text-primary/70 flex items-center"
+                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
                               >
                                 <ExternalLink size={10} className="mr-1" />
                                 DexScreener
@@ -1056,7 +1056,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 href="https://otter.pulsechain.com" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-primary hover:text-primary/70 flex items-center"
+                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
                               >
                                 <ExternalLink size={10} className="mr-1" />
                                 Otterscan
@@ -1065,7 +1065,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 href="https://scan.pulsechain.com" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-primary hover:text-primary/70 flex items-center"
+                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200"
                               >
                                 <ExternalLink size={10} className="mr-1" />
                                 PulseScan
