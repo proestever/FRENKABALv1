@@ -123,6 +123,58 @@ export function Donations() {
     fetchDonationData();
   }, [isConnected, account]);
   
+  // Fetch user profiles for donors
+  useEffect(() => {
+    const fetchDonorProfiles = async () => {
+      if (donors.length === 0) return;
+      
+      try {
+        // Create a copy of donors for modification
+        const donorsWithProfiles = [...donors];
+        
+        // Fetch profiles for each donor
+        // Start with the top 10 donors to prioritize loading the most important ones first
+        const topDonors = donorsWithProfiles.slice(0, Math.min(10, donorsWithProfiles.length));
+        
+        // Fetch profiles in parallel
+        await Promise.all(
+          topDonors.map(async (donor, index) => {
+            try {
+              const profile = await getUserProfileByWallet(donor.address);
+              if (profile) {
+                donorsWithProfiles[index].profile = {
+                  displayName: profile.displayName,
+                  website: profile.website,
+                  twitterHandle: profile.twitterHandle,
+                  bio: profile.bio
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching profile for donor ${donor.address}:`, error);
+            }
+          })
+        );
+        
+        // Update the donors state with profiles
+        setDonors(donorsWithProfiles);
+        
+        // Update top donor if it's in the list
+        if (topDonor && donorsWithProfiles.length > 0) {
+          const updatedTopDonor = donorsWithProfiles.find(
+            d => d.address === topDonor.address
+          );
+          if (updatedTopDonor) {
+            setTopDonor(updatedTopDonor);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching donor profiles:', error);
+      }
+    };
+    
+    fetchDonorProfiles();
+  }, [donors.length, topDonor]);
+  
   const copyAddressToClipboard = () => {
     navigator.clipboard.writeText(DONATIONS_ADDRESS);
     setCopiedAddress(true);
@@ -285,17 +337,60 @@ export function Donations() {
                 </div>
                 <CardHeader>
                   <CardTitle className="flex items-center">
-                    <span className="text-2xl font-bold text-yellow-400">👑 {shortenAddress(topDonor.address)}</span>
+                    <span className="text-2xl font-bold text-yellow-400">
+                      👑 {topDonor.profile?.displayName || shortenAddress(topDonor.address)}
+                    </span>
                   </CardTitle>
                   <CardDescription>
-                    <span className="text-white/80">Our biggest supporter - thank you!</span>
+                    {topDonor.profile?.displayName ? (
+                      <span className="text-white/80 font-mono text-xs">{shortenAddress(topDonor.address)}</span>
+                    ) : (
+                      <span className="text-white/80">Our biggest supporter - thank you!</span>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xl font-bold">{formatCurrency(topDonor.totalDonated)}</p>
-                  <p className="text-sm text-white/60 mt-1">
-                    Total donations: {topDonor.donations.length}
-                  </p>
+                  <div className="mb-3">
+                    <p className="text-xl font-bold">{formatCurrency(topDonor.totalDonated)}</p>
+                    <p className="text-sm text-white/60">
+                      Total donations: {topDonor.donations.length}
+                    </p>
+                  </div>
+                  
+                  {/* Profile information */}
+                  {topDonor.profile && (
+                    <div className="mt-4 space-y-2 border-t border-white/10 pt-3">
+                      {topDonor.profile.website && (
+                        <a 
+                          href={topDonor.profile.website} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
+                        >
+                          <Globe className="h-4 w-4" />
+                          <span className="truncate">{topDonor.profile.website.replace(/^https?:\/\//, '')}</span>
+                        </a>
+                      )}
+                      
+                      {topDonor.profile.twitterHandle && (
+                        <a 
+                          href={`https://x.com/${topDonor.profile.twitterHandle.replace('@', '')}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
+                        >
+                          <Twitter className="h-4 w-4" />
+                          <span>{topDonor.profile.twitterHandle}</span>
+                        </a>
+                      )}
+                      
+                      {topDonor.profile.bio && (
+                        <p className="text-xs text-white/60 italic">
+                          "{topDonor.profile.bio}"
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </>
@@ -309,14 +404,51 @@ export function Donations() {
                   <Badge variant="outline" className="text-xs">#{donor.rank}</Badge>
                 </div>
                 <CardHeader className="py-3 px-4">
-                  <CardTitle className="text-base">{shortenAddress(donor.address)}</CardTitle>
-                  <CardDescription className="text-xs">Top Donor</CardDescription>
+                  <CardTitle className="text-base">
+                    {donor.profile?.displayName || shortenAddress(donor.address)}
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    {donor.profile?.displayName ? (
+                      <span className="font-mono">{shortenAddress(donor.address)}</span>
+                    ) : (
+                      "Top Donor"
+                    )}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="py-2 px-4">
                   <p className="text-lg font-bold">{formatCurrency(donor.totalDonated)}</p>
-                  <p className="text-xs text-white/60">
+                  <p className="text-xs text-white/60 mb-2">
                     {donor.donations.length} donation{donor.donations.length !== 1 ? 's' : ''}
                   </p>
+                  
+                  {/* Profile links */}
+                  {donor.profile && (
+                    <div className="flex space-x-2 pt-2 border-t border-white/10">
+                      {donor.profile.website && (
+                        <a 
+                          href={donor.profile.website} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-white/60 hover:text-white transition-colors"
+                          title={donor.profile.website}
+                        >
+                          <Globe className="h-3 w-3" />
+                        </a>
+                      )}
+                      
+                      {donor.profile.twitterHandle && (
+                        <a 
+                          href={`https://x.com/${donor.profile.twitterHandle.replace('@', '')}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-white/60 hover:text-white transition-colors"
+                          title={donor.profile.twitterHandle}
+                        >
+                          <Twitter className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -356,9 +488,10 @@ export function Donations() {
               <thead>
                 <tr className="bg-white/5 border-b border-white/10">
                   <th className="text-left py-3 px-4">Rank</th>
-                  <th className="text-left py-3 px-4">Address</th>
+                  <th className="text-left py-3 px-4">Donor</th>
                   <th className="text-left py-3 px-4">Total Donated</th>
                   <th className="text-left py-3 px-4">Last Donation</th>
+                  <th className="text-left py-3 px-4">Links</th>
                 </tr>
               </thead>
               <tbody>
@@ -384,10 +517,46 @@ export function Donations() {
                         </span>
                       ) : `#${index + 1}`}
                     </td>
-                    <td className="py-3 px-4 font-mono">{shortenAddress(donor.address)}</td>
+                    <td className="py-3 px-4">
+                      {donor.profile?.displayName ? (
+                        <div>
+                          <div className="font-medium">{donor.profile.displayName}</div>
+                          <div className="text-xs font-mono text-white/60">{shortenAddress(donor.address)}</div>
+                        </div>
+                      ) : (
+                        <span className="font-mono">{shortenAddress(donor.address)}</span>
+                      )}
+                    </td>
                     <td className="py-3 px-4 font-bold">{formatCurrency(donor.totalDonated)}</td>
                     <td className="py-3 px-4 text-white/70">
                       {new Date(donor.donations[0].timestamp).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex space-x-2">
+                        {donor.profile?.website && (
+                          <a 
+                            href={donor.profile.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-white/60 hover:text-white transition-colors"
+                            title={donor.profile.website}
+                          >
+                            <Globe className="h-4 w-4" />
+                          </a>
+                        )}
+                        
+                        {donor.profile?.twitterHandle && (
+                          <a 
+                            href={`https://x.com/${donor.profile.twitterHandle.replace('@', '')}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-white/60 hover:text-white transition-colors"
+                            title={donor.profile.twitterHandle}
+                          >
+                            <Twitter className="h-4 w-4" />
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -395,7 +564,7 @@ export function Donations() {
                 {/* If no donors yet, show placeholder */}
                 {donors.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-white/50">
+                    <td colSpan={5} className="py-8 text-center text-white/50">
                       No donations yet. Be the first to donate!
                     </td>
                   </tr>
