@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useWallet } from "@/hooks/use-wallet";
+import { useAuth } from "@/providers/auth-provider";
 import { Bookmark } from "@shared/schema";
 import { 
   Home, 

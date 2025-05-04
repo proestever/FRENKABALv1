@@ -7,7 +7,8 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import { Profile } from "@/pages/profile";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
-import { useWallet } from "@/hooks/use-wallet";
+import { useAuth } from "@/providers/auth-provider";
+import { AuthProvider } from "@/providers/auth-provider";
 import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark } from "lucide-react";
 import telegramLogo from "@assets/Telegram_2019_Logo.svg.png";
 import xLogo from "@assets/X_logo.jpg";
@@ -26,7 +27,7 @@ function Header() {
     isConnected, 
     account, 
     isConnecting 
-  } = useWallet();
+  } = useAuth();
   const [, setLocation] = useLocation();
 
   // Format account address for display
@@ -271,10 +272,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
