@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
@@ -24,16 +24,39 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useWallet } from "@/hooks/use-wallet";
 import { Bookmark } from "@shared/schema";
-import { Home, ExternalLink, Star, Trash2, Wallet, Pencil, Clock, Calendar } from "lucide-react";
+import { 
+  Home, 
+  ExternalLink, 
+  Star, 
+  Trash2, 
+  Wallet, 
+  Pencil, 
+  Clock, 
+  Calendar, 
+  Download, 
+  Upload, 
+  FileUp, 
+  FileDown, 
+  AlertTriangle 
+} from "lucide-react";
+import { 
+  bookmarksToCSV, 
+  csvToBookmarks, 
+  downloadAsFile,
+  getExampleCSV 
+} from "@/lib/csv-utils";
 import { formatAccount } from "../lib/format";
 
 export function Profile() {
   const { isConnected, account, userId } = useWallet();
   const [, setLocation] = useLocation();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importCsvText, setImportCsvText] = useState("");
   const [currentBookmark, setCurrentBookmark] = useState<Bookmark | null>(null);
   const [editedLabel, setEditedLabel] = useState("");
   const [editedNotes, setEditedNotes] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Fetch user's bookmarks
   const { 
