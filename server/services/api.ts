@@ -232,14 +232,14 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
     
     if (response && response.raw && response.raw.length > 0) {
       const tokenData = response.raw[0];
-      const decimals = parseInt(tokenData.decimals);
+      const decimals = parseInt(tokenData.decimals || "18", 10);
       const balance = tokenData.balance;
-      const balanceFormatted = parseInt(balance) / Math.pow(10, decimals);
+      const balanceFormatted = parseFloat(balance) / Math.pow(10, decimals);
       
       // Try to get price data
-      let price = null;
-      let value = null;
-      let priceChange24h = null;
+      let price: number | undefined = undefined;
+      let value: number | undefined = undefined;
+      let priceChange24h: number | undefined = undefined;
       
       try {
         const priceData = await getTokenPrice(tokenAddress);
@@ -248,8 +248,8 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
           value = price * balanceFormatted;
           priceChange24h = priceData.usdPrice24hrPercentChange || 0;
         }
-      } catch (priceError) {
-        console.log(`Could not get price for token ${tokenAddress}: ${priceError.message}`);
+      } catch (priceError: any) {
+        console.log(`Could not get price for token ${tokenAddress}: ${priceError.message || "Unknown error"}`);
       }
       
       return {

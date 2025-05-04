@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { getWalletData, getTokenPrice, getWalletTransactionHistory } from "./services/api";
+import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance } from "./services/api";
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
@@ -89,6 +89,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching token price:", error);
       return res.status(500).json({ 
         message: "Failed to fetch token price",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // API route to get specific token balance for a wallet
+  app.get("/api/wallet/:address/token/:tokenAddress", async (req, res) => {
+    try {
+      const { address, tokenAddress } = req.params;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      if (!tokenAddress || typeof tokenAddress !== 'string') {
+        return res.status(400).json({ message: "Invalid token address" });
+      }
+      
+      // Validate ethereum addresses format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      if (!addressRegex.test(tokenAddress)) {
+        return res.status(400).json({ message: "Invalid token address format" });
+      }
+      
+      // Get the specific token balance
+      const tokenData = await getSpecificTokenBalance(address, tokenAddress);
+      
+      if (!tokenData) {
+        return res.status(404).json({ message: "Token not found or no balance" });
+      }
+      
+      return res.json(tokenData);
+    } catch (error) {
+      console.error("Error fetching specific token balance:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch specific token balance",
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
