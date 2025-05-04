@@ -27,10 +27,9 @@ try {
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98';
 const PLS_TOKEN_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'; // PulseChain native token is 0xeee...eee 
-const WPLS_TOKEN_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'; // wPLS contract - used for price
 const PLS_CONTRACT_ADDRESS = '0x5616458eb2bAc88dD60a4b08F815F37335215f9B'; // Alternative PLS contract address
 const PLS_DECIMALS = 18; // Native PLS has 18 decimals
-const PLS_PRICE_USD_FALLBACK = 0.000020; // Fallback price only if all APIs fail
+const PLS_PRICE_USD = 0.000020; // Approximate placeholder price if API fails - updated May 2023
 
 // Note: Moralis is already initialized at the top of the file
 
@@ -142,19 +141,10 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
   if (tokenAddress && tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
     console.log('Detected request for native PLS token price, using special handling');
     
-    // Use wPLS contract address for price and price change (PLS and wPLS are 1:1)
-    const { getTokenPriceFromDexScreener, getTokenPriceChange } = await import('./dexscreener');
-    const plsPrice = await getTokenPriceFromDexScreener(WPLS_TOKEN_ADDRESS);
+    // For native token, we'll check if we have cached token info from Moralis wallet balances
+    // which should already include the native token price
     
-    // Get the 24h price change from DexScreener using wPLS
-    const plsPriceChange = await getTokenPriceChange(WPLS_TOKEN_ADDRESS);
-    
-    // Use the price from DexScreener or fall back to default
-    const usdPrice = plsPrice || PLS_PRICE_USD_FALLBACK;
-    
-    console.log(`Native PLS price from DexScreener (using wPLS address): $${usdPrice} (24h change: ${plsPriceChange || 0}%)`);
-    
-    // Return a structure with the PLS logo and price
+    // Return a default structure with the PLS logo and price if available
     return {
       tokenName: "PulseChain",
       tokenSymbol: "PLS",
@@ -166,14 +156,14 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
         symbol: "PLS",
         address: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
       },
-      usdPrice: usdPrice,
-      usdPriceFormatted: usdPrice.toString(),
+      usdPrice: 0.000020, // Approximate value - the real price will come from Moralis wallet balances
+      usdPriceFormatted: "0.000020",
       exchangeName: "PulseX",
       exchangeAddress: "",
       tokenAddress: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       blockTimestamp: new Date().toISOString(),
-      '24hrPercentChange': plsPriceChange ? plsPriceChange.toString() : "0",
-      usdPrice24hrPercentChange: plsPriceChange || 0,
+      '24hrPercentChange': "0", // Default if not available
+      usdPrice24hrPercentChange: 0, // Default if not available
       tokenLogo: getDefaultLogo('pls'), // Use our default PLS logo
       verifiedContract: true,
       securityScore: 100 // Highest score for native token
@@ -236,108 +226,60 @@ function getDefaultLogo(symbol: string | null | undefined): string {
 
 /**
  * Get wallet balance using Moralis API 
- * (includes native PLS and ERC20 tokens)
+ * (includes native PLS and ERC20 tokens with pricing data)
  */
 export async function getWalletTokenBalancesFromMoralis(walletAddress: string): Promise<any> {
   try {
-    console.log(`Fetching wallet balances for ${walletAddress} from Moralis using getWalletTokenBalances endpoint`);
+    console.log(`Fetching wallet balances with price for ${walletAddress} from Moralis`);
     
-    // Fetch token balances using the general token balances endpoint
-    const response = await Moralis.EvmApi.token.getWalletTokenBalances({
-      chain: "0x171", // Use the hex ID for PulseChain
+    const response = await Moralis.EvmApi.wallets.getWalletTokenBalancesPrice({
+      chain: "0x171", // PulseChain chain hex ID
       address: walletAddress
     });
     
-    console.log(`Successfully fetched token balances for ${walletAddress}`);
+    console.log(`Successfully fetched wallet balances with price for ${walletAddress}`);
     
     // Enhanced debugging
     const result = response.raw;
     console.log(`Got response from Moralis with type: ${typeof result}`);
     
-    // Check if we have a result
+    // Check if we have a native token (PLS)
     if (Array.isArray(result)) {
       // Log item count
       console.log(`Moralis returned ${result.length} tokens`);
       
-      // Log a sample token for debugging
-      if (result.length > 0) {
-        console.log('Sample token data:');
-        console.log(JSON.stringify(result[0], null, 2));
+      // Look for PLS token in different ways
+      const nativeToken = result.find((token: any) => token.native_token === true);
+      const plsSymbol = result.find((token: any) => token.symbol && token.symbol.toLowerCase() === 'pls');
+      const plsAddress = result.find((token: any) => token.token_address && 
+                                      (token.token_address.toLowerCase() === PLS_TOKEN_ADDRESS.toLowerCase() || 
+                                       token.token_address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'));
+      
+      // Log what we found
+      if (nativeToken) {
+        console.log(`Found native PLS by native_token flag: ${nativeToken.symbol}, address: ${nativeToken.token_address}, balance: ${nativeToken.balance_formatted}`);
       }
       
-      // We always need to add the native PLS token manually when using Moralis token balances,
-      // since the API doesn't return it for PulseChain
-      const { getTokenPriceFromDexScreener, getTokenPriceChange } = await import('./dexscreener');
-      const plsPrice = await getTokenPriceFromDexScreener(WPLS_TOKEN_ADDRESS);
-      const plsPriceChange = await getTokenPriceChange(WPLS_TOKEN_ADDRESS);
-      
-      // Get native PLS balance directly from PulseChain Scan (most reliable)
-      const plsBalance = await getNativePlsBalance(walletAddress);
-      
-      // Create tokens array with all tokens including native PLS
-      let tokensWithNative = [...result];
-      
-      // Only add native PLS if we got a balance
-      if (plsBalance) {
-        console.log(`Adding native PLS token with balance: ${plsBalance.balanceFormatted}`);
-        console.log(`PLS price change (24h): ${plsPriceChange || 0}%`);
-        
-        const nativeToken = {
-          token_address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-          symbol: 'PLS',
-          name: 'PulseChain',
-          logo: 'https://cryptologos.cc/logos/pulse-pls-logo.png',
-          thumbnail: 'https://cryptologos.cc/logos/pulse-pls-logo.png',
-          decimals: 18,
-          balance: plsBalance.balance,
-          balance_formatted: plsBalance.balanceFormatted.toString(),
-          possible_spam: false,
-          verified_contract: true,
-          usd_price: plsPrice || PLS_PRICE_USD_FALLBACK,
-          usd_value: plsBalance.balanceFormatted * (plsPrice || PLS_PRICE_USD_FALLBACK),
-          usd_price_24hr_percent_change: plsPriceChange || 0,
-          security_score: 100,
-          is_native: true
-        };
-        
-        // Add native token at the beginning of the array
-        tokensWithNative.unshift(nativeToken);
+      if (plsSymbol) {
+        console.log(`Found PLS by symbol: address=${plsSymbol.token_address}, balance=${plsSymbol.balance_formatted}`);
       }
       
-      // Add pricing information to each token
-      const tokensWithPrices = await Promise.all(
-        tokensWithNative.map(async (token: any) => {
-          try {
-            // For native token that we just added, pricing is already included
-            if (token.is_native || 
-                token.token_address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-              return token;
-            }
-            
-            // For non-native tokens, try to get price from Moralis
-            const priceData = await getTokenPrice(token.token_address);
-            if (priceData && priceData.usdPrice) {
-              return {
-                ...token,
-                usd_price: priceData.usdPrice,
-                usd_value: parseFloat(token.balance_formatted || '0') * priceData.usdPrice,
-                usd_price_24hr_percent_change: priceData.usdPrice24hrPercentChange,
-                verified_contract: priceData.verifiedContract
-              };
-            }
-            
-            return token;
-          } catch (error) {
-            console.error(`Error fetching price for token ${token.token_address}:`, error);
-            return token;
-          }
-        })
-      );
+      if (plsAddress) {
+        console.log(`Found PLS by address: symbol=${plsAddress.symbol}, balance=${plsAddress.balance_formatted}`);
+      }
       
-      return tokensWithPrices;
+      if (!nativeToken && !plsSymbol && !plsAddress) {
+        console.log('PLS token not found in Moralis response by any method');
+        
+        // Log some token samples to understand structure
+        if (result.length > 0) {
+          console.log('Sample token data:');
+          console.log(JSON.stringify(result[0], null, 2));
+        }
+      }
     }
     
-    // Just return the raw data if not an array
+    // Just return the raw data - we'll handle the structure in the caller
     return result;
   } catch (error: any) {
     console.error('Error fetching wallet balances from Moralis:', error.message);
@@ -412,7 +354,7 @@ export async function getWalletTransactionHistory(
       }
       
       // Parse the JSON response
-      const responseData = await response.json() as any;
+      const responseData = await response.json();
       console.log(`Transaction response cursor: ${responseData?.cursor || 'none'}`);
       console.log('Response data keys:', Object.keys(responseData));
       
@@ -541,85 +483,63 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
         const batch = moralisTokens.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(batch.map(async (item: any) => {
           try {
-            // Check if this is the native PLS token (either with is_native flag or by address)
-            const isNative = item.is_native === true || 
-                            (item.token_address && 
-                            (item.token_address.toLowerCase() === PLS_TOKEN_ADDRESS.toLowerCase() || 
-                             item.token_address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'));
+            // Check if this is the native PLS token (has address 0xeeee...eeee and native_token flag)
+            const isNative = item.native_token === true || 
+                            (item.token_address && item.token_address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
             
-            // Handle token symbol and name
+            // Fix the incorrect label of native PLS token (Moralis returns it as WPLS)
+            // Fix incorrect labeling for the native PLS token
             let symbol = item.symbol || 'UNKNOWN';
             let name = item.name || 'Unknown Token';
-            
-            // Fix the native token representation if needed
-            if (isNative) {
-              symbol = 'PLS'; // Ensure consistent symbol for native token
-              name = 'PulseChain'; // Ensure consistent name for native token
-            }
-            
-            // Handle token logo
-            let logoUrl = item.logo || item.thumbnail || null;
-            
-            // If no logo in Moralis response, try our database
-            if (!logoUrl) {
-              const storedLogo = await storage.getTokenLogo(item.token_address);
-              if (storedLogo) {
-                logoUrl = storedLogo.logoUrl;
-              } else {
-                // If still no logo, use default
-                logoUrl = getDefaultLogo(symbol);
-              }
+          
+          if (isNative && symbol.toLowerCase() === 'wpls') {
+            symbol = 'PLS'; // Correct the symbol for native token
+            name = 'PulseChain'; // Correct the name too
+            console.log('Corrected native token from WPLS/Wrapped Pulse to PLS/PulseChain');
+          }
+          
+          let logoUrl = item.logo || null;
+          
+          // If no logo in Moralis response, try our database
+          if (!logoUrl) {
+            const storedLogo = await storage.getTokenLogo(item.token_address);
+            if (storedLogo) {
+              logoUrl = storedLogo.logoUrl;
             } else {
-              // Store the logo in our database for future use
-              try {
-                const newLogo: InsertTokenLogo = {
-                  tokenAddress: item.token_address,
-                  logoUrl,
-                  symbol,
-                  name,
-                  lastUpdated: new Date().toISOString()
-                };
-                
-                console.log(`Saving logo for token ${item.token_address}: {
-  url: '${logoUrl?.substring(0, 20)}...',
-  symbol: '${symbol}',
-  name: '${name}'
-}`);
-                
-                await storage.saveTokenLogo(newLogo);
-              } catch (storageError) {
-                console.error(`Error storing logo for token ${item.token_address}:`, storageError);
-              }
+              // If still no logo, use default
+              logoUrl = getDefaultLogo(symbol);
             }
-            
-            // Handle balance formatting - ensure we convert the string balance to a proper number
-            const balanceFormatted = item.balance_formatted ? 
-                                    parseFloat(item.balance_formatted) : 
-                                    parseFloat(item.balance || '0') / Math.pow(10, parseInt(item.decimals || '18'));
-            
-            // Check if item has price info added by our getWalletTokenBalancesFromMoralis function
-            const price = item.usd_price || undefined;
-            const value = item.usd_value || (price ? balanceFormatted * price : undefined);
-            
-            // Always set a default security score for all tokens
-            // Native tokens get 100, verified tokens get 90, other tokens get 50 as a base
-            const defaultScore = isNative ? 100 : (item.verified_contract === true || item.possible_spam === false) ? 90 : 50;
-            
-            return {
-              address: item.token_address,
-              symbol,
-              name,
-              decimals: parseInt(item.decimals || '18'),
-              balance: item.balance || '0',
-              balanceFormatted, // Use our properly formatted balance
-              price,
-              value,
-              priceChange24h: item.usd_price_24hr_percent_change,
-              logo: logoUrl,
-              exchange: item.exchangeName || '', 
-              verified: item.verified_contract === true || item.possible_spam === false,
-              securityScore: item.securityScore || defaultScore,
-              isNative
+          } else {
+            // Store the logo in our database for future use
+            try {
+              const newLogo: InsertTokenLogo = {
+                tokenAddress: item.token_address,
+                logoUrl,
+                symbol,
+                name, // Use our corrected name for native token
+                lastUpdated: new Date().toISOString()
+              };
+              
+              await storage.saveTokenLogo(newLogo);
+            } catch (storageError) {
+              console.error(`Error storing logo for token ${item.token_address}:`, storageError);
+            }
+          }
+          
+          return {
+            address: item.token_address,
+            symbol,
+            name, // Use our corrected name for native token
+            decimals: parseInt(item.decimals || '18'),
+            balance: item.balance || '0',
+            balanceFormatted: parseFloat(item.balance_formatted || '0'),
+            price: item.usd_price,
+            value: item.usd_value,
+            priceChange24h: item.usd_price_24hr_percent_change,
+            logo: logoUrl,
+            exchange: '', // Moralis doesn't provide exchange info in this endpoint
+            verified: item.verified_contract === true,
+            isNative
           };
         } catch (error) {
           console.error(`Error processing token from Moralis:`, error);
@@ -696,32 +616,6 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
     if (nativePlsBalance) {
       console.log(`Adding native PLS token with balance: ${nativePlsBalance.balanceFormatted}`);
       
-      // Get PLS price and price change from DexScreener using wPLS address
-      let plsPrice = PLS_PRICE_USD_FALLBACK; // Start with fallback price
-      let plsPriceChange = 0; // Default price change
-      try {
-        const { getTokenPriceFromDexScreener, getTokenPriceChange } = await import('./dexscreener');
-        
-        // Get price
-        const dexScreenerPrice = await getTokenPriceFromDexScreener(WPLS_TOKEN_ADDRESS);
-        if (dexScreenerPrice !== null) {
-          plsPrice = dexScreenerPrice;
-          console.log(`Got PLS price from DexScreener (using wPLS): $${plsPrice}`);
-          
-          // Get price change
-          const dexScreenerPriceChange = await getTokenPriceChange(WPLS_TOKEN_ADDRESS);
-          if (dexScreenerPriceChange !== null) {
-            plsPriceChange = dexScreenerPriceChange;
-            console.log(`Got PLS price change from DexScreener (using wPLS): ${plsPriceChange}%`);
-          }
-        } else {
-          console.log(`Couldn't get PLS price from DexScreener, using fallback: $${plsPrice}`);
-        }
-      } catch (error) {
-        console.error('Error getting PLS price from DexScreener:', error);
-        console.log(`Using fallback PLS price: $${plsPrice}`);
-      }
-      
       // Add native PLS token to the beginning of the token list
       tokens.unshift({
         address: PLS_TOKEN_ADDRESS,
@@ -730,14 +624,10 @@ export async function getWalletData(walletAddress: string): Promise<WalletData> 
         decimals: PLS_DECIMALS,
         balance: nativePlsBalance.balance,
         balanceFormatted: nativePlsBalance.balanceFormatted,
-        price: plsPrice, // Use dynamically fetched price
-        value: nativePlsBalance.balanceFormatted * plsPrice,
+        price: PLS_PRICE_USD, // Use our default price
+        value: nativePlsBalance.balanceFormatted * PLS_PRICE_USD,
         logo: getDefaultLogo('pls'),
-        isNative: true,
-        priceChange24h: plsPriceChange, // Use the fetched price change
-        exchange: 'PulseX',
-        verified: true,
-        securityScore: 100 // Highest score for native token
+        isNative: true
       });
     }
     
