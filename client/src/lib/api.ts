@@ -317,6 +317,12 @@ export async function getUserFromWallet(
   }
 ): Promise<number | null> {
   try {
+    // Check if the wallet address is provided
+    if (!walletAddress) {
+      console.warn('Wallet address is required');
+      return null;
+    }
+    
     const requestBody: any = { walletAddress };
     
     // If authentication data is provided, include it in the request
@@ -334,15 +340,27 @@ export async function getUserFromWallet(
       body: JSON.stringify(requestBody),
     });
     
+    // For 404 errors, the endpoint might not be implemented yet
+    if (response.status === 404) {
+      console.warn('User wallet endpoint not found. This feature may not be fully implemented yet.');
+      return null;
+    }
+    
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to get user from wallet');
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { message: errorText || 'Unknown error' };
+      }
+      throw new Error(errorData.message || `Failed to get user from wallet (Status: ${response.status})`);
     }
     
     const data = await response.json();
     return data.id || null;
   } catch (error) {
-    console.error('Error getting user from wallet:', error);
+    console.error('Error getting user from wallet:', error instanceof Error ? error.message : 'Unknown error');
     return null;
   }
 }

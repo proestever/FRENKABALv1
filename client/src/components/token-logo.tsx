@@ -142,7 +142,10 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
         src={logoUrl} 
         alt={symbol || 'Token logo'} 
         className={`${sizeClass} rounded-full object-cover border border-white/10`}
-        onError={() => {
+        onError={(e) => {
+          // Prevent infinite error loops
+          e.currentTarget.onerror = null;
+          console.warn(`Failed to load token logo for ${symbol || address}`, logoUrl);
           setError(true);
           setLogoUrl(null);
         }}
