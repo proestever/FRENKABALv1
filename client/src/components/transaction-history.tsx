@@ -475,7 +475,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         }
       });
       
-      console.log(`Collected ${addresses.length} unique token addresses from transactions`);
+      console.log(`Collected ${addresses.length} unique token addresses from transactions`, addresses);
       setVisibleTokenAddresses(addresses);
     }
   }, [transactions]);
@@ -582,6 +582,16 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             <span className="text-white text-sm ml-2 opacity-60">
               {transactions.length} transactions
             </span>
+            {!isPricesFetching && Object.keys(batchPrices).length > 0 && (
+              <span className="ml-3 px-2 py-0.5 bg-primary/20 text-xs rounded-md text-primary">
+                ✓ Batch Prices
+              </span>
+            )}
+            {isPricesFetching && (
+              <span className="ml-3 px-2 py-0.5 bg-yellow-500/20 text-xs rounded-md text-yellow-400">
+                Loading Prices...
+              </span>
+            )}
           </h2>
           
           {/* Filter dropdown */}

@@ -1104,10 +1104,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Batch includes native PLS token, will handle special case');
       }
       
-      // Get prices from DexScreener in batch
-      const priceMap = await getTokenPricesFromDexScreener(uniqueAddresses);
-      
-      return res.json(priceMap);
+      try {
+        // Try to get prices from DexScreener in batch first
+        const priceMap = await getTokenPricesFromDexScreener(uniqueAddresses);
+        
+        // If we have at least some prices, return what we got
+        if (Object.keys(priceMap).length > 0) {
+          console.log(`Returning ${Object.keys(priceMap).length} token prices from batch request`);
+          return res.json(priceMap);
+        } else {
+          // If DexScreener returned no prices, try Moralis as fallback for a few tokens
+          console.log('DexScreener returned no prices, trying Moralis fallback for some tokens');
+          
+          // Limit fallback to 10 tokens to avoid overwhelming Moralis API
+          const fallbackAddresses = uniqueAddresses.slice(0, 10);
+          const fallbackPrices: Record<string, number> = {};
+          
+          // Process in smaller batches to avoid rate limiting
+          const BATCH_SIZE = 5;
+          const fallbackBatches = [];
+          
+          for (let i = 0; i < fallbackAddresses.length; i += BATCH_SIZE) {
+            fallbackBatches.push(fallbackAddresses.slice(i, i + BATCH_SIZE));
+          }
+          
+          for (let i = 0; i < fallbackBatches.length; i++) {
+            const batch = fallbackBatches[i];
+            console.log(`Processing fallback token batch ${i+1}/${fallbackBatches.length}`);
+            
+            await Promise.all(batch.map(async (address) => {
+              try {
+                const priceData = await getTokenPrice(address);
+                if (priceData?.usdPrice) {
+                  fallbackPrices[address.toLowerCase()] = priceData.usdPrice;
+                }
+              } catch (err) {
+                console.error(`Error fetching fallback price for ${address}:`, err);
+              }
+            }));
+            
+            // Add delay between batches
+            if (i < fallbackBatches.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          }
+          
+          console.log(`Returning ${Object.keys(fallbackPrices).length} fallback token prices`);
+          return res.json(fallbackPrices);
+        }
+      } catch (error) {
+        console.error("Error in DexScreener batch token price fetch:", error);
+        
+        // Return empty map instead of failing - client will handle empty response
+        return res.json({});
+      }
     } catch (error) {
       console.error("Error in batch token price fetch:", error);
       return res.status(500).json({ 

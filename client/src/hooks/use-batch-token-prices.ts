@@ -88,6 +88,9 @@ export function useBatchTokenPrices(tokenAddresses: string[]) {
             priceCache[normalizedAddress] = { price: price as number, timestamp };
           });
           
+          // Debug log - show how many new prices we received
+          console.log(`Batch token price fetch success: Received ${Object.keys(newPrices).length} prices`);
+          
           // Update state with combined cached and new prices
           setPrices(prev => ({ ...prev, ...newPrices }));
         } catch (err) {
