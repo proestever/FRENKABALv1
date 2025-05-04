@@ -471,9 +471,19 @@ export async function getWalletTransactionHistory(
       }
       
       // Parse the JSON response
-      const responseData = await response.json();
+      const responseData = await response.json() as {
+        result?: any[];
+        cursor?: string | null;
+        page?: number;
+        page_size?: number;
+      };
+      
       console.log(`Transaction response cursor: ${responseData?.cursor || 'none'}`);
-      console.log('Response data keys:', Object.keys(responseData));
+      
+      // Safely check if responseData is an object before calling Object.keys
+      if (responseData && typeof responseData === 'object') {
+        console.log('Response data keys:', Object.keys(responseData));
+      }
       
       const result = responseData?.result || [];
       const cursor = responseData?.cursor || null;
