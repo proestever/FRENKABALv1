@@ -582,20 +582,20 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             <span className="text-white text-sm ml-2 opacity-60">
               {transactions.length} transactions
             </span>
-            {!isPricesFetching && Object.keys(batchPrices).length > 0 && (
-              <span className="ml-3 px-2 py-0.5 bg-primary/20 text-xs rounded-md text-primary">
-                ✓ Batch Prices
-              </span>
-            )}
-            {isPricesFetching && (
-              <span className="ml-3 px-2 py-0.5 bg-yellow-500/20 text-xs rounded-md text-yellow-400">
-                Loading Prices...
-              </span>
-            )}
           </h2>
           
           {/* Filter dropdown */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            {!isPricesFetching && Object.keys(batchPrices).length > 0 && (
+              <span className="px-2 py-0.5 bg-primary/20 text-xs rounded-md text-primary mr-2">
+                Batch Prices
+              </span>
+            )}
+            {isPricesFetching && (
+              <span className="px-2 py-0.5 bg-yellow-500/20 text-xs rounded-md text-yellow-400 mr-2">
+                Loading Prices...
+              </span>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200">
