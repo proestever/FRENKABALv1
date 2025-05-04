@@ -364,9 +364,9 @@ export function Profile() {
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={() => handleEditBookmark(bookmark)}
-                            className="h-7 w-7 p-0 hover:bg-blue-500/10 hover:text-blue-300 rounded-full"
+                            className="h-7 w-7 p-0 hover:bg-black/30 hover:text-white rounded-full"
                             title="Edit Bookmark"
+                            onClick={() => handleEditBookmark(bookmark)}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
@@ -374,9 +374,9 @@ export function Profile() {
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={() => handleDeleteBookmark(bookmark.id)}
-                            className="h-7 w-7 p-0 hover:bg-red-500/10 hover:text-red-300 rounded-full"
+                            className="h-7 w-7 p-0 hover:bg-black/30 hover:text-red-400 rounded-full"
                             title="Delete Bookmark"
+                            onClick={() => handleDeleteBookmark(bookmark.id)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -386,18 +386,61 @@ export function Profile() {
                   ))}
                 </tbody>
               </table>
+              
+              {/* CSV Export/Import Buttons */}
+              <div className="flex justify-end mt-4 space-x-2 p-3 border-t border-white/10">
+                <Button
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    if (bookmarks && bookmarks.length > 0) {
+                      const csv = bookmarksToCSV(bookmarks);
+                      downloadAsFile(csv, "frenklabal-saved-wallets.csv", "text/csv");
+                      toast({
+                        title: "Export Successful",
+                        description: "Your saved wallets have been exported to CSV.",
+                      });
+                    }
+                  }}
+                  className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
+                  disabled={!bookmarks || bookmarks.length === 0}
+                >
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+                <Button
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsImportDialogOpen(true)}
+                  className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  Import CSV
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="text-center py-12 border border-dashed border-white/10 rounded-md">
               <p className="text-muted-foreground mb-4">You haven't saved any wallet addresses yet.</p>
-              <Button 
-                variant="outline" 
-                onClick={() => setLocation("/")}
-                className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
-              >
-                <Home className="w-4 h-4 mr-2" />
-                Go Home to Search Wallets
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setLocation("/")}
+                  className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
+                >
+                  <Home className="w-4 h-4 mr-2" />
+                  Go Home to Search Wallets
+                </Button>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsImportDialogOpen(true)}
+                  className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  Import CSV
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
@@ -456,6 +499,179 @@ export function Profile() {
               className="bg-primary hover:bg-primary/90"
             >
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Import CSV Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="glass-card border-white/15 bg-black/80 backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle className="text-white">Import Saved Wallets</DialogTitle>
+            <DialogDescription>
+              Import wallet addresses from a CSV file.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="csv-data" className="text-white">CSV Data</Label>
+              <Textarea
+                id="csv-data"
+                value={importCsvText}
+                onChange={(e) => setImportCsvText(e.target.value)}
+                placeholder="Paste your CSV data here..."
+                className="bg-black/50 border-white/10 text-white focus:border-primary min-h-[150px] font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Format: Wallet Address, Label, Notes, Is Favorite
+              </p>
+            </div>
+            
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Load sample CSV
+                  setImportCsvText(getExampleCSV());
+                }}
+                className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
+              >
+                <FileDown className="w-4 h-4 mr-2" />
+                Load Example
+              </Button>
+              
+              <input
+                type="file"
+                accept=".csv"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      if (event.target?.result) {
+                        setImportCsvText(event.target.result as string);
+                      }
+                    };
+                    reader.readAsText(file);
+                  }
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload CSV File
+              </Button>
+            </div>
+          </div>
+          
+          <DialogFooter className="flex sm:justify-between">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsImportDialogOpen(false);
+                setImportCsvText("");
+              }}
+              className="glass-card border-white/15"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={async () => {
+                if (!importCsvText.trim() || !userId) {
+                  toast({
+                    title: "Error",
+                    description: "Please provide valid CSV data.",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                
+                try {
+                  const bookmarksToImport = csvToBookmarks(importCsvText);
+                  
+                  if (bookmarksToImport.length === 0) {
+                    toast({
+                      title: "Error",
+                      description: "No valid wallet addresses found in the CSV data.",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  
+                  // Get existing bookmarks to avoid duplicates
+                  const existingAddresses = new Set(bookmarks?.map(b => b.walletAddress.toLowerCase()) || []);
+                  const newBookmarks = bookmarksToImport.filter(b => !existingAddresses.has(b.walletAddress.toLowerCase()));
+                  
+                  if (newBookmarks.length === 0) {
+                    toast({
+                      title: "No New Wallets",
+                      description: "All wallets in the CSV are already in your saved list.",
+                    });
+                    setIsImportDialogOpen(false);
+                    setImportCsvText("");
+                    return;
+                  }
+                  
+                  // Process each wallet address
+                  let successCount = 0;
+                  
+                  for (const bookmark of newBookmarks) {
+                    const response = await fetch('/api/bookmarks', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        userId,
+                        walletAddress: bookmark.walletAddress,
+                        label: bookmark.label || null,
+                        notes: bookmark.notes || null,
+                        isFavorite: bookmark.isFavorite || false
+                      }),
+                    });
+                    
+                    if (response.ok) {
+                      successCount++;
+                    }
+                  }
+                  
+                  if (successCount > 0) {
+                    toast({
+                      title: "Import Successful",
+                      description: `Added ${successCount} new wallet addresses to your saved list.`,
+                    });
+                    refetch();
+                  } else {
+                    toast({
+                      title: "Import Failed",
+                      description: "Failed to import any wallet addresses. Please try again.",
+                      variant: "destructive"
+                    });
+                  }
+                  
+                  setIsImportDialogOpen(false);
+                  setImportCsvText("");
+                } catch (error) {
+                  console.error("Import error:", error);
+                  toast({
+                    title: "Error",
+                    description: "An unexpected error occurred during import. Please check your CSV format.",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Import Addresses
             </Button>
           </DialogFooter>
         </DialogContent>
