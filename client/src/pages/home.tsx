@@ -168,14 +168,6 @@ export default function Home() {
               />
             )}
             
-            {/* Manual Token Entry Section */}
-            <div className="mt-4 mb-2">
-              <ManualTokenEntry 
-                walletAddress={searchedAddress} 
-                onTokenAdded={handleTokenAdded}
-              />
-            </div>
-            
             {/* Token List with combined tokens */}
             <TokenList 
               tokens={allTokens} 
@@ -183,6 +175,14 @@ export default function Home() {
               hasError={isError}
               walletAddress={searchedAddress || ''}
             />
+            
+            {/* Manual Token Entry Section (moved below token list) */}
+            <div className="mt-6">
+              <ManualTokenEntry 
+                walletAddress={searchedAddress} 
+                onTokenAdded={handleTokenAdded}
+              />
+            </div>
           </div>
         </>
       )}
@@ -190,20 +190,21 @@ export default function Home() {
       {searchedAddress && isError && (
         <>
           <div className="mt-4">
-            {/* Still show manual token entry even if API had an error */}
-            <div className="mt-4 mb-2">
-              <ManualTokenEntry 
-                walletAddress={searchedAddress} 
-                onTokenAdded={handleTokenAdded}
-              />
-            </div>
-            
+            {/* Token list with manually added tokens */}
             <TokenList 
               tokens={manualTokens} 
               isLoading={false} 
               hasError={true}
               walletAddress={searchedAddress} 
             />
+            
+            {/* Still show manual token entry even if API had an error (moved below) */}
+            <div className="mt-6">
+              <ManualTokenEntry 
+                walletAddress={searchedAddress} 
+                onTokenAdded={handleTokenAdded}
+              />
+            </div>
           </div>
         </>
       )}
