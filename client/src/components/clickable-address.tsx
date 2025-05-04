@@ -1,0 +1,21 @@
+import { shortenAddress } from "@/lib/utils";
+
+interface ClickableAddressProps {
+  address: string;
+  showPrefix?: boolean;
+  className?: string;
+}
+
+export function ClickableAddress({ address, showPrefix = false, className = "" }: ClickableAddressProps) {
+  return (
+    <a 
+      href={`/${address}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`text-primary hover:text-primary/70 hover:underline ${className}`}
+    >
+      {showPrefix && (address === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? 'PLS Native: ' : '')}
+      {shortenAddress(address)}
+    </a>
+  );
+}
