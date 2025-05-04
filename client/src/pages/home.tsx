@@ -8,7 +8,7 @@ import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
 import { saveRecentAddress, ProcessedToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { usePagedWallet } from '@/hooks/use-paged-wallet';
+import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
 import { Wallet, Token } from '@shared/schema';
 
 // Example wallet address
@@ -51,7 +51,7 @@ export default function Home() {
     }
   }, [params.walletAddress, searchedAddress]);
 
-  // Use our optimized hook for paginated wallet data
+  // Use our new hook for loading all wallet tokens without pagination
   const { 
     walletData, 
     isLoading, 
@@ -59,9 +59,8 @@ export default function Home() {
     error, 
     refetch,
     isFetching,
-    currentPage,
-    changePage
-  } = usePagedWallet(searchedAddress, 1); // Start at page 1
+    progress
+  } = useAllWalletTokens(searchedAddress)
   
   // Debug wallet data
   useEffect(() => {
@@ -124,7 +123,7 @@ export default function Home() {
   // Combine all tokens - standard API tokens + manually added tokens
   const allTokens = walletData 
     ? [...walletData.tokens, ...manualTokens.filter(t => 
-        !walletData.tokens.some(wt => wt.address.toLowerCase() === t.address.toLowerCase())
+        !walletData.tokens.some((wt: { address: string }) => wt.address.toLowerCase() === t.address.toLowerCase())
       )]
     : manualTokens;
 
@@ -156,11 +155,6 @@ export default function Home() {
               isLoading={isLoading || isFetching} 
               hasError={isError}
               walletAddress={searchedAddress || ''}
-              pagination={walletData?.pagination}
-              onPageChange={(page) => {
-                console.log('Changing to page:', page);
-                changePage(page);
-              }}
             />
             
             {/* Manual Token Entry Section (only show when not loading) */}

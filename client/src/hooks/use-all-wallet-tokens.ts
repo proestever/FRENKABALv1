@@ -23,10 +23,11 @@ export function useAllWalletTokens(walletAddress: string | null) {
     error,
     refetch
   } = useQuery({
-    queryKey: walletAddress ? [`/api/wallet/${walletAddress}/all`] : null,
+    queryKey: walletAddress ? [`wallet-all-${walletAddress}`] : ['wallet-all-empty'],
     enabled: !!walletAddress,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    queryFn: () => walletAddress ? fetchAllWalletTokens(walletAddress) : Promise.reject('No wallet address'),
   });
   
   // Poll loading progress during fetching
