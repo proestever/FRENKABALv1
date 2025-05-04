@@ -589,8 +589,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         </div>
       </div>
       
-      {/* Transactions Table */}
-      <div className="overflow-x-auto">
+      {/* Transactions Table - Desktop View */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr>
@@ -777,6 +777,159 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             ))}
           </tbody>
         </table>
+      </div>
+      
+      {/* Mobile Transaction Cards */}
+      <div className="md:hidden">
+        {filteredTransactions.map((tx, index) => (
+          <div key={tx.hash + index} className="mb-4 glass-card border border-white/10 rounded-md overflow-hidden">
+            {/* Transaction Header - Date & Status */}
+            <div className="p-3 border-b border-white/10 flex justify-between items-center">
+              <div>
+                <div className="text-sm font-medium">{formatTimestamp(tx.block_timestamp)}</div>
+                <div className="text-xs text-muted-foreground">
+                  Type: {getTransactionType(tx).charAt(0).toUpperCase() + getTransactionType(tx).slice(1)}
+                </div>
+              </div>
+              <div className="flex items-center">
+                <span className={`px-2 py-1 text-xs rounded-sm ${
+                  tx.receipt_status === '1' 
+                    ? 'bg-green-500/20 text-green-400' 
+                    : 'bg-red-500/20 text-red-400'
+                }`}>
+                  {tx.receipt_status === '1' ? 'Success' : 'Failed'}
+                </span>
+                <a 
+                  href={`https://scan.pulsechain.com/tx/${tx.hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-2 text-primary hover:text-primary/80 transition-colors"
+                >
+                  <ExternalLink size={16} />
+                </a>
+              </div>
+            </div>
+            
+            {/* Transaction Body - Details */}
+            <div className="p-3">
+              {/* Transaction summary if available */}
+              {tx.summary && (
+                <div className="mb-2 text-sm">{tx.summary}</div>
+              )}
+              
+              {/* ERC20 Transfers */}
+              {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
+                <div key={`mobile-${tx.hash}-erc20-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                  <div className="flex items-center">
+                    <TokenLogo 
+                      address={transfer.address || ''}
+                      symbol={transfer.token_symbol || ''}
+                      size="sm"
+                    />
+                    <div className="ml-2">
+                      <div className="flex items-center">
+                        {transfer.direction === 'receive' ? (
+                          <ArrowDownLeft size={14} className="text-green-400 mr-1" />
+                        ) : (
+                          <ArrowUpRight size={14} className="text-red-400 mr-1" />
+                        )}
+                        <span className="text-sm font-medium">{transfer.token_symbol}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {transfer.direction === 'receive' ? 'From: ' : 'To: '}
+                        <Link 
+                          to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
+                          className="text-white hover:text-gray-300 underline"
+                        >
+                          {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`text-sm font-medium ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
+                      {transfer.direction === 'receive' ? '+' : '-'}
+                      {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)}
+                    </div>
+                    {calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') && (
+                      <div className="text-xs text-muted-foreground">
+                        {(calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '') || 0).toLocaleString('en-US', {
+                          style: 'currency',
+                          currency: 'USD',
+                          maximumFractionDigits: 2,
+                          minimumFractionDigits: 2
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Native Transfers */}
+              {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
+                <div key={`mobile-${tx.hash}-native-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                  <div className="flex items-center">
+                    <img 
+                      src="/assets/pls-logo-trimmed.png"
+                      alt="PLS"
+                      className="w-6 h-6 rounded-full object-cover border border-white/10"
+                    />
+                    <div className="ml-2">
+                      <div className="flex items-center">
+                        {transfer.direction === 'receive' ? (
+                          <ArrowDownLeft size={14} className="text-green-400 mr-1" />
+                        ) : (
+                          <ArrowUpRight size={14} className="text-red-400 mr-1" />
+                        )}
+                        <span className="text-sm font-medium">{transfer.token_symbol || 'PLS'}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {transfer.direction === 'receive' ? 'From: ' : 'To: '}
+                        <Link 
+                          to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
+                          className="text-white hover:text-gray-300 underline"
+                        >
+                          {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`text-sm font-medium ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
+                      {transfer.direction === 'receive' ? '+' : '-'}
+                      {transfer.value_formatted || formatTokenValue(transfer.value)}
+                    </div>
+                    {calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
+                      <div className="text-xs text-muted-foreground">
+                        {(calculateUsdValue(transfer.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
+                          style: 'currency',
+                          currency: 'USD',
+                          maximumFractionDigits: 2,
+                          minimumFractionDigits: 2
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Gas Fee */}
+              <div className="text-xs text-muted-foreground mt-2 text-right">
+                Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
+                {calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') && (
+                  <span className="ml-2">
+                    ({(calculateUsdValue(tx.transaction_fee.toString(), '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') || 0).toLocaleString('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                      maximumFractionDigits: 2,
+                      minimumFractionDigits: 2
+                    })})
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
       
       {/* Load More Button (if there are more transactions) */}
