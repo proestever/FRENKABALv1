@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getRecentAddresses } from '@/lib/api';
 import { truncateAddress } from '@/lib/utils';
+import { ClickableAddress } from './clickable-address';
 import { Search } from 'lucide-react';
 import { FrenKabalLogo } from '@/components/frenklabal-logo';
 

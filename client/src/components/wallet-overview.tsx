@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Wallet, Bookmark } from '@shared/schema';
 import { ExternalLink, Copy, RotateCw, Bookmark as BookmarkIcon, CheckCircle } from 'lucide-react';
 import { formatCurrency, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass, truncateAddress } from '@/lib/utils';
+import { ClickableAddress } from './clickable-address';
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
 import { useState, useEffect } from 'react';
@@ -133,10 +134,10 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             <div className="flex items-center mt-1 max-w-full overflow-hidden">
               {/* Show truncated address on mobile, full address on desktop */}
               <span className="text-sm text-muted-foreground mr-2 metallic-address overflow-hidden text-ellipsis whitespace-nowrap md:hidden">
-                {truncateAddress(wallet.address, 8, 6)}
+                <ClickableAddress address={wallet.address} />
               </span>
               <span className="text-sm text-muted-foreground mr-2 metallic-address overflow-hidden text-ellipsis whitespace-nowrap hidden md:inline-block">
-                {wallet.address}
+                <ClickableAddress address={wallet.address} />
               </span>
               <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-white glass-card hover:bg-black/20 p-0.5 flex-shrink-0">
                 <Copy className="h-4 w-4" />
