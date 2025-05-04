@@ -141,13 +141,14 @@ export default function Home() {
         customProgress={progress}
       />
       
-      {searchedAddress && !isError && (
+      {/* Only show wallet data when not loading */}
+      {searchedAddress && !isError && !(isLoading || isFetching) && (
         <>
           <div className="mt-4">
             {walletData && (
               <WalletOverview 
                 wallet={walletData} 
-                isLoading={isLoading || isFetching} 
+                isLoading={false} 
                 onRefresh={handleRefresh} 
               />
             )}
@@ -155,20 +156,10 @@ export default function Home() {
             {/* Token List with combined tokens */}
             <TokenList 
               tokens={allTokens} 
-              isLoading={isLoading || isFetching} 
+              isLoading={false} 
               hasError={isError}
               walletAddress={searchedAddress || ''}
             />
-            
-            {/* Manual Token Entry Section (only show when not loading) */}
-            {!isLoading && !isFetching && (
-              <div className="mt-6">
-                <ManualTokenEntry 
-                  walletAddress={searchedAddress} 
-                  onTokenAdded={handleTokenAdded}
-                />
-              </div>
-            )}
           </div>
         </>
       )}
@@ -184,13 +175,7 @@ export default function Home() {
               walletAddress={searchedAddress} 
             />
             
-            {/* Still show manual token entry even if API had an error (moved below) */}
-            <div className="mt-6">
-              <ManualTokenEntry 
-                walletAddress={searchedAddress} 
-                onTokenAdded={handleTokenAdded}
-              />
-            </div>
+            {/* Manual Token Entry removed as requested */}
           </div>
         </>
       )}
