@@ -130,9 +130,15 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
                 <span className="ml-2 flex items-center">: <span className="text-green-400 font-bold text-xl ml-2">{existingBookmark.label}</span></span>
               )}
             </h2>
-            <div className="flex items-center mt-1">
-              <span className="text-sm text-muted-foreground mr-2 metallic-address">{wallet.address}</span>
-              <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-white glass-card hover:bg-black/20 p-0.5">
+            <div className="flex items-center mt-1 max-w-full overflow-hidden">
+              {/* Show truncated address on mobile, full address on desktop */}
+              <span className="text-sm text-muted-foreground mr-2 metallic-address overflow-hidden text-ellipsis whitespace-nowrap md:hidden">
+                {truncateAddress(wallet.address, 8, 6)}
+              </span>
+              <span className="text-sm text-muted-foreground mr-2 metallic-address overflow-hidden text-ellipsis whitespace-nowrap hidden md:inline-block">
+                {wallet.address}
+              </span>
+              <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-white glass-card hover:bg-black/20 p-0.5 flex-shrink-0">
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
