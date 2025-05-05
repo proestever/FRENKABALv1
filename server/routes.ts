@@ -38,6 +38,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API route to get wallet data
   app.get("/api/wallet/:address", async (req, res) => {
     try {
+      // Set cache control headers to prevent caching
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const { address } = req.params;
       const { page = '1', limit = '100' } = req.query; // Default to page 1, limit 100
       
@@ -112,6 +117,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API route to get ALL wallet tokens without pagination
   app.get("/api/wallet/:address/all", async (req, res) => {
     try {
+      // Set cache control headers to prevent caching
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const { address } = req.params;
       
       if (!address || typeof address !== 'string') {
@@ -152,6 +162,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API route to get specific token balance for a wallet
   app.get("/api/wallet/:address/token/:tokenAddress", async (req, res) => {
     try {
+      // Set cache control headers to prevent caching
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const { address, tokenAddress } = req.params;
       
       if (!address || typeof address !== 'string') {
@@ -192,6 +207,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API route to get wallet transaction history
   app.get("/api/wallet/:address/transactions", async (req, res) => {
     try {
+      // Set cache control headers to prevent caching
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const { address } = req.params;
       const { limit = '100', cursor = null } = req.query;
       

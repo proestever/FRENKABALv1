@@ -105,12 +105,19 @@ export default function Home() {
       // This will clear the cache and force a fresh network request
       console.log('Forcing refresh for wallet:', searchedAddress);
       
-      // First invalidate the query to clear the cache completely
+      // Aggressively clear all cache related to this wallet
       queryClient.invalidateQueries({ queryKey: [`wallet-all-${searchedAddress}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/wallet/${searchedAddress}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/wallet/${searchedAddress}/all`] });
       queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
       
+      // Also clear the entire query cache to be extra aggressive
+      queryClient.clear();
+      
       // Then trigger a refetch with cancellation of any in-flight requests
-      refetch({ cancelRefetch: true });
+      setTimeout(() => {
+        refetch({ cancelRefetch: true });
+      }, 50); // Small delay to ensure cache clearing is complete
       
       // Show a toast to confirm the refresh action
       toast({
