@@ -63,6 +63,9 @@ export interface MoralisTokenPriceResponse {
   usdPrice24hrUsdChange?: number;
   usdPrice24hrPercentChange?: number;
   '24hrPercentChange'?: string;
+  
+  // Adding our own fields to handle custom properties we calculate
+  [key: string]: any; // Allow additional properties for flexibility
 }
 
 // Moralis Wallet Token Balances Price Response

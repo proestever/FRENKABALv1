@@ -16,6 +16,41 @@ const TOKEN_LOGOS: Record<string, string> = {
   // Add other important token logos here
 };
 
+/**
+ * Helper function to ensure token price response has all required fields
+ */
+export function ensureValidTokenPriceResponse(response: any): MoralisTokenPriceResponse {
+  // Create a base valid response with defaults for all required fields
+  const validResponse: MoralisTokenPriceResponse = {
+    tokenName: response.tokenName || "Unknown",
+    tokenSymbol: response.tokenSymbol || "UNK",
+    tokenDecimals: response.tokenDecimals || "18",
+    nativePrice: {
+      value: response.nativePrice?.value || "0",
+      decimals: response.nativePrice?.decimals || 18,
+      name: response.nativePrice?.name || "PLS",
+      symbol: response.nativePrice?.symbol || "PLS",
+      address: response.nativePrice?.address || PLS_TOKEN_ADDRESS
+    },
+    usdPrice: response.usdPrice || 0,
+    usdPriceFormatted: response.usdPriceFormatted || "0",
+    exchangeName: response.exchangeName || "Unknown",
+    exchangeAddress: response.exchangeAddress || "0x0000000000000000000000000000000000000000",
+    tokenAddress: response.tokenAddress || "0x0000000000000000000000000000000000000000",
+    blockTimestamp: response.blockTimestamp || new Date().toISOString()
+  };
+  
+  // Add optional fields if they exist
+  if (response.tokenLogo) validResponse.tokenLogo = response.tokenLogo;
+  if (response['24hrPercentChange']) validResponse['24hrPercentChange'] = response['24hrPercentChange'];
+  if (response.usdPrice24hrPercentChange) validResponse.usdPrice24hrPercentChange = response.usdPrice24hrPercentChange;
+  if (response.usdPrice24hrUsdChange) validResponse.usdPrice24hrUsdChange = response.usdPrice24hrUsdChange;
+  if (response.possibleSpam !== undefined) validResponse.possibleSpam = response.possibleSpam;
+  if (response.verifiedContract !== undefined) validResponse.verifiedContract = response.verifiedContract;
+  
+  return validResponse;
+}
+
 // Check if Moralis is already initialized
 export const initMoralis = async (): Promise<void> => {
   // Only attempt to initialize if not already initialized
@@ -93,22 +128,39 @@ export const getWalletTokenBalances = async (walletAddress: string): Promise<Mor
       throw new Error('Invalid response from Moralis getWalletTokenBalances');
     }
     
-    // Add balance_formatted property to each token if it doesn't exist
+    // Process and normalize the raw response to match our expected types
     return response.raw.map(token => {
-      if (!('balance_formatted' in token)) {
+      // Create a properly typed token object
+      const processedToken: MoralisWalletTokenBalanceItem = {
+        token_address: token.token_address,
+        symbol: token.symbol,
+        name: token.name,
         // Ensure decimals is a string as required by the type
-        const decimalStr = typeof token.decimals === 'number' ? token.decimals.toString() : (token.decimals || '18');
-        const decimalsNum = parseInt(decimalStr);
+        decimals: typeof token.decimals === 'number' ? token.decimals.toString() : (token.decimals || '18'),
+        balance: token.balance,
+        possible_spam: !!token.possible_spam,
+        verified_contract: !!token.verified_contract
+      };
+      
+      // Add optional properties if they exist
+      if (token.logo) processedToken.logo = token.logo;
+      if (token.thumbnail) processedToken.thumbnail = token.thumbnail;
+      
+      // Calculate balance_formatted if it doesn't exist
+      if (!('balance_formatted' in token)) {
+        const decimalsNum = parseInt(processedToken.decimals);
         const balanceFormatted = parseFloat(token.balance) / Math.pow(10, decimalsNum);
-        
-        // Return a properly typed object
-        return {
-          ...token,
-          decimals: decimalStr, // Ensure it's a string
-          balance_formatted: balanceFormatted.toString()
-        };
+        processedToken.balance_formatted = balanceFormatted.toString();
+      } else {
+        processedToken.balance_formatted = token.balance_formatted;
       }
-      return token;
+      
+      // Add other price-related fields if they exist
+      if ('usd_price' in token) processedToken.usd_price = token.usd_price;
+      if ('usd_price_24hr_percent_change' in token) processedToken.usd_price_24hr_percent_change = token.usd_price_24hr_percent_change;
+      if ('usd_value' in token) processedToken.usd_value = token.usd_value;
+      
+      return processedToken;
     });
   } catch (error) {
     console.error(`Error fetching wallet balances: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -172,7 +224,8 @@ export const getTokenPrice = async (tokenAddress: string): Promise<MoralisTokenP
     }
     
     console.log(`Successfully fetched price for ${tokenAddress}: ${response.raw.usdPrice} USD`);
-    return response.raw as MoralisTokenPriceResponse;
+    // Ensure the response has all required fields with proper types
+    return ensureValidTokenPriceResponse(response.raw);
   } catch (error) {
     console.error(`Error fetching token price: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return null;
@@ -200,10 +253,11 @@ export const getWrappedTokenPrice = async (
       return null;
     }
     
-    // Use the price from wrapped token but create response for native token
-    const wrappedPrice = response.raw;
+    // Use the price from wrapped token but create a base response for the native token
+    const wrappedPrice = ensureValidTokenPriceResponse(response.raw);
     
-    return {
+    // Create response for native PLS token based on wrapped PLS price
+    const nativeTokenPrice: MoralisTokenPriceResponse = {
       tokenName: name || "PulseChain",
       tokenSymbol: symbol || "PLS",
       tokenDecimals: "18",
@@ -215,16 +269,25 @@ export const getWrappedTokenPrice = async (
         address: PLS_TOKEN_ADDRESS
       },
       usdPrice: wrappedPrice.usdPrice,
-      usdPriceFormatted: wrappedPrice.usdPriceFormatted || "0.0",
-      exchangeName: wrappedPrice.exchangeName || "Unknown",
-      exchangeAddress: wrappedPrice.exchangeAddress || "0x0000000000000000000000000000000000000000",
+      usdPriceFormatted: wrappedPrice.usdPriceFormatted,
+      exchangeName: wrappedPrice.exchangeName,
+      exchangeAddress: wrappedPrice.exchangeAddress,
       tokenAddress: PLS_TOKEN_ADDRESS,
-      blockTimestamp: new Date().toISOString(),
-      '24hrPercentChange': wrappedPrice['24hrPercentChange'],
-      // Use proper property that's available in the response
-      usdPrice24hrPercentChange: wrappedPrice.usdPrice24hrPercentChange || 
-                               (wrappedPrice['24hrPercentChange'] ? parseFloat(wrappedPrice['24hrPercentChange']) : 0)
+      blockTimestamp: new Date().toISOString()
     };
+    
+    // Add percent change data if available
+    if (wrappedPrice['24hrPercentChange']) {
+      nativeTokenPrice['24hrPercentChange'] = wrappedPrice['24hrPercentChange'];
+    }
+    
+    if (wrappedPrice.usdPrice24hrPercentChange !== undefined) {
+      nativeTokenPrice.usdPrice24hrPercentChange = wrappedPrice.usdPrice24hrPercentChange;
+    } else if (wrappedPrice['24hrPercentChange']) {
+      nativeTokenPrice.usdPrice24hrPercentChange = parseFloat(wrappedPrice['24hrPercentChange']);
+    }
+    
+    return nativeTokenPrice;
   } catch (error) {
     console.error(`Error fetching wrapped token price: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return null;
