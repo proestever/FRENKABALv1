@@ -93,7 +93,18 @@ export const getWalletTokenBalances = async (walletAddress: string): Promise<Mor
       throw new Error('Invalid response from Moralis getWalletTokenBalances');
     }
     
-    return response.raw;
+    // Add balance_formatted property to each token if it doesn't exist
+    return response.raw.map(token => {
+      if (!('balance_formatted' in token)) {
+        const decimals = parseInt(token.decimals || '18');
+        const balanceFormatted = parseFloat(token.balance) / Math.pow(10, decimals);
+        return {
+          ...token,
+          balance_formatted: balanceFormatted.toString()
+        };
+      }
+      return token;
+    });
   } catch (error) {
     console.error(`Error fetching wallet balances: ${error instanceof Error ? error.message : 'Unknown error'}`);
     throw error;
@@ -188,8 +199,8 @@ export const getWrappedTokenPrice = async (
     const wrappedPrice = response.raw;
     
     return {
-      tokenName: name,
-      tokenSymbol: symbol,
+      tokenName: name || "PulseChain",
+      tokenSymbol: symbol || "PLS",
       tokenDecimals: "18",
       nativePrice: {
         value: "1000000000000000000",

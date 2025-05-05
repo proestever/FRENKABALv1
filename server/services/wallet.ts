@@ -225,7 +225,7 @@ export async function getWalletData(
     // Set PLS specific data (for UI elements)
     if (plsToken) {
       response.plsBalance = plsToken.balanceFormatted;
-      response.plsPriceChange = plsToken.priceChange24h;
+      response.plsPriceChange = plsToken.priceChange24h || null;
     }
     
     // Set network count (always 1 for PulseChain in this case)
@@ -297,8 +297,10 @@ export async function getWalletTransactions(
     );
     
     // Process and return transaction data
+    // Cast the transaction history results to Transaction[] with unknown as intermediate step
+    // to handle potential type mismatches safely
     return {
-      result: transactionHistory.result as Transaction[],
+      result: transactionHistory.result as unknown as Transaction[],
       cursor: transactionHistory.cursor || null,
       total: transactionHistory.total || transactionHistory.result.length
     };
@@ -333,8 +335,13 @@ export async function getBatchTokenPrices(tokenAddresses: string[]) {
     // Normalize addresses to lowercase
     const normalizedAddresses = tokenAddresses.map(addr => addr.toLowerCase());
     
-    // Remove duplicates
-    const uniqueAddresses = [...new Set(normalizedAddresses)];
+    // Remove duplicates without using Set spreading (which has type issues)
+    const uniqueAddresses: string[] = [];
+    normalizedAddresses.forEach(addr => {
+      if (!uniqueAddresses.includes(addr)) {
+        uniqueAddresses.push(addr);
+      }
+    });
     
     // Get prices
     return await moralisService.batchGetTokenPrices(uniqueAddresses);
@@ -431,15 +438,18 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
       const priceData = await getTokenPriceInfo(tokenAddress);
       
       // Format the token data
+      // Handle the balance formatting manually if necessary
+      const balanceFormatted = parseFloat(tokenBalance.balance_formatted || '0');
+      // Use type assertion to handle potential missing properties in tokenBalance
       return {
         address: tokenAddress,
         symbol: tokenBalance.symbol,
         name: tokenBalance.name,
         decimals: parseInt(tokenBalance.decimals),
         balance: tokenBalance.balance,
-        balanceFormatted: parseFloat(tokenBalance.balance_formatted || '0'),
+        balanceFormatted: balanceFormatted,
         price: priceData?.usdPrice || 0,
-        value: (parseFloat(tokenBalance.balance_formatted || '0') * (priceData?.usdPrice || 0)),
+        value: balanceFormatted * (priceData?.usdPrice || 0),
         priceChange24h: priceData?.usdPrice24hrPercentChange,
         logo: await getTokenLogoUrl(tokenAddress),
         exchange: priceData?.exchangeName || '',
