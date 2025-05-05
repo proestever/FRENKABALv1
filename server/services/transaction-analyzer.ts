@@ -502,6 +502,27 @@ export function getMethodName(tx: Transaction, type: TransactionType): string {
 }
 
 /**
+ * Get USD value for a token if possible
+ * @param tokenAddress The token contract address
+ * @param amount The token amount (formatted)
+ * @returns The USD value if price is available, or undefined
+ */
+async function getTokenUSDValue(tokenAddress: string, amount: string): Promise<number | undefined> {
+  try {
+    // Get token price from Moralis
+    const priceData = await moralisService.getTokenPrice(tokenAddress);
+    if (priceData && priceData.usdPrice) {
+      // Calculate value
+      const usdValue = parseFloat(amount) * priceData.usdPrice;
+      return usdValue;
+    }
+  } catch (error) {
+    console.error(`Error getting USD value for token ${tokenAddress}:`, error);
+  }
+  return undefined;
+}
+
+/**
  * Get detailed information for a transaction
  */
 export async function analyzeTransaction(
@@ -516,6 +537,20 @@ export async function analyzeTransaction(
     
     // Extract token transfers
     const { sent, received } = await extractTokenTransfers(tx, walletAddress);
+    
+    // Enhance token information with USD values where possible
+    for (const token of [...sent, ...received]) {
+      try {
+        if (token.amountFormatted) {
+          const usdValue = await getTokenUSDValue(token.address, token.amountFormatted);
+          if (usdValue !== undefined) {
+            token.value = usdValue;
+          }
+        }
+      } catch (error) {
+        console.error(`Error enhancing token value for ${token.symbol}:`, error);
+      }
+    }
     
     // For unknown types, try to classify based on more specific criteria
     if (type === TransactionType.Unknown || type === TransactionType.Contract) {

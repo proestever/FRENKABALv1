@@ -39,6 +39,17 @@ interface TransactionTransfer {
   internal_transaction?: boolean;
 }
 
+interface SwapDetail {
+  symbol: string;
+  amount: string;
+  address: string;
+}
+
+interface SwapDetails {
+  sent: SwapDetail[];
+  received: SwapDetail[];
+}
+
 interface Transaction {
   hash: string;
   nonce: string;
@@ -62,6 +73,8 @@ interface Transaction {
   summary?: string;
   category?: string;
   possible_spam?: boolean;
+  swap_details?: SwapDetails;  // Enhanced swap information
+  analyzed?: boolean;          // Flag indicating if transaction was analyzed with the new analyzer
 }
 
 interface TransactionHistoryProps {
