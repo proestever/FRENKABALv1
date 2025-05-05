@@ -1192,5 +1192,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
 
+  // Get specific token balance for a wallet
+  app.get("/api/wallet/:walletAddress/token/:tokenAddress", async (req, res) => {
+    try {
+      const { walletAddress, tokenAddress } = req.params;
+      if (!walletAddress || !tokenAddress) {
+        return res.status(400).json({ message: "Wallet address and token address are required" });
+      }
+      
+      console.log(`Getting specific token ${tokenAddress} balance for wallet ${walletAddress}`);
+      const tokenBalance = await walletService.getSpecificTokenBalance(walletAddress, tokenAddress);
+      
+      if (!tokenBalance) {
+        return res.status(404).json({ message: "Token not found or no balance for this wallet" });
+      }
+      
+      return res.json(tokenBalance);
+    } catch (error) {
+      console.error("Error fetching specific token balance:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch token balance",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   return httpServer;
 }

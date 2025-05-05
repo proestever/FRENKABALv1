@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchAllWalletTokens } from '@/lib/api';
+import { fetchAllWalletTokens, fetchSpecificToken } from '@/lib/api';
 import { useEffect, useState, useRef } from 'react';
+import { Wallet } from '@shared/schema';
 
 /**
  * Hook for retrieving all wallet tokens at once (not paginated)
@@ -44,7 +45,53 @@ export function useAllWalletTokens(walletAddress: string | null) {
     refetchOnReconnect: false,
     staleTime: 0, // Consider data always stale to force refetch
     gcTime: 0, // Don't cache between wallet loads (this is TanStack Query v5's replacement for cacheTime)
-    queryFn: () => walletAddress ? fetchAllWalletTokens(walletAddress) : Promise.reject('No wallet address'),
+    queryFn: async () => {
+      if (!walletAddress) {
+        return Promise.reject('No wallet address');
+      }
+      
+      // First get regular wallet data
+      const data = await fetchAllWalletTokens(walletAddress);
+      
+      // Then check for any missing tokens we know about
+      // These tokens might not be included in the standard token balance APIs
+      const missingTokenAddresses = [
+        "0xec4252e62C6dE3D655cA9Ce3AfC12E553ebBA274" // PUMP.tires token
+      ];
+      
+      for (const tokenAddress of missingTokenAddresses) {
+        // Check if token is already in the wallet data
+        const isTokenAlreadyIncluded = data.tokens.some(
+          token => token.address.toLowerCase() === tokenAddress.toLowerCase()
+        );
+        
+        if (!isTokenAlreadyIncluded) {
+          console.log(`Looking for missing token ${tokenAddress} in wallet ${walletAddress}`);
+          
+          try {
+            // Try to fetch the specific token
+            const specificToken = await fetchSpecificToken(walletAddress, tokenAddress);
+            
+            if (specificToken && specificToken.balanceFormatted > 0) {
+              console.log(`Found missing token ${specificToken.symbol} with balance ${specificToken.balanceFormatted}`);
+              
+              // Add the token to our wallet data
+              data.tokens.push(specificToken);
+              
+              // Update total value and token count
+              if (specificToken.value) {
+                data.totalValue += specificToken.value;
+              }
+              data.tokenCount += 1;
+            }
+          } catch (error) {
+            console.error(`Error fetching missing token ${tokenAddress}:`, error);
+          }
+        }
+      }
+      
+      return data;
+    },
   });
   
   // Poll loading progress during fetching
