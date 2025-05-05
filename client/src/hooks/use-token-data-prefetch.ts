@@ -36,11 +36,12 @@ const globalCache: Record<string, TokenDataCache> = {};
  * for a wallet address and a set of visible token addresses
  */
 export function useTokenDataPrefetch(
-  walletAddress: string,
-  visibleTokenAddresses: string[]
+  walletAddress?: string,
+  visibleTokenAddresses?: string[]
 ): {
   prices: Record<string, number>;
   logos: Record<string, string>;
+  prefetchedLogos: Record<string, string>; // Alias for logos
   isLoading: boolean;
 } {
   const [prices, setPrices] = useState<Record<string, number>>({});
@@ -56,7 +57,7 @@ export function useTokenDataPrefetch(
   }, []);
 
   useEffect(() => {
-    if (!walletAddress || visibleTokenAddresses.length === 0) {
+    if (!walletAddress || !visibleTokenAddresses || visibleTokenAddresses.length === 0) {
       setIsLoading(false);
       return;
     }
@@ -121,9 +122,9 @@ export function useTokenDataPrefetch(
           }
           
           // Batch fetch visible token logos not already in the data
-          const missingLogoAddresses = visibleTokenAddresses.filter(
+          const missingLogoAddresses = visibleTokenAddresses ? visibleTokenAddresses.filter(
             address => !tokenLogos[address.toLowerCase()]
-          );
+          ) : [];
           
           if (missingLogoAddresses.length > 0) {
             try {
@@ -175,5 +176,6 @@ export function useTokenDataPrefetch(
     fetchData();
   }, [walletAddress, visibleTokenAddresses]);
   
-  return { prices, logos, isLoading };
+  // Include prefetchedLogos as an alias for logos
+  return { prices, logos, prefetchedLogos: logos, isLoading };
 }

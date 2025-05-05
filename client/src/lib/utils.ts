@@ -115,8 +115,16 @@ export function shortenAddress(address: string, chars: number = 10): string {
 }
 
 /**
- * Format a number with thousands separators
+ * Format a number with thousands separators and optional decimal places
+ * @param num The number to format
+ * @param decimals Number of decimal places to include (optional)
  */
-export function formatNumber(num: number): string {
+export function formatNumber(num: number, decimals?: number): string {
+  if (decimals !== undefined) {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }).format(num);
+  }
   return num.toLocaleString('en-US');
 }

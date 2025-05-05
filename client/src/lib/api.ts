@@ -189,6 +189,8 @@ export interface TransactionTransfer {
   security_score?: number;
   direction?: string;
   internal_transaction?: boolean;
+  usd_price?: number;       // USD price of token at transaction time
+  usd_value?: number;       // Total USD value of the transfer (value * price)
 }
 
 /**
