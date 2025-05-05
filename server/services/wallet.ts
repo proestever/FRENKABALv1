@@ -7,7 +7,6 @@ import { InsertTokenLogo } from '@shared/schema';
 import { storage } from '../storage';
 import { updateLoadingProgress } from '../routes';
 import * as moralisService from './moralis';
-import * as dexScreenerService from './dexscreener';
 import Moralis from 'moralis';
 
 /**
@@ -56,51 +55,6 @@ export async function getWalletData(
       ];
       
       // Check if any of these tokens are missing from the moralisTokens result
-      // Define a list of tokens with known pricing issues that should always use DexScreener instead of Moralis
-      const problematicTokens = [
-        "0xbd59a88754902b80922dfebc15c7ea94a8c21ce2" // PUPPERS has incorrect pricing in Moralis
-      ];
-      
-      // Always process problematic tokens specially, even if already in the results
-      for (const problematicToken of problematicTokens) {
-        // Check if token exists in the moralisTokens array
-        const tokenIndex = moralisTokens.findIndex(
-          token => token.token_address.toLowerCase() === problematicToken.toLowerCase()
-        );
-        
-        if (tokenIndex !== -1) {
-          // Token exists but needs special handling for price
-          console.log(`Found problematic token ${problematicToken}, will use DexScreener for pricing`);
-          
-          try {
-            // Get the correct price from DexScreener
-            const dexScreenerPrice = await dexScreenerService.getTokenPriceFromDexScreener(problematicToken);
-            
-            if (dexScreenerPrice !== null) {
-              console.log(`Using DexScreener price for ${problematicToken}: $${dexScreenerPrice}`);
-              
-              // Update token price (don't modify original token yet)
-              moralisTokens[tokenIndex].usd_price = dexScreenerPrice;
-              moralisTokens[tokenIndex].usd_price_24hr_percent_change = 0; // Default to 0 if not available
-              
-              // Try to get 24h change if possible
-              try {
-                const dexScreenerTokenData = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${problematicToken}`).then(res => res.json());
-                if (dexScreenerTokenData.pairs && dexScreenerTokenData.pairs.length > 0) {
-                  const priceChange24h = dexScreenerTokenData.pairs[0].priceChange?.h24 || 0;
-                  moralisTokens[tokenIndex].usd_price_24hr_percent_change = priceChange24h;
-                  console.log(`Updated 24h price change for ${problematicToken}: ${priceChange24h}%`);
-                }
-              } catch (error) {
-                console.error(`Error fetching 24h change for ${problematicToken}:`, error);
-              }
-            }
-          } catch (error) {
-            console.error(`Error updating price for problematic token ${problematicToken}:`, error);
-          }
-        }
-      }
-      
       for (const knownAddress of knownTokenAddresses) {
         // Skip if token already exists in the results
         if (moralisTokens.some(token => token.token_address.toLowerCase() === knownAddress.toLowerCase())) {
