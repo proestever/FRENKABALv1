@@ -437,9 +437,30 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                     return null;
                                   }
                                   
-                                  // Get first token sent and last token received for simplicity
-                                  const tokenIn = sentTokens[0];
-                                  const tokenOut = receivedTokens[receivedTokens.length - 1];
+                                  // Check if we have a summary that mentions specific tokens
+                                  let tokenIn = sentTokens[0];
+                                  let tokenOut = receivedTokens[receivedTokens.length - 1];
+                                  
+                                  // Try to match tokens from the summary if available
+                                  if (tx.summary) {
+                                    const summaryLower = tx.summary.toLowerCase();
+                                    
+                                    // Find the sent token that matches the summary
+                                    for (const token of sentTokens) {
+                                      if (token.token_symbol && summaryLower.includes(token.token_symbol.toLowerCase())) {
+                                        tokenIn = token;
+                                        break;
+                                      }
+                                    }
+                                    
+                                    // Find the received token that matches the summary
+                                    for (const token of receivedTokens) {
+                                      if (token.token_symbol && summaryLower.includes(token.token_symbol.toLowerCase())) {
+                                        tokenOut = token;
+                                        break;
+                                      }
+                                    }
+                                  }
                                   
                                   // Calculate USD values
                                   const tokenInUsd = calculateUsdValue(

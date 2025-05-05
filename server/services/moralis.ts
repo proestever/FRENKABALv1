@@ -678,11 +678,34 @@ export const getTransactionHistory = async (
           const isReceiving = transfer.to_address?.toLowerCase() === normalizedWalletAddress;
           const isSending = transfer.from_address?.toLowerCase() === normalizedWalletAddress;
           
+          // Format the token value to make it human readable
+          let valueFormatted = '';
+          if (transfer.value && transfer.token_decimals) {
+            try {
+              const decimals = parseInt(transfer.token_decimals);
+              const value = transfer.value;
+              
+              // Convert the raw value to a human-readable number with proper decimals
+              const rawValue = parseFloat(value) / Math.pow(10, decimals);
+              
+              // Format with commas for thousands and proper decimal places
+              const maxDecimals = Math.min(4, decimals); // Cap at 4 decimal places for readability
+              valueFormatted = rawValue.toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: maxDecimals
+              });
+            } catch (e) {
+              console.warn(`Error formatting token value: ${e}`);
+            }
+          }
+          
           return {
             ...transfer,
             direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown'),
             // Ensure token_address is set (sometimes it's in address property)
-            token_address: transfer.token_address || transfer.address
+            token_address: transfer.token_address || transfer.address,
+            // Add formatted value if it wasn't already provided
+            value_formatted: transfer.value_formatted || valueFormatted
           };
         });
       }
