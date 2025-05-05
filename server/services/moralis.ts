@@ -348,35 +348,41 @@ export const getWrappedTokenPrice = async (
 };
 
 /**
- * Get transaction history with SDK
- * This implementation uses the Moralis SDK to fetch transaction history
- * and processes the results to add direction information to transfers
+ * Get transaction history for a wallet address from Moralis verbose endpoint
+ * This provides much richer data than the standard transaction endpoint
+ * 
+ * @param walletAddress Wallet address to fetch transaction history for
+ * @param limit Maximum number of transactions to return (max 25 for verbose endpoint)
+ * @param cursor Pagination cursor for fetching next page
+ * @returns Transaction history with rich transaction data
  */
 export const getTransactionHistory = async (
   walletAddress: string,
-  limit: number = 100,
+  limit: number = 25,
   cursor: string | null = null
 ) => {
   try {
-    console.log(`Fetching transaction history for ${walletAddress} from Moralis SDK`);
+    console.log(`Fetching transaction history for ${walletAddress} from Moralis SDK (verbose endpoint)`);
     
     // Normalize wallet address to lowercase for comparison
     const normalizedWalletAddress = walletAddress.toLowerCase();
     
+    // Make the API request using the verbose endpoint
     const options: any = {
       chain: PULSECHAIN_CHAIN_ID,
       address: normalizedWalletAddress,
-      limit
+      limit: Math.min(limit, 25), // Limit to 25 for verbose endpoint
     };
     
     if (cursor) {
       options.cursor = cursor;
     }
     
-    const response = await Moralis.EvmApi.transaction.getWalletTransactions(options);
+    // Use the verbose endpoint for richer transaction data
+    const response = await Moralis.EvmApi.transaction.getWalletTransactionsVerbose(options);
     
     if (!response || !response.raw) {
-      throw new Error('Invalid response from Moralis getWalletTransactions');
+      throw new Error('Invalid response from Moralis getWalletTransactionsVerbose');
     }
     
     const responseData = response.raw;
@@ -429,7 +435,7 @@ export const getTransactionHistory = async (
       console.log('No transactions found');
     }
     
-    // Return processed data with the same structure as the original response
+    // Return processed data
     return {
       result,
       cursor: responseData.cursor || null,
@@ -502,91 +508,3 @@ export const getTokenMetadata = async (tokenAddress: string) => {
   }
 };
 
-/**
- * Get transaction history for a wallet address from Moralis verbose endpoint
- * This provides much richer data than the standard transaction endpoint
- * 
- * @param walletAddress Wallet address to fetch transaction history for
- * @param limit Maximum number of transactions to return (max 25 for verbose endpoint)
- * @param cursor Pagination cursor for fetching next page
- * @returns Transaction history with rich transaction data
- */
-export async function getTransactionHistory(
-  walletAddress: string,
-  limit: number = 25,
-  cursor: string | null = null
-): Promise<any> {
-  try {
-    console.log(`Fetching transaction history for ${walletAddress} from Moralis SDK`);
-    
-    // Direct API endpoint for verbose transaction data
-    const url = `https://deep-index.moralis.io/api/v2.2/${walletAddress}/verbose`;
-    
-    // Add query parameters
-    const params = {
-      chain: PULSECHAIN_CHAIN_ID,
-      order: 'DESC',
-      limit: Math.min(limit, 25).toString(), // Limit to 25 for verbose endpoint
-    };
-    
-    if (cursor) {
-      params['cursor'] = cursor;
-    }
-    
-    // Make the API request
-    const response = await Moralis.EvmApi.transaction.getWalletTransactionsVerbose({
-      chain: PULSECHAIN_CHAIN_ID,
-      address: walletAddress,
-      limit: Math.min(limit, 25),
-      cursor: cursor || undefined
-    });
-    
-    if (!response) {
-      throw new Error('No response from Moralis API');
-    }
-    
-    // Process the response to add direction to token transfers
-    const result = response.raw.result || [];
-    
-    // Process to add direction property to token transfers
-    result.forEach((tx: any) => {
-      // Process ERC20 transfers to add direction
-      if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-        tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
-          // Set direction based on from/to addresses
-          const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-          const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-          
-          return {
-            ...transfer,
-            direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-          };
-        });
-      }
-      
-      // Process native transfers to add direction
-      if (tx.native_transfers && tx.native_transfers.length > 0) {
-        tx.native_transfers = tx.native_transfers.map((transfer: any) => {
-          // Set direction based on from/to addresses
-          const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-          const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-          
-          return {
-            ...transfer,
-            direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-          };
-        });
-      }
-    });
-    
-    // Construct full response with cursor and total
-    return {
-      result,
-      cursor: response.raw.cursor,
-      total: response.raw.total || result.length
-    };
-  } catch (error) {
-    console.error('Error fetching transaction history:', error);
-    throw error;
-  }
-};
