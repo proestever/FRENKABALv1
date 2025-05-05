@@ -435,12 +435,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   const { 
     logos: prefetchedLogos, 
     isLoading: isLogosPrefetching 
-  } = useTokenDataPrefetch(transactions);
+  } = useTokenDataPrefetch(walletAddress, visibleTokenAddresses || []);
   
   const {
     prices: batchPrices,
     isLoading: isPricesFetching
-  } = useBatchTokenPrices(visibleTokenAddresses);
+  } = useBatchTokenPrices(visibleTokenAddresses || []);
   
   // Calculate USD values for tokens based on batch prices
   const calculateUsdValue = useCallback((value: string, decimals: string = '18', tokenAddress?: string) => {

@@ -34,15 +34,46 @@ const globalCache: Record<string, TokenDataCache> = {};
 /**
  * Custom hook that prefetches and caches token data (prices and logos)
  * for a wallet address and a set of visible token addresses
+ * 
+ * @param transactions Optional transactions array, used as a placeholder for compatibility
+ * @param walletAddress The wallet address to fetch data for
+ * @param visibleTokenAddresses Optional list of token addresses to prefetch
  */
 export function useTokenDataPrefetch(
-  walletAddress: string,
-  visibleTokenAddresses: string[]
+  transactionsOrWalletAddress: any[] | string,
+  walletAddressOrTokenAddresses?: string | string[],
+  optionalVisibleTokenAddresses?: string[]
 ): {
   prices: Record<string, number>;
   logos: Record<string, string>;
   isLoading: boolean;
 } {
+  // Handle different parameter combinations for backward compatibility
+  let walletAddress: string;
+  let visibleTokenAddresses: string[] = [];
+
+  // Check if first param is wallet address (string) or transactions array
+  if (typeof transactionsOrWalletAddress === 'string') {
+    walletAddress = transactionsOrWalletAddress;
+    
+    // If second param is array, it's token addresses
+    if (Array.isArray(walletAddressOrTokenAddresses)) {
+      visibleTokenAddresses = walletAddressOrTokenAddresses;
+    }
+  } else {
+    // First param is transactions array, second is wallet address
+    if (typeof walletAddressOrTokenAddresses === 'string') {
+      walletAddress = walletAddressOrTokenAddresses;
+    } else {
+      // If neither param is a valid wallet address, use a default empty string
+      walletAddress = '';
+    }
+    
+    // Third param is token addresses if provided
+    if (Array.isArray(optionalVisibleTokenAddresses)) {
+      visibleTokenAddresses = optionalVisibleTokenAddresses;
+    }
+  }
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [logos, setLogos] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -56,7 +87,8 @@ export function useTokenDataPrefetch(
   }, []);
 
   useEffect(() => {
-    if (!walletAddress || visibleTokenAddresses.length === 0) {
+    // Add null/undefined check for visibleTokenAddresses
+    if (!walletAddress || !visibleTokenAddresses || !Array.isArray(visibleTokenAddresses) || visibleTokenAddresses.length === 0) {
       setIsLoading(false);
       return;
     }

@@ -23,7 +23,8 @@ export function useBatchTokenPrices(tokenAddresses: string[]) {
   }, []);
   
   useEffect(() => {
-    if (!tokenAddresses || tokenAddresses.length === 0) {
+    // Enhanced check to verify it's a valid array
+    if (!tokenAddresses || !Array.isArray(tokenAddresses) || tokenAddresses.length === 0) {
       return;
     }
     
