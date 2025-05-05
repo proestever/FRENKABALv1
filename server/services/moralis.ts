@@ -583,11 +583,12 @@ export const getTransactionHistory = async (
     // Normalize wallet address to lowercase for comparison
     const normalizedWalletAddress = walletAddress.toLowerCase();
     
-    // Make the API request using the getWalletHistory endpoint
+    // Since we're having issues with the getWalletHistory endpoint, let's try the traditional getWalletTransactionsVerbose
+    console.log('Falling back to traditional getWalletTransactions endpoint...');
+    
     const options: any = {
       chain: PULSECHAIN_CHAIN_ID,
       address: normalizedWalletAddress,
-      order: "DESC",
       limit: Math.min(limit, 100), // Allow up to 100 transactions per request
     };
     
@@ -595,47 +596,50 @@ export const getTransactionHistory = async (
       options.cursor = cursor;
     }
     
-    // Use the wallets.getWalletHistory endpoint for complete transaction data
-    console.log('Calling Moralis wallets.getWalletHistory with options:', JSON.stringify(options));
+    // Use the getWalletTransactions endpoint which is more stable
+    const response = await Moralis.EvmApi.transaction.getWalletTransactionsVerbose(options);
     
-    const response = await Moralis.EvmApi.wallets.getWalletHistory(options);
+    console.log('Transaction API response received');
     
-    if (!response || !response.toJSON()) {
-      throw new Error('Invalid response from Moralis wallets.getWalletHistory');
+    if (!response) {
+      throw new Error('Empty response from Moralis getWalletTransactionsVerbose');
     }
     
+    // Convert response to JSON to work with it
     const responseData = response.toJSON();
+    const data = responseData as any;
     
-    // Debug the response to see what we're getting
-    console.log('Raw response from getWalletHistory:', 
-                JSON.stringify({
-                  responseKeys: Object.keys(responseData),
-                  hasResult: !!responseData.result,
-                  resultLength: responseData.result ? responseData.result.length : 0
-                }));
+    console.log(`Got transaction response with ${data.result?.length || 0} transactions`);
     
-    // Cast responseData to any to work with properties
-    const typedResponse = responseData as any;
+    // Debug response structure
+    console.log('Transaction response keys:', Object.keys(data));
     
     // Return the raw data since it already contains all the token transfers and details we need
-    console.log(`Successfully fetched transaction history for ${walletAddress} - ${typedResponse.result?.length || 0} transactions`);
-    
-    // Log a sample of the first transaction (truncated to avoid huge logs)
-    if (typedResponse.result && typedResponse.result.length > 0) {
-      const sampleTx = { ...typedResponse.result[0] };
+    if (data.result && data.result.length > 0) {
+      console.log(`Successfully fetched ${data.result.length} transactions for ${walletAddress}`);
+      
+      // Log a sample of the first transaction (truncated to avoid huge logs)
+      const sampleTx = { ...data.result[0] };
       // Truncate large arrays to avoid excessive logging
-      if (sampleTx.erc20_transfers && sampleTx.erc20_transfers.length > 2) {
-        const truncatedErc20 = [...sampleTx.erc20_transfers.slice(0, 2)];
-        truncatedErc20.push({ note: `...and ${typedResponse.result[0].erc20_transfers.length - 2} more transfers` });
-        sampleTx.erc20_transfers = truncatedErc20;
+      if (sampleTx.logs && sampleTx.logs.length > 3) {
+        sampleTx.logs = sampleTx.logs.slice(0, 3);
+        sampleTx.logs.push({ note: `...and ${data.result[0].logs.length - 3} more logs` });
       }
-      console.log('First transaction sample:', JSON.stringify(sampleTx).substring(0, 300) + '...');
+      console.log('First transaction sample:', JSON.stringify({
+        hash: sampleTx.hash,
+        from: sampleTx.from_address,
+        to: sampleTx.to_address,
+        value: sampleTx.value,
+        blockNumber: sampleTx.block_number,
+        timestamp: sampleTx.block_timestamp,
+        method: sampleTx.method_label || 'unknown'
+      }));
     } else {
-      console.log('No transactions found');
+      console.log('No transactions found for this wallet address');
     }
     
     // Process the transactions to ensure they have all the fields we expect
-    const result = typedResponse.result ? typedResponse.result.map((tx: any) => {
+    const result = data.result ? data.result.map((tx: any) => {
       // Ensure transfer arrays exist
       if (!tx.erc20_transfers) {
         tx.erc20_transfers = [];
@@ -692,10 +696,10 @@ export const getTransactionHistory = async (
     // Return processed data
     return {
       result,
-      cursor: typedResponse.cursor || null,
-      page: typedResponse.page || 0,
-      page_size: typedResponse.page_size || limit,
-      total: typedResponse.total || result.length
+      cursor: data.cursor || null,
+      page: data.page || 0,
+      page_size: data.page_size || limit,
+      total: data.total || result.length
     };
   } catch (error) {
     console.error(`Error fetching transaction history: ${error instanceof Error ? error.message : 'Unknown error'}`);
