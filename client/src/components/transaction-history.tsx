@@ -90,6 +90,11 @@ type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contr
 
 // Helper function to determine transaction type
 const getTransactionType = (tx: Transaction): TransactionType => {
+  // First, check if we have swap details from our enhanced analysis
+  if (tx.swap_details) {
+    return 'swap';
+  }
+  
   if (!tx.category) {
     // Try to infer from other properties if category is not available
     if (tx.method_label?.toLowerCase().includes('swap')) {
@@ -99,7 +104,15 @@ const getTransactionType = (tx: Transaction): TransactionType => {
     } else if (tx.erc20_transfers && tx.erc20_transfers.some(t => t.from_address.toLowerCase() === t.to_address.toLowerCase())) {
       return 'contract'; // Self-transfers are often contract interactions
     } else if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-      return 'send'; // Default for token transfers
+      // Check if it's likely a swap by looking at multiple token transfers with different directions
+      const receivedTokens = tx.erc20_transfers.filter(t => t.direction === 'receive').length;
+      const sentTokens = tx.erc20_transfers.filter(t => t.direction === 'send').length;
+      
+      if (receivedTokens > 0 && sentTokens > 0) {
+        return 'swap'; // If tokens are both sent and received, it's likely a swap
+      }
+      
+      return tx.erc20_transfers[0].direction === 'receive' ? 'receive' : 'send';
     } else {
       return 'all'; // Default fallback
     }
@@ -764,6 +777,60 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   <div className="text-sm font-semibold text-white">
                     {tx.summary || 'Transaction details'}
                     
+                    {/* Swap Details (Enhanced UI for Swaps) */}
+                    {tx.swap_details && (
+                      <div className="glass-card border border-white/10 rounded-lg mt-2 mb-3 p-3">
+                        <div className="text-sm font-medium text-white mb-2 flex items-center">
+                          <DollarSign size={14} className="text-purple-400 mr-1" />
+                          <span>Token Swap</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 gap-2">
+                          {/* Sent Tokens */}
+                          {tx.swap_details.sent.length > 0 && (
+                            <div className="border-b border-white/5 pb-2">
+                              <div className="text-xs text-muted-foreground mb-1">Sent:</div>
+                              {tx.swap_details.sent.map((sent, i) => (
+                                <div key={`swap-sent-desktop-${i}`} className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <TokenLogo 
+                                      address={sent.address}
+                                      symbol={sent.symbol}
+                                      fallbackLogo={prefetchedLogos[sent.address?.toLowerCase() || '']}
+                                      size="sm"
+                                    />
+                                    <span className="text-sm font-medium ml-2">{sent.symbol}</span>
+                                  </div>
+                                  <div className="text-sm font-medium text-red-400">{sent.amount}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Received Tokens */}
+                          {tx.swap_details.received.length > 0 && (
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">Received:</div>
+                              {tx.swap_details.received.map((received, i) => (
+                                <div key={`swap-received-desktop-${i}`} className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <TokenLogo 
+                                      address={received.address}
+                                      symbol={received.symbol}
+                                      fallbackLogo={prefetchedLogos[received.address?.toLowerCase() || '']}
+                                      size="sm"
+                                    />
+                                    <span className="text-sm font-medium ml-2">{received.symbol}</span>
+                                  </div>
+                                  <div className="text-sm font-medium text-green-400">{received.amount}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* ERC20 Transfers */}
                     {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                       <div key={`${tx.hash}-erc20-${i}`} className="flex items-center mt-2">
@@ -1093,6 +1160,60 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {/* Transaction summary if available */}
               {tx.summary && (
                 <div className="mb-2 text-sm">{tx.summary}</div>
+              )}
+              
+              {/* Swap Details (Enhanced UI for Swaps) */}
+              {tx.swap_details && (
+                <div className="glass-card border border-white/10 rounded-lg mb-3 p-3">
+                  <div className="text-sm font-medium text-white mb-2 flex items-center">
+                    <DollarSign size={14} className="text-purple-400 mr-1" />
+                    <span>Token Swap</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-2">
+                    {/* Sent Tokens */}
+                    {tx.swap_details.sent.length > 0 && (
+                      <div className="border-b border-white/5 pb-2">
+                        <div className="text-xs text-muted-foreground mb-1">Sent:</div>
+                        {tx.swap_details.sent.map((sent, i) => (
+                          <div key={`swap-sent-${i}`} className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <TokenLogo 
+                                address={sent.address}
+                                symbol={sent.symbol}
+                                fallbackLogo={prefetchedLogos[sent.address?.toLowerCase() || '']}
+                                size="sm"
+                              />
+                              <span className="text-sm font-medium ml-2">{sent.symbol}</span>
+                            </div>
+                            <div className="text-sm font-medium text-red-400">{sent.amount}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Received Tokens */}
+                    {tx.swap_details.received.length > 0 && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Received:</div>
+                        {tx.swap_details.received.map((received, i) => (
+                          <div key={`swap-received-${i}`} className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <TokenLogo 
+                                address={received.address}
+                                symbol={received.symbol}
+                                fallbackLogo={prefetchedLogos[received.address?.toLowerCase() || '']}
+                                size="sm"
+                              />
+                              <span className="text-sm font-medium ml-2">{received.symbol}</span>
+                            </div>
+                            <div className="text-sm font-medium text-green-400">{received.amount}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
               
               {/* ERC20 Transfers */}
