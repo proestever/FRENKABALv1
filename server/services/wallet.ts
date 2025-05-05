@@ -7,6 +7,7 @@ import { InsertTokenLogo } from '@shared/schema';
 import { storage } from '../storage';
 import { updateLoadingProgress } from '../routes';
 import * as moralisService from './moralis';
+import * as transactionAnalyzer from './transaction-analyzer';
 import Moralis from 'moralis';
 
 /**
@@ -346,7 +347,14 @@ export async function getWalletData(
 /**
  * Get wallet transaction history
  */
-export async function getWalletTransactions(
+export /**
+ * Get transaction history for a wallet with enhanced transaction type detection and token info
+ * @param walletAddress The wallet address
+ * @param limit Maximum number of transactions to return
+ * @param cursor Pagination cursor for fetching next page
+ * @returns Processed transaction history with detailed token info
+ */
+async function getWalletTransactions(
   walletAddress: string,
   limit: number = 100,
   cursor: string | null = null
