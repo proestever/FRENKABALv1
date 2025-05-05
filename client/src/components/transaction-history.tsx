@@ -1553,6 +1553,154 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 <div className="mb-2 text-sm font-medium">{tx.summary}</div>
               )}
               
+              {/* Expanded Transaction Details - Mobile */}
+              {expandedTransaction === tx.hash && (
+                <div className="mb-3 p-3 rounded-md glass-card border border-white/10">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="bg-blue-500/20 px-2 py-0.5 rounded-md text-xs text-blue-300">
+                      Transaction Details
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2 text-xs">
+                    <div className="flex flex-col space-y-1">
+                      <div className="flex justify-between items-center bg-black/30 px-2 py-1.5 rounded-sm">
+                        <span className="text-white/70">Hash:</span>
+                        <div className="flex items-center">
+                          <span className="text-white truncate max-w-[150px]">{tx.hash}</span>
+                          <button 
+                            onClick={() => copyToClipboard(tx.hash)}
+                            className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
+                          >
+                            {copiedAddresses[tx.hash] ? (
+                              <Check size={12} className="text-green-400" />
+                            ) : (
+                              <Copy size={12} className="text-white/70 hover:text-white" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center px-2 py-1.5">
+                        <span className="text-white/70">Block:</span>
+                        <span className="text-white">{tx.block_number}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center bg-black/30 px-2 py-1.5 rounded-sm">
+                        <span className="text-white/70">From:</span>
+                        <div className="flex items-center">
+                          <Link 
+                            to={`/${tx.from_address}`}
+                            className="text-white hover:text-gray-300"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {shortenAddress(tx.from_address)}
+                          </Link>
+                          {tx.from_address_label && (
+                            <span className="ml-1 px-1 py-0.5 bg-yellow-500/20 text-xs rounded-md text-yellow-300">
+                              {tx.from_address_label}
+                            </span>
+                          )}
+                          <button 
+                            onClick={() => copyToClipboard(tx.from_address)}
+                            className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
+                          >
+                            {copiedAddresses[tx.from_address] ? (
+                              <Check size={12} className="text-green-400" />
+                            ) : (
+                              <Copy size={12} className="text-white/70 hover:text-white" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center px-2 py-1.5">
+                        <span className="text-white/70">To:</span>
+                        <div className="flex items-center">
+                          <Link 
+                            to={`/${tx.to_address}`}
+                            className="text-white hover:text-gray-300"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {shortenAddress(tx.to_address)}
+                          </Link>
+                          {tx.to_address_label && (
+                            <span className="ml-1 px-1 py-0.5 bg-yellow-500/20 text-xs rounded-md text-yellow-300">
+                              {tx.to_address_label}
+                            </span>
+                          )}
+                          <button 
+                            onClick={() => copyToClipboard(tx.to_address)}
+                            className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
+                          >
+                            {copiedAddresses[tx.to_address] ? (
+                              <Check size={12} className="text-green-400" />
+                            ) : (
+                              <Copy size={12} className="text-white/70 hover:text-white" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center bg-black/30 px-2 py-1.5 rounded-sm">
+                        <span className="text-white/70">Value:</span>
+                        <span className="text-white">{parseFloat(ethers.utils.formatEther(tx.value)) > 0 ? `${ethers.utils.formatEther(tx.value)} PLS` : '0 PLS'}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center px-2 py-1.5">
+                        <span className="text-white/70">Gas Price:</span>
+                        <span className="text-white">{(parseInt(tx.gas_price) / 10**9).toFixed(2)} Gwei</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center bg-black/30 px-2 py-1.5 rounded-sm">
+                        <span className="text-white/70">Gas Used:</span>
+                        <span className="text-white">{parseInt(tx.receipt_gas_used).toLocaleString()}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center px-2 py-1.5">
+                        <span className="text-white/70">Gas Limit:</span>
+                        <span className="text-white">{parseInt(tx.gas).toLocaleString()}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center bg-black/30 px-2 py-1.5 rounded-sm">
+                        <span className="text-white/70">Transaction Fee:</span>
+                        <span className="text-white">{parseFloat(tx.transaction_fee).toFixed(8)} PLS</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center px-2 py-1.5">
+                        <span className="text-white/70">Nonce:</span>
+                        <span className="text-white">{tx.nonce}</span>
+                      </div>
+                      
+                      {tx.method_label && (
+                        <div className="flex justify-between items-center bg-black/30 px-2 py-1.5 rounded-sm">
+                          <span className="text-white/70">Method:</span>
+                          <span className="text-white">{tx.method_label}</span>
+                        </div>
+                      )}
+                      
+                      {tx.category && (
+                        <div className="flex justify-between items-center px-2 py-1.5">
+                          <span className="text-white/70">Category:</span>
+                          <span className="text-white">{tx.category}</span>
+                        </div>
+                      )}
+                      
+                      {tx.possible_spam !== undefined && (
+                        <div className="flex justify-between items-center bg-black/30 px-2 py-1.5 rounded-sm">
+                          <span className="text-white/70">Possible Spam:</span>
+                          <span className={tx.possible_spam ? 'text-red-400' : 'text-green-400'}>
+                            {tx.possible_spam ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {/* Swap Transaction Special Display - Mobile */}
               {getTransactionType(tx) === 'swap' && (
                 <div className="mb-3 p-3 rounded-md glass-card border border-white/10 flex flex-col">
