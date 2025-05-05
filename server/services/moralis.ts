@@ -445,7 +445,17 @@ export const getTransactionHistory = async (
     return response.raw;
   } catch (error) {
     console.error(`Error fetching transaction history: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    throw error;
+    
+    // Instead of throwing, return an empty result structure with a descriptive error message
+    // This will prevent the entire API from failing if there's an issue with transaction history
+    return {
+      result: [],
+      cursor: null,
+      total: 0,
+      page: 1,
+      page_size: limit,
+      error: error instanceof Error ? error.message : 'Failed to fetch transaction history'
+    };
   }
 };
 

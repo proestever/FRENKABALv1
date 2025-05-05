@@ -362,6 +362,7 @@ async function getWalletTransactions(
   result: Transaction[];
   cursor: string | null;
   total: number;
+  error?: string;
 }> {
   try {
     walletAddress = walletAddress.toLowerCase();
@@ -373,7 +374,18 @@ async function getWalletTransactions(
       cursor
     );
     
-    console.log(`Processing ${transactionHistory.result.length} transactions for wallet ${walletAddress}`);
+    // Check if there was an error in fetching transaction history
+    if (transactionHistory.error) {
+      console.warn(`Error in transaction history response: ${transactionHistory.error}`);
+      return {
+        result: [],
+        cursor: null, 
+        total: 0,
+        error: transactionHistory.error
+      };
+    }
+    
+    console.log(`Processing ${transactionHistory.result?.length || 0} transactions for wallet ${walletAddress}`);
     
     // Process transaction data to ensure compatibility with frontend
     const processedTransactions = await Promise.all(transactionHistory.result.map(async (tx: any) => {
