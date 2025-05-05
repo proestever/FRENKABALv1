@@ -142,8 +142,7 @@ export function getBaseTransactionType(
   );
   
   const isSendingNative = tx.from_address?.toLowerCase() === walletAddress && 
-                          tx.value !== '0' &&
-                          !tx.receipt_contract_address;
+                          tx.value !== '0';
   
   // Check for received tokens/native currency
   const isReceivingERC20 = tx.erc20_transfers?.some(
@@ -199,8 +198,8 @@ export function isSwapTransaction(tx: Transaction): boolean {
     input.startsWith(METHOD_SIGNATURES.SWAP_TOKENS_FOR_TOKENS_SUPPORTING_FEE);
     
   // Check if interacting with a known router
-  const isRouterInteraction = tx.to_address && 
-    KNOWN_ROUTER_ADDRESSES.includes(tx.to_address.toLowerCase());
+  const isRouterInteraction = tx.to_address ? 
+    KNOWN_ROUTER_ADDRESSES.includes(tx.to_address.toLowerCase()) : false;
     
   return isSwapMethod || isRouterInteraction;
 }

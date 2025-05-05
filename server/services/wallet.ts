@@ -531,9 +531,46 @@ async function getWalletTransactions(
             }
           }
         } else {
-          // For all other contract interactions
-          if (!tx.method_label) {
-            tx.method_label = 'Contract Interaction';
+          // Try to analyze using the transaction analyzer
+          try {
+            // Run a detailed transaction analysis to get better information
+            // This will check function signatures, token movements, and contract addresses
+            console.log(`Using transaction analyzer to identify transaction type for ${tx.hash}`);
+            const txDetails = await transactionAnalyzer.analyzeTransaction(tx, walletAddress);
+            
+            // Update with more specific method based on the analysis
+            if (txDetails.methodName && txDetails.methodName !== 'Contract Interaction') {
+              tx.method_label = txDetails.methodName;
+              tx.category = txDetails.type;
+              console.log(`Transaction analyzer identified ${tx.hash} as ${txDetails.type}: ${txDetails.methodName}`);
+              
+              // For swap transactions, add the swap details
+              if (txDetails.type === 'swap' && txDetails.tokens.sent.length > 0 && txDetails.tokens.received.length > 0) {
+                tx.swap_details = {
+                  sent: txDetails.tokens.sent.map(t => ({
+                    symbol: t.symbol,
+                    amount: t.amountFormatted || '0',
+                    address: t.address
+                  })),
+                  received: txDetails.tokens.received.map(t => ({
+                    symbol: t.symbol,
+                    amount: t.amountFormatted || '0',
+                    address: t.address
+                  }))
+                };
+              }
+            } else {
+              // If no specific method detected, use basic fallback
+              if (!tx.method_label) {
+                tx.method_label = 'Contract Interaction';
+              }
+            }
+          } catch (error) {
+            console.error(`Transaction analyzer error for ${tx.hash}:`, error);
+            // For all other contract interactions
+            if (!tx.method_label) {
+              tx.method_label = 'Contract Interaction';
+            }
           }
         }
       }
@@ -766,24 +803,28 @@ async function getWalletTransactions(
         // Check if this is a staking transaction by address even if we don't recognize the method
         if (isKnownStakingContract && !isStaking && !isUnstaking) {
           // If we can't identify if it's staking or unstaking, look at token flows
-          let incomingTokens = 0;
-          let outgoingTokens = 0;
+          let incomingTokensCount = 0;
+          let outgoingTokensCount = 0;
           
           // Check ERC20 token transfers
           tx.erc20_transfers?.forEach((transfer: any) => {
             if (transfer.from_address?.toLowerCase() === walletAddress.toLowerCase()) {
-              outgoingTokens++;
+              outgoingTokensCount++;
             }
             if (transfer.to_address?.toLowerCase() === walletAddress.toLowerCase()) {
-              incomingTokens++;
+              incomingTokensCount++;
             }
           });
           
           // More incoming than outgoing typically means unstaking (getting rewards)
-          if (incomingTokens > outgoingTokens) {
-            isUnstaking = true;
-          } else if (outgoingTokens > incomingTokens) {
-            isStaking = true;
+          if (incomingTokensCount > outgoingTokensCount) {
+            // Set transaction as unstaking
+            tx.category = 'unstake';
+            tx.method_label = 'Unstake';
+          } else if (outgoingTokensCount > incomingTokensCount) {
+            // Set transaction as staking
+            tx.category = 'stake';
+            tx.method_label = 'Stake';
           }
           // If equal or none, leave as is
         }
@@ -822,7 +863,57 @@ async function getWalletTransactions(
         return false;
       };
       
-      // Ensure category is set - Apply detection in sequence
+      // Final analysis pass - Run transaction analyzer for all transactions to extract comprehensive details
+      try {
+        // Only run the analyzer if we haven't already analyzed this transaction earlier
+        if (!tx.analyzed) {
+          console.log(`Running comprehensive transaction analysis for ${tx.hash}`);
+          
+          // Get detailed transaction analysis
+          const txAnalysis = await transactionAnalyzer.analyzeTransaction(tx, walletAddress);
+          
+          // Only update category/method if we get a specific transaction type (not 'unknown' or 'contract')
+          if (txAnalysis.type !== 'unknown' && txAnalysis.type !== 'contract') {
+            tx.category = txAnalysis.type;
+            
+            // Only update method_label if we got a better description than "Contract Interaction"
+            if (txAnalysis.methodName && txAnalysis.methodName !== 'Contract Interaction' && 
+                (!tx.method_label || tx.method_label === 'Contract Interaction')) {
+              tx.method_label = txAnalysis.methodName;
+            }
+            
+            console.log(`Transaction analyzer identified ${tx.hash} as ${txAnalysis.type}: ${txAnalysis.methodName}`);
+          }
+          
+          // For swap transactions, ensure we set swap details for UI rendering
+          if (txAnalysis.type === 'swap' && txAnalysis.tokens.sent.length > 0 && txAnalysis.tokens.received.length > 0) {
+            // Only update swap details if we don't already have them
+            if (!tx.swap_details) {
+              tx.swap_details = {
+                sent: txAnalysis.tokens.sent.map(t => ({
+                  symbol: t.symbol,
+                  amount: t.amountFormatted || '0',
+                  address: t.address
+                })),
+                received: txAnalysis.tokens.received.map(t => ({
+                  symbol: t.symbol,
+                  amount: t.amountFormatted || '0',
+                  address: t.address
+                }))
+              };
+              
+              console.log(`Added swap details for ${tx.hash}: ${txAnalysis.tokens.sent.length} sent tokens, ${txAnalysis.tokens.received.length} received tokens`);
+            }
+          }
+          
+          // Mark as analyzed to avoid redundant processing
+          tx.analyzed = true;
+        }
+      } catch (error) {
+        console.error(`Error in transaction analysis for ${tx.hash}:`, error);
+      }
+      
+      // Ensure category is set - Apply detection in sequence as fallback if needed
       if (!tx.category) {
         // First check for swaps
         const isSwap = detectSwapTransaction();
