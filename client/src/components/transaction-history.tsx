@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
-import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check, Activity as ActivityIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
 import { Link } from 'wouter';
 import { useTokenDataPrefetch } from '@/hooks/use-token-data-prefetch';
 import { useBatchTokenPrices } from '@/hooks/use-batch-token-prices';
+import { ethers } from 'ethers';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -777,6 +778,38 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   <div className="text-sm font-semibold text-white">
                     {tx.summary || 'Transaction details'}
                     
+                    {/* Default transaction details when no transfers are available */}
+                    {(!tx.erc20_transfers || tx.erc20_transfers.length === 0) && 
+                     (!tx.native_transfers || tx.native_transfers.length === 0) && 
+                     (!tx.contract_interactions?.approvals || tx.contract_interactions.approvals.length === 0) && (
+                      <div className="flex items-center mt-2">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-black/20 border border-white/10">
+                          <ActivityIcon size={14} className="text-white" />
+                        </div>
+                        <div className="ml-2 flex flex-col">
+                          <div className="flex items-center">
+                            <span className="bg-gray-400/20 px-1 py-0.5 rounded-sm text-xs text-gray-300 mr-1">
+                              Contract Interaction
+                            </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            To: <Link 
+                              to={`/${tx.to_address}`} 
+                              className="text-white hover:text-gray-300"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {shortenAddress(tx.to_address)}
+                            </Link>
+                            {parseFloat(tx.value) > 0 && (
+                              <span className="ml-2 text-red-400">
+                                -{ethers.utils.formatEther(tx.value)} PLS
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {/* Contract Interactions - Approvals */}
                     {tx.contract_interactions?.approvals && tx.contract_interactions.approvals.map((approval, i) => (
                       <div key={`${tx.hash}-approval-${i}`} className="flex items-center mt-2 bg-blue-500/10 p-2 rounded-md">
@@ -1145,6 +1178,41 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {/* Transaction summary if available */}
               {tx.summary && (
                 <div className="mb-2 text-sm font-medium">{tx.summary}</div>
+              )}
+              
+              {/* Default transaction details when no transfers are available */}
+              {(!tx.erc20_transfers || tx.erc20_transfers.length === 0) && 
+               (!tx.native_transfers || tx.native_transfers.length === 0) && 
+               (!tx.contract_interactions?.approvals || tx.contract_interactions.approvals.length === 0) && (
+                <div className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                  <div className="flex items-center">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-black/20 border border-white/10">
+                      <ActivityIcon size={14} className="text-white" />
+                    </div>
+                    <div className="ml-2">
+                      <div className="text-sm font-medium">Contract Interaction</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        To: <Link 
+                          to={`/${tx.to_address}`} 
+                          className="text-white hover:text-gray-300"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {shortenAddress(tx.to_address)}
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-muted-foreground">
+                      {parseFloat(tx.value) > 0 && (
+                        <div className="text-sm font-bold text-red-400">
+                          -{ethers.utils.formatEther(tx.value)} PLS
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
               
               {/* Contract Interactions - Approvals */}
