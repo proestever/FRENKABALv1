@@ -578,17 +578,16 @@ export const getTransactionHistory = async (
   cursor: string | null = null
 ) => {
   try {
-    console.log(`Fetching transaction history for ${walletAddress} from Moralis SDK (verbose endpoint)`);
+    console.log(`Fetching transaction history for ${walletAddress} from Moralis SDK (wallet history endpoint)`);
     
     // Normalize wallet address to lowercase for comparison
     const normalizedWalletAddress = walletAddress.toLowerCase();
     
-    // Since we're having issues with the getWalletHistory endpoint, let's try the traditional getWalletTransactionsVerbose
-    console.log('Falling back to traditional getWalletTransactions endpoint...');
-    
+    // Create options object for Moralis API call
     const options: any = {
-      chain: PULSECHAIN_CHAIN_ID,
+      chain: 'pulse', // Using the chain name directly instead of hex chain ID
       address: normalizedWalletAddress,
+      order: 'DESC',
       limit: Math.min(limit, 100), // Allow up to 100 transactions per request
     };
     
@@ -596,49 +595,50 @@ export const getTransactionHistory = async (
       options.cursor = cursor;
     }
     
-    // Use the getWalletTransactions endpoint which is more stable
-    const response = await Moralis.EvmApi.transaction.getWalletTransactionsVerbose(options);
+    console.log('Calling Moralis wallets.getWalletHistory with options:', JSON.stringify(options));
     
+    // Use the wallets.getWalletHistory endpoint which provides rich transaction details
+    const response = await Moralis.EvmApi.wallets.getWalletHistory(options);
     console.log('Transaction API response received');
     
-    if (!response) {
-      throw new Error('Empty response from Moralis getWalletTransactionsVerbose');
+    if (!response || !response.raw) {
+      throw new Error('Empty response from Moralis wallets.getWalletHistory');
     }
     
-    // Convert response to JSON to work with it
-    const responseData = response.toJSON();
-    const data = responseData as any;
+    // Get the raw response data
+    const data = response.raw as any;
     
+    // Debug response info
     console.log(`Got transaction response with ${data.result?.length || 0} transactions`);
-    
-    // Debug response structure
     console.log('Transaction response keys:', Object.keys(data));
     
-    // Return the raw data since it already contains all the token transfers and details we need
     if (data.result && data.result.length > 0) {
       console.log(`Successfully fetched ${data.result.length} transactions for ${walletAddress}`);
       
-      // Log a sample of the first transaction (truncated to avoid huge logs)
-      const sampleTx = { ...data.result[0] };
-      // Truncate large arrays to avoid excessive logging
-      if (sampleTx.logs && sampleTx.logs.length > 3) {
-        sampleTx.logs = sampleTx.logs.slice(0, 3);
-        sampleTx.logs.push({ note: `...and ${data.result[0].logs.length - 3} more logs` });
+      // Log sample transaction (first one)
+      const sampleTx = data.result[0];
+      console.log('First transaction summary:', sampleTx.summary || 'No summary available');
+      console.log('Transaction type:', sampleTx.category || 'unknown');
+      
+      // Log first transaction's ERC20 transfers count
+      if (sampleTx.erc20_transfers && sampleTx.erc20_transfers.length > 0) {
+        console.log(`First transaction has ${sampleTx.erc20_transfers.length} ERC20 transfers`);
+        
+        // Log the first transfer as sample
+        const sampleTransfer = sampleTx.erc20_transfers[0];
+        console.log('Sample transfer:', JSON.stringify({
+          token: sampleTransfer.token_symbol,
+          from: sampleTransfer.from_address,
+          to: sampleTransfer.to_address,
+          value: sampleTransfer.value_formatted,
+          direction: sampleTransfer.direction || 'unknown'
+        }));
       }
-      console.log('First transaction sample:', JSON.stringify({
-        hash: sampleTx.hash,
-        from: sampleTx.from_address,
-        to: sampleTx.to_address,
-        value: sampleTx.value,
-        blockNumber: sampleTx.block_number,
-        timestamp: sampleTx.block_timestamp,
-        method: sampleTx.method_label || 'unknown'
-      }));
     } else {
       console.log('No transactions found for this wallet address');
     }
     
-    // Process the transactions to ensure they have all the fields we expect
+    // Process the transactions to ensure all transfers have direction
     const result = data.result ? data.result.map((tx: any) => {
       // Ensure transfer arrays exist
       if (!tx.erc20_transfers) {
@@ -649,44 +649,57 @@ export const getTransactionHistory = async (
         tx.native_transfers = [];
       }
       
-      // Process ERC20 transfers to set direction property
+      // Process ERC20 transfers to set direction property if not already set
       if (tx.erc20_transfers.length > 0) {
         tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
-          // Set direction based on from/to addresses
+          // If direction is already set, keep it
+          if (transfer.direction) {
+            return transfer;
+          }
+          
+          // Otherwise, determine direction based on wallet address
           const isReceiving = transfer.to_address?.toLowerCase() === normalizedWalletAddress;
           const isSending = transfer.from_address?.toLowerCase() === normalizedWalletAddress;
           
           return {
             ...transfer,
             direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown'),
-            // Store token address for consistency
-            token_address: transfer.address
+            // Ensure token_address is set (sometimes it's in address property)
+            token_address: transfer.token_address || transfer.address
           };
         });
       }
       
-      // Determine transaction category if not already set
-      if (!tx.category) {
-        const hasOutgoingErc20 = tx.erc20_transfers.some((t: any) => 
-          t.from_address?.toLowerCase() === normalizedWalletAddress);
-        const hasIncomingErc20 = tx.erc20_transfers.some((t: any) => 
-          t.to_address?.toLowerCase() === normalizedWalletAddress);
-        const hasOutgoingNative = tx.native_transfers?.some((t: any) => 
-          t.from_address?.toLowerCase() === normalizedWalletAddress);
-        const hasIncomingNative = tx.native_transfers?.some((t: any) => 
-          t.to_address?.toLowerCase() === normalizedWalletAddress);
+      // Add additional token swap indicators if not already categorized
+      if (!tx.category && tx.erc20_transfers && tx.erc20_transfers.length >= 2) {
+        const sentTokens = tx.erc20_transfers.filter((t: any) => 
+          t.direction === 'send' || t.from_address?.toLowerCase() === normalizedWalletAddress
+        );
         
-        if ((hasOutgoingErc20 && hasIncomingErc20) || tx.summary?.toLowerCase().includes('swap')) {
+        const receivedTokens = tx.erc20_transfers.filter((t: any) => 
+          t.direction === 'receive' || t.to_address?.toLowerCase() === normalizedWalletAddress
+        );
+        
+        if (sentTokens.length > 0 && receivedTokens.length > 0) {
           tx.category = 'token swap';
-        } else if (hasOutgoingErc20 || hasOutgoingNative) {
-          tx.category = 'token send';
-        } else if (hasIncomingErc20 || hasIncomingNative) {
-          tx.category = 'token receive';
-        } else if (tx.method_label?.toLowerCase().includes('approve') || 
-                  (tx.contract_interactions?.approvals && tx.contract_interactions.approvals.length > 0)) {
-          tx.category = 'approve';
-        } else {
-          tx.category = 'contract';
+          
+          // Create a summary if one doesn't exist
+          if (!tx.summary) {
+            const sentToken = sentTokens[0];
+            const receivedToken = receivedTokens[0];
+            
+            if (sentToken && receivedToken) {
+              // Format values with commas for thousands
+              const sentAmount = parseFloat(sentToken.value_formatted).toLocaleString(undefined, {
+                maximumFractionDigits: 2
+              });
+              const receivedAmount = parseFloat(receivedToken.value_formatted).toLocaleString(undefined, {
+                maximumFractionDigits: 2
+              });
+              
+              tx.summary = `Swapped ${sentAmount} ${sentToken.token_symbol} for ${receivedAmount} ${receivedToken.token_symbol}`;
+            }
+          }
         }
       }
       

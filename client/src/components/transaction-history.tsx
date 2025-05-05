@@ -379,22 +379,31 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   onClick={() => toggleExpandTx(tx.hash)}
                 >
                   {/* Transaction summary row */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge className={`${typeInfo.color}`}>
-                        {typeInfo.label}
-                      </Badge>
-                      <div className="text-sm">
-                        {new Date(tx.block_timestamp).toLocaleString()}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge className={`${typeInfo.color}`}>
+                          {typeInfo.label}
+                        </Badge>
+                        <div className="text-sm">
+                          {new Date(tx.block_timestamp).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        {isExpanded ? (
+                          <ChevronUp className="h-5 w-5 text-white/50" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-white/50" />
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center">
-                      {isExpanded ? (
-                        <ChevronUp className="h-5 w-5 text-white/50" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-white/50" />
-                      )}
-                    </div>
+                    
+                    {/* Transaction summary if available */}
+                    {tx.summary && (
+                      <div className="text-sm font-medium text-white/90 mt-1">
+                        {tx.summary}
+                      </div>
+                    )}
                   </div>
                   
                   {/* Expanded content */}
