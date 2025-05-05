@@ -1,12 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance } from "./services/api";
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
-import { getTokenPricesFromDexScreener } from "./services/dexscreener";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
+
+// Import our new services
+import * as walletService from "./services/wallet";
+import * as moralisService from "./services/moralis";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -69,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid limit parameter. Must be between 1 and 200" });
       }
       
-      const walletData = await getWalletData(address, pageNum, limitNum);
+      const walletData = await walletService.getWalletData(address, pageNum, limitNum);
       
       // Store this address in recent addresses (for future implementation)
       // For now we're just returning the data
@@ -144,7 +146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all tokens without pagination (backend will still process in batches)
       // Pass a very large limit to essentially get all tokens
-      const walletData = await getWalletData(address, 1, 1000);
+      const walletData = await walletService.getWalletData(address, 1, 1000);
       
       // Store this address in recent addresses (for future implementation)
       // This would save the recent searches in the database
