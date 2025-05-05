@@ -112,7 +112,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         setIsLoadingMore(true);
       }
       
-      const response = await fetch(`/api/v1/wallet/${walletAddress}/transactions?page=${p}&limit=${limit}`);
+      const response = await fetch(`/api/wallet/${walletAddress}/transactions?page=${p}&limit=${limit}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch transactions');
