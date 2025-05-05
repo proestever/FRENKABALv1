@@ -400,6 +400,68 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   {/* Expanded content */}
                   {isExpanded && (
                     <div className="mt-3 border-t border-white/10 pt-3">
+                      {/* Transaction Details Section */}
+                      <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
+                        <h4 className="text-sm font-medium mb-2 col-span-2">Transaction Details</h4>
+                        
+                        {/* Hash */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Hash</div>
+                          <div className="flex items-center gap-1">
+                            <span className="font-mono text-white text-xs truncate">{shortenAddress(displayTx.hash, 6, 6)}</span>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyToClipboard(displayTx.hash);
+                              }} 
+                              className="hover:text-blue-400"
+                            >
+                              {copiedAddresses[displayTx.hash] ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Status */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Status</div>
+                          <div className="text-green-400">
+                            {displayTx.receipt_status === "1" ? "Success" : "Failed"}
+                          </div>
+                        </div>
+                        
+                        {/* Block */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Block</div>
+                          <div>{displayTx.block_number}</div>
+                        </div>
+                        
+                        {/* Gas Used */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Gas Used</div>
+                          <div>{parseInt(displayTx.receipt_gas_used).toLocaleString()} gas</div>
+                        </div>
+                        
+                        {/* Gas Price */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Gas Price</div>
+                          <div>{(parseInt(displayTx.gas_price) / 1e9).toFixed(9)} Gwei</div>
+                        </div>
+                        
+                        {/* Total Fee */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Total Fee</div>
+                          <div>{displayTx.transaction_fee ? (parseFloat(displayTx.transaction_fee)).toFixed(8) : '0.00000000'} PLS</div>
+                        </div>
+                        
+                        {/* Method */}
+                        {displayTx.method_label && (
+                          <div className="bg-black/20 p-2 rounded-md col-span-2">
+                            <div className="text-white/60 text-xs mb-1">Method</div>
+                            <div className="font-mono">{displayTx.method_label}</div>
+                          </div>
+                        )}
+                      </div>
+                      
                       {/* Token transfers section */}
                       {(displayTx.erc20_transfers && displayTx.erc20_transfers.length > 0) || 
                        (displayTx.native_transfers && displayTx.native_transfers.length > 0) ? (
@@ -490,10 +552,65 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 })()}
                               </div>
                               
-                              {/* Show message about routing if there are more than 2 transfers */}
+                              {/* Show detailed steps button if there are more than 2 transfers */}
                               {displayTx.erc20_transfers.length > 2 && (
-                                <div className="text-xs text-white/60 text-center mt-2">
-                                  Via {displayTx.erc20_transfers.length - 2} intermediate steps
+                                <div className="mt-4">
+                                  <details className="group">
+                                    <summary className="text-xs cursor-pointer flex items-center justify-center gap-1 text-white/70 hover:text-white/90">
+                                      <span>View all {displayTx.erc20_transfers.length} token transfers</span>
+                                      <ChevronDown className="h-3 w-3 group-open:rotate-180 transition-transform" />
+                                    </summary>
+                                    <div className="mt-3 space-y-2 pt-2 border-t border-white/10">
+                                      {displayTx.erc20_transfers.map((transfer, i) => {
+                                        // Calculate USD value for the token transfer
+                                        const usdValue = calculateUsdValue(
+                                          transfer.value,
+                                          transfer.token_decimals,
+                                          getTokenAddress(transfer)
+                                        );
+                                        
+                                        const isFromWallet = transfer.from_address?.toLowerCase() === displayTx.from_address.toLowerCase();
+                                        const isToWallet = transfer.to_address?.toLowerCase() === displayTx.from_address.toLowerCase();
+                                        
+                                        return (
+                                          <div key={`erc20-step-${displayTx.hash}-${i}`} className="flex items-center justify-between p-2 bg-black/10 rounded-md text-sm">
+                                            <div className="flex items-center gap-2">
+                                              <TokenLogo 
+                                                address={getTokenAddress(transfer)}
+                                                symbol={transfer.token_symbol || ''}
+                                                fallbackLogo={prefetchedLogos[getTokenAddress(transfer)]}
+                                                size="sm"
+                                              />
+                                              <div>
+                                                <div className={isFromWallet ? "text-red-400" : (isToWallet ? "text-green-400" : "text-white/80")}>
+                                                  {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol}
+                                                </div>
+                                                {usdValue !== null && (
+                                                  <div className="text-xs text-white/60">${usdValue.toFixed(2)}</div>
+                                                )}
+                                              </div>
+                                            </div>
+                                            <div className="text-xs text-white/60 flex flex-col items-end">
+                                              <div className="flex items-center gap-1">
+                                                <span className="truncate max-w-[100px]">
+                                                  {shortenAddress(transfer.from_address)}
+                                                </span>
+                                                <ArrowRight className="h-3 w-3" />
+                                                <span className="truncate max-w-[100px]">
+                                                  {shortenAddress(transfer.to_address)}
+                                                </span>
+                                              </div>
+                                              {transfer.token_address && (
+                                                <span className="text-white/40">
+                                                  {shortenAddress(transfer.token_address)}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </details>
                                 </div>
                               )}
                             </div>
