@@ -41,6 +41,10 @@ const METHOD_SIGNATURES = {
   SWAP_ETH_FOR_EXACT_TOKENS: '0xfb3bdb41',
   SWAP_TOKENS_FOR_TOKENS_SUPPORTING_FEE: '0x5c11d795',
   
+  // Velocity-specific swap functions
+  VELOCITY_EXECUTE_SWAP: '0xac9650d8', // execute swap function on velocity DEX
+  VELOCITY_MULTI_SWAP: '0xab0acea4', // multi-hop swap on velocity
+  
   // Liquidity functions
   ADD_LIQUIDITY: '0xe8e33700',
   ADD_LIQUIDITY_ETH: '0xf305d719',
@@ -195,7 +199,10 @@ export function isSwapTransaction(tx: Transaction): boolean {
     input.startsWith(METHOD_SIGNATURES.SWAP_EXACT_ETH_FOR_TOKENS) ||
     input.startsWith(METHOD_SIGNATURES.SWAP_TOKENS_FOR_EXACT_TOKENS) ||
     input.startsWith(METHOD_SIGNATURES.SWAP_ETH_FOR_EXACT_TOKENS) ||
-    input.startsWith(METHOD_SIGNATURES.SWAP_TOKENS_FOR_TOKENS_SUPPORTING_FEE);
+    input.startsWith(METHOD_SIGNATURES.SWAP_TOKENS_FOR_TOKENS_SUPPORTING_FEE) ||
+    // Velocity-specific methods
+    input.startsWith(METHOD_SIGNATURES.VELOCITY_EXECUTE_SWAP) ||  
+    input.startsWith(METHOD_SIGNATURES.VELOCITY_MULTI_SWAP);
     
   // Check if interacting with a known router
   const isRouterInteraction = tx.to_address ? 
@@ -442,6 +449,13 @@ export function getMethodName(tx: Transaction, type: TransactionType): string {
     }
     if (input.startsWith(METHOD_SIGNATURES.SWAP_ETH_FOR_EXACT_TOKENS)) {
       return 'Swap PLS For Exact Tokens';
+    }
+    // Velocity-specific methods
+    if (input.startsWith(METHOD_SIGNATURES.VELOCITY_EXECUTE_SWAP)) {
+      return 'Velocity Swap';
+    }
+    if (input.startsWith(METHOD_SIGNATURES.VELOCITY_MULTI_SWAP)) {
+      return 'Velocity Multi-Hop Swap';
     }
     return 'Swap';
   }
