@@ -164,8 +164,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         // Extract from ERC20 transfers
         if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
           tx.erc20_transfers.forEach(transfer => {
-            if (transfer.token_address) {
-              tokenAddresses.push(transfer.token_address.toLowerCase());
+            // Try token_address first (our custom field), then fall back to address
+            const tokenAddress = transfer.token_address || transfer.address;
+            if (tokenAddress) {
+              tokenAddresses.push(tokenAddress.toLowerCase());
             }
           });
         }
@@ -441,6 +443,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Debug logging flag
   const DEBUG_LOGGING = false;
+  
+  // Helper function to get the token address from a transfer
+  const getTokenAddress = (transfer: TransactionTransfer): string => {
+    return (transfer.token_address || transfer.address || '').toLowerCase();
+  };
   
   // Function to calculate USD value for a transaction
   const calculateUsdValue = (value: string, decimals: string = '18', tokenAddress: string) => {

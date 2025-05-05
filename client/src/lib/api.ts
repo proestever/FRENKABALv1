@@ -179,7 +179,8 @@ export interface TransactionTransfer {
   from_address_label?: string | null;
   to_address: string;
   to_address_label?: string | null;
-  address?: string;
+  address?: string;         // For backward compatibility
+  token_address?: string;   // Contract address of the token
   log_index?: number;
   value: string;
   value_formatted?: string;
