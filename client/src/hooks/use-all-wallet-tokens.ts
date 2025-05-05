@@ -17,14 +17,19 @@ export function useAllWalletTokens(walletAddress: string | null) {
     message: ''
   });
   
-  // If wallet address changes, invalidate previous wallet address cache
+  // Always invalidate the cache for the current wallet address on mount and when wallet changes
   useEffect(() => {
-    if (walletAddress && walletAddress !== prevWalletAddress.current) {
-      // Clear the cache for this wallet to ensure fresh data
-      if (walletAddress) {
-        console.log('Invalidating cache for wallet:', walletAddress);
-        queryClient.invalidateQueries({ queryKey: [`wallet-all-${walletAddress}`] });
+    // Always clear the cache for the current wallet address - even if it's the same as before
+    if (walletAddress) {
+      console.log('Invalidating cache for wallet:', walletAddress);
+      queryClient.invalidateQueries({ queryKey: [`wallet-all-${walletAddress}`] });
+      
+      // Clear any previous wallet address cache as well
+      if (prevWalletAddress.current && prevWalletAddress.current !== walletAddress) {
+        console.log('Clearing previous wallet cache:', prevWalletAddress.current);
+        queryClient.invalidateQueries({ queryKey: [`wallet-all-${prevWalletAddress.current}`] });
       }
+      
       prevWalletAddress.current = walletAddress;
     }
   }, [walletAddress, queryClient]);

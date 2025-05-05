@@ -27,24 +27,34 @@ export default function Home() {
   const handleSearch = (address: string) => {
     if (!address) return;
     
-    // If we're switching to a different address, invalidate React Query cache
-    if (searchedAddress !== address) {
-      console.log('Switching to new wallet address, clearing cache...');
-      
-      // Clear any existing wallet cache
-      if (searchedAddress) {
-        // Invalidate the previous wallet's cache
-        queryClient.invalidateQueries({ queryKey: [`wallet-all-${searchedAddress}`] });
-      }
-      
-      // Also invalidate the new wallet's cache to ensure fresh data
-      queryClient.invalidateQueries({ queryKey: [`wallet-all-${address}`] });
-      
-      // Clear any other relevant caches
-      queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+    // Always invalidate cache to ensure fresh data, even when searching for the same address
+    console.log('Searching wallet address, clearing cache to ensure fresh data:', address);
+    
+    // Clear any existing wallet cache
+    if (searchedAddress) {
+      // Invalidate the previous wallet's cache
+      queryClient.invalidateQueries({ queryKey: [`wallet-all-${searchedAddress}`] });
     }
     
-    setSearchedAddress(address);
+    // Always invalidate the new wallet's cache to ensure fresh data
+    queryClient.invalidateQueries({ queryKey: [`wallet-all-${address}`] });
+    
+    // Clear any other relevant caches
+    queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+    
+    // For the same address, we'll force a fresh fetch by first clearing the address and then setting it back
+    if (searchedAddress === address) {
+      // Temporarily clear the address (this will cancel any in-flight requests)
+      setSearchedAddress(null);
+      
+      // Use setTimeout to ensure the state update has completed before setting it back
+      setTimeout(() => {
+        setSearchedAddress(address);
+      }, 10);
+    } else {
+      // For new addresses, just set it directly
+      setSearchedAddress(address);
+    }
     
     // Update URL to include wallet address
     const currentPath = `/${address}`;
