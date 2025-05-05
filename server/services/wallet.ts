@@ -70,6 +70,11 @@ export async function getWalletData(
           message: `Processing token batch ${currentBatch}/${totalBatches}...`
         });
         
+        // Extract token addresses to fetch prices in batch
+        const tokenAddresses = batchTokens.map(token => token.token_address);
+        // Fetch price data for all tokens in this batch
+        const tokenPriceMap = await moralisService.batchGetTokenPrices(tokenAddresses);
+        
         // Process each token in the batch
         const processedBatchTokens = await Promise.all(batchTokens.map(async (token) => {
           try {
@@ -96,7 +101,23 @@ export async function getWalletData(
             }
             
             // Process the token data
-            return moralisService.processTokenData(token, logoUrl);
+            const processedToken = moralisService.processTokenData(token, logoUrl);
+            
+            // Add price data from our batch request if available
+            const priceData = tokenPriceMap[token.token_address.toLowerCase()];
+            if (priceData) {
+              // Update with latest price data
+              processedToken.price = priceData.usdPrice;
+              processedToken.priceChange24h = priceData.usdPrice24hrPercentChange;
+              processedToken.value = processedToken.balanceFormatted * priceData.usdPrice;
+              processedToken.exchange = priceData.exchangeName;
+              
+              console.log(`Added price data for ${token.symbol}: $${priceData.usdPrice}, change: ${priceData.usdPrice24hrPercentChange}%`);
+            } else {
+              console.log(`No price data found for token ${token.symbol}`);
+            }
+            
+            return processedToken;
           } catch (error) {
             console.error(`Error processing token ${token.token_address}:`, error);
             return null;

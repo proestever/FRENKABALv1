@@ -334,6 +334,10 @@ export const getWrappedTokenPrice = async (
       nativeTokenPrice.usdPrice24hrPercentChange = wrappedPrice.usdPrice24hrPercentChange;
     } else if (wrappedPrice['24hrPercentChange']) {
       nativeTokenPrice.usdPrice24hrPercentChange = parseFloat(wrappedPrice['24hrPercentChange']);
+    } else {
+      // Set a default of 0 if no price change data is available
+      nativeTokenPrice.usdPrice24hrPercentChange = 0;
+      console.log(`No price change data available for ${name}, using default of 0%`);
     }
     
     return nativeTokenPrice;
