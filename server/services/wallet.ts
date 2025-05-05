@@ -174,7 +174,7 @@ export async function getWalletData(
       message: 'Calculating portfolio value...'
     });
     
-    // Calculate token values (price * balance)
+    // Calculate token values (price * balance) and ensure price change values
     tokenBalances = tokenBalances.map(token => {
       // If the token has a price, calculate its value
       if (token.price && token.balanceFormatted) {
@@ -182,6 +182,15 @@ export async function getWalletData(
       } else {
         token.value = 0;
       }
+      
+      // Ensure price change is a number (not undefined or null)
+      if (token.priceChange24h === undefined || token.priceChange24h === null) {
+        token.priceChange24h = 0;
+        console.log(`Set default price change for token ${token.symbol} as it was undefined`);
+      }
+      
+      console.log(`Processed token ${token.symbol}: price=${token.price}, priceChange24h=${token.priceChange24h}, value=${token.value}`);
+      
       return token;
     });
     

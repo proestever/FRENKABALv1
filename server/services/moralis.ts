@@ -189,8 +189,11 @@ export const getWalletTokenBalances = async (walletAddress: string): Promise<Mor
         const decimalsNum = parseInt(processedToken.decimals);
         const balanceFormatted = parseFloat(token.balance) / Math.pow(10, decimalsNum);
         processedToken.balance_formatted = balanceFormatted.toString();
-      } else {
-        processedToken.balance_formatted = String(token.balance_formatted);
+      } else if (token.balance_formatted !== undefined) {
+        // Safely convert to string with type checking
+        processedToken.balance_formatted = typeof token.balance_formatted === 'string' 
+          ? token.balance_formatted 
+          : String(token.balance_formatted);
       }
       
       // Add other price-related fields if they exist with proper type checking
