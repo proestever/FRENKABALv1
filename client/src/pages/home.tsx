@@ -176,11 +176,14 @@ export default function Home() {
 
   return (
     <main className="container mx-auto px-4 py-6">
-      <SearchSection 
-        onSearch={handleSearch} 
-        isLoading={isLoading} 
-        hasSearched={!!searchedAddress} 
-      />
+      {/* Only show the search section at the top if no wallet has been searched yet */}
+      {!searchedAddress && (
+        <SearchSection 
+          onSearch={handleSearch} 
+          isLoading={isLoading} 
+          hasSearched={false} 
+        />
+      )}
       
       {/* Loading Progress Bar - shows during loading */}
       <LoadingProgress 
@@ -195,7 +198,7 @@ export default function Home() {
             {/* Two-column layout: Wallet overview (1/3) on left, Token list (2/3) on right */}
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Left column - Wallet Overview (1/3 width on large screens) */}
-              <div className="w-full lg:w-1/3">
+              <div className="w-full lg:w-1/3 flex flex-col gap-6">
                 {walletData && (
                   <WalletOverview 
                     wallet={walletData} 
@@ -203,6 +206,15 @@ export default function Home() {
                     onRefresh={handleRefresh} 
                   />
                 )}
+                
+                {/* Search bar placed below the wallet overview */}
+                <div className="w-full">
+                  <SearchSection 
+                    onSearch={handleSearch} 
+                    isLoading={isLoading} 
+                    hasSearched={true} 
+                  />
+                </div>
               </div>
               
               {/* Right column - Token List (2/3 width on large screens) */}
@@ -225,19 +237,26 @@ export default function Home() {
           <div className="mt-4">
             {/* Two-column layout in error state for consistency */}
             <div className="flex flex-col lg:flex-row gap-6">
-              {/* Left column - Empty placeholder maintaining layout */}
-              <div className="w-full lg:w-1/3">
-                {/* Empty with same height as wallet overview to maintain layout */}
-                <div className="h-full min-h-[200px] flex items-center justify-center">
-                  <div className="glass-card p-6 w-full text-center border-red-500/20 shadow-lg border">
-                    <div className="text-red-400 mb-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 mx-auto">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-medium text-white">Error Loading Wallet</h3>
-                    <p className="text-sm text-white/60 mt-1">Unable to fetch wallet overview data</p>
+              {/* Left column - Error message and search bar */}
+              <div className="w-full lg:w-1/3 flex flex-col gap-6">
+                {/* Error card */}
+                <div className="glass-card p-6 w-full text-center border-red-500/20 shadow-lg border">
+                  <div className="text-red-400 mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 mx-auto">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                    </svg>
                   </div>
+                  <h3 className="text-lg font-medium text-white">Error Loading Wallet</h3>
+                  <p className="text-sm text-white/60 mt-1">Unable to fetch wallet overview data</p>
+                </div>
+                
+                {/* Search bar below error message */}
+                <div className="w-full">
+                  <SearchSection 
+                    onSearch={handleSearch} 
+                    isLoading={isLoading} 
+                    hasSearched={true} 
+                  />
                 </div>
               </div>
               
