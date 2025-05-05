@@ -96,10 +96,15 @@ export const getWalletTokenBalances = async (walletAddress: string): Promise<Mor
     // Add balance_formatted property to each token if it doesn't exist
     return response.raw.map(token => {
       if (!('balance_formatted' in token)) {
-        const decimals = parseInt(token.decimals || '18');
-        const balanceFormatted = parseFloat(token.balance) / Math.pow(10, decimals);
+        // Ensure decimals is a string as required by the type
+        const decimalStr = typeof token.decimals === 'number' ? token.decimals.toString() : (token.decimals || '18');
+        const decimalsNum = parseInt(decimalStr);
+        const balanceFormatted = parseFloat(token.balance) / Math.pow(10, decimalsNum);
+        
+        // Return a properly typed object
         return {
           ...token,
+          decimals: decimalStr, // Ensure it's a string
           balance_formatted: balanceFormatted.toString()
         };
       }
@@ -205,18 +210,20 @@ export const getWrappedTokenPrice = async (
       nativePrice: {
         value: "1000000000000000000",
         decimals: 18,
-        name: symbol,
-        symbol: symbol,
+        name: symbol || "PLS",
+        symbol: symbol || "PLS",
         address: PLS_TOKEN_ADDRESS
       },
       usdPrice: wrappedPrice.usdPrice,
-      usdPriceFormatted: wrappedPrice.usdPriceFormatted,
-      exchangeName: wrappedPrice.exchangeName,
-      exchangeAddress: wrappedPrice.exchangeAddress,
+      usdPriceFormatted: wrappedPrice.usdPriceFormatted || "0.0",
+      exchangeName: wrappedPrice.exchangeName || "Unknown",
+      exchangeAddress: wrappedPrice.exchangeAddress || "0x0000000000000000000000000000000000000000",
       tokenAddress: PLS_TOKEN_ADDRESS,
       blockTimestamp: new Date().toISOString(),
       '24hrPercentChange': wrappedPrice['24hrPercentChange'],
-      usdPrice24hrPercentChange: wrappedPrice.usdPrice24hrPercentChange
+      // Use proper property that's available in the response
+      usdPrice24hrPercentChange: wrappedPrice.usdPrice24hrPercentChange || 
+                               (wrappedPrice['24hrPercentChange'] ? parseFloat(wrappedPrice['24hrPercentChange']) : 0)
     };
   } catch (error) {
     console.error(`Error fetching wrapped token price: ${error instanceof Error ? error.message : 'Unknown error'}`);

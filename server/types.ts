@@ -76,7 +76,7 @@ export interface MoralisWalletTokenBalanceItem {
   balance: string;
   possible_spam?: boolean;
   verified_contract?: boolean;
-  balance_formatted: string;
+  balance_formatted?: string;  // Make this optional since we might add it ourselves
   usd_price?: number;
   usd_price_24hr_percent_change?: number;
   usd_price_24hr_usd_change?: number;

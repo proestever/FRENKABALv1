@@ -434,26 +434,36 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
       // Get token balance from response
       const tokenBalance = response.raw[0];
       
+      // Ensure the tokenBalance has balance_formatted property and other required fields
+      // Use type assertion to handle API response with potentially different fields
+      const tokenData = tokenBalance as any; // This allows us to add properties
+      
+      if (!tokenData.balance_formatted) {
+        const decimals = parseInt(tokenData.decimals);
+        const balanceValue = parseFloat(tokenData.balance);
+        tokenData.balance_formatted = (balanceValue / Math.pow(10, decimals)).toString();
+      }
+      
       // Get token price
       const priceData = await getTokenPriceInfo(tokenAddress);
       
       // Format the token data
       // Handle the balance formatting manually if necessary
-      const balanceFormatted = parseFloat(tokenBalance.balance_formatted || '0');
+      const balanceFormatted = parseFloat(tokenData.balance_formatted || '0');
       // Use type assertion to handle potential missing properties in tokenBalance
       return {
         address: tokenAddress,
-        symbol: tokenBalance.symbol,
-        name: tokenBalance.name,
-        decimals: parseInt(tokenBalance.decimals),
-        balance: tokenBalance.balance,
+        symbol: tokenData.symbol,
+        name: tokenData.name,
+        decimals: parseInt(tokenData.decimals.toString()),
+        balance: tokenData.balance,
         balanceFormatted: balanceFormatted,
         price: priceData?.usdPrice || 0,
         value: balanceFormatted * (priceData?.usdPrice || 0),
         priceChange24h: priceData?.usdPrice24hrPercentChange,
         logo: await getTokenLogoUrl(tokenAddress),
         exchange: priceData?.exchangeName || '',
-        verified: !!tokenBalance.verified_contract,
+        verified: !!tokenData.verified_contract,
         isNative: false
       };
     } catch (error) {
