@@ -358,8 +358,8 @@ export const getTransactionHistory = async (
   try {
     console.log(`Fetching transaction history for ${walletAddress} from Moralis SDK`);
     
-    // Create options for the API call with proper typing
-    const options: Moralis.EvmTransactionWalletTransactionsRequest = {
+    // Create options object for the API call
+    const options: any = {
       chain: PULSECHAIN_CHAIN_ID,
       address: walletAddress,
       limit

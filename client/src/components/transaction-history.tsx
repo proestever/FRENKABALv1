@@ -260,7 +260,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       setLoadingTimeout(true);
       setIsLoadingMore(false);
       // Don't set hasMore to false to allow retry
-    }, 20000); // 20 seconds timeout
+    }, 30000); // 30 seconds timeout (increased from 20s)
     
     setRequestTimeoutId(timeoutId);
     
@@ -281,41 +281,37 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       }
       
       if (moreData?.result && moreData.result.length > 0) {
-        // Process the additional transactions
-        const processedTransactions = moreData.result.map(tx => {
-          // Process ERC20 transfers to add direction
+        // Extract unique token addresses for price fetching
+        const newTokenAddresses = new Set<string>();
+        
+        // Process transactions to extract token addresses for price fetching
+        moreData.result.forEach(tx => {
+          // Process ERC20 transfers to collect token addresses
           if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-            tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
-              // Set direction based on from/to addresses
-              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-              
-              return {
-                ...transfer,
-                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-              };
+            tx.erc20_transfers.forEach((transfer: any) => {
+              if (transfer.address) {
+                newTokenAddresses.add(transfer.address.toLowerCase());
+              }
             });
           }
-          
-          // Process native transfers to add direction
-          if (tx.native_transfers && tx.native_transfers.length > 0) {
-            tx.native_transfers = tx.native_transfers.map((transfer: any) => {
-              // Set direction based on from/to addresses
-              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-              
-              return {
-                ...transfer,
-                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-              };
-            });
-          }
-          
-          return tx;
         });
         
-        // Append new processed transactions to existing list
-        setTransactions(prev => [...prev, ...processedTransactions]);
+        // Log the collected token addresses
+        console.log('Collected unique token addresses from new transactions', Array.from(newTokenAddresses));
+        
+        // Update visible token addresses for the price fetching hook by adding any new ones
+        setVisibleTokenAddresses(prev => {
+          const updated = [...prev];
+          newTokenAddresses.forEach(addr => {
+            if (!updated.includes(addr)) {
+              updated.push(addr);
+            }
+          });
+          return updated;
+        });
+        
+        // Append new transactions to existing list
+        setTransactions(prev => [...prev, ...moreData.result]);
         setNextCursor(moreData.cursor);
         setHasMore(!!moreData.cursor); // Has more if cursor exists
       } else {
