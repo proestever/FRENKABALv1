@@ -578,35 +578,50 @@ export const getTransactionHistory = async (
   cursor: string | null = null
 ) => {
   try {
-    console.log(`Fetching transaction history for ${walletAddress} from Moralis SDK (wallet history endpoint)`);
+    console.log(`Fetching transaction history for ${walletAddress} from Moralis API directly`);
     
-    // Normalize wallet address to lowercase for comparison
+    // Normalize wallet address to lowercase for consistency
     const normalizedWalletAddress = walletAddress.toLowerCase();
     
-    // Create options object for Moralis API call
-    const options: any = {
-      chain: 'pulse', // Using the chain name directly instead of hex chain ID
-      address: normalizedWalletAddress,
-      order: 'DESC',
-      limit: Math.min(limit, 100), // Allow up to 100 transactions per request
+    // Get API key from Moralis config
+    const apiKey = Moralis.Core.config.get('apiKey');
+    
+    // Configure the API request
+    const options: RequestInit = {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'X-API-Key': apiKey
+      }
     };
     
+    // Set up pagination parameters
+    const queryParams = new URLSearchParams({
+      'chain': 'pulse',
+      'order': 'DESC',
+      'limit': Math.min(limit, 100).toString(), // Cap at 100 per request
+    });
+    
+    // Add cursor if provided
     if (cursor) {
-      options.cursor = cursor;
+      queryParams.append('cursor', cursor);
     }
     
-    console.log('Calling Moralis wallets.getWalletHistory with options:', JSON.stringify(options));
+    // Build the full URL
+    const url = `https://deep-index.moralis.io/api/v2.2/wallets/${normalizedWalletAddress}/history?${queryParams}`;
     
-    // Use the wallets.getWalletHistory endpoint which provides rich transaction details
-    const response = await Moralis.EvmApi.wallets.getWalletHistory(options);
-    console.log('Transaction API response received');
+    console.log(`Fetching transactions from: ${url.replace(apiKey, '[REDACTED]')}`);
     
-    if (!response || !response.raw) {
-      throw new Error('Empty response from Moralis wallets.getWalletHistory');
+    // Make the API request
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      console.error(`API error: ${response.status} ${response.statusText}`);
+      throw new Error(`API request failed with status ${response.status}`);
     }
     
-    // Get the raw response data
-    const data = response.raw as any;
+    // Parse the response data
+    const data = await response.json();
     
     // Debug response info
     console.log(`Got transaction response with ${data.result?.length || 0} transactions`);
