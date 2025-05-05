@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
-import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, ChevronRight, DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
@@ -733,7 +733,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm">
+                  <div className="flex flex-col items-start gap-1">
                     {(() => {
                       const type = getTransactionType(tx);
                       switch (type) {
@@ -751,9 +751,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           return <span className="px-2 py-1 rounded-full bg-gray-500/20 text-gray-400 text-xs">Other</span>;
                       }
                     })()}
-                  </div>
-                  <div className="text-xs text-white/50 mt-1">
-                    {tx.method_label || 'Transaction'}
+                    {tx.method_label && (
+                      <span className="text-xs font-mono bg-white/5 px-1.5 py-0.5 rounded">
+                        {tx.method_label}
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -872,9 +874,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         ))}
       </div>
       
-      {/* Load More Button */}
+      {/* Load More and Next Buttons */}
       {hasMore && (
-        <div className="mt-4 flex justify-center">
+        <div className="mt-4 flex justify-center gap-2">
           <Button 
             variant="outline" 
             onClick={loadMore}
@@ -889,7 +891,26 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             ) : (
               <>
                 <Plus size={16} className="mr-2" />
-                Load More Transactions
+                Load More
+              </>
+            )}
+          </Button>
+          
+          <Button 
+            variant="default" 
+            onClick={loadMore}
+            disabled={isLoadingMore}
+            className="w-full md:w-auto"
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 size={16} className="mr-2 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                Next
+                <ChevronRight size={16} className="ml-2" />
               </>
             )}
           </Button>
