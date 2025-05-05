@@ -9,6 +9,7 @@ import { ethers } from "ethers";
 // Import our new services
 import * as walletService from "./services/wallet";
 import * as moralisService from "./services/moralis";
+import * as dexScreenerService from "./services/dexscreener";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -354,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await Promise.all(chunk.map(async (address) => {
           try {
             // Try to get token data from Moralis
-            const tokenData = await getTokenPrice(address);
+            const tokenData = await walletService.getTokenPriceInfo(address);
             
             if (tokenData && tokenData.tokenLogo) {
               const newLogo = {
@@ -468,7 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If not found in database, fetch from Moralis API and store
       if (!logo) {
         try {
-          const tokenData = await getTokenPrice(address);
+          const tokenData = await walletService.getTokenPriceInfo(address);
           
           if (tokenData && tokenData.tokenLogo) {
             const newLogo = {
@@ -1071,7 +1072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Fetching specific token ${tokenAddress} for wallet ${walletAddress}`);
       
       // Get token balance using the specialized function
-      const tokenData = await getSpecificTokenBalance(walletAddress, tokenAddress);
+      const tokenData = await walletService.getSpecificTokenBalance(walletAddress, tokenAddress);
       
       if (!tokenData) {
         return res.status(404).json({ message: "Token not found or no balance" });
@@ -1128,7 +1129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Try to get prices from DexScreener in batch first
-        const priceMap = await getTokenPricesFromDexScreener(uniqueAddresses);
+        const priceMap = await dexScreenerService.getTokenPricesFromDexScreener(uniqueAddresses);
         
         // If we have at least some prices, return what we got
         if (Object.keys(priceMap).length > 0) {
@@ -1156,7 +1157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             await Promise.all(batch.map(async (address) => {
               try {
-                const priceData = await getTokenPrice(address);
+                const priceData = await walletService.getTokenPriceInfo(address);
                 if (priceData?.usdPrice) {
                   fallbackPrices[address.toLowerCase()] = priceData.usdPrice;
                 }
