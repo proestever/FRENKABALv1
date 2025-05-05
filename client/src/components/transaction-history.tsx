@@ -155,17 +155,24 @@ const getTransactionType = (tx: Transaction): TransactionType => {
 
 // Helper function to identify token in and token out in a swap transaction
 const getSwapTokens = (tx: Transaction): { tokenIn?: TransactionTransfer, tokenOut?: TransactionTransfer } => {
-  if (!tx.erc20_transfers || tx.erc20_transfers.length < 2) {
+  // Extra safety checks to avoid 'length of undefined' errors
+  if (!tx || !tx.erc20_transfers || !Array.isArray(tx.erc20_transfers) || tx.erc20_transfers.length < 2) {
     return {};
   }
   
-  const sendTokens = tx.erc20_transfers.filter(t => t.direction === 'send');
-  const receiveTokens = tx.erc20_transfers.filter(t => t.direction === 'receive');
+  // Make sure each transfer has the direction property before filtering
+  const validTransfers = tx.erc20_transfers.filter(t => t && typeof t === 'object' && 'direction' in t);
+  if (validTransfers.length < 2) {
+    return {};
+  }
   
-  // Return the first token of each direction
+  const sendTokens = validTransfers.filter(t => t.direction === 'send');
+  const receiveTokens = validTransfers.filter(t => t.direction === 'receive');
+  
+  // Return the first token of each direction with additional safety checks
   return {
-    tokenIn: sendTokens.length > 0 ? sendTokens[0] : undefined,
-    tokenOut: receiveTokens.length > 0 ? receiveTokens[0] : undefined
+    tokenIn: sendTokens && sendTokens.length > 0 ? sendTokens[0] : undefined,
+    tokenOut: receiveTokens && receiveTokens.length > 0 ? receiveTokens[0] : undefined
   };
 };
 
@@ -982,7 +989,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       </div>
                       
                       {(() => {
-                        const { tokenIn, tokenOut } = getSwapTokens(tx);
+                        // Added extra null/undefined check for tx before calling getSwapTokens
+                        const { tokenIn, tokenOut } = tx ? getSwapTokens(tx) : { tokenIn: undefined, tokenOut: undefined };
                         
                         return (
                           <div className="flex flex-col space-y-2">
