@@ -18,59 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Transaction types
-interface TransactionTransfer {
-  token_name?: string;
-  token_symbol?: string;
-  token_logo?: string | null;
-  token_decimals?: string;
-  from_address: string;
-  from_address_label?: string | null;
-  to_address: string;
-  to_address_label?: string | null;
-  address?: string;
-  log_index?: number;
-  value: string;
-  value_formatted?: string;
-  possible_spam?: boolean;
-  verified_contract?: boolean;
-  security_score?: number;
-  direction?: string;
-  internal_transaction?: boolean;
-}
-
-interface Transaction {
-  hash: string;
-  nonce: string;
-  transaction_index: string;
-  from_address: string;
-  from_address_label?: string | null;
-  to_address: string;
-  to_address_label?: string | null;
-  value: string;
-  gas: string;
-  gas_price: string;
-  receipt_gas_used: string;
-  receipt_status: string;
-  block_timestamp: string;
-  block_number: string;
-  transaction_fee: string;
-  method_label?: string;
-  erc20_transfers?: TransactionTransfer[];
-  native_transfers?: TransactionTransfer[];
-  nft_transfers?: any[];
-  summary?: string;
-  category?: string;
-  possible_spam?: boolean;
-}
-
-interface TransactionHistoryProps {
-  walletAddress: string;
-  onClose: () => void;
-}
-
-// Number of transactions to load per batch (Moralis free plan limit is 100)
-const TRANSACTIONS_PER_BATCH = 100;
+// Import Transaction types
+import { Transaction, TransactionTransfer } from '@/lib/api';
 
 // Define transaction type options
 type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contract';
@@ -78,9 +27,9 @@ type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contr
 // Common DEX router addresses on PulseChain (lowercase)
 const DEX_ROUTERS = [
   '0x165c3410fbed4528472e9e0d4d1c8d8cbd0723dd', // PulseX router
-  '0x29eA298FEfa2Efd3213A1aD637a41B9a640a1e9D'.toLowerCase(), // PulseX V2 router
-  '0x98bf93ebf5c380C0e6Ae8e192A7e2AE08edAcc02'.toLowerCase(), // HEX/USD PulseX pool
-  '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc'.toLowerCase(), // Uniswap V2 (and forks) common routers
+  '0x29ea298fefa2efd3213a1ad637a41b9a640a1e9d', // PulseX V2 router
+  '0x98bf93ebf5c380c0e6ae8e192a7e2ae08edacc02', // HEX/USD PulseX pool
+  '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc', // Uniswap V2 (and forks) common routers
 ];
 
 // Known approval method signatures
@@ -102,7 +51,7 @@ const getTransactionType = (tx: Transaction): TransactionType => {
   }
   
   // Check for DEX swaps by router addresses (more accurate than method inference)
-  if (DEX_ROUTERS.includes(tx.to_address.toLowerCase())) {
+  if (tx.to_address && DEX_ROUTERS.includes(tx.to_address.toLowerCase())) {
     return 'swap';
   }
   
@@ -158,260 +107,277 @@ const getTransactionType = (tx: Transaction): TransactionType => {
     if (allIncoming) return 'receive';
   }
   
-  // Check for contract interactions
-  if (tx.method_label && !tx.method_label.toLowerCase().includes('transfer')) {
-    return 'contract';
-  }
-  
   // Default for unclassified transactions
   return 'all';
 };
 
+interface TransactionHistoryProps {
+  walletAddress: string;
+  onClose: () => void;
+}
+
 export function TransactionHistory({ walletAddress, onClose }: TransactionHistoryProps) {
-  const [visibleTokenAddresses, setVisibleTokenAddresses] = useState<string[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingTimeout, setLoadingTimeout] = useState<boolean>(false);
-  const [requestTimeoutId, setRequestTimeoutId] = useState<NodeJS.Timeout | null>(null);
-  const [tokenPrices, setTokenPrices] = useState<Record<string, number>>({});
-  // State to track copied addresses
-  const [copiedAddresses, setCopiedAddresses] = useState<Record<string, boolean>>({});
-  
-  // Add state for transaction type filter
   const [selectedType, setSelectedType] = useState<TransactionType>('all');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [visibleTokenAddresses, setVisibleTokenAddresses] = useState<string[]>([]);
+  const [tokenPrices, setTokenPrices] = useState<{[key: string]: number}>({});
+  const [copiedAddresses, setCopiedAddresses] = useState<{[key: string]: boolean}>({});
   
-  // Function to copy text to clipboard
-  const copyToClipboard = useCallback((text: string) => {
-    navigator.clipboard.writeText(text)
-      .then(() => {
-        // Set the copied state for this specific address
-        setCopiedAddresses(prev => ({ ...prev, [text]: true }));
-        
-        // Reset the copied state after 2 seconds
-        setTimeout(() => {
-          setCopiedAddresses(prev => ({ ...prev, [text]: false }));
-        }, 2000);
-      })
-      .catch(err => {
-        console.error('Failed to copy text: ', err);
-      });
-  }, []);
-
-  // Set up a timeout to show an error message if the transactions don't load within reasonable time
-  useEffect(() => {
-    // Clear any existing timeout when component mounts or is unmounted
-    return () => {
-      if (requestTimeoutId) {
-        clearTimeout(requestTimeoutId);
-      }
-    };
-  }, [requestTimeoutId]);
-
-  // Initial transaction data fetch
-  const { isLoading, isError, data: initialData, refetch } = useQuery({
-    queryKey: ['transactions', walletAddress], // Removed timestamp to prevent infinite fetching
-    queryFn: async () => {
-      console.log('Fetching transaction history for:', walletAddress);
-      
-      // Set a timeout to detect if the request is taking too long
-      if (requestTimeoutId) clearTimeout(requestTimeoutId);
-      
-      const timeoutId = setTimeout(() => {
-        console.log('Transaction history request is taking too long');
-        setLoadingTimeout(true);
-      }, 20000); // 20 seconds timeout
-      
-      setRequestTimeoutId(timeoutId);
-      setLoadingTimeout(false);
-      
-      try {
-        // Use the actual wallet address (not the token address)
-        const response = await fetchTransactionHistory(walletAddress, TRANSACTIONS_PER_BATCH);
-        
-        // Clear timeout as we got a response
-        if (requestTimeoutId) clearTimeout(requestTimeoutId);
-        setLoadingTimeout(false);
-        
-        console.log('Initial transaction history fetched:', response ? 'yes' : 'no', 
-          response?.result ? `${response.result.length} transactions` : '', 
-          'Response data:', JSON.stringify(response).substring(0, 300) + '...');
-        
-        // Check if there's an error
-        if (response?.error) {
-          console.error('Error in transaction history response:', response.error);
-          throw new Error(response.error);
-        }
-        
-        // Handle empty results specifically
-        if (!response || !response.result || response.result.length === 0) {
-          console.log('No transactions found in response, clearing state');
-          setTransactions([]);
-          setHasMore(false);
-          return { result: [], cursor: null, page: 0, page_size: TRANSACTIONS_PER_BATCH };
-        }
-        
-        // Process the response data to add direction property to transfers
-        const processedTransactions = (response.result || []).map(tx => {
-          // Process ERC20 transfers to add direction
-          if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-            // Use type assertion for TransactionTransfer
-            tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
-              // Set direction based on from/to addresses
-              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-              
-              return {
-                ...transfer,
-                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-              };
-            });
-          }
-          
-          // Process native transfers to add direction
-          if (tx.native_transfers && tx.native_transfers.length > 0) {
-            // Use type assertion for TransactionTransfer
-            tx.native_transfers = tx.native_transfers.map((transfer: any) => {
-              // Set direction based on from/to addresses
-              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-              
-              return {
-                ...transfer,
-                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-              };
-            });
-          }
-          
-          return tx;
-        });
-        
-        // Update state with the processed data
-        console.log(`Setting ${processedTransactions.length} processed transactions`);
-        setTransactions(processedTransactions);
-        setNextCursor(response.cursor);
-        setHasMore(!!response.cursor); // Has more if cursor exists
-        
-        return response;
-      } catch (error) {
-        // Clear timeout on error
-        if (requestTimeoutId) clearTimeout(requestTimeoutId);
-        setLoadingTimeout(false);
-        
-        console.error('Error fetching transaction history:', error);
-        throw error;
-      }
-    },
+  // Fetch transaction history
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['transactionHistory', walletAddress],
+    queryFn: () => fetchTransactionHistory(walletAddress, page, 100),
+    staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: !!walletAddress,
-    staleTime: 0, // Don't use stale data
-    gcTime: 0, // Don't keep data in cache
-    refetchOnMount: true, // Always refetch when component mounts
-    retry: 2, // Reduce retries to prevent long loading times
-    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 5000), // Faster retry with shorter max delay
-    retryOnMount: true
   });
   
+  // Update transactions when data changes
+  useEffect(() => {
+    if (data?.result) {
+      // Set transactions directly if it's the first page
+      if (page === 1) {
+        setTransactions(data.result);
+        console.log("Setting", data.result.length, "processed transactions");
+      } else {
+        // Append to existing transactions if loading more pages
+        setTransactions(prev => [...prev, ...data.result]);
+        console.log("Appending", data.result.length, "more transactions");
+      }
+      
+      // Update hasMore based on if we received a full page of results
+      setHasMore(data.result.length === 100);
+    }
+  }, [data, page]);
+  
   // Function to load more transactions
-  const loadMoreTransactions = useCallback(async () => {
-    if (!nextCursor || isLoadingMore || !walletAddress) return;
-    
-    setIsLoadingMore(true);
-    
-    // Set a timeout for loading more transactions
-    if (requestTimeoutId) clearTimeout(requestTimeoutId);
-    
-    const timeoutId = setTimeout(() => {
-      console.log('Load more transactions request is taking too long');
-      setLoadingTimeout(true);
-      setIsLoadingMore(false);
-      // Don't set hasMore to false to allow retry
-    }, 20000); // 20 seconds timeout
-    
-    setRequestTimeoutId(timeoutId);
+  const loadMore = useCallback(async () => {
+    if (isLoading || isLoadingMore || !hasMore) return;
     
     try {
-      const moreData = await fetchTransactionHistory(
-        walletAddress, 
-        TRANSACTIONS_PER_BATCH, 
-        nextCursor
-      );
-      
-      // Clear timeout as we got a response
-      if (requestTimeoutId) clearTimeout(requestTimeoutId);
-      setLoadingTimeout(false);
-      
-      if (moreData?.error) {
-        console.error('Error in load more transaction response:', moreData.error);
-        throw new Error(moreData.error);
-      }
-      
-      if (moreData?.result && moreData.result.length > 0) {
-        // Process the additional transactions
-        const processedTransactions = moreData.result.map(tx => {
-          // Process ERC20 transfers to add direction
-          if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-            tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
-              // Set direction based on from/to addresses
-              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-              
-              return {
-                ...transfer,
-                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-              };
-            });
-          }
-          
-          // Process native transfers to add direction
-          if (tx.native_transfers && tx.native_transfers.length > 0) {
-            tx.native_transfers = tx.native_transfers.map((transfer: any) => {
-              // Set direction based on from/to addresses
-              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-              
-              return {
-                ...transfer,
-                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-              };
-            });
-          }
-          
-          return tx;
-        });
-        
-        // Append new processed transactions to existing list
-        setTransactions(prev => [...prev, ...processedTransactions]);
-        setNextCursor(moreData.cursor);
-        setHasMore(!!moreData.cursor); // Has more if cursor exists
-      } else {
-        // No more data available
-        console.log('No more transactions available');
-        setHasMore(false);
-      }
-    } catch (error) {
-      // Clear timeout on error
-      if (requestTimeoutId) clearTimeout(requestTimeoutId);
-      setLoadingTimeout(false);
-      
-      console.error('Error loading more transactions:', error);
-      // Don't set hasMore to false to allow retry
+      setIsLoadingMore(true);
+      setPage(prevPage => prevPage + 1);
+    } catch (err) {
+      console.error("Error loading more transactions:", err);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [nextCursor, isLoadingMore, walletAddress, requestTimeoutId]);
-
-  // Format timestamp
+  }, [isLoading, isLoadingMore, hasMore]);
+  
+  // Function to copy address to clipboard
+  const copyToClipboard = useCallback((address: string) => {
+    navigator.clipboard.writeText(address).then(() => {
+      setCopiedAddresses(prev => ({ ...prev, [address]: true }));
+      setTimeout(() => {
+        setCopiedAddresses(prev => ({ ...prev, [address]: false }));
+      }, 2000);
+    }).catch(err => {
+      console.error("Error copying address:", err);
+    });
+  }, []);
+  
+  // Format timestamp to human-readable date
   const formatTimestamp = (timestamp: string) => {
     return formatDate(new Date(timestamp));
   };
-
+  
   // Format value based on token decimals
   const formatTokenValue = (value: string, decimals: string = '18') => {
     const decimalValue = parseInt(decimals);
     return (parseInt(value) / 10 ** decimalValue).toFixed(decimalValue > 8 ? 4 : 2);
   };
-
+  
+  // Helper function to render transaction content by type
+  const renderTransactionContent = (tx: Transaction) => {
+    const txType = getTransactionType(tx);
+    
+    if (txType === 'swap' && tx.erc20_transfers && tx.erc20_transfers.length >= 2) {
+      // Get sent and received tokens
+      const sentTokens = tx.erc20_transfers.filter(t => t.direction === 'send');
+      const receivedTokens = tx.erc20_transfers.filter(t => t.direction === 'receive');
+      
+      // If we have both sent and received tokens, this is a swap
+      if (sentTokens.length > 0 && receivedTokens.length > 0) {
+        return (
+          <div className="mt-2 p-2 border border-white/10 rounded-md bg-black/20">
+            <div className="text-xs font-medium mb-2 text-primary-foreground">Token Swap</div>
+            
+            {/* Group transfers by direction */}
+            <div className="flex flex-col space-y-3">
+              {/* Tokens Sent (Outgoing) */}
+              <div>
+                <div className="text-xs text-white/60 mb-1">Sent:</div>
+                {sentTokens.map((transfer, i) => (
+                  <div key={`swap-out-${tx.hash}-${i}`} className="flex items-center">
+                    <TokenLogo 
+                      address={transfer.address || ''}
+                      symbol={transfer.token_symbol || ''}
+                      fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
+                      size="sm"
+                    />
+                    <div className="ml-2 flex items-center">
+                      <span className="text-sm font-medium text-red-400">
+                        {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Arrow between sent and received */}
+              <div className="flex justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 4L12 20M12 20L18 14M12 20L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              
+              {/* Tokens Received (Incoming) */}
+              <div>
+                <div className="text-xs text-white/60 mb-1">Received:</div>
+                {receivedTokens.map((transfer, i) => (
+                  <div key={`swap-in-${tx.hash}-${i}`} className="flex items-center">
+                    <TokenLogo 
+                      address={transfer.address || ''}
+                      symbol={transfer.token_symbol || ''}
+                      fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
+                      size="sm"
+                    />
+                    <div className="ml-2 flex items-center">
+                      <span className="text-sm font-medium text-green-400">
+                        {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
+    } else if (txType === 'approval') {
+      // Special handling for approval transactions
+      return (
+        <div className="mt-2 p-2 border border-white/10 rounded-md bg-black/20">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-medium text-primary-foreground">Token Approval</div>
+            {tx.method_label && (
+              <div className="text-xs font-mono bg-white/10 rounded px-1.5 py-0.5">
+                {tx.method_label}
+              </div>
+            )}
+          </div>
+          
+          {/* Show which token was approved */}
+          {tx.erc20_transfers && tx.erc20_transfers.length > 0 ? (
+            <div className="mt-2">
+              {tx.erc20_transfers.map((transfer, i) => (
+                <div key={`approve-${tx.hash}-${i}`} className="flex items-center">
+                  <TokenLogo 
+                    address={transfer.address || ''}
+                    symbol={transfer.token_symbol || ''}
+                    fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
+                    size="sm"
+                  />
+                  <div className="ml-2">
+                    <span className="text-sm font-medium">
+                      {transfer.token_symbol || 'Unknown Token'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // If no transfers, just show the approval with address
+            <div className="mt-2 flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-white/10 rounded-full flex items-center justify-center">
+                  <Check size={14} className="text-green-400" />
+                </div>
+                <span className="ml-2 text-sm">Approved to: {shortenAddress(tx.to_address)}</span>
+              </div>
+              <button 
+                onClick={() => copyToClipboard(tx.to_address)}
+                className="text-white/50 hover:text-white/90 transition-colors ml-2"
+              >
+                {copiedAddresses[tx.to_address] ? (
+                  <Check size={14} className="text-green-400" />
+                ) : (
+                  <Copy size={14} />
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // Default: Just show standard token transfers
+    if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+      return tx.erc20_transfers.map((transfer, i) => (
+        <div key={`${tx.hash}-erc20-${i}`} className="flex items-center mt-2">
+          <TokenLogo 
+            address={transfer.address || ''}
+            symbol={transfer.token_symbol || ''}
+            fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
+            size="sm"
+          />
+          <div className="ml-2 flex items-center">
+            <div className="mr-1">
+              {transfer.direction === 'receive' ? (
+                <ArrowDownLeft size={14} className="text-green-400" />
+              ) : (
+                <ArrowUpRight size={14} className="text-red-400" />
+              )}
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center">
+                <div className="group relative">
+                  <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30" title={transfer.token_symbol || ''}>
+                    {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ));
+    }
+    
+    // For transactions with no ERC20 transfers but with native transfers
+    if (tx.native_transfers && tx.native_transfers.length > 0) {
+      return tx.native_transfers.map((transfer, i) => (
+        <div key={`${tx.hash}-native-${i}`} className="flex items-center mt-2">
+          <img 
+            src="/assets/pls-logo-trimmed.png"
+            alt="PLS"
+            className="w-6 h-6 rounded-full object-cover border border-white/10"
+          />
+          <div className="ml-2 flex items-center">
+            <div className="mr-1">
+              {transfer.direction === 'receive' ? (
+                <ArrowDownLeft size={14} className="text-green-400" />
+              ) : (
+                <ArrowUpRight size={14} className="text-red-400" />
+              )}
+            </div>
+            <span className="text-sm font-semibold">
+              {transfer.value_formatted || formatTokenValue(transfer.value)} PLS
+            </span>
+          </div>
+        </div>
+      ));
+    }
+    
+    // For transactions with no transfers
+    return (
+      <div className="text-sm text-white/80 mt-2">
+        {tx.method_label || "Contract interaction"}
+      </div>
+    );
+  };
+  
   // Use our custom hooks for data prefetching - one for logos, one for prices
   const { 
     logos: prefetchedLogos, 
@@ -433,10 +399,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       }));
     }
   }, [batchPrices]);
-
+  
   // Debug logging flag
   const DEBUG_LOGGING = false;
-
+  
   // Function to calculate USD value for a transaction
   const calculateUsdValue = (value: string, decimals: string = '18', tokenAddress: string) => {
     // Normalize token address
@@ -490,7 +456,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     
     return usdValue;
   };
-
+  
   // Filter transactions based on selected type
   const filteredTransactions = transactions.filter(tx => {
     if (selectedType === 'all') return true; // Show all transactions
@@ -536,467 +502,185 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       setVisibleTokenAddresses(addresses);
     }
   }, [transactions]);
-
+  
   if (isLoading) {
     return (
-      <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
-        <div className="flex flex-col items-center justify-center min-h-[300px]">
-          <Loader2 size={40} className="animate-spin text-white mb-4" />
-          <h3 className="text-xl font-bold text-white">
-            {loadingTimeout ? 'Still Loading...' : 'Loading Transaction History...'}
-          </h3>
-          <p className="text-muted-foreground mt-2">
-            {loadingTimeout ? (
-              <>
-                The server is taking longer than expected to respond. 
-                <br />This could be due to high network traffic or temporary API limitations.
-                <br />You can wait or try again later.
-              </>
-            ) : (
-              'This may take a moment depending on your transaction count'
-            )}
-          </p>
-          
-          {loadingTimeout && (
-            <div className="mt-4">
-              <button
-                onClick={() => {
-                  // Clear timeout state
-                  setLoadingTimeout(false);
-                  // Try again
-                  refetch();
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
-              >
-                <RefreshCw size={16} className="mr-1" />
-                <span className="text-sm font-medium">Try Again</span>
-              </button>
-            </div>
-          )}
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center space-y-4">
+          <Loader2 size={32} className="animate-spin mx-auto text-primary" />
+          <div className="text-white">Fetching transaction history...</div>
         </div>
-      </Card>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
-        <div className="flex flex-col items-center justify-center min-h-[300px]">
-          <h3 className="text-xl font-bold text-red-400 mb-2">Error Loading Transactions</h3>
-          <p className="text-muted-foreground mb-4">
-            There was an error loading the transaction history.
-            <br />Please try again later or check your connection.
-          </p>
-          <button
-            onClick={() => {
-              refetch();
-            }}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
-          >
-            <RefreshCw size={16} className="mr-1" />
-            <span className="text-sm font-medium">Try Again</span>
-          </button>
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 mt-2"
-          >
-            <ChevronDown size={16} className="mr-1" />
-            <span className="text-sm font-medium">Close</span>
-          </button>
-        </div>
-      </Card>
+      </div>
     );
   }
   
-  // Empty state
-  if (!transactions || transactions.length === 0) {
+  if (isError) {
     return (
-      <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
-        <h3 className="text-xl font-bold mb-2 text-white">
-          No transactions found
-        </h3>
-        <p className="text-muted-foreground mb-4">
-          No transaction history was found for this wallet.
+      <div className="rounded-md bg-yellow-500/20 p-4 text-center">
+        <h3 className="font-bold text-lg text-yellow-500 mb-2">Error Loading Transactions</h3>
+        <p className="text-white/70">
+          There was a problem fetching transaction history. Please try again.
         </p>
-        <button
-          onClick={onClose}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 mx-auto"
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => refetch()}
         >
-          <ChevronDown size={16} className="mr-1" />
-          <span className="text-sm font-medium">Close</span>
-        </button>
-      </Card>
+          <RefreshCw size={16} className="mr-2" />
+          Retry
+        </Button>
+      </div>
     );
   }
-
+  
   return (
-    <Card className="border-border shadow-lg backdrop-blur-sm glass-card">
-      {/* Header */}
-      <div className="p-4 md:p-6 border-b border-border">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-xl font-bold text-white flex items-center">
-            Transaction History
-            <span className="text-white text-sm ml-2 opacity-60">
-              {transactions.length} transactions
-            </span>
-          </h2>
-          
-          {/* Filter dropdown */}
-          <div className="flex flex-wrap gap-2 items-center">
-            {!isPricesFetching && Object.keys(batchPrices).length > 0 && (
-              <span className="px-2 py-0.5 bg-green-500/20 text-xs rounded-md text-green-400 mr-2">
-                Batch Prices
-              </span>
-            )}
-            {isPricesFetching && (
-              <span className="px-2 py-0.5 bg-yellow-500/20 text-xs rounded-md text-yellow-400 mr-2">
-                Loading Prices...
-              </span>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200">
-                  <Filter size={16} />
-                  <span className="text-sm font-medium capitalize">
-                    {selectedType === 'all' ? 'All Transactions' : selectedType}
-                  </span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 glass-card border border-white/10 bg-black/60 backdrop-blur-lg">
-                <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className={`cursor-pointer ${selectedType === 'all' ? 'bg-primary/20 text-primary' : ''}`}
-                  onClick={() => setSelectedType('all')}
-                >
-                  All Transactions
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {transactions.length}
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className={`cursor-pointer ${selectedType === 'swap' ? 'bg-primary/20 text-primary' : ''}`}
-                  onClick={() => setSelectedType('swap')}
-                >
-                  Swaps
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {transactionCounts.swap || 0}
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className={`cursor-pointer ${selectedType === 'send' ? 'bg-primary/20 text-primary' : ''}`}
-                  onClick={() => setSelectedType('send')}
-                >
-                  Sends
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {transactionCounts.send || 0}
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className={`cursor-pointer ${selectedType === 'receive' ? 'bg-primary/20 text-primary' : ''}`}
-                  onClick={() => setSelectedType('receive')}
-                >
-                  Receives
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {transactionCounts.receive || 0}
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className={`cursor-pointer ${selectedType === 'approval' ? 'bg-primary/20 text-primary' : ''}`}
-                  onClick={() => setSelectedType('approval')}
-                >
-                  Approvals
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {transactionCounts.approval || 0}
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className={`cursor-pointer ${selectedType === 'contract' ? 'bg-primary/20 text-primary' : ''}`}
-                  onClick={() => setSelectedType('contract')}
-                >
-                  Contract Interactions
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {transactionCounts.contract || 0}
-                  </span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            {/* Load More Button */}
-            {hasMore && (
-              <button
-                onClick={() => {
-                  if (loadingTimeout) {
-                    // If in timeout state, clear it and retry
-                    setLoadingTimeout(false);
-                    if (requestTimeoutId) clearTimeout(requestTimeoutId);
-                    loadMoreTransactions();
-                  } else {
-                    // Normal load more
-                    loadMoreTransactions();
-                  }
-                }}
-                disabled={isLoadingMore && !loadingTimeout}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoadingMore && !loadingTimeout ? (
-                  <Loader2 size={16} className="animate-spin text-white" />
-                ) : (
-                  <Plus size={16} />
+    <div className="bg-transparent rounded-md">
+      <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-white">Transaction History</h2>
+          <p className="text-muted-foreground">
+            Showing {filteredTransactions.length} transactions for {shortenAddress(walletAddress)}
+          </p>
+        </div>
+        
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center">
+                <Filter size={14} className="mr-2" />
+                {selectedType === 'all' ? 'All Transactions' : (
+                  selectedType.charAt(0).toUpperCase() + selectedType.slice(1)
                 )}
-              </button>
-            )}
-            
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
-            >
-              <ChevronDown size={16} />
-              <span className="text-sm font-medium">Close</span>
-            </button>
-          </div>
+                <ChevronDown size={14} className="ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              
+              <DropdownMenuItem 
+                className={selectedType === 'all' ? 'bg-white/10' : ''}
+                onClick={() => setSelectedType('all')}
+              >
+                All Transactions
+                <span className="ml-2 px-1.5 py-0.5 bg-gray-500/20 text-xs rounded">
+                  {transactions.length}
+                </span>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                className={selectedType === 'swap' ? 'bg-white/10' : ''}
+                onClick={() => setSelectedType('swap')}
+              >
+                Swaps
+                <span className="ml-2 px-1.5 py-0.5 bg-gray-500/20 text-xs rounded">
+                  {transactionCounts['swap'] || 0}
+                </span>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                className={selectedType === 'send' ? 'bg-white/10' : ''}
+                onClick={() => setSelectedType('send')}
+              >
+                Sent
+                <span className="ml-2 px-1.5 py-0.5 bg-gray-500/20 text-xs rounded">
+                  {transactionCounts['send'] || 0}
+                </span>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                className={selectedType === 'receive' ? 'bg-white/10' : ''}
+                onClick={() => setSelectedType('receive')}
+              >
+                Received
+                <span className="ml-2 px-1.5 py-0.5 bg-gray-500/20 text-xs rounded">
+                  {transactionCounts['receive'] || 0}
+                </span>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                className={selectedType === 'approval' ? 'bg-white/10' : ''}
+                onClick={() => setSelectedType('approval')}
+              >
+                Approvals
+                <span className="ml-2 px-1.5 py-0.5 bg-gray-500/20 text-xs rounded">
+                  {transactionCounts['approval'] || 0}
+                </span>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                className={selectedType === 'contract' ? 'bg-white/10' : ''}
+                onClick={() => setSelectedType('contract')}
+              >
+                Contract Interactions
+                <span className="ml-2 px-1.5 py-0.5 bg-gray-500/20 text-xs rounded">
+                  {transactionCounts['contract'] || 0}
+                </span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
         </div>
       </div>
       
-      {/* Transactions Table - Desktop View */}
-      <div className="hidden md:block">
-        <table className="w-full">
-          <thead className="bg-black/40 border-b border-white/20">
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-hidden rounded-md">
+        <table className="w-full border-collapse">
+          <thead className="bg-black/20">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
-                Details
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-bold text-white uppercase tracking-wider">
-                Value
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-bold text-white uppercase tracking-wider">
-                Link
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Details</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Block</th>
             </tr>
           </thead>
-          <tbody className="bg-black/20 backdrop-blur-sm divide-y divide-border">
+          <tbody className="divide-y divide-white/5">
             {filteredTransactions.map((tx, index) => (
-              <tr key={tx.hash + index} className="hover:bg-white/5 transition-colors">
+              <tr key={tx.hash + index} className={tx.receipt_status !== '1' ? 'bg-red-500/10' : (index % 2 === 0 ? 'bg-black/5' : 'bg-black/10')}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-semibold text-white">
-                    {formatTimestamp(tx.block_timestamp)}
+                  <div className="text-sm font-medium text-white">{formatTimestamp(tx.block_timestamp)}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {tx.receipt_status === '1' ? (
+                      <span className="text-green-400">Success</span>
+                    ) : (
+                      <span className="text-red-400">Failed</span>
+                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1 flex flex-col">
-                    <div className="flex items-center">
-                      <span className={`
-                        mr-1 px-1.5 py-0.5 text-xs font-medium rounded-sm ${
-                          tx.receipt_status === '1' 
-                            ? 'bg-green-500/20 text-green-400' 
-                            : 'bg-red-500/20 text-red-400'
-                        }`}>
-                        {tx.receipt_status === '1' ? 'Success' : 'Failed'}
-                      </span>
-                    </div>
-                    <div className="flex items-center mt-1">
-                      <span className="text-xs font-medium text-white/70">
-                        Type: {getTransactionType(tx).charAt(0).toUpperCase() + getTransactionType(tx).slice(1)}
-                      </span>
-                    </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm">
+                    {(() => {
+                      const type = getTransactionType(tx);
+                      switch (type) {
+                        case 'swap':
+                          return <span className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs">Swap</span>;
+                        case 'send':
+                          return <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-400 text-xs">Send</span>;
+                        case 'receive':
+                          return <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs">Receive</span>;
+                        case 'approval':
+                          return <span className="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-xs">Approval</span>;
+                        case 'contract':
+                          return <span className="px-2 py-1 rounded-full bg-purple-500/20 text-purple-400 text-xs">Contract</span>;
+                        default:
+                          return <span className="px-2 py-1 rounded-full bg-gray-500/20 text-gray-400 text-xs">Other</span>;
+                      }
+                    })()}
+                  </div>
+                  <div className="text-xs text-white/50 mt-1">
+                    {tx.method_label || 'Transaction'}
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm font-semibold text-white">
                     {tx.summary || 'Transaction details'}
                     
-                    {/* ERC20 Transfers */}
-                    {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
-                      <div key={`${tx.hash}-erc20-${i}`} className="flex items-center mt-2">
-                        <TokenLogo 
-                          address={transfer.address || ''}
-                          symbol={transfer.token_symbol || ''}
-                          fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
-                          size="sm"
-                        />
-                        <div className="ml-2 flex items-center">
-                          <div className="mr-1">
-                            {transfer.direction === 'receive' ? (
-                              <ArrowDownLeft size={14} className="text-green-400" />
-                            ) : (
-                              <ArrowUpRight size={14} className="text-red-400" />
-                            )}
-                          </div>
-                          <div className="flex flex-col">
-                            <div className="flex items-center">
-                              <div className="group relative">
-                                <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30" title={transfer.token_symbol}>
-                                  {transfer.token_symbol && transfer.token_symbol.length > 15 
-                                    ? `${transfer.token_symbol.substring(0, 15)}...` 
-                                    : transfer.token_symbol}
-                                </span>
-                                <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
-                                  <div className="mb-2 text-xs">
-                                    <span className="text-muted-foreground">Contract:</span>
-                                    <div className="flex items-center mt-1">
-                                      <span className="bg-black/20 px-1 py-0.5 rounded text-white">
-                                        {shortenAddress(transfer.address || '')}
-                                      </span>
-                                      <button 
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          copyToClipboard(transfer.address || '');
-                                        }}
-                                        className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
-                                        title="Copy contract address"
-                                      >
-                                        {copiedAddresses[transfer.address || ''] ? (
-                                          <Check size={12} className="text-green-400" />
-                                        ) : (
-                                          <Copy size={12} className="text-white/70 hover:text-white" />
-                                        )}
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col space-y-1 text-xs">
-                                    <a 
-                                      href={`https://dexscreener.com/pulsechain/${transfer.address}`} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
-                                    >
-                                      <ExternalLink size={10} className="mr-1" />
-                                      DexScreener
-                                    </a>
-                                    <a 
-                                      href={`https://otter.pulsechain.com/address/${transfer.address}`} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
-                                    >
-                                      <ExternalLink size={10} className="mr-1" />
-                                      Otterscan
-                                    </a>
-                                    <a 
-                                      href={`https://scan.pulsechain.com/token/${transfer.address}`} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200"
-                                    >
-                                      <ExternalLink size={10} className="mr-1" />
-                                      PulseScan
-                                    </a>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                              <Link 
-                                to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
-                                className="text-white hover:text-gray-300"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {/* Native Transfers */}
-                    {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
-                      <div key={`${tx.hash}-native-${i}`} className="flex items-center mt-2">
-                        <img 
-                          src="/assets/pls-logo-trimmed.png"
-                          alt="PLS"
-                          className="w-6 h-6 rounded-full object-cover border border-white/10"
-                        />
-                        <div className="ml-2 flex items-center">
-                          <div className="mr-1">
-                            {transfer.direction === 'receive' ? (
-                              <ArrowDownLeft size={14} className="text-green-400" />
-                            ) : (
-                              <ArrowUpRight size={14} className="text-red-400" />
-                            )}
-                          </div>
-                          <div className="flex flex-col">
-                            <div className="flex items-center">
-                              <div className="group relative">
-                                <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30" title={transfer.token_symbol || 'PLS'}>
-                                  {(transfer.token_symbol && transfer.token_symbol.length > 15) 
-                                    ? `${transfer.token_symbol.substring(0, 15)}...` 
-                                    : (transfer.token_symbol || 'PLS')}
-                                </span>
-                                <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
-                                  <div className="mb-2 text-xs">
-                                    <span className="text-muted-foreground">Type:</span>
-                                    <div className="flex items-center mt-1">
-                                      <span className="bg-black/20 px-1 py-0.5 rounded text-white">
-                                        Native Token
-                                      </span>
-                                      <button 
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          copyToClipboard('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
-                                        }}
-                                        className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
-                                        title="Copy PLS token address"
-                                      >
-                                        {copiedAddresses['0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'] ? (
-                                          <Check size={12} className="text-green-400" />
-                                        ) : (
-                                          <Copy size={12} className="text-white/70 hover:text-white" />
-                                        )}
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col space-y-1 text-xs">
-                                    <a 
-                                      href="https://dexscreener.com/pulsechain/0x8a810ea8B121d08342E9e7696f4a9915cBE494B7" 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
-                                    >
-                                      <ExternalLink size={10} className="mr-1" />
-                                      DexScreener
-                                    </a>
-                                    <a 
-                                      href="https://otter.pulsechain.com" 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
-                                    >
-                                      <ExternalLink size={10} className="mr-1" />
-                                      Otterscan
-                                    </a>
-                                    <a 
-                                      href="https://scan.pulsechain.com" 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200"
-                                    >
-                                      <ExternalLink size={10} className="mr-1" />
-                                      PulseScan
-                                    </a>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                              <Link 
-                                to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
-                                className="text-white hover:text-gray-300"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                    {/* Enhanced Transaction Content Display */}
+                    {renderTransactionContent(tx)}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -1124,330 +808,60 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   href={`https://scan.pulsechain.com/tx/${tx.hash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-2 text-white hover:text-white/80 transition-colors"
+                  className="ml-2 p-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                 >
-                  <ExternalLink size={16} />
+                  <ExternalLink size={14} />
                 </a>
               </div>
             </div>
             
-            {/* Transaction Body - Details */}
+            {/* Transaction Body - Content and Details */}
             <div className="p-3">
-              {/* Transaction summary if available */}
-              {tx.summary && (
-                <div className="mb-2 text-sm">{tx.summary}</div>
+              {/* Method Label / Hash */}
+              {tx.method_label && (
+                <div className="mb-2">
+                  <span className="text-xs font-mono bg-white/10 px-2 py-1 rounded">
+                    {tx.method_label}
+                  </span>
+                </div>
               )}
               
-              {/* ERC20 Transfers */}
-              {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
-                <div key={`mobile-${tx.hash}-erc20-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                  <div className="flex items-center">
-                    <TokenLogo 
-                      address={transfer.address || ''}
-                      symbol={transfer.token_symbol || ''}
-                      fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
-                      size="sm"
-                    />
-                    <div className="ml-2">
-                      <div className="flex items-center">
-                        {transfer.direction === 'receive' ? (
-                          <ArrowDownLeft size={14} className="text-green-400 mr-1" />
-                        ) : (
-                          <ArrowUpRight size={14} className="text-red-400 mr-1" />
-                        )}
-                        <div className="group relative">
-                          <span className="text-sm font-medium border-b border-dotted border-white/30" title={transfer.token_symbol}>
-                            {transfer.token_symbol && transfer.token_symbol.length > 15 
-                              ? `${transfer.token_symbol.substring(0, 15)}...` 
-                              : transfer.token_symbol}
-                          </span>
-                          <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
-                            <div className="mb-2 text-xs">
-                              <span className="text-muted-foreground">Contract:</span>
-                              <div className="flex items-center mt-1">
-                                <span className="bg-black/20 px-1 py-0.5 rounded text-white">
-                                  {shortenAddress(transfer.address || '')}
-                                </span>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    copyToClipboard(transfer.address || '');
-                                  }}
-                                  className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
-                                  title="Copy contract address"
-                                >
-                                  {copiedAddresses[transfer.address || ''] ? (
-                                    <Check size={12} className="text-green-400" />
-                                  ) : (
-                                    <Copy size={12} className="text-white/70 hover:text-white" />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex flex-col space-y-1 text-xs">
-                              <a 
-                                href={`https://dexscreener.com/pulsechain/${transfer.address}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
-                              >
-                                <ExternalLink size={10} className="mr-1" />
-                                DexScreener
-                              </a>
-                              <a 
-                                href={`https://otter.pulsechain.com/address/${transfer.address}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
-                              >
-                                <ExternalLink size={10} className="mr-1" />
-                                Otterscan
-                              </a>
-                              <a 
-                                href={`https://scan.pulsechain.com/token/${transfer.address}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200"
-                              >
-                                <ExternalLink size={10} className="mr-1" />
-                                PulseScan
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                        <Link 
-                          to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
-                          className="text-white hover:text-gray-300"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                        >
-                          {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
-                      {transfer.direction === 'receive' ? '+' : '-'}
-                      {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)}
-                    </div>
-                    {(() => {
-                      const tokenAddress = (transfer.address || '').toLowerCase();
-                      const hasBatchPrice = !!batchPrices[tokenAddress];
-                      const usdValue = calculateUsdValue(transfer.value, transfer.token_decimals, tokenAddress);
-                      
-                      return usdValue ? (
-                        <div className="text-xs text-muted-foreground flex items-center justify-end">
-                          {usdValue.toLocaleString('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                            maximumFractionDigits: 2,
-                            minimumFractionDigits: 2
-                          })}
-                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
-                        </div>
-                      ) : null;
-                    })()}
-                  </div>
-                </div>
-              ))}
+              {/* Enhanced Transaction Content Display - Mobile version */}
+              {renderTransactionContent(tx)}
               
-              {/* Native Transfers */}
-              {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
-                <div key={`mobile-${tx.hash}-native-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                  <div className="flex items-center">
-                    <img 
-                      src="/assets/pls-logo-trimmed.png"
-                      alt="PLS"
-                      className="w-6 h-6 rounded-full object-cover border border-white/10"
-                    />
-                    <div className="ml-2">
-                      <div className="flex items-center">
-                        {transfer.direction === 'receive' ? (
-                          <ArrowDownLeft size={14} className="text-green-400 mr-1" />
-                        ) : (
-                          <ArrowUpRight size={14} className="text-red-400 mr-1" />
-                        )}
-                        <div className="group relative">
-                          <span className="text-sm font-medium border-b border-dotted border-white/30" title={transfer.token_symbol || 'PLS'}>
-                            {(transfer.token_symbol && transfer.token_symbol.length > 15) 
-                              ? `${transfer.token_symbol.substring(0, 15)}...` 
-                              : (transfer.token_symbol || 'PLS')}
-                          </span>
-                          <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
-                            <div className="mb-2 text-xs">
-                              <span className="text-muted-foreground">Type:</span>
-                              <div className="flex items-center mt-1">
-                                <span className="bg-black/20 px-1 py-0.5 rounded text-white">
-                                  Native Token
-                                </span>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    copyToClipboard('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
-                                  }}
-                                  className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
-                                  title="Copy PLS token address"
-                                >
-                                  {copiedAddresses['0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'] ? (
-                                    <Check size={12} className="text-green-400" />
-                                  ) : (
-                                    <Copy size={12} className="text-white/70 hover:text-white" />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex flex-col space-y-1 text-xs">
-                              <a 
-                                href="https://dexscreener.com/pulsechain/0x8a810ea8B121d08342E9e7696f4a9915cBE494B7" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
-                              >
-                                <ExternalLink size={10} className="mr-1" />
-                                DexScreener
-                              </a>
-                              <a 
-                                href="https://otter.pulsechain.com" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200 mb-1"
-                              >
-                                <ExternalLink size={10} className="mr-1" />
-                                Otterscan
-                              </a>
-                              <a 
-                                href="https://scan.pulsechain.com" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center bg-black/50 border border-white/20 rounded-md px-2 py-1 text-white hover:bg-black/80 hover:border-white/40 transition-all duration-200"
-                              >
-                                <ExternalLink size={10} className="mr-1" />
-                                PulseScan
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-                        <Link 
-                          to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
-                          className="text-white hover:text-gray-300"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                        >
-                          {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
-                      {transfer.direction === 'receive' ? '+' : '-'}
-                      {transfer.value_formatted || formatTokenValue(transfer.value)}
-                    </div>
-                    {(() => {
-                      const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-                      const hasBatchPrice = !!batchPrices[plsAddress];
-                      const usdValue = calculateUsdValue(transfer.value, '18', plsAddress);
-                      
-                      return usdValue ? (
-                        <div className="text-xs text-muted-foreground flex items-center justify-end">
-                          {usdValue.toLocaleString('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                            maximumFractionDigits: 2,
-                            minimumFractionDigits: 2
-                          })}
-                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
-                        </div>
-                      ) : null;
-                    })()}
-                  </div>
-                </div>
-              ))}
-              
-              {/* Gas Fee */}
-              <div className="text-xs font-semibold text-white mt-2 text-right">
-                Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
-                {(() => {
-                  const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-                  const hasBatchPrice = !!batchPrices[plsAddress];
-                  const usdValue = calculateUsdValue(tx.transaction_fee.toString(), '18', plsAddress);
-                  
-                  return usdValue ? (
-                    <span className="ml-2 flex items-center">
-                      ({usdValue.toLocaleString('en-US', {
-                        style: 'currency',
-                        currency: 'USD',
-                        maximumFractionDigits: 2,
-                        minimumFractionDigits: 2
-                      })})
-                      {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
-                    </span>
-                  ) : null;
-                })()}
+              {/* Fee Info */}
+              <div className="mt-3 text-xs text-muted-foreground flex justify-between">
+                <div>Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS</div>
+                <div>Block: {parseInt(tx.block_number).toLocaleString()}</div>
               </div>
             </div>
           </div>
         ))}
       </div>
       
-      {/* Load More Button (if there are more transactions) */}
+      {/* Load More Button */}
       {hasMore && (
-        <div className="p-6 flex flex-col items-center">
-          {loadingTimeout && isLoadingMore && (
-            <div className="mb-4 px-4 py-3 glass-card border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 rounded-md max-w-md text-center">
-              <p className="text-sm mb-2">
-                The request is taking longer than expected. This may be due to:
-              </p>
-              <ul className="text-xs text-left list-disc pl-5 mb-2">
-                <li>Moralis API rate limits (100 transactions per request)</li>
-                <li>Network congestion on PulseChain</li>
-                <li>Server-side timeouts</li>
-              </ul>
-              <p className="text-xs">You can wait or try again.</p>
-            </div>
-          )}
-          
-          <button 
-            onClick={() => {
-              if (loadingTimeout) {
-                // If in timeout state, clear it and retry
-                setLoadingTimeout(false);
-                if (requestTimeoutId) clearTimeout(requestTimeoutId);
-                loadMoreTransactions();
-              } else {
-                // Normal load more
-                loadMoreTransactions();
-              }
-            }}
-            disabled={isLoadingMore && !loadingTimeout}
-            className="w-full max-w-md flex items-center justify-center px-3 py-2 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        <div className="mt-4 flex justify-center">
+          <Button 
+            variant="outline"
+            disabled={isLoadingMore}
+            onClick={loadMore}
+            className="w-full sm:w-auto"
           >
-            {isLoadingMore && !loadingTimeout ? (
-              <span className="flex items-center">
-                <Loader2 size={18} className="mr-2 animate-spin text-white" /> 
-                Loading more transactions...
-              </span>
-            ) : isLoadingMore && loadingTimeout ? (
-              <span className="flex items-center">
-                <RefreshCw size={18} className="mr-2" /> 
-                Try Again
-              </span>
+            {isLoadingMore ? (
+              <>
+                <Loader2 size={16} className="mr-2 animate-spin" />
+                Loading more...
+              </>
             ) : (
-              <span className="flex items-center">
-                <ChevronDown size={18} className="mr-2" /> 
+              <>
+                <Plus size={16} className="mr-2" />
                 Load More Transactions
-              </span>
+              </>
             )}
-          </button>
+          </Button>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
