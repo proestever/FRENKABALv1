@@ -230,6 +230,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return (parseInt(value) / 10 ** decimalValue).toFixed(decimalValue > 8 ? 4 : 2);
   };
   
+  // Helper function to get the token address from a transfer
+  const getTokenAddress = (transfer: TransactionTransfer): string => {
+    return (transfer.token_address || transfer.address || '').toLowerCase();
+  };
+  
   // Helper function to render transaction content by type
   const renderTransactionContent = (tx: Transaction) => {
     const txType = getTransactionType(tx);
@@ -253,9 +258,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 {sentTokens.map((transfer, i) => (
                   <div key={`swap-out-${tx.hash}-${i}`} className="flex items-center">
                     <TokenLogo 
-                      address={transfer.address || ''}
+                      address={getTokenAddress(transfer)}
                       symbol={transfer.token_symbol || ''}
-                      fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
+                      fallbackLogo={prefetchedLogos[getTokenAddress(transfer)]}
                       size="sm"
                     />
                     <div className="ml-2 flex items-center">
@@ -280,9 +285,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 {receivedTokens.map((transfer, i) => (
                   <div key={`swap-in-${tx.hash}-${i}`} className="flex items-center">
                     <TokenLogo 
-                      address={transfer.address || ''}
+                      address={getTokenAddress(transfer)}
                       symbol={transfer.token_symbol || ''}
-                      fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
+                      fallbackLogo={prefetchedLogos[getTokenAddress(transfer)]}
                       size="sm"
                     />
                     <div className="ml-2 flex items-center">
@@ -316,9 +321,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {tx.erc20_transfers.map((transfer, i) => (
                 <div key={`approve-${tx.hash}-${i}`} className="flex items-center">
                   <TokenLogo 
-                    address={transfer.address || ''}
+                    address={getTokenAddress(transfer)}
                     symbol={transfer.token_symbol || ''}
-                    fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
+                    fallbackLogo={prefetchedLogos[getTokenAddress(transfer)]}
                     size="sm"
                   />
                   <div className="ml-2">
@@ -359,9 +364,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       return tx.erc20_transfers.map((transfer, i) => (
         <div key={`${tx.hash}-erc20-${i}`} className="flex items-center mt-2">
           <TokenLogo 
-            address={transfer.address || ''}
+            address={getTokenAddress(transfer)}
             symbol={transfer.token_symbol || ''}
-            fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
+            fallbackLogo={prefetchedLogos[getTokenAddress(transfer)]}
             size="sm"
           />
           <div className="ml-2 flex items-center">
@@ -443,11 +448,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Debug logging flag
   const DEBUG_LOGGING = false;
-  
-  // Helper function to get the token address from a transfer
-  const getTokenAddress = (transfer: TransactionTransfer): string => {
-    return (transfer.token_address || transfer.address || '').toLowerCase();
-  };
   
   // Function to calculate USD value for a transaction
   const calculateUsdValue = (value: string, decimals: string = '18', tokenAddress: string) => {
@@ -532,8 +532,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         // Get token addresses from ERC20 transfers
         if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
           tx.erc20_transfers.forEach((transfer: any) => {
-            if (transfer.address) {
-              addUniqueAddress(transfer.address);
+            const tokenAddress = getTokenAddress(transfer);
+            if (tokenAddress) {
+              addUniqueAddress(tokenAddress);
             }
           });
         }
@@ -729,99 +730,33 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     {renderTransactionContent(tx)}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
-                  {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
-                    <div key={`${tx.hash}-erc20-value-${i}`} className={`${i > 0 ? 'mt-2' : ''}`}>
-                      <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
-                        {transfer.direction === 'receive' ? '+' : '-'}
-                        {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol && transfer.token_symbol.length > 15 ? `${transfer.token_symbol.substring(0, 15)}...` : transfer.token_symbol}
-                      </div>
-                      {/* Add USD value display using batch token prices */}
-                      {(() => {
-                        const tokenAddress = (transfer.address || '').toLowerCase();
-                        // Check if we have a price from our batch hook
-                        const hasBatchPrice = !!batchPrices[tokenAddress];
-                        const usdValue = calculateUsdValue(transfer.value, transfer.token_decimals, tokenAddress);
-                        
-                        return usdValue ? (
-                          <div className="text-xs text-muted-foreground flex items-center justify-end">
-                            {usdValue.toLocaleString('en-US', {
-                              style: 'currency',
-                              currency: 'USD',
-                              maximumFractionDigits: 2,
-                              minimumFractionDigits: 2
-                            })}
-                            {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
-                          </div>
-                        ) : null;
-                      })()}
+                <td className="px-6 py-4 text-right whitespace-nowrap">
+                  <div className="flex flex-col items-end space-y-1">
+                    <div className="text-xs text-white/50 font-mono">
+                      {tx.transaction_fee ? `Fee: ${(parseInt(tx.transaction_fee) / 1e18).toFixed(8)} PLS` : '-'}
                     </div>
-                  ))}
-                  
-                  {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
-                    <div key={`${tx.hash}-native-value-${i}`} className={`${(tx.erc20_transfers && tx.erc20_transfers.length > 0) || i > 0 ? 'mt-2' : ''}`}>
-                      <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
-                        {transfer.direction === 'receive' ? '+' : '-'}
-                        {transfer.value_formatted || formatTokenValue(transfer.value)} {(transfer.token_symbol && transfer.token_symbol.length > 15) ? `${transfer.token_symbol.substring(0, 15)}...` : (transfer.token_symbol || 'PLS')}
+                    
+                    {tx.erc20_transfers && tx.erc20_transfers.length > 0 && (
+                      <div className="flex items-center justify-end mt-1 space-x-1">
+                        {tx.erc20_transfers.some(t => {
+                          const usdValue = calculateUsdValue(t.value, t.token_decimals, getTokenAddress(t));
+                          return usdValue !== null;
+                        }) && (
+                          <DollarSign size={12} className="text-white/50" />
+                        )}
                       </div>
-                      {/* Add USD value display for native PLS token using batch token prices */}
-                      {(() => {
-                        const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-                        // Check if we have a price from our batch hook
-                        const hasBatchPrice = !!batchPrices[plsAddress];
-                        const usdValue = calculateUsdValue(transfer.value, '18', plsAddress);
-                        
-                        return usdValue ? (
-                          <div className="text-xs text-muted-foreground flex items-center justify-end">
-                            {usdValue.toLocaleString('en-US', {
-                              style: 'currency',
-                              currency: 'USD',
-                              maximumFractionDigits: 2,
-                              minimumFractionDigits: 2
-                            })}
-                            {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
-                          </div>
-                        ) : null;
-                      })()}
-                    </div>
-                  ))}
-                  
-                  <div className="text-xs font-semibold text-white mt-2">
-                    Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
-                    {/* Add USD value for gas fee using batch prices */}
-                    {(() => {
-                      const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-                      // Check if we have a price from our batch hook
-                      const hasBatchPrice = !!batchPrices[plsAddress];
-                      const usdValue = calculateUsdValue(tx.transaction_fee.toString(), '18', plsAddress);
-                      
-                      return usdValue ? (
-                        <div className="flex items-center justify-end mt-0.5">
-                          {usdValue.toLocaleString('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                            maximumFractionDigits: 2,
-                            minimumFractionDigits: 2
-                          })}
-                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
-                        </div>
-                      ) : null;
-                    })()}
+                    )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center">
+                <td className="px-6 py-4 text-center whitespace-nowrap">
                   <a 
                     href={`https://scan.pulsechain.com/tx/${tx.hash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-white hover:text-white/80 transition-colors"
+                    className="inline-flex items-center text-xs text-blue-400 hover:text-blue-300 transition-colors"
                   >
-                    <div className="flex justify-center mb-1">
-                      <ExternalLink size={16} />
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {parseInt(tx.block_number).toLocaleString()}
-                    </div>
+                    {tx.block_number}
+                    <ExternalLink size={12} className="ml-1" />
                   </a>
                 </td>
               </tr>
@@ -830,58 +765,76 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         </table>
       </div>
       
-      {/* Mobile Transaction Cards */}
-      <div className="md:hidden">
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-4">
         {filteredTransactions.map((tx, index) => (
-          <div key={tx.hash + index} className="mb-4 glass-card border border-white/10 rounded-md overflow-hidden">
-            {/* Transaction Header - Date & Status */}
-            <div className="p-3 border-b border-white/10 flex justify-between items-center">
+          <Card key={tx.hash + index} className={`p-4 ${tx.receipt_status !== '1' ? 'bg-red-500/10' : 'bg-black/10'}`}>
+            <div className="flex justify-between items-start mb-3">
               <div>
-                <div className="text-sm font-medium">{formatTimestamp(tx.block_timestamp)}</div>
+                <div className="text-sm font-medium text-white">{formatTimestamp(tx.block_timestamp)}</div>
                 <div className="text-xs text-muted-foreground">
-                  Type: {getTransactionType(tx).charAt(0).toUpperCase() + getTransactionType(tx).slice(1)}
+                  {tx.receipt_status === '1' ? (
+                    <span className="text-green-400">Success</span>
+                  ) : (
+                    <span className="text-red-400">Failed</span>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center">
-                <span className={`px-2 py-1 text-xs rounded-sm ${
-                  tx.receipt_status === '1' 
-                    ? 'bg-green-500/20 text-green-400' 
-                    : 'bg-red-500/20 text-red-400'
-                }`}>
-                  {tx.receipt_status === '1' ? 'Success' : 'Failed'}
-                </span>
+              
+              <div className="text-sm">
+                {(() => {
+                  const type = getTransactionType(tx);
+                  switch (type) {
+                    case 'swap':
+                      return <span className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs">Swap</span>;
+                    case 'send':
+                      return <span className="px-2 py-1 rounded-full bg-red-500/20 text-red-400 text-xs">Send</span>;
+                    case 'receive':
+                      return <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs">Receive</span>;
+                    case 'approval':
+                      return <span className="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-xs">Approval</span>;
+                    case 'contract':
+                      return <span className="px-2 py-1 rounded-full bg-purple-500/20 text-purple-400 text-xs">Contract</span>;
+                    default:
+                      return <span className="px-2 py-1 rounded-full bg-gray-500/20 text-gray-400 text-xs">Other</span>;
+                  }
+                })()}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              {/* Method label if available */}
+              {tx.method_label && (
+                <div className="text-xs font-mono bg-white/10 rounded px-1.5 py-0.5 inline-block">
+                  {tx.method_label}
+                </div>
+              )}
+              
+              {/* Transaction summary */}
+              <div className="text-sm text-white/90">
+                {tx.summary || 'Transaction details'}
+              </div>
+              
+              {/* Enhanced Transaction Content Display */}
+              {renderTransactionContent(tx)}
+              
+              <div className="flex justify-between items-center mt-4 pt-2 border-t border-white/10">
+                <div className="text-xs text-white/50 font-mono">
+                  {tx.transaction_fee ? `Fee: ${(parseInt(tx.transaction_fee) / 1e18).toFixed(8)} PLS` : '-'}
+                </div>
+                
                 <a 
                   href={`https://scan.pulsechain.com/tx/${tx.hash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-2 p-1 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                  className="inline-flex items-center text-xs text-blue-400 hover:text-blue-300 transition-colors"
                 >
-                  <ExternalLink size={14} />
+                  Block: {tx.block_number}
+                  <ExternalLink size={12} className="ml-1" />
                 </a>
               </div>
             </div>
-            
-            {/* Transaction Body - Content and Details */}
-            <div className="p-3">
-              {/* Method Label / Hash */}
-              {tx.method_label && (
-                <div className="mb-2">
-                  <span className="text-xs font-mono bg-white/10 px-2 py-1 rounded">
-                    {tx.method_label}
-                  </span>
-                </div>
-              )}
-              
-              {/* Enhanced Transaction Content Display - Mobile version */}
-              {renderTransactionContent(tx)}
-              
-              {/* Fee Info */}
-              <div className="mt-3 text-xs text-muted-foreground flex justify-between">
-                <div>Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS</div>
-                <div>Block: {parseInt(tx.block_number).toLocaleString()}</div>
-              </div>
-            </div>
-          </div>
+          </Card>
         ))}
       </div>
       
@@ -889,10 +842,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       {hasMore && (
         <div className="mt-4 flex justify-center">
           <Button 
-            variant="outline"
-            disabled={isLoadingMore}
+            variant="outline" 
             onClick={loadMore}
-            className="w-full sm:w-auto"
+            disabled={isLoadingMore}
+            className="w-full md:w-auto"
           >
             {isLoadingMore ? (
               <>
@@ -906,6 +859,17 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               </>
             )}
           </Button>
+        </div>
+      )}
+      
+      {/* No transactions message */}
+      {transactions.length === 0 && !isLoading && (
+        <div className="p-8 text-center border border-dashed border-white/20 rounded-md">
+          <Wallet size={40} className="mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold text-white">No Transactions Found</h3>
+          <p className="text-muted-foreground mt-1">
+            This wallet has no transaction history on PulseChain.
+          </p>
         </div>
       )}
     </div>
