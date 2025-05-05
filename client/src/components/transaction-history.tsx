@@ -273,6 +273,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     <div className="ml-2 flex items-center">
                       <span className="text-sm font-medium text-red-400">
                         {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol}
+                        <span className="text-xs opacity-70 ml-1">({transfer.token_name || 'Unknown Token'})</span>
                       </span>
                     </div>
                   </div>
@@ -300,6 +301,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     <div className="ml-2 flex items-center">
                       <span className="text-sm font-medium text-green-400">
                         {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol}
+                        <span className="text-xs opacity-70 ml-1">({transfer.token_name || 'Unknown Token'})</span>
                       </span>
                     </div>
                   </div>
@@ -336,6 +338,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   <div className="ml-2">
                     <span className="text-sm font-medium">
                       {transfer.token_symbol || 'Unknown Token'}
+                      <span className="text-xs opacity-70 ml-1">({transfer.token_name || 'Unknown Token'})</span>
                     </span>
                   </div>
                 </div>
@@ -389,6 +392,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 <div className="group relative">
                   <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30" title={transfer.token_symbol || ''}>
                     {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol}
+                    <span className="text-xs opacity-70 ml-1">({transfer.token_name || 'Unknown Token'})</span>
                   </span>
                 </div>
               </div>
