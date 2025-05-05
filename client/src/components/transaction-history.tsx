@@ -806,6 +806,82 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   <div className="text-sm font-semibold text-white">
                     {tx.summary || 'Transaction details'}
                     
+                    {/* Swap Transaction Display - Desktop */}
+                    {getTransactionType(tx) === 'swap' && (
+                      <div className="mt-2 p-2 rounded-md glass-card border border-white/10">
+                        <div className="flex items-center mb-2">
+                          <span className="bg-purple-500/20 px-2 py-0.5 rounded-md text-xs text-purple-300">
+                            Token Swap
+                          </span>
+                        </div>
+                        
+                        {(() => {
+                          const { tokenIn, tokenOut } = getSwapTokens(tx);
+                          
+                          return (
+                            <div className="flex items-center space-x-4">
+                              {/* Token In */}
+                              {tokenIn && (
+                                <div className="flex flex-col items-center p-2 bg-black/20 rounded-md flex-1">
+                                  <div className="flex items-center w-full justify-between mb-1">
+                                    <div className="flex items-center">
+                                      <TokenLogo 
+                                        address={tokenIn.address || ''}
+                                        symbol={tokenIn.token_symbol || ''}
+                                        fallbackLogo={tokenIn.token_logo || ''}
+                                        size="sm"
+                                      />
+                                      <div className="ml-2 flex flex-col">
+                                        <span className="text-sm font-medium">{tokenIn.token_symbol || 'Unknown'}</span>
+                                        <span className="text-xs text-muted-foreground">{shortenAddress(tokenIn.address || '')}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center">
+                                      <ArrowUpRight size={14} className="text-red-400 mr-1" />
+                                      <span className="text-sm font-bold text-red-400">
+                                        -{tokenIn.value_formatted || formatTokenValue(tokenIn.value, tokenIn.token_decimals)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Arrow */}
+                              <div className="flex-shrink-0">
+                                <div className="w-6 h-px bg-white/20"></div>
+                              </div>
+                              
+                              {/* Token Out */}
+                              {tokenOut && (
+                                <div className="flex flex-col items-center p-2 bg-black/20 rounded-md flex-1">
+                                  <div className="flex items-center w-full justify-between mb-1">
+                                    <div className="flex items-center">
+                                      <TokenLogo 
+                                        address={tokenOut.address || ''}
+                                        symbol={tokenOut.token_symbol || ''}
+                                        fallbackLogo={tokenOut.token_logo || ''}
+                                        size="sm"
+                                      />
+                                      <div className="ml-2 flex flex-col">
+                                        <span className="text-sm font-medium">{tokenOut.token_symbol || 'Unknown'}</span>
+                                        <span className="text-xs text-muted-foreground">{shortenAddress(tokenOut.address || '')}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center">
+                                      <ArrowDownLeft size={14} className="text-green-400 mr-1" />
+                                      <span className="text-sm font-bold text-green-400">
+                                        +{tokenOut.value_formatted || formatTokenValue(tokenOut.value, tokenOut.token_decimals)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                    
                     {/* Default transaction details when no transfers are available */}
                     {(!tx.erc20_transfers || tx.erc20_transfers.length === 0) && 
                      (!tx.native_transfers || tx.native_transfers.length === 0) && 
@@ -1206,6 +1282,88 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {/* Transaction summary if available */}
               {tx.summary && (
                 <div className="mb-2 text-sm font-medium">{tx.summary}</div>
+              )}
+              
+              {/* Swap Transaction Special Display - Mobile */}
+              {getTransactionType(tx) === 'swap' && (
+                <div className="mb-3 p-3 rounded-md glass-card border border-white/10 flex flex-col">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center">
+                      <span className="bg-purple-500/20 px-2 py-0.5 rounded-md text-xs text-purple-300">
+                        Swap
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {(() => {
+                    const { tokenIn, tokenOut } = getSwapTokens(tx);
+                    
+                    return (
+                      <div className="flex flex-col space-y-2">
+                        {/* Token In */}
+                        {tokenIn && (
+                          <div className="flex items-center justify-between p-2 bg-black/20 rounded-md">
+                            <div className="flex items-center">
+                              <TokenLogo 
+                                address={tokenIn.address || ''}
+                                symbol={tokenIn.token_symbol || ''}
+                                fallbackLogo={tokenIn.token_logo || ''}
+                                size="sm"
+                              />
+                              <div className="ml-2">
+                                <div className="flex items-center">
+                                  <ArrowUpRight size={12} className="text-red-400 mr-1" />
+                                  <span className="text-sm font-medium">{tokenIn.token_symbol || 'Unknown'}</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {shortenAddress(tokenIn.address || '')}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-bold text-red-400">
+                                -{tokenIn.value_formatted || formatTokenValue(tokenIn.value, tokenIn.token_decimals)}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Arrow */}
+                        <div className="flex justify-center">
+                          <div className="w-px h-4 bg-white/20"></div>
+                        </div>
+                        
+                        {/* Token Out */}
+                        {tokenOut && (
+                          <div className="flex items-center justify-between p-2 bg-black/20 rounded-md">
+                            <div className="flex items-center">
+                              <TokenLogo 
+                                address={tokenOut.address || ''}
+                                symbol={tokenOut.token_symbol || ''}
+                                fallbackLogo={tokenOut.token_logo || ''}
+                                size="sm"
+                              />
+                              <div className="ml-2">
+                                <div className="flex items-center">
+                                  <ArrowDownLeft size={12} className="text-green-400 mr-1" />
+                                  <span className="text-sm font-medium">{tokenOut.token_symbol || 'Unknown'}</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {shortenAddress(tokenOut.address || '')}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-bold text-green-400">
+                                +{tokenOut.value_formatted || formatTokenValue(tokenOut.value, tokenOut.token_decimals)}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
               )}
               
               {/* Default transaction details when no transfers are available */}
