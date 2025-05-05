@@ -218,23 +218,23 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
         <>
           {/* Mobile View - Only shown on small screens */}
           <div className="block md:hidden">
-            <div className="space-y-2">
+            <div className="space-y-1">
               {sortedTokens.map((token, index) => {
                 const priceChangeClass = getChangeColorClass(token.priceChange24h);
                 const isHidden = hiddenTokens.includes(token.address);
                 
                 return (
-                  <div key={`mobile-${token.address}-${index}`} className="p-5 glass-card rounded-lg hover:bg-black/20 transition-colors">
+                  <div key={`mobile-${token.address}-${index}`} className="p-3 glass-card rounded-lg hover:bg-black/20 transition-colors">
                     <div className="flex items-center justify-between">
                       {/* Token Info */}
                       <div className="flex items-center flex-grow">
-                        <div className="mr-4 flex-shrink-0">
+                        <div className="mr-3 flex-shrink-0">
                           {/* Force use our PLS logo for PLS token in mobile view too */}
                           {token.symbol === 'PLS' || token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? (
                             <img 
                               src={plsLogo} 
                               alt="PLS" 
-                              className="w-10 h-10 rounded-full object-cover border border-white/10"
+                              className="w-11 h-11 rounded-full object-cover border border-white/10"
                             />
                           ) : (
                             <TokenLogo 
@@ -247,7 +247,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                         </div>
                         <div className="min-w-0 flex-grow">
                           <div className="flex items-center gap-1">
-                            <span className="text-base font-bold text-foreground" title={token.name}>
+                            <span className="text-lg font-bold text-foreground" title={token.name}>
                               {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
                             </span>
                             {token.verified && (
@@ -258,21 +258,26 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-muted-foreground font-medium" title={token.symbol}>
-                            {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                          <div className="flex gap-1 items-center">
+                            <div className="text-base text-muted-foreground font-medium" title={token.symbol}>
+                              {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              • {formatTokenAmount(token.balanceFormatted || 0)}
+                            </div>
                           </div>
                         </div>
                       </div>
                       
                       {/* Token Value & Hide Button */}
                       <div className="flex flex-col items-end">
-                        <div className="text-base sm:text-lg font-bold mb-1 text-white">
+                        <div className="text-lg sm:text-xl font-bold text-white">
                           {token.value !== undefined 
                             ? formatCurrency(token.value) 
                             : 'N/A'}
                         </div>
                         <div className="flex gap-2 items-center">
-                          <span className={`text-sm font-medium ${priceChangeClass}`}>
+                          <span className={`text-base font-medium ${priceChangeClass}`}>
                             {token.priceChange24h !== undefined 
                               ? `${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%` 
                               : ''}
@@ -287,11 +292,6 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Balance */}
-                    <div className="mt-3 text-sm text-muted-foreground">
-                      Balance: <span className="font-medium">{formatTokenAmount(token.balanceFormatted || 0)} {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}</span>
-                    </div>
                   </div>
                 );
               })}
@@ -303,22 +303,22 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
             <table className="min-w-full divide-y divide-white/10">
               <thead className="bg-black/20 backdrop-blur-md">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/5 first:rounded-tl-md">
+                  <th scope="col" className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/5 first:rounded-tl-md">
                     Token
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/6">
+                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
                     Balance
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/6">
+                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
                     Price
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/6">
+                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
                     Value
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/6">
+                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
                     24h Change
                   </th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider w-1/12 last:rounded-tr-md">
+                  <th scope="col" className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/12 last:rounded-tr-md">
                     Visibility
                   </th>
                 </tr>
@@ -331,7 +331,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                   // Create a unique key using address and index to avoid duplicate keys
                   return (
                     <tr key={`desktop-${token.address}-${index}`} className="hover:bg-black/20 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="mr-3 flex-shrink-0">
                             {/* Force use our PLS logo for PLS token */}
@@ -339,19 +339,20 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                             <img 
                               src={plsLogo} 
                               alt="PLS" 
-                              className="w-8 h-8 rounded-full object-cover border border-white/10"
+                              className="w-10 h-10 rounded-full object-cover border border-white/10"
                             />
                           ) : (
                             <TokenLogo 
                               address={token.address}
                               symbol={token.symbol}
                               fallbackLogo={token.logo}
+                              size="md"
                             />
                           )}
                           </div>
                           <div>
                             <div className="flex items-center gap-1">
-                              <span className="text-sm font-medium text-foreground" title={token.name}>
+                              <span className="text-base font-bold text-foreground" title={token.name}>
                                 {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
                               </span>
                               {token.verified && (
@@ -363,7 +364,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               )}
                             </div>
                             <div className="flex items-center gap-2 overflow-hidden">
-                              <div className="text-xs text-muted-foreground" title={token.symbol}>
+                              <div className="text-sm text-muted-foreground" title={token.symbol}>
                                 {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
                               </div>
                               {token.exchange && (
@@ -384,40 +385,40 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="text-sm font-medium text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
-                        <div className="text-xs text-muted-foreground" title={token.symbol}>
+                      <td className="px-4 py-3 whitespace-nowrap text-right">
+                        <div className="text-base font-medium text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
+                        <div className="text-sm text-muted-foreground" title={token.symbol}>
                           {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="text-sm font-medium text-white">
+                      <td className="px-4 py-3 whitespace-nowrap text-right">
+                        <div className="text-base font-medium text-white">
                           {token.price !== undefined 
                             ? formatCurrencyWithPrecision(token.price, 2, token.price < 0.01 ? 8 : 2) 
                             : 'N/A'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="text-sm font-medium text-white">
+                      <td className="px-4 py-3 whitespace-nowrap text-right">
+                        <div className="text-lg font-bold text-white">
                           {token.value !== undefined 
                             ? formatCurrency(token.value) 
                             : 'N/A'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className={`text-sm font-medium ${priceChangeClass}`}>
+                      <td className="px-4 py-3 whitespace-nowrap text-right">
+                        <div className={`text-base font-medium ${priceChangeClass}`}>
                           {token.priceChange24h !== undefined 
                             ? `${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%` 
                             : 'N/A'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
                         <button 
                           onClick={() => handleToggleVisibility(token.address)} 
                           className={`p-1.5 rounded-full glass-card hover:bg-black/20 ${isHidden ? 'text-white/60' : 'text-purple-400'}`}
                           title={isHidden ? "Show token" : "Hide token"}
                         >
-                          {isHidden ? <EyeOff size={16} /> : <Eye size={16} />}
+                          {isHidden ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
                       </td>
                     </tr>
