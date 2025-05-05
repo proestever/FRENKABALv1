@@ -492,7 +492,7 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
     // For ERC20 tokens, we'll try to use the token metadata + balance APIs
     try {
       // First get the token metadata
-      const tokenMetadata = await moralisService.getTokenMetadata(tokenAddress);
+      const tokenMetadata = await moralisService.getTokenFullMetadata(tokenAddress);
       
       if (!tokenMetadata) {
         return null;
@@ -518,7 +518,7 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
           value: 0,
           logo: await getTokenLogoUrl(tokenAddress),
           exchange: '',
-          verified: !!tokenMetadata.verified_contract,
+          verified: tokenMetadata.verified || false,
           isNative: false
         };
       }
@@ -555,7 +555,7 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
         priceChange24h: priceData?.usdPrice24hrPercentChange,
         logo: await getTokenLogoUrl(tokenAddress),
         exchange: priceData?.exchangeName || '',
-        verified: !!tokenData.verified_contract,
+        verified: tokenMetadata.verified || false,
         isNative: false
       };
     } catch (error) {

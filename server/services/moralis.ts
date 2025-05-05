@@ -251,6 +251,57 @@ export const getNativeBalance = async (walletAddress: string): Promise<{
 };
 
 /**
+ * Get complete token information including metadata, logo, and price
+ */
+export const getTokenFullMetadata = async (tokenAddress: string): Promise<{
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: string;
+  logo?: string;
+  price?: number;
+  priceChange24h?: number;
+  verified?: boolean;
+} | null> => {
+  try {
+    // First try to get metadata including logo
+    const metadataResponse = await Moralis.EvmApi.token.getTokenMetadata({
+      chain: PULSECHAIN_CHAIN_ID,
+      addresses: [tokenAddress]
+    });
+    
+    if (!metadataResponse || !metadataResponse.raw || !metadataResponse.raw[0]) {
+      return null;
+    }
+    
+    const tokenData = metadataResponse.raw[0];
+    
+    // Then try to get price information
+    let priceInfo: MoralisTokenPriceResponse | null = null;
+    try {
+      priceInfo = await getTokenPrice(tokenAddress);
+    } catch (e) {
+      console.log(`Couldn't get price info for ${tokenAddress}: ${e}`);
+    }
+    
+    // Build the combined token data
+    return {
+      address: tokenAddress,
+      name: tokenData.name || 'Unknown',
+      symbol: tokenData.symbol || 'UNK',
+      decimals: tokenData.decimals?.toString() || '18',
+      logo: tokenData.logo || undefined,
+      price: priceInfo?.usdPrice,
+      priceChange24h: priceInfo?.usdPrice24hrPercentChange,
+      verified: tokenData.verified_contract || false
+    };
+  } catch (error) {
+    console.error(`Error getting token metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return null;
+  }
+};
+
+/**
  * Get token price with SDK
  */
 export const getTokenPrice = async (tokenAddress: string): Promise<MoralisTokenPriceResponse | null> => {
@@ -413,6 +464,47 @@ export const getTransactionByHash = async (transactionHash: string) => {
                 
                 // Add to ERC20 transfers
                 txData.erc20_transfers.push(transfer);
+                
+                // Fetch token metadata and enrich the transfer
+                try {
+                  getTokenFullMetadata(log.address).then(tokenData => {
+                    if (tokenData) {
+                      // Find the transfer we just added and update it with metadata
+                      const transferIndex = txData.erc20_transfers.findIndex((t: any) => 
+                        t.token_address === log.address && 
+                        t.log_index === log.log_index
+                      );
+                      
+                      if (transferIndex >= 0) {
+                        const transferToUpdate = txData.erc20_transfers[transferIndex];
+                        transferToUpdate.token_name = tokenData.name;
+                        transferToUpdate.token_symbol = tokenData.symbol;
+                        transferToUpdate.token_decimals = tokenData.decimals;
+                        transferToUpdate.token_logo = tokenData.logo;
+                        transferToUpdate.usd_price = tokenData.price;
+                        
+                        // Calculate formatted value and USD value if possible
+                        if (tokenData.decimals && transferToUpdate.value) {
+                          const valueNum = parseInt(transferToUpdate.value);
+                          const decimals = parseInt(tokenData.decimals);
+                          if (!isNaN(valueNum) && !isNaN(decimals)) {
+                            const valueFormatted = valueNum / Math.pow(10, decimals);
+                            transferToUpdate.value_formatted = valueFormatted.toString();
+                            
+                            // Add USD value if price is available
+                            if (tokenData.price) {
+                              transferToUpdate.usd_value = valueFormatted * tokenData.price;
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }).catch(e => {
+                    console.error(`Error enriching token data for ${log.address}:`, e);
+                  });
+                } catch (e) {
+                  console.error(`Failed to process token metadata for ${log.address}:`, e);
+                }
               }
             }
           }
@@ -700,26 +792,5 @@ export const batchGetTokenPrices = async (tokenAddresses: string[]): Promise<Rec
   return results;
 };
 
-/**
- * Get token metadata with SDK
- */
-export const getTokenMetadata = async (tokenAddress: string) => {
-  try {
-    console.log(`Fetching token metadata for ${tokenAddress}`);
-    
-    const response = await Moralis.EvmApi.token.getTokenMetadata({
-      chain: PULSECHAIN_CHAIN_ID,
-      addresses: [tokenAddress]
-    });
-    
-    if (!response || !response.raw || !response.raw.length) {
-      throw new Error('Invalid response from Moralis getTokenMetadata');
-    }
-    
-    return response.raw[0];
-  } catch (error) {
-    console.error(`Error fetching token metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    return null;
-  }
-};
+// Removing duplicate getTokenMetadata function
 
