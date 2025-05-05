@@ -510,6 +510,9 @@ export const getTokenTransfersForTx = async (txHash: string) => {
        */
       
       // This method will be skipped - no condition check needed
+      
+      // Add logging and tracing for debugging the transaction
+      console.log(`Transaction hash: ${txHash} - Starting retrieval`);
     } catch (error) {
       console.error('Error using dedicated ERC20 endpoint:', error);
     }

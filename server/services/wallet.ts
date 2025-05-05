@@ -552,33 +552,309 @@ export async function getWalletTransactions(
         }
       }
       
-      // Ensure category is set
-      if (!tx.category) {
-        // Try to infer the category
-        if (tx.method_label?.toLowerCase().includes('swap')) {
+      // Detect swap transactions
+      const detectSwapTransaction = () => {
+        // Common DEX router addresses on PulseChain (all lowercase)
+        const knownRouterAddresses = [
+          // PulseX router
+          '0x165c68077ac06c83800d19200e6e2b08d02de75c',
+          // Velocity router
+          '0xda9aba4eacf54e0273f56dffee6b8f1e20b23bba',
+          // PulseX v2 router
+          '0x98bf93ebf5c380c0e6daeda0b0e9894a57779dfb',
+          // PLDEX router
+          '0xb4959bebfc2919da68119ac8efa1b57382e69089',
+          // ThorSwap router
+          '0xc145990e84155416144c532e31642d04dbd5a14a',
+          // HEX / HEX UI contracts
+          '0x2b591e99afe9f32eaa6214f7b7629768c40eeb39',
+          '0x9a67f1940164d0318612b497e8e6038f902a00a4',
+        ];
+
+        // Check if the tx is interacting with a known router
+        const isRouterInteraction = knownRouterAddresses.includes(tx.to_address?.toLowerCase() || '');
+        
+        // Look at token transfers - a swap typically has at least 2 token transfers
+        // (one outgoing and one incoming token) or token + native token
+        let incomingTokens: any[] = [];
+        let outgoingTokens: any[] = [];
+        
+        // Check ERC20 token transfers
+        tx.erc20_transfers?.forEach((transfer: any) => {
+          if (transfer.from_address?.toLowerCase() === walletAddress.toLowerCase()) {
+            outgoingTokens.push({
+              symbol: transfer.token_symbol,
+              value: transfer.value,
+              decimals: transfer.token_decimals,
+              address: transfer.address
+            });
+          }
+          if (transfer.to_address?.toLowerCase() === walletAddress.toLowerCase()) {
+            incomingTokens.push({
+              symbol: transfer.token_symbol,
+              value: transfer.value,
+              decimals: transfer.token_decimals,
+              address: transfer.address
+            });
+          }
+        });
+        
+        // Check native transfers
+        tx.native_transfers?.forEach((transfer: any) => {
+          if (transfer.from_address?.toLowerCase() === walletAddress.toLowerCase()) {
+            outgoingTokens.push({
+              symbol: transfer.token_symbol,
+              value: transfer.value,
+              decimals: transfer.token_decimals,
+              address: transfer.address
+            });
+          }
+          if (transfer.to_address?.toLowerCase() === walletAddress.toLowerCase()) {
+            incomingTokens.push({
+              symbol: transfer.token_symbol,
+              value: transfer.value,
+              decimals: transfer.token_decimals,
+              address: transfer.address
+            });
+          }
+        });
+        
+        // Also check for swap function signatures in the input data
+        const isSwapMethod = 
+          tx.input?.startsWith('0x7ff36ab5') || // swapExactTokensForETH
+          tx.input?.startsWith('0x38ed1739') || // swapExactTokensForTokens
+          tx.input?.startsWith('0x4a25d94a') || // swapTokensForExactETH
+          tx.input?.startsWith('0x18cbafe5') || // swapExactETHForTokens
+          tx.input?.startsWith('0x8803dbee') || // swapTokensForExactTokens
+          tx.input?.startsWith('0xfb3bdb41') || // swapETHForExactTokens
+          tx.input?.startsWith('0x5c11d795');   // swapExactTokensForTokensSupportingFeeOnTransferTokens
+        
+        // A swap typically has token flow in both directions
+        const hasSwapTokenFlow = incomingTokens.length > 0 && outgoingTokens.length > 0;
+        
+        // Determine if this is a swap
+        const isSwap = (isRouterInteraction || isSwapMethod) && hasSwapTokenFlow;
+        
+        if (isSwap) {
+          // Set swap information
           tx.category = 'swap';
-        } else if (tx.method_label?.toLowerCase().includes('approve')) {
-          tx.category = 'approval';
-        } else if (
-          tx.erc20_transfers?.some((t: any) => 
-            t.from_address?.toLowerCase() === walletAddress.toLowerCase() &&
-            t.to_address?.toLowerCase() !== walletAddress.toLowerCase()
-          )
-        ) {
-          tx.category = 'send';
-        } else if (
-          tx.erc20_transfers?.some((t: any) => 
-            t.to_address?.toLowerCase() === walletAddress.toLowerCase() &&
-            t.from_address?.toLowerCase() !== walletAddress.toLowerCase()
-          )
-        ) {
-          tx.category = 'receive';
-        } else if (tx.to_address?.toLowerCase() === walletAddress.toLowerCase()) {
-          tx.category = 'receive';
-        } else if (tx.from_address?.toLowerCase() === walletAddress.toLowerCase()) {
-          tx.category = 'send';
-        } else {
-          tx.category = 'contract';
+          
+          if (incomingTokens.length > 0 && outgoingTokens.length > 0) {
+            // Format the token values for display
+            const formatTokenValue = (token: any) => {
+              if (!token.decimals || !token.value) return '0';
+              // Handle different decimal precision
+              const decimals = parseInt(token.decimals);
+              const rawValue = BigInt(token.value);
+              return (Number(rawValue) / Math.pow(10, decimals)).toFixed(6);
+            };
+            
+            const inToken = incomingTokens[0];
+            const outToken = outgoingTokens[0];
+            
+            // Set a more informative method label for the swap
+            tx.method_label = `Swap ${formatTokenValue(outToken)} ${outToken.symbol} for ${formatTokenValue(inToken)} ${inToken.symbol}`;
+            
+            // Add swap details to help the UI display more information
+            tx.swap_details = {
+              sent: outgoingTokens.map(t => ({ 
+                symbol: t.symbol, 
+                amount: formatTokenValue(t),
+                address: t.address
+              })),
+              received: incomingTokens.map(t => ({ 
+                symbol: t.symbol, 
+                amount: formatTokenValue(t),
+                address: t.address
+              }))
+            };
+          }
+        }
+        
+        return isSwap;
+      };
+      
+      // Detect liquidity operations
+      const detectLiquidityOperation = () => {
+        // LP-related function signatures
+        const isAddLiquidity = 
+          tx.input?.startsWith('0xe8e33700') || // addLiquidity
+          tx.input?.startsWith('0xf305d719') || // addLiquidityETH
+          tx.input?.startsWith('0x4515cef3');   // addLiquidityETHSupportingFeeOnTransferTokens
+          
+        const isRemoveLiquidity = 
+          tx.input?.startsWith('0xbaa2abde') || // removeLiquidity
+          tx.input?.startsWith('0x02751cec') || // removeLiquidityETH
+          tx.input?.startsWith('0xaf2979eb') || // removeLiquidityETHSupportingFeeOnTransferTokens
+          tx.input?.startsWith('0xded9382a') || // removeLiquidityETHWithPermit
+          tx.input?.startsWith('0x2195995c');   // removeLiquidityWithPermit
+        
+        if (isAddLiquidity || isRemoveLiquidity) {
+          tx.category = isAddLiquidity ? 'liquidity_add' : 'liquidity_remove';
+          tx.method_label = isAddLiquidity ? 'Add Liquidity' : 'Remove Liquidity';
+          
+          // Try to identify the tokens involved in the liquidity operation
+          const tokensInvolved = new Set<string>();
+          tx.erc20_transfers?.forEach((transfer: any) => {
+            if (transfer.token_symbol) {
+              tokensInvolved.add(transfer.token_symbol);
+            }
+          });
+          
+          if (tokensInvolved.size > 0) {
+            tx.method_label += `: ${Array.from(tokensInvolved).join('/')}`;
+          }
+          
+          return true;
+        }
+        
+        return false;
+      };
+      
+      // Detect staking/unstaking operations
+      const detectStakingOperation = () => {
+        // Special case for HEX staking
+        const isHexContract = tx.to_address?.toLowerCase() === '0x2b591e99afe9f32eaa6214f7b7629768c40eeb39';
+        
+        // HEX-specific functions
+        const isHexStake = isHexContract && (
+          tx.input?.startsWith('0x93fa31f1') || // stakeStart
+          tx.input?.startsWith('0xd9a99b82')    // stakeStart with days and amount in one function
+        );
+        
+        const isHexUnstake = isHexContract && (
+          tx.input?.startsWith('0x835c15c5') || // stakeEnd
+          tx.input?.startsWith('0x3aa3e5f3') || // stakeGoodAccounting
+          tx.input?.startsWith('0x9bdd9b38')    // stakeEarlyEnd
+        );
+        
+        // General staking methods for other contracts
+        // Note: These are generic signatures, specific protocols may have different ones
+        const isStaking = 
+          tx.input?.startsWith('0xa694fc3a') || // stake
+          tx.input?.startsWith('0xadc9772e') || // deposit (often used for staking)
+          tx.input?.startsWith('0xe2bbb158') || // deposit method for some staking contracts
+          isHexStake;                           // HEX staking
+        
+        const isUnstaking = 
+          tx.input?.startsWith('0x2e1a7d4d') || // withdraw
+          tx.input?.startsWith('0x853828b6') || // unstake
+          tx.input?.startsWith('0x441a3e70') || // withdraw for some staking contracts
+          isHexUnstake;                         // HEX unstaking
+          
+        // PulseChain-specific yield/staking contracts
+        const knownStakingContracts = [
+          // HEX contract
+          '0x2b591e99afe9f32eaa6214f7b7629768c40eeb39',
+          // PulseX IFO/MAXIMUS
+          '0x075dbb8b2ea6929ee58d552b5b2e5510b08ef028',
+          // pHEX-PLS LP Staking
+          '0xb79dd08ea68a908a97220c76d19a6aa9cbde4376',
+          // Additional staking contracts can be added here
+        ];
+        
+        const isKnownStakingContract = knownStakingContracts.includes(tx.to_address?.toLowerCase() || '');
+        
+        // Check if this is a staking transaction by address even if we don't recognize the method
+        if (isKnownStakingContract && !isStaking && !isUnstaking) {
+          // If we can't identify if it's staking or unstaking, look at token flows
+          let incomingTokens = 0;
+          let outgoingTokens = 0;
+          
+          // Check ERC20 token transfers
+          tx.erc20_transfers?.forEach((transfer: any) => {
+            if (transfer.from_address?.toLowerCase() === walletAddress.toLowerCase()) {
+              outgoingTokens++;
+            }
+            if (transfer.to_address?.toLowerCase() === walletAddress.toLowerCase()) {
+              incomingTokens++;
+            }
+          });
+          
+          // More incoming than outgoing typically means unstaking (getting rewards)
+          if (incomingTokens > outgoingTokens) {
+            isUnstaking = true;
+          } else if (outgoingTokens > incomingTokens) {
+            isStaking = true;
+          }
+          // If equal or none, leave as is
+        }
+        
+        // Special case for HEX
+        if (isHexContract) {
+          // HEX-specific handling
+          if (isHexStake) {
+            tx.method_label = 'Start HEX Stake';
+            return true;
+          } else if (isHexUnstake) {
+            tx.method_label = 'End HEX Stake';
+            // Check if it was an early end (penalty)
+            if (tx.input?.startsWith('0x9bdd9b38')) {
+              tx.method_label += ' (Early)';
+            }
+            return true;
+          }
+        }
+        
+        if (isStaking || isUnstaking) {
+          tx.category = isStaking ? 'stake' : 'unstake';
+          tx.method_label = isStaking ? 'Stake' : 'Unstake';
+          
+          // Try to identify the token being staked/unstaked
+          if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+            const firstTransfer = tx.erc20_transfers[0];
+            if (firstTransfer.token_symbol) {
+              tx.method_label += ` ${firstTransfer.token_symbol}`;
+            }
+          }
+          
+          return true;
+        }
+        
+        return false;
+      };
+      
+      // Ensure category is set - Apply detection in sequence
+      if (!tx.category) {
+        // First check for swaps
+        const isSwap = detectSwapTransaction();
+        
+        // If not a swap, check for liquidity operations
+        if (!isSwap) {
+          const isLiquidityOp = detectLiquidityOperation();
+          
+          // If not liquidity, check for staking
+          if (!isLiquidityOp) {
+            const isStakingOp = detectStakingOperation();
+            
+            // If none of the above, use basic categorization
+            if (!isStakingOp) {
+              // Basic categorization based on token transfers
+              if (tx.method_label?.toLowerCase().includes('approve')) {
+                tx.category = 'approval';
+              } else if (
+                tx.erc20_transfers?.some((t: any) => 
+                  t.from_address?.toLowerCase() === walletAddress.toLowerCase() &&
+                  t.to_address?.toLowerCase() !== walletAddress.toLowerCase()
+                )
+              ) {
+                tx.category = 'send';
+              } else if (
+                tx.erc20_transfers?.some((t: any) => 
+                  t.to_address?.toLowerCase() === walletAddress.toLowerCase() &&
+                  t.from_address?.toLowerCase() !== walletAddress.toLowerCase()
+                )
+              ) {
+                tx.category = 'receive';
+              } else if (tx.to_address?.toLowerCase() === walletAddress.toLowerCase()) {
+                tx.category = 'receive';
+              } else if (tx.from_address?.toLowerCase() === walletAddress.toLowerCase()) {
+                tx.category = 'send';
+              } else {
+                tx.category = 'contract';
+              }
+            }
+          }
         }
       }
       
