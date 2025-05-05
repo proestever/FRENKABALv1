@@ -126,10 +126,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   const [tokenPrices, setTokenPrices] = useState<{[key: string]: number}>({});
   const [copiedAddresses, setCopiedAddresses] = useState<{[key: string]: boolean}>({});
   
+  // State for tracking pagination cursor
+  const [cursor, setCursor] = useState<string | null>(null);
+  
   // Fetch transaction history
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['transactionHistory', walletAddress, page],
-    queryFn: () => fetchTransactionHistory(walletAddress, 100, page > 1 ? String(page) : null),
+    queryKey: ['transactionHistory', walletAddress, cursor],
+    queryFn: () => fetchTransactionHistory(walletAddress, 100, cursor),
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: !!walletAddress,
   });
@@ -137,8 +140,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   // Update transactions when data changes
   useEffect(() => {
     if (data?.result) {
-      // Set transactions directly if it's the first page
-      if (page === 1) {
+      // Set transactions directly if it's the first request (cursor is null)
+      if (!cursor) {
         setTransactions(data.result);
         console.log("Setting", data.result.length, "processed transactions");
       } else {
@@ -147,10 +150,44 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         console.log("Appending", data.result.length, "more transactions");
       }
       
-      // Update hasMore based on if we received a full page of results
-      setHasMore(data.result.length === 100);
+      // Store the cursor for next page
+      if (data.cursor) {
+        setCursor(data.cursor);
+      }
+      
+      // Update hasMore based on if we received a full page of results and have a cursor
+      setHasMore(data.result.length === 100 && !!data.cursor);
+      
+      // Extract token addresses from all transfers to prefetch logos
+      const tokenAddresses: string[] = [];
+      data.result.forEach((tx: Transaction) => {
+        // Extract from ERC20 transfers
+        if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+          tx.erc20_transfers.forEach(transfer => {
+            if (transfer.token_address) {
+              tokenAddresses.push(transfer.token_address.toLowerCase());
+            }
+          });
+        }
+      });
+      
+      // Update visible token addresses for logo prefetching
+      if (tokenAddresses.length > 0) {
+        console.log("Collected", tokenAddresses.length, "unique token addresses from transactions", tokenAddresses);
+        setVisibleTokenAddresses(prev => {
+          // Remove duplicates manually instead of using Set
+          const uniqueAddresses: string[] = [];
+          const combined = [...prev, ...tokenAddresses];
+          combined.forEach(address => {
+            if (!uniqueAddresses.includes(address)) {
+              uniqueAddresses.push(address);
+            }
+          });
+          return uniqueAddresses;
+        });
+      }
     }
-  }, [data, page]);
+  }, [data, cursor]);
   
   // Function to load more transactions
   const loadMore = useCallback(async () => {
@@ -158,7 +195,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     
     try {
       setIsLoadingMore(true);
-      setPage(prevPage => prevPage + 1);
+      // The cursor is already set in the data effect hook
+      // We don't need to increment the page number anymore
+      setPage(prevPage => prevPage + 1); // Keep this for UI state only
     } catch (err) {
       console.error("Error loading more transactions:", err);
     } finally {
