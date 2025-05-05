@@ -199,7 +199,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   const fetchTransactionDetails = async (hash: string) => {
     try {
-      const response = await fetch(`/api/v1/transactions/${hash}`);
+      const response = await fetch(`/api/transaction/${hash}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch transaction details');
