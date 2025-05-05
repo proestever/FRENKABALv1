@@ -189,7 +189,18 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
         
         {/* Stats - Re-arranged to stack vertically */}
         <div className="space-y-4">
-          {/* PLS Balance Card - Most important info first */}
+          {/* Total Value Card - Now first */}
+          <div className="glass-card rounded-lg p-4 border-white/15">
+            <div className="text-sm text-muted-foreground mb-1">Total Value (Visible)</div>
+            <div className="text-2xl font-bold text-white">
+              {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
+            </div>
+            <div className="text-sm mt-2 flex items-center">
+              <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
+            </div>
+          </div>
+          
+          {/* PLS Balance Card - Now second */}
           <div className="glass-card rounded-lg p-4 border-white/15">
             <div className="flex items-center mb-2">
               <TokenLogo 
@@ -215,17 +226,6 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
                 </span>
               </div>
             )}
-          </div>
-          
-          {/* Total Value Card */}
-          <div className="glass-card rounded-lg p-4 border-white/15">
-            <div className="text-sm text-muted-foreground mb-1">Total Value (Visible)</div>
-            <div className="text-2xl font-bold text-white">
-              {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
-            </div>
-            <div className="text-sm mt-2 flex items-center">
-              <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
-            </div>
           </div>
           
           {/* Token Count Card */}
