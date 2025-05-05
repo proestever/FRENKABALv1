@@ -108,71 +108,167 @@ type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contr
 
 // Helper function to determine transaction type
 const getTransactionType = (tx: Transaction): TransactionType => {
-  if (!tx.category) {
-    // Try to infer from other properties if category is not available
-    if (tx.method_label?.toLowerCase().includes('swap')) {
+  // Safety check for the tx object
+  if (!tx || typeof tx !== 'object') {
+    return 'all';
+  }
+
+  // Track if the transaction appears to be a swap
+  let isSwap = false;
+  
+  // Check based on category if available
+  if (tx.category) {
+    const category = tx.category.toLowerCase();
+    if (category.includes('swap') || category.includes('trade')) {
       return 'swap';
-    } else if (tx.method_label?.toLowerCase().includes('approve')) {
+    } else if (category.includes('send') || category.includes('transfer')) {
+      return 'send';
+    } else if (category.includes('receive')) {
+      return 'receive';
+    } else if (category.includes('approve') || category.includes('approval')) {
       return 'approval';
-    } else if (tx.erc20_transfers && tx.erc20_transfers.some(t => t.from_address.toLowerCase() === t.to_address.toLowerCase())) {
-      return 'contract'; // Self-transfers are often contract interactions
-    } else if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-      // Check for swap transactions (token in and token out)
-      const hasSendTransfer = tx.erc20_transfers.some(t => t.direction === 'send');
-      const hasReceiveTransfer = tx.erc20_transfers.some(t => t.direction === 'receive');
-      
-      if (hasSendTransfer && hasReceiveTransfer) {
-        return 'swap';
-      } else if (hasSendTransfer) {
-        return 'send';
-      } else if (hasReceiveTransfer) {
-        return 'receive';
-      } else {
-        return 'contract';
-      }
-    } else {
-      return 'all'; // Default fallback
+    } else if (category.includes('contract') || category.includes('deploy') || category.includes('execute')) {
+      return 'contract';
     }
   }
   
-  // If category is provided, use it
-  const category = tx.category.toLowerCase();
-  
-  if (category.includes('swap') || category.includes('trade')) {
-    return 'swap';
-  } else if (category.includes('send') || category.includes('transfer')) {
-    return 'send';
-  } else if (category.includes('receive')) {
-    return 'receive';
-  } else if (category.includes('approve') || category.includes('approval')) {
-    return 'approval';
-  } else if (category.includes('contract') || category.includes('deploy') || category.includes('execute')) {
-    return 'contract';
+  // Check summary field for swap-related terms
+  if (tx.summary && typeof tx.summary === 'string') {
+    const summary = tx.summary.toLowerCase();
+    if (summary.includes('swap') || summary.includes('trade') || 
+        summary.includes('exchange') || summary.includes('router')) {
+      isSwap = true;
+    }
   }
   
-  return 'all';
+  // Check method label for swap-related terms
+  if (tx.method_label && typeof tx.method_label === 'string') {
+    const methodLabel = tx.method_label.toLowerCase();
+    if (methodLabel.includes('swap') || 
+        methodLabel.includes('exact') || 
+        methodLabel.includes('router') || 
+        methodLabel.includes('trade') || 
+        methodLabel.includes('exchange')) {
+      isSwap = true;
+    }
+    
+    // Check for approvals
+    if (methodLabel.includes('approve')) {
+      return 'approval';
+    }
+  }
+  
+  // Common DEX router addresses
+  const routerAddresses = [
+    '0x165c3410fca3a132cead4881f9525d95a48f9cdd', // PulseX V2 Router
+    '0xbd5c7c6ff7e05aff649b0a028f9e84731aebe609', // PulseX V1 Router
+    '0x5dd6c8ab0e45c9dceae45e685e19745d75134182', // Another DEX Router
+    '0x7a250d5630b4cf539739df2c5dacb4c659f2488d'  // Uniswap V2 Router
+  ];
+  
+  // Check if the transaction is to a known router
+  if (tx.to_address && routerAddresses.includes(tx.to_address.toLowerCase())) {
+    isSwap = true;
+  }
+  
+  // Analyze ERC20 transfers
+  if (tx.erc20_transfers && Array.isArray(tx.erc20_transfers) && tx.erc20_transfers.length > 0) {
+    // Check for swap patterns (sending one token and receiving another)
+    const sendTokens = tx.erc20_transfers.filter(t => 
+      t.direction === 'send' || 
+      t.from_address.toLowerCase() === tx.from_address.toLowerCase()
+    );
+    
+    const receiveTokens = tx.erc20_transfers.filter(t => 
+      t.direction === 'receive' || 
+      t.to_address.toLowerCase() === tx.from_address.toLowerCase()
+    );
+    
+    // Classic swap: sending one token and receiving another
+    if (sendTokens.length > 0 && receiveTokens.length > 0) {
+      isSwap = true;
+    } else if (sendTokens.length > 0 && receiveTokens.length === 0) {
+      // Only sending tokens, not a swap
+      return 'send';
+    } else if (receiveTokens.length > 0 && sendTokens.length === 0) {
+      // Only receiving tokens, not a swap
+      return 'receive';
+    }
+    
+    // Check for self-transfers, which are often contract interactions
+    if (tx.erc20_transfers.some(t => 
+      t.from_address.toLowerCase() === t.to_address.toLowerCase()
+    )) {
+      return 'contract';
+    }
+  }
+  
+  // Return the final transaction type
+  if (isSwap) {
+    return 'swap';
+  }
+  
+  // Default to contract interaction if we couldn't determine a more specific type
+  return 'contract';
 };
 
 // Helper function to identify token in and token out in a swap transaction
 const getSwapTokens = (tx: Transaction): { tokenIn?: TransactionTransfer, tokenOut?: TransactionTransfer } => {
   // Extra safety checks to avoid 'length of undefined' errors
-  if (!tx || !tx.erc20_transfers || !Array.isArray(tx.erc20_transfers) || tx.erc20_transfers.length < 2) {
+  if (!tx || !tx.erc20_transfers || !Array.isArray(tx.erc20_transfers)) {
     return {};
   }
   
-  // Make sure each transfer has the direction property before filtering
-  const validTransfers = tx.erc20_transfers.filter(t => t && typeof t === 'object' && 'direction' in t);
-  if (validTransfers.length < 2) {
+  // Make sure each transfer has the necessary properties before filtering
+  const validTransfers = tx.erc20_transfers.filter(t => (
+    t && 
+    typeof t === 'object' && 
+    t.from_address && 
+    t.to_address && 
+    (t.direction || t.from_address !== t.to_address) // Must have direction or be a non-self transfer
+  ));
+  
+  if (validTransfers.length < 1) {
     return {};
   }
   
-  const sendTokens = validTransfers.filter(t => t.direction === 'send');
-  const receiveTokens = validTransfers.filter(t => t.direction === 'receive');
+  // Find tokens sent by the transaction initiator (tokenIn)
+  const sendTokens = validTransfers.filter(t => 
+    t.direction === 'send' || 
+    (t.from_address.toLowerCase() === tx.from_address.toLowerCase() &&
+     t.to_address.toLowerCase() !== tx.from_address.toLowerCase())
+  );
   
-  // Return the first token of each direction with additional safety checks
+  // Find tokens received by the transaction initiator (tokenOut)
+  const receiveTokens = validTransfers.filter(t => 
+    t.direction === 'receive' || 
+    (t.to_address.toLowerCase() === tx.from_address.toLowerCase() &&
+     t.from_address.toLowerCase() !== tx.from_address.toLowerCase())
+  );
+  
+  // If we don't have explicit send/receive tokens, try to infer from the transaction flow
+  if (sendTokens.length === 0 && receiveTokens.length === 0 && validTransfers.length >= 2) {
+    // Find unique token addresses in the transfers
+    const tokenAddresses = new Set<string>();
+    validTransfers.forEach(t => {
+      if (t.address) tokenAddresses.add(t.address.toLowerCase());
+    });
+    
+    // If there are multiple tokens involved, it might be a swap
+    if (tokenAddresses.size >= 2) {
+      // Take the first transfer as tokenIn (sent token)
+      // and the last transfer as tokenOut (received token)
+      return {
+        tokenIn: validTransfers[0],
+        tokenOut: validTransfers[validTransfers.length - 1]
+      };
+    }
+  }
+  
+  // Return token in and token out with additional safety checks
   return {
-    tokenIn: sendTokens && sendTokens.length > 0 ? sendTokens[0] : undefined,
-    tokenOut: receiveTokens && receiveTokens.length > 0 ? receiveTokens[0] : undefined
+    tokenIn: sendTokens.length > 0 ? sendTokens[0] : undefined,
+    tokenOut: receiveTokens.length > 0 ? receiveTokens[0] : undefined
   };
 };
 
