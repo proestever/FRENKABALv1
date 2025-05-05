@@ -486,7 +486,65 @@ export const batchGetTokenPrices = async (tokenAddresses: string[]): Promise<Rec
 };
 
 /**
- * Get token metadata with SDK
+ * Get the ERC20 Transfer event signature
+ * keccak256("Transfer(address,address,uint256)")
+ */
+const ERC20_TRANSFER_EVENT = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+
+/**
+ * Get token transfers for a specific transaction by fetching detailed transaction info
+ */
+export const getTokenTransfersForTx = async (txHash: string) => {
+  try {
+    console.log(`Fetching token transfers for transaction ${txHash} from Moralis SDK`);
+    
+    // Get detailed transaction information
+    const response = await Moralis.EvmApi.transaction.getTransaction({
+      chain: PULSECHAIN_CHAIN_ID,
+      transactionHash: txHash,
+      include: "internal_transactions,logs"
+    });
+    
+    if (!response || !response.raw || !response.raw.logs) {
+      console.log(`No token transfers found for transaction ${txHash}`);
+      return [];
+    }
+    
+    // Extract ERC20 transfers from logs
+    const transfers = response.raw.logs.filter(log => 
+      log.topic0 === ERC20_TRANSFER_EVENT && log.topics.length === 3
+    ).map(log => {
+      // Decode topics
+      // topic1 = from address (padded to 32 bytes)
+      // topic2 = to address (padded to 32 bytes)
+      // data = amount (hex)
+      
+      // Remove padding from addresses
+      const fromAddress = '0x' + log.topic1.substring(26);
+      const toAddress = '0x' + log.topic2.substring(26);
+      
+      // The token address is the address of the contract that emitted the log
+      const tokenAddress = log.address;
+      
+      return {
+        token_address: tokenAddress,
+        from_address: fromAddress,
+        to_address: toAddress,
+        value: log.data, // This is the amount in hex
+        transaction_hash: txHash
+      };
+    });
+    
+    console.log(`Found ${transfers.length} ERC20 transfers in transaction ${txHash}`);
+    return transfers;
+  } catch (error) {
+    console.error(`Error fetching token transfers for tx ${txHash}:`, error);
+    return [];
+  }
+};
+
+/**
+ * Get token metadata from the blockchain
  */
 export const getTokenMetadata = async (tokenAddress: string) => {
   try {

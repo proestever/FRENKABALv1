@@ -365,85 +365,161 @@ export async function getWalletTransactions(
       cursor
     );
     
+    console.log(`Processing ${transactionHistory.result.length} transactions for wallet ${walletAddress}`);
+    
     // Process transaction data to ensure compatibility with frontend
     const processedTransactions = await Promise.all(transactionHistory.result.map(async (tx: any) => {
-      // Process the transaction to adapt it to our expected format
+      // Log transaction details for debugging
+      console.log(`Processing tx ${tx.hash}: has_erc20=${!!tx.erc20_transfers}, has_native=${!!tx.native_transfers}, method=${tx.method_label || 'Unknown'}, value=${tx.value}`);
+      
+      // Check if any transfers exist
+      if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+        console.log(`Transaction ${tx.hash} already has ${tx.erc20_transfers.length} ERC20 transfers`);
+      }
       
       // Make sure erc20_transfers is initialized
       if (!tx.erc20_transfers) {
         tx.erc20_transfers = [];
-        
-        // If this is an ERC20 transfer, try to extract token details
-        // Check for standard ERC20 transfer method signature (0xa9059cbb)
-        if (tx.input && tx.input.length > 10) {
-          // ERC20 transfer function signature
-          if (tx.input.startsWith('0xa9059cbb')) {
-            try {
-              // Try to get token information for the contract being called
-              const tokenContract = tx.to_address;
-              const tokenData = await moralisService.getTokenMetadata(tokenContract);
-              
-              if (tokenData) {
-                // Extract parameters from input data (recipient address and amount)
-                // Format: 0xa9059cbb + 32 bytes (address) + 32 bytes (amount)
-                // Skip first 10 characters (0x + 8 for function signature)
-                const recipientAddress = '0x' + tx.input.substring(34, 74); 
-                // Amount is a hex string - need to convert to decimal
-                const amountHex = tx.input.substring(74, 138);
-                const amount = BigInt('0x' + amountHex).toString();
-                
-                // Create a token transfer entry
-                const transfer = {
-                  token_name: tokenData.name,
-                  token_symbol: tokenData.symbol,
-                  token_logo: await getTokenLogoUrl(tokenContract),
-                  token_decimals: tokenData.decimals,
-                  from_address: tx.from_address,
-                  to_address: recipientAddress,
-                  value: amount,
-                  address: tokenContract,
-                  direction: tx.from_address.toLowerCase() === walletAddress.toLowerCase() ? 'send' : 'receive'
-                };
-                
-                tx.erc20_transfers.push(transfer);
-                console.log(`Added ERC20 transfer for ${tokenData.symbol} in transaction ${tx.hash}`);
-                
-                // Set method label for UI
-                if (!tx.method_label) {
-                  tx.method_label = `Transfer ${tokenData.symbol}`;
+      }
+      
+      // Check for token transfers in logs if they weren't detected by Moralis
+      if (tx.erc20_transfers.length === 0 && tx.to_address) {
+        // Try checking logs to detect token transfers
+        try {
+          // Get token transfers directly for this transaction
+          const tokenTransfers = await moralisService.getTokenTransfersForTx(tx.hash);
+          
+          if (tokenTransfers && tokenTransfers.length > 0) {
+            console.log(`Found ${tokenTransfers.length} token transfers in transaction ${tx.hash} from logs`);
+            
+            // Add each token transfer to the transaction
+            for (const transfer of tokenTransfers) {
+              try {
+                // Get token contract address from the transfer
+                const tokenContract = transfer.token_address || transfer.address;
+                if (!tokenContract) {
+                  console.warn(`No token address found for transfer in tx ${tx.hash}`);
+                  continue;
                 }
-              }
-            } catch (error) {
-              console.error(`Failed to parse ERC20 transfer in ${tx.hash}:`, error);
-              // If error, add a basic method label
-              if (!tx.method_label) {
-                tx.method_label = 'Token Transfer';
+                
+                const tokenData = await moralisService.getTokenMetadata(tokenContract);
+                
+                if (tokenData) {
+                  // Create a transfer entry
+                  const transferEntry = {
+                    token_name: tokenData.name,
+                    token_symbol: tokenData.symbol,
+                    token_logo: await getTokenLogoUrl(tokenContract),
+                    token_decimals: tokenData.decimals,
+                    from_address: transfer.from_address,
+                    to_address: transfer.to_address,
+                    value: transfer.value,
+                    address: tokenContract,
+                    direction: transfer.from_address.toLowerCase() === walletAddress.toLowerCase() ? 'send' : 'receive'
+                  };
+                  
+                  tx.erc20_transfers.push(transferEntry);
+                  console.log(`Added ERC20 transfer for ${tokenData.symbol} in transaction ${tx.hash} from logs`);
+                  
+                  // Set method label for UI if not already set
+                  if (!tx.method_label) {
+                    tx.method_label = `Transfer ${tokenData.symbol}`;
+                  }
+                }
+              } catch (error) {
+                console.error(`Failed to process token transfer in ${tx.hash}:`, error);
               }
             }
           }
-          // Add other known ERC20 methods (approvals, etc.)
-          else if (tx.input.startsWith('0x095ea7b3')) {
-            // This is an ERC20 approval
-            try {
-              const tokenContract = tx.to_address;
-              const tokenData = await moralisService.getTokenMetadata(tokenContract);
+        } catch (error) {
+          console.error(`Failed to get token transfers for transaction ${tx.hash}:`, error);
+        }
+      }
+      
+      // If still no transfers found, try parsing the input data (as a fallback)
+      if (tx.erc20_transfers.length === 0 && tx.input && tx.input.length > 10) {
+        // ERC20 transfer function signature
+        if (tx.input.startsWith('0xa9059cbb')) {
+          try {
+            // Try to get token information for the contract being called
+            const tokenContract = tx.to_address;
+            const tokenData = await moralisService.getTokenMetadata(tokenContract);
+            
+            if (tokenData) {
+              // Extract parameters from input data (recipient address and amount)
+              // Format: 0xa9059cbb + 32 bytes (address) + 32 bytes (amount)
+              // Skip first 10 characters (0x + 8 for function signature)
+              const recipientAddress = '0x' + tx.input.substring(34, 74); 
+              // Amount is a hex string - need to convert to decimal
+              const amountHex = tx.input.substring(74, 138);
+              const amount = BigInt('0x' + amountHex).toString();
               
-              if (tokenData) {
-                // Set method label for UI
-                tx.method_label = `Approve ${tokenData.symbol}`;
-              }
-            } catch (error) {
-              console.error(`Failed to parse ERC20 approval in ${tx.hash}:`, error);
-              // Default approval label if we can't get token data
+              // Create a token transfer entry
+              const transfer = {
+                token_name: tokenData.name,
+                token_symbol: tokenData.symbol,
+                token_logo: await getTokenLogoUrl(tokenContract),
+                token_decimals: tokenData.decimals,
+                from_address: tx.from_address,
+                to_address: recipientAddress,
+                value: amount,
+                address: tokenContract,
+                direction: tx.from_address.toLowerCase() === walletAddress.toLowerCase() ? 'send' : 'receive'
+              };
+              
+              tx.erc20_transfers.push(transfer);
+              console.log(`Added ERC20 transfer for ${tokenData.symbol} in transaction ${tx.hash} from input data`);
+              
+              // Set method label for UI
               if (!tx.method_label) {
-                tx.method_label = 'Token Approval';
+                tx.method_label = `Transfer ${tokenData.symbol}`;
               }
             }
-          } else {
-            // For all other contract interactions
+          } catch (error) {
+            console.error(`Failed to parse ERC20 transfer in ${tx.hash}:`, error);
+            // If error, add a basic method label
             if (!tx.method_label) {
-              tx.method_label = 'Contract Interaction';
+              tx.method_label = 'Token Transfer';
             }
+          }
+        }
+        // Add other known ERC20 methods (approvals, etc.)
+        else if (tx.input.startsWith('0x095ea7b3')) {
+          // This is an ERC20 approval
+          try {
+            const tokenContract = tx.to_address;
+            const tokenData = await moralisService.getTokenMetadata(tokenContract);
+            
+            if (tokenData) {
+              // Set method label for UI
+              tx.method_label = `Approve ${tokenData.symbol}`;
+              // Add a "fake" erc20_transfer to help with UI display and categorization
+              const transfer = {
+                token_name: tokenData.name,
+                token_symbol: tokenData.symbol,
+                token_logo: await getTokenLogoUrl(tokenContract),
+                token_decimals: tokenData.decimals,
+                from_address: tx.from_address,
+                to_address: tx.to_address,
+                value: '0', // Approval doesn't transfer tokens
+                address: tokenContract,
+                direction: 'approval'
+              };
+              
+              tx.erc20_transfers.push(transfer);
+              console.log(`Added ERC20 approval for ${tokenData.symbol} in transaction ${tx.hash}`);
+            }
+          } catch (error) {
+            console.error(`Failed to parse ERC20 approval in ${tx.hash}:`, error);
+            // Default approval label if we can't get token data
+            if (!tx.method_label) {
+              tx.method_label = 'Token Approval';
+            }
+          }
+        } else {
+          // For all other contract interactions
+          if (!tx.method_label) {
+            tx.method_label = 'Contract Interaction';
           }
         }
       }
