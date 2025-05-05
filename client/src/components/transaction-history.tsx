@@ -39,14 +39,40 @@ interface TransactionTransfer {
   internal_transaction?: boolean;
 }
 
+// Approval in contract interactions
+interface TokenApproval {
+  value: string;
+  value_formatted: string;
+  token: {
+    address: string;
+    address_label: string | null;
+    token_name: string;
+    token_logo: string;
+    token_symbol: string;
+  };
+  spender: {
+    address: string;
+    address_label: string | null;
+  };
+}
+
+// Contract interactions
+interface ContractInteractions {
+  approvals?: TokenApproval[];
+}
+
 interface Transaction {
   hash: string;
   nonce: string;
   transaction_index: string;
   from_address: string;
   from_address_label?: string | null;
+  from_address_entity?: any | null;
+  from_address_entity_logo?: string | null;
   to_address: string;
   to_address_label?: string | null;
+  to_address_entity?: any | null;
+  to_address_entity_logo?: string | null;
   value: string;
   gas: string;
   gas_price: string;
@@ -59,6 +85,7 @@ interface Transaction {
   erc20_transfers?: TransactionTransfer[];
   native_transfers?: TransactionTransfer[];
   nft_transfers?: any[];
+  contract_interactions?: ContractInteractions;
   summary?: string;
   category?: string;
   possible_spam?: boolean;
@@ -750,13 +777,38 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   <div className="text-sm font-semibold text-white">
                     {tx.summary || 'Transaction details'}
                     
+                    {/* Contract Interactions - Approvals */}
+                    {tx.contract_interactions?.approvals && tx.contract_interactions.approvals.map((approval, i) => (
+                      <div key={`${tx.hash}-approval-${i}`} className="flex items-center mt-2 bg-blue-500/10 p-2 rounded-md">
+                        <TokenLogo 
+                          address={approval.token.address}
+                          symbol={approval.token.token_symbol}
+                          fallbackLogo={approval.token.token_logo || prefetchedLogos[approval.token.address?.toLowerCase() || '']}
+                          size="sm"
+                        />
+                        <div className="ml-2 flex items-center">
+                          <div className="mr-1 bg-blue-400/20 px-1 py-0.5 rounded-sm text-xs text-blue-300">
+                            Approve
+                          </div>
+                          <div className="flex flex-col">
+                            <div className="text-sm font-semibold whitespace-nowrap">
+                              {approval.value_formatted} {approval.token.token_symbol}
+                            </div>
+                            <div className="text-xs text-neutral-400">
+                              Spender: {shortenAddress(approval.spender.address)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
                     {/* ERC20 Transfers */}
                     {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                       <div key={`${tx.hash}-erc20-${i}`} className="flex items-center mt-2">
                         <TokenLogo 
                           address={transfer.address || ''}
                           symbol={transfer.token_symbol || ''}
-                          fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
+                          fallbackLogo={transfer.token_logo || prefetchedLogos[transfer.address?.toLowerCase() || '']}
                           size="sm"
                         />
                         <div className="ml-2 flex items-center">
@@ -1078,8 +1130,40 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             <div className="p-3">
               {/* Transaction summary if available */}
               {tx.summary && (
-                <div className="mb-2 text-sm">{tx.summary}</div>
+                <div className="mb-2 text-sm font-medium">{tx.summary}</div>
               )}
+              
+              {/* Contract Interactions - Approvals */}
+              {tx.contract_interactions?.approvals && tx.contract_interactions.approvals.map((approval, i) => (
+                <div key={`mobile-${tx.hash}-approval-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 bg-blue-500/10 p-2 rounded-md mb-2">
+                  <div className="flex items-center">
+                    <TokenLogo 
+                      address={approval.token.address}
+                      symbol={approval.token.token_symbol}
+                      fallbackLogo={approval.token.token_logo || prefetchedLogos[approval.token.address?.toLowerCase() || '']}
+                      size="sm"
+                    />
+                    <div className="ml-2">
+                      <div className="flex items-center">
+                        <div className="bg-blue-400/20 px-1 py-0.5 rounded-sm text-xs text-blue-300 mr-1">
+                          Approve
+                        </div>
+                        <div>
+                          <span className="font-medium text-sm">{approval.token.token_symbol}</span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Spender: {shortenAddress(approval.spender.address)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium">
+                      {approval.value_formatted}
+                    </div>
+                  </div>
+                </div>
+              ))}
               
               {/* ERC20 Transfers */}
               {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
@@ -1088,7 +1172,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     <TokenLogo 
                       address={transfer.address || ''}
                       symbol={transfer.token_symbol || ''}
-                      fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
+                      fallbackLogo={transfer.token_logo || prefetchedLogos[transfer.address?.toLowerCase() || '']}
                       size="sm"
                     />
                     <div className="ml-2">
