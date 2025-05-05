@@ -348,6 +348,91 @@ export const getWrappedTokenPrice = async (
 };
 
 /**
+ * Get transaction details for a specific transaction hash
+ * 
+ * @param transactionHash The transaction hash to fetch details for
+ * @returns Detailed transaction information
+ */
+export const getTransactionByHash = async (transactionHash: string) => {
+  try {
+    console.log(`Fetching detailed transaction data for hash: ${transactionHash}`);
+    
+    // Make the API request for the specific transaction
+    const response = await Moralis.EvmApi.transaction.getTransactionVerbose({
+      chain: PULSECHAIN_CHAIN_ID,
+      transactionHash
+    });
+    
+    if (!response || !response.raw) {
+      throw new Error('Invalid response from Moralis getTransactionVerbose');
+    }
+    
+    const txData = response.raw;
+    
+    // Process the transaction data similar to how we do in getTransactionHistory
+    if (txData) {
+      // Initialize empty arrays for transfers if they don't exist
+      if (!txData.erc20_transfers) {
+        txData.erc20_transfers = [];
+      }
+      
+      if (!txData.native_transfers) {
+        txData.native_transfers = [];
+      }
+      
+      // Process logs to extract additional information
+      if (txData.logs && txData.logs.length > 0) {
+        txData.logs.forEach((log: any) => {
+          // Look for ERC20 Transfer events
+          if (log.topic0 === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' && 
+              log.decoded_event && 
+              log.decoded_event.label === 'Transfer') {
+                
+            // Extract transfer details from the decoded event
+            const params = log.decoded_event.params;
+            if (params && params.length >= 3) {
+              const fromParam = params.find((p: any) => p.name === 'from');
+              const toParam = params.find((p: any) => p.name === 'to');
+              const valueParam = params.find((p: any) => p.name === 'value');
+              
+              if (fromParam && toParam && valueParam) {
+                // Create ERC20 transfer object
+                const transfer = {
+                  token_address: log.address,
+                  token_symbol: '', // Will be populated later if available
+                  token_name: '',
+                  token_decimals: '18', // Default decimals
+                  from_address: fromParam.value,
+                  to_address: toParam.value,
+                  value: valueParam.value,
+                  value_formatted: '', // Will calculate later if decimals are known
+                  log_index: log.log_index,
+                  transaction_hash: log.transaction_hash,
+                };
+                
+                // Add to ERC20 transfers
+                txData.erc20_transfers.push(transfer);
+              }
+            }
+          }
+          
+          // Look for Swap events
+          if (log.decoded_event && log.decoded_event.label === 'Swap') {
+            // Mark this transaction as a DEX swap
+            txData.category = 'swap';
+          }
+        });
+      }
+    }
+    
+    return txData;
+  } catch (error) {
+    console.error(`Error fetching transaction ${transactionHash}:`, error);
+    return null;
+  }
+};
+
+/**
  * Get transaction history for a wallet address from Moralis verbose endpoint
  * This provides much richer data than the standard transaction endpoint
  * 
