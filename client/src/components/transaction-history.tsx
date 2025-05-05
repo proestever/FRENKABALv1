@@ -114,7 +114,19 @@ const getTransactionType = (tx: Transaction): TransactionType => {
     } else if (tx.erc20_transfers && tx.erc20_transfers.some(t => t.from_address.toLowerCase() === t.to_address.toLowerCase())) {
       return 'contract'; // Self-transfers are often contract interactions
     } else if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-      return 'send'; // Default for token transfers
+      // Check for swap transactions (token in and token out)
+      const hasSendTransfer = tx.erc20_transfers.some(t => t.direction === 'send');
+      const hasReceiveTransfer = tx.erc20_transfers.some(t => t.direction === 'receive');
+      
+      if (hasSendTransfer && hasReceiveTransfer) {
+        return 'swap';
+      } else if (hasSendTransfer) {
+        return 'send';
+      } else if (hasReceiveTransfer) {
+        return 'receive';
+      } else {
+        return 'contract';
+      }
     } else {
       return 'all'; // Default fallback
     }
@@ -136,6 +148,22 @@ const getTransactionType = (tx: Transaction): TransactionType => {
   }
   
   return 'all';
+};
+
+// Helper function to identify token in and token out in a swap transaction
+const getSwapTokens = (tx: Transaction): { tokenIn?: TransactionTransfer, tokenOut?: TransactionTransfer } => {
+  if (!tx.erc20_transfers || tx.erc20_transfers.length < 2) {
+    return {};
+  }
+  
+  const sendTokens = tx.erc20_transfers.filter(t => t.direction === 'send');
+  const receiveTokens = tx.erc20_transfers.filter(t => t.direction === 'receive');
+  
+  // Return the first token of each direction
+  return {
+    tokenIn: sendTokens.length > 0 ? sendTokens[0] : undefined,
+    tokenOut: receiveTokens.length > 0 ? receiveTokens[0] : undefined
+  };
 };
 
 export function TransactionHistory({ walletAddress, onClose }: TransactionHistoryProps) {
