@@ -365,11 +365,95 @@ export async function getWalletTransactions(
       cursor
     );
     
-    // Process and return transaction data
-    // Cast the transaction history results to Transaction[] with unknown as intermediate step
-    // to handle potential type mismatches safely
+    // Process transaction data to ensure compatibility with frontend
+    const processedTransactions = transactionHistory.result.map((tx: any) => {
+      // Process the transaction to adapt it to our expected format
+      
+      // Make sure erc20_transfers is initialized
+      if (!tx.erc20_transfers) {
+        tx.erc20_transfers = [];
+      }
+      
+      // Add token transfer data from transactions if not already present
+      // This is a workaround for cases where the SDK doesn't include token transfers directly
+      if (tx.input && tx.input.length > 10 && tx.input.startsWith('0x')) {
+        // Input data exists, this could be a token transfer or contract interaction
+        // Let's parse input data to identify token transfers
+        
+        // If this is a token transfer (ERC20), try to extract token details
+        // Check for standard ERC20 transfer method signature (0xa9059cbb)
+        if (tx.input.startsWith('0xa9059cbb') && tx.erc20_transfers.length === 0) {
+          // This might be an ERC20 transfer, but Moralis didn't parse it correctly
+          // We could try to interpret the input data
+          
+          // For now, we'll add a placeholder as a fallback so the UI doesn't break
+          const methodLabel = tx.method_label || 'Contract Interaction';
+          if (!tx.method_label) {
+            tx.method_label = methodLabel;
+          }
+          
+          // For debugging
+          console.log('Processing transaction with input data but no erc20_transfers:', tx.hash);
+        }
+      }
+      
+      // Process native transfers
+      if (!tx.native_transfers) {
+        tx.native_transfers = [];
+        
+        // If this is a simple ETH transfer with value > 0, add it as a native transfer
+        if (tx.value && tx.value !== '0' && !tx.receipt_contract_address) {
+          const nativeTransfer = {
+            token_name: 'PulseChain',
+            token_symbol: 'PLS',
+            token_logo: moralisService.getDefaultLogo('PLS'),
+            token_decimals: '18',
+            from_address: tx.from_address,
+            to_address: tx.to_address,
+            value: tx.value,
+            address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', // Standard placeholder for native token
+            direction: tx.from_address.toLowerCase() === walletAddress.toLowerCase() ? 'send' : 'receive'
+          };
+          
+          tx.native_transfers.push(nativeTransfer);
+        }
+      }
+      
+      // Ensure category is set
+      if (!tx.category) {
+        // Try to infer the category
+        if (tx.method_label?.toLowerCase().includes('swap')) {
+          tx.category = 'swap';
+        } else if (tx.method_label?.toLowerCase().includes('approve')) {
+          tx.category = 'approval';
+        } else if (
+          tx.erc20_transfers?.some((t: any) => 
+            t.from_address?.toLowerCase() === walletAddress.toLowerCase() &&
+            t.to_address?.toLowerCase() !== walletAddress.toLowerCase()
+          )
+        ) {
+          tx.category = 'send';
+        } else if (
+          tx.erc20_transfers?.some((t: any) => 
+            t.to_address?.toLowerCase() === walletAddress.toLowerCase() &&
+            t.from_address?.toLowerCase() !== walletAddress.toLowerCase()
+          )
+        ) {
+          tx.category = 'receive';
+        } else if (tx.to_address?.toLowerCase() === walletAddress.toLowerCase()) {
+          tx.category = 'receive';
+        } else if (tx.from_address?.toLowerCase() === walletAddress.toLowerCase()) {
+          tx.category = 'send';
+        } else {
+          tx.category = 'contract';
+        }
+      }
+      
+      return tx;
+    });
+    
     return {
-      result: transactionHistory.result as unknown as Transaction[],
+      result: processedTransactions as unknown as Transaction[],
       cursor: transactionHistory.cursor || null,
       total: transactionHistory.total || transactionHistory.result.length
     };
