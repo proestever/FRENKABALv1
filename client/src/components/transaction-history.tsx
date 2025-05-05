@@ -2,13 +2,22 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
-import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, ChevronRight, DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check } from 'lucide-react';
+import { 
+  Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, ChevronRight, 
+  DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check, ArrowRight,
+  CircleDollarSign, ArrowUpDown, ShieldCheck, Code, AlertCircle
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
+import { 
+  fetchTransactionHistory, fetchTransactionByHash, 
+  TransactionResponse, Transaction, TransactionTransfer 
+} from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
 import { Link } from 'wouter';
 import { useTokenDataPrefetch } from '@/hooks/use-token-data-prefetch';
 import { useBatchTokenPrices } from '@/hooks/use-batch-token-prices';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,9 +26,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-// Import Transaction types
-import { Transaction, TransactionTransfer } from '@/lib/api';
 
 // Define transaction type options
 type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contract';
