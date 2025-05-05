@@ -50,15 +50,68 @@ export function useAllWalletTokens(walletAddress: string | null) {
         return Promise.reject('No wallet address');
       }
       
-      // First get regular wallet data
-      const data = await fetchAllWalletTokens(walletAddress);
+      // Define tokens with incorrect decimals that need fixing
+      const tokensWithIncorrectDecimals: Record<string, number> = {
+        "0xbd59a88754902B80922dFEBc15c7ea94a8C21ce2": 18 // PUPPERS token - Moralis reports 0 decimals but needs 18 adjustment
+      };
       
-      // Then check for any missing tokens we know about
-      // These tokens might not be included in the standard token balance APIs
+      // Define tokens that might be missing from the API
       const missingTokenAddresses = [
         "0xec4252e62C6dE3D655cA9Ce3AfC12E553ebBA274" // PUMP.tires token
       ];
       
+      // First get regular wallet data
+      const data = await fetchAllWalletTokens(walletAddress);
+      
+      if (!data || !data.tokens) {
+        return data;
+      }
+      
+      // Fix any tokens with incorrect decimals
+      for (let i = 0; i < data.tokens.length; i++) {
+        const token = data.tokens[i];
+        const normalizedAddress = token.address.toLowerCase();
+        
+        // Check if this token needs decimal correction
+        Object.keys(tokensWithIncorrectDecimals).forEach(addressToFix => {
+          if (normalizedAddress === addressToFix.toLowerCase()) {
+            const decimalAdjustment = tokensWithIncorrectDecimals[addressToFix];
+            
+            console.log(`Fixing token ${token.symbol} (${token.address}) balance with ${decimalAdjustment} decimal adjustment`);
+            
+            if (token.balanceFormatted !== undefined) {
+              console.log(`Original balance: ${token.balanceFormatted}`);
+              
+              // Apply the decimal adjustment (divide by 10^adjustment)
+              const divisor = Math.pow(10, decimalAdjustment);
+              const originalBalanceFormatted = token.balanceFormatted;
+              token.balanceFormatted = token.balanceFormatted / divisor;
+              
+              // Recalculate the token's value based on the new balance
+              if (token.price) {
+                // Calculate old value to subtract from total
+                const oldValue = originalBalanceFormatted * token.price;
+                
+                // Calculate new value
+                token.value = token.balanceFormatted * token.price;
+                
+                // Update the wallet's total value if it exists
+                if (data.totalValue !== undefined) {
+                  // First subtract the old value
+                  data.totalValue = data.totalValue - oldValue;
+                  // Then add the corrected value
+                  data.totalValue = data.totalValue + token.value;
+                }
+              }
+              
+              console.log(`Corrected balance: ${token.balanceFormatted}`);
+              console.log(`Corrected value: ${token.value}`);
+            }
+          }
+        });
+      }
+      
+      // Then check for any missing tokens
       for (const tokenAddress of missingTokenAddresses) {
         // Check if token is already in the wallet data
         const isTokenAlreadyIncluded = data.tokens.some(
@@ -72,17 +125,20 @@ export function useAllWalletTokens(walletAddress: string | null) {
             // Try to fetch the specific token
             const specificToken = await fetchSpecificToken(walletAddress, tokenAddress);
             
-            if (specificToken && specificToken.balanceFormatted > 0) {
+            if (specificToken && specificToken.balanceFormatted && specificToken.balanceFormatted > 0) {
               console.log(`Found missing token ${specificToken.symbol} with balance ${specificToken.balanceFormatted}`);
               
               // Add the token to our wallet data
               data.tokens.push(specificToken);
               
-              // Update total value and token count
-              if (specificToken.value) {
-                data.totalValue += specificToken.value;
+              // Update total value and token count if they exist
+              if (specificToken.value && data.totalValue !== undefined) {
+                data.totalValue = data.totalValue + specificToken.value;
               }
-              data.tokenCount += 1;
+              
+              if (data.tokenCount !== undefined) {
+                data.tokenCount = data.tokenCount + 1;
+              }
             }
           } catch (error) {
             console.error(`Error fetching missing token ${tokenAddress}:`, error);
