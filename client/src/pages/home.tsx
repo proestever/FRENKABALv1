@@ -192,21 +192,30 @@ export default function Home() {
       {searchedAddress && !isError && !(isLoading || isFetching) && (
         <>
           <div className="mt-4">
-            {walletData && (
-              <WalletOverview 
-                wallet={walletData} 
-                isLoading={false} 
-                onRefresh={handleRefresh} 
-              />
-            )}
-            
-            {/* Token List with combined tokens */}
-            <TokenList 
-              tokens={allTokens} 
-              isLoading={false} 
-              hasError={isError}
-              walletAddress={searchedAddress || ''}
-            />
+            {/* Two-column layout: Wallet overview (1/3) on left, Token list (2/3) on right */}
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Left column - Wallet Overview (1/3 width on large screens) */}
+              <div className="w-full lg:w-1/3">
+                {walletData && (
+                  <WalletOverview 
+                    wallet={walletData} 
+                    isLoading={false} 
+                    onRefresh={handleRefresh} 
+                  />
+                )}
+              </div>
+              
+              {/* Right column - Token List (2/3 width on large screens) */}
+              <div className="w-full lg:w-2/3">
+                {/* Token List with combined tokens */}
+                <TokenList 
+                  tokens={allTokens} 
+                  isLoading={false} 
+                  hasError={isError}
+                  walletAddress={searchedAddress || ''}
+                />
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -214,13 +223,35 @@ export default function Home() {
       {searchedAddress && isError && (
         <>
           <div className="mt-4">
-            {/* Token list with manually added tokens */}
-            <TokenList 
-              tokens={manualTokens} 
-              isLoading={false} 
-              hasError={true}
-              walletAddress={searchedAddress} 
-            />
+            {/* Two-column layout in error state for consistency */}
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Left column - Empty placeholder maintaining layout */}
+              <div className="w-full lg:w-1/3">
+                {/* Empty with same height as wallet overview to maintain layout */}
+                <div className="h-full min-h-[200px] flex items-center justify-center">
+                  <div className="glass-card p-6 w-full text-center border-red-500/20 shadow-lg border">
+                    <div className="text-red-400 mb-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 mx-auto">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-white">Error Loading Wallet</h3>
+                    <p className="text-sm text-white/60 mt-1">Unable to fetch wallet overview data</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Right column - Token List (2/3 width on large screens) */}
+              <div className="w-full lg:w-2/3">
+                {/* Token list with manually added tokens */}
+                <TokenList 
+                  tokens={manualTokens} 
+                  isLoading={false} 
+                  hasError={true}
+                  walletAddress={searchedAddress} 
+                />
+              </div>
+            </div>
             
             {/* Manual Token Entry removed as requested */}
           </div>

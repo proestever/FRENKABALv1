@@ -121,9 +121,10 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
         />
       )}
       
-      <Card className="p-6 glass-card shadow-lg border-white/15">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div>
+      <Card className="p-6 glass-card shadow-lg border-white/15 h-full">
+        {/* Header - Title, Address and Action Buttons */}
+        <div className="flex flex-col mb-6">
+          <div className="mb-3">
             <h2 className="text-xl font-bold text-white flex items-center">
               Wallet Overview
               {existingBookmark && existingBookmark.label && (
@@ -131,12 +132,9 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               )}
             </h2>
             <div className="flex items-center mt-1 max-w-full overflow-hidden">
-              {/* Show truncated address on mobile, full address on desktop */}
-              <span className="text-sm text-muted-foreground mr-2 metallic-address overflow-hidden text-ellipsis whitespace-nowrap md:hidden">
-                {truncateAddress(wallet.address, 8, 6)}
-              </span>
-              <span className="text-sm text-muted-foreground mr-2 metallic-address overflow-hidden text-ellipsis whitespace-nowrap hidden md:inline-block">
-                {wallet.address}
+              {/* Always show truncated address for better fit in narrower layout */}
+              <span className="text-sm text-muted-foreground mr-2 metallic-address overflow-hidden text-ellipsis whitespace-nowrap">
+                {truncateAddress(wallet.address, 10, 8)}
               </span>
               <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-white glass-card hover:bg-black/20 p-0.5 flex-shrink-0">
                 <Copy className="h-4 w-4" />
@@ -144,7 +142,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <a 
               href={`https://scan.pulsechain.com/address/${wallet.address}`}
               target="_blank" 
@@ -152,7 +150,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               className="text-white glass-card hover:bg-black/20 transition-all text-sm flex items-center h-8 px-3 rounded-md border border-white/15"
             >
               <ExternalLink className="h-4 w-4 mr-1" />
-              <span className="hidden md:inline">View on </span>PulseScan
+              PulseScan
             </a>
             {isConnected && (
               <Button
@@ -167,14 +165,12 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
                 {isBookmarked ? (
                   <>
                     <CheckCircle className="h-4 w-4 mr-1" />
-                    <span className="hidden md:inline">Bookmarked</span>
-                    <span className="inline md:hidden">Saved</span>
+                    Saved
                   </>
                 ) : (
                   <>
                     <BookmarkIcon className="h-4 w-4 mr-1" />
-                    <span className="hidden md:inline">Bookmark</span>
-                    <span className="inline md:hidden">Save</span>
+                    Save
                   </>
                 )}
               </Button>
@@ -191,31 +187,9 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-card rounded-lg p-4 border-white/15">
-            <div className="text-sm text-muted-foreground mb-1">Total Value (Visible)</div>
-            <div className="text-2xl font-bold text-white">
-              {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
-            </div>
-            <div className="text-sm mt-2 flex items-center">
-              <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
-            </div>
-          </div>
-          
-          <div className="glass-card rounded-lg p-4 border-white/15">
-            <div className="text-sm text-muted-foreground mb-1">Token Count (Visible)</div>
-            <div className="text-2xl font-bold text-white">
-              {visibleTokenCount || 0}
-            </div>
-            <div className="text-sm mt-2 flex items-center">
-              {hiddenTokens.length > 0 && (
-                <span className="text-purple-400 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">
-                  ({hiddenTokens.length} hidden)
-                </span>
-              )}
-            </div>
-          </div>
-          
+        {/* Stats - Re-arranged to stack vertically */}
+        <div className="space-y-4">
+          {/* PLS Balance Card - Most important info first */}
           <div className="glass-card rounded-lg p-4 border-white/15">
             <div className="flex items-center mb-2">
               <TokenLogo 
@@ -241,6 +215,32 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
                 </span>
               </div>
             )}
+          </div>
+          
+          {/* Total Value Card */}
+          <div className="glass-card rounded-lg p-4 border-white/15">
+            <div className="text-sm text-muted-foreground mb-1">Total Value (Visible)</div>
+            <div className="text-2xl font-bold text-white">
+              {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
+            </div>
+            <div className="text-sm mt-2 flex items-center">
+              <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
+            </div>
+          </div>
+          
+          {/* Token Count Card */}
+          <div className="glass-card rounded-lg p-4 border-white/15">
+            <div className="text-sm text-muted-foreground mb-1">Token Count (Visible)</div>
+            <div className="text-2xl font-bold text-white">
+              {visibleTokenCount || 0}
+            </div>
+            <div className="text-sm mt-2 flex items-center">
+              {hiddenTokens.length > 0 && (
+                <span className="text-purple-400 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">
+                  ({hiddenTokens.length} hidden)
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </Card>
