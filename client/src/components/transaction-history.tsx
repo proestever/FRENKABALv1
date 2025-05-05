@@ -188,10 +188,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         newSet.delete(hash);
       } else {
         newSet.add(hash);
-        // Load detailed transaction info if needed
-        if (!detailedTx[hash]) {
-          fetchTransactionDetails(hash);
-        }
+        // Always fetch detailed transaction info to ensure we have the latest data
+        fetchTransactionDetails(hash);
       }
       return newSet;
     });
@@ -443,21 +441,57 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                   
                                   // Try to match tokens from the summary if available
                                   if (tx.summary) {
-                                    const summaryLower = tx.summary.toLowerCase();
+                                    // Extract token symbols from the summary using regex pattern
+                                    const tokenPattern = /swapped ([\d,.]+) (\w+) for ([\d,.]+) (\w+)/i;
+                                    const match = tx.summary.match(tokenPattern);
                                     
-                                    // Find the sent token that matches the summary
-                                    for (const token of sentTokens) {
-                                      if (token.token_symbol && summaryLower.includes(token.token_symbol.toLowerCase())) {
-                                        tokenIn = token;
-                                        break;
+                                    if (match) {
+                                      // Get the token symbols from the regex match
+                                      const sentSymbol = match[2];
+                                      const receivedSymbol = match[4];
+                                      
+                                      // Find exact matches for the symbols
+                                      const exactSentToken = sentTokens.find(token => 
+                                        token.token_symbol && 
+                                        token.token_symbol.toUpperCase() === sentSymbol.toUpperCase()
+                                      );
+                                      
+                                      const exactReceivedToken = receivedTokens.find(token => 
+                                        token.token_symbol && 
+                                        token.token_symbol.toUpperCase() === receivedSymbol.toUpperCase()
+                                      );
+                                      
+                                      // Use exact matches if found
+                                      if (exactSentToken) tokenIn = exactSentToken;
+                                      if (exactReceivedToken) tokenOut = exactReceivedToken;
+                                    } else {
+                                      // Fallback to simple string inclusion if pattern doesn't match
+                                      const summaryLower = tx.summary.toLowerCase();
+                                      
+                                      // Create sorted arrays by token symbol length (longest first)
+                                      // This helps match "WETH" before "ETH" for example
+                                      const sortedSentTokens = [...sentTokens].sort((a, b) => 
+                                        (b.token_symbol?.length || 0) - (a.token_symbol?.length || 0)
+                                      );
+                                      
+                                      const sortedReceivedTokens = [...receivedTokens].sort((a, b) => 
+                                        (b.token_symbol?.length || 0) - (a.token_symbol?.length || 0)
+                                      );
+                                      
+                                      // Find the sent token that matches the summary
+                                      for (const token of sortedSentTokens) {
+                                        if (token.token_symbol && summaryLower.includes(token.token_symbol.toLowerCase())) {
+                                          tokenIn = token;
+                                          break;
+                                        }
                                       }
-                                    }
-                                    
-                                    // Find the received token that matches the summary
-                                    for (const token of receivedTokens) {
-                                      if (token.token_symbol && summaryLower.includes(token.token_symbol.toLowerCase())) {
-                                        tokenOut = token;
-                                        break;
+                                      
+                                      // Find the received token that matches the summary
+                                      for (const token of sortedReceivedTokens) {
+                                        if (token.token_symbol && summaryLower.includes(token.token_symbol.toLowerCase())) {
+                                          tokenOut = token;
+                                          break;
+                                        }
                                       }
                                     }
                                   }
