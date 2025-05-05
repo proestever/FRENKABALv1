@@ -267,6 +267,35 @@ export async function fetchTransactionHistory(
 }
 
 /**
+ * Fetch detailed information for a specific transaction by hash
+ * @param hash - Transaction hash to fetch details for
+ * @returns Transaction details or null if not found
+ */
+export async function fetchTransactionByHash(hash: string): Promise<Transaction | null> {
+  try {
+    // Make the API request with cache-busting timestamp
+    const timestamp = Date.now();
+    const response = await fetch(`/api/transaction/${hash}?_=${timestamp}`);
+    
+    if (response.status === 404) {
+      console.log(`Transaction ${hash} not found`);
+      return null;
+    }
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error(`Failed to fetch transaction ${hash}:`, errorData);
+      throw new Error(errorData.message || `Failed to fetch transaction ${hash}`);
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error(`Error fetching transaction ${hash}:`, error);
+    return null;
+  }
+}
+
+/**
  * Get all bookmarks for a user
  */
 export async function getBookmarks(userId: number): Promise<Bookmark[]> {

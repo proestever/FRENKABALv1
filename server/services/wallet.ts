@@ -385,6 +385,29 @@ export async function getWalletTransactions(
 }
 
 /**
+ * Get detailed transaction by hash
+ */
+export async function getTransactionByHash(
+  transactionHash: string
+): Promise<Transaction | null> {
+  try {
+    // Get transaction details using Moralis SDK
+    const transaction = await moralisService.getTransactionByHash(transactionHash);
+    
+    if (!transaction) {
+      return null;
+    }
+    
+    // Cast the transaction to Transaction type with unknown as intermediate step
+    // to handle potential type mismatches safely
+    return transaction as unknown as Transaction;
+  } catch (error) {
+    console.error(`Error fetching transaction details for hash ${transactionHash}:`, error);
+    return null;
+  }
+}
+
+/**
  * Get token price information
  */
 export async function getTokenPriceInfo(tokenAddress: string) {

@@ -367,7 +367,8 @@ export const getTransactionByHash = async (transactionHash: string) => {
       throw new Error('Invalid response from Moralis getTransactionVerbose');
     }
     
-    const txData = response.raw;
+    // Use any type to allow adding custom properties
+    const txData: any = response.raw;
     
     // Process the transaction data similar to how we do in getTransactionHistory
     if (txData) {
@@ -422,6 +423,44 @@ export const getTransactionByHash = async (transactionHash: string) => {
             txData.category = 'swap';
           }
         });
+      }
+      
+      // Add native transfer if value is non-zero
+      if (txData.value && txData.value !== '0') {
+        const nativeTransfer = {
+          from_address: txData.from_address,
+          to_address: txData.to_address,
+          value: txData.value,
+          value_formatted: (parseInt(txData.value) / 1e18).toString(), // Format as PLS
+          token_symbol: 'PLS',
+          token_name: 'PulseChain',
+          token_decimals: '18',
+        };
+        
+        txData.native_transfers.push(nativeTransfer);
+      }
+      
+      // Add transaction method from decoded call if available
+      if (txData.decoded_call && txData.decoded_call.label && !txData.method_label) {
+        txData.method_label = txData.decoded_call.label;
+      }
+      
+      // Determine transaction category based on transfers if not already set
+      if (!txData.category) {
+        const hasErc20Transfers = txData.erc20_transfers && txData.erc20_transfers.length > 0;
+        const hasNativeTransfers = txData.native_transfers && txData.native_transfers.length > 0;
+        
+        if (hasErc20Transfers && hasNativeTransfers) {
+          txData.category = 'swap';
+        } else if (hasNativeTransfers) {
+          txData.category = 'transfer';
+        } else if (hasErc20Transfers) {
+          txData.category = 'token';
+        } else if (txData.method_label && txData.method_label.toLowerCase().includes('approve')) {
+          txData.category = 'approval';
+        } else {
+          txData.category = 'contract';
+        }
       }
     }
     
