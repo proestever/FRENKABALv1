@@ -182,6 +182,20 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           response?.result ? `${response.result.length} transactions` : '', 
           'Response data:', JSON.stringify(response).substring(0, 300) + '...');
         
+        // Add a detailed log of the first transaction for debugging
+        if (response?.result?.length > 0) {
+          console.log('First transaction details:', JSON.stringify(response.result[0], null, 2));
+          console.log('Transaction structure check:', {
+            hasErc20Transfers: !!response.result[0].erc20_transfers,
+            erc20TransfersLength: response.result[0].erc20_transfers?.length,
+            hasNativeTransfers: !!response.result[0].native_transfers,
+            nativeTransfersLength: response.result[0].native_transfers?.length,
+            method: response.result[0].method_label,
+            timestamp: response.result[0].block_timestamp,
+            status: response.result[0].receipt_status
+          });
+        }
+        
         // Check if there's an error
         if (response?.error) {
           console.error('Error in transaction history response:', response.error);
