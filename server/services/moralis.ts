@@ -387,34 +387,125 @@ export const getTransactionHistory = async (
     
     const responseData = response.raw;
     
-    // Process transaction data to add direction property to transfers
+    // Process transaction data and extract transfer information from logs
     const result = responseData.result ? responseData.result.map((tx: any) => {
-      // Process ERC20 transfers to add direction
-      if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-        tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
-          // Set direction based on from/to addresses
-          const isReceiving = transfer.to_address.toLowerCase() === normalizedWalletAddress;
-          const isSending = transfer.from_address.toLowerCase() === normalizedWalletAddress;
+      // Initialize empty arrays for transfers if they don't exist
+      if (!tx.erc20_transfers) {
+        tx.erc20_transfers = [];
+      }
+      
+      if (!tx.native_transfers) {
+        tx.native_transfers = [];
+      }
+      
+      // Check if we have logs to process
+      if (tx.logs && tx.logs.length > 0) {
+        // Process logs to extract ERC20 transfers
+        tx.logs.forEach((log: any) => {
+          // Look for ERC20 Transfer events (topic0 = Transfer event signature)
+          if (log.topic0 === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' && 
+              log.decoded_event && 
+              log.decoded_event.label === 'Transfer') {
+                
+            // Extract transfer details from the decoded event
+            const params = log.decoded_event.params;
+            if (params && params.length >= 3) {
+              const fromParam = params.find((p: any) => p.name === 'from');
+              const toParam = params.find((p: any) => p.name === 'to');
+              const valueParam = params.find((p: any) => p.name === 'value');
+              
+              if (fromParam && toParam && valueParam) {
+                // Create ERC20 transfer object
+                const transfer = {
+                  token_address: log.address,
+                  token_symbol: '', // Will be populated later if available
+                  token_name: '',
+                  token_decimals: '18', // Default decimals
+                  from_address: fromParam.value,
+                  to_address: toParam.value,
+                  value: valueParam.value,
+                  value_formatted: '', // Will calculate later if decimals are known
+                  log_index: log.log_index,
+                  transaction_hash: log.transaction_hash,
+                };
+                
+                // Set direction based on from/to addresses
+                const isReceiving = toParam.value.toLowerCase() === normalizedWalletAddress;
+                const isSending = fromParam.value.toLowerCase() === normalizedWalletAddress;
+                
+                // Only add transfers that involve the wallet address
+                if (isReceiving || isSending) {
+                  tx.erc20_transfers.push({
+                    ...transfer,
+                    direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+                  });
+                }
+              }
+            }
+          }
           
-          return {
-            ...transfer,
-            direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-          };
+          // Look for Swap events to enrich transaction data
+          if (log.decoded_event && log.decoded_event.label === 'Swap') {
+            // Mark this transaction as a DEX swap by setting a category
+            tx.category = 'swap';
+            
+            // Enrich with method label if not set
+            if (!tx.method_label) {
+              tx.method_label = 'Swap';
+            }
+            
+            // Could add more swap details here if needed
+          }
         });
       }
       
-      // Process native transfers to add direction
-      if (tx.native_transfers && tx.native_transfers.length > 0) {
-        tx.native_transfers = tx.native_transfers.map((transfer: any) => {
-          // Set direction based on from/to addresses
-          const isReceiving = transfer.to_address.toLowerCase() === normalizedWalletAddress;
-          const isSending = transfer.from_address.toLowerCase() === normalizedWalletAddress;
-          
-          return {
-            ...transfer,
+      // Add native transfer if value is non-zero
+      if (tx.value && tx.value !== '0') {
+        const nativeTransfer = {
+          from_address: tx.from_address,
+          to_address: tx.to_address,
+          value: tx.value,
+          value_formatted: (parseInt(tx.value) / 1e18).toString(), // Format as PLS
+          token_symbol: 'PLS',
+          token_name: 'PulseChain',
+          token_decimals: '18',
+        };
+        
+        // Set direction for native transfer
+        const isReceiving = tx.to_address.toLowerCase() === normalizedWalletAddress;
+        const isSending = tx.from_address.toLowerCase() === normalizedWalletAddress;
+        
+        if (isReceiving || isSending) {
+          tx.native_transfers.push({
+            ...nativeTransfer,
             direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-          };
-        });
+          });
+        }
+      }
+      
+      // Add transaction method from decoded call if available
+      if (tx.decoded_call && tx.decoded_call.label && !tx.method_label) {
+        tx.method_label = tx.decoded_call.label;
+      }
+      
+      // Determine transaction category based on transfers if not already set
+      if (!tx.category) {
+        const hasOutgoingErc20 = tx.erc20_transfers.some((t: any) => t.direction === 'send');
+        const hasIncomingErc20 = tx.erc20_transfers.some((t: any) => t.direction === 'receive');
+        const hasOutgoingNative = tx.native_transfers.some((t: any) => t.direction === 'send');
+        const hasIncomingNative = tx.native_transfers.some((t: any) => t.direction === 'receive');
+        
+        if (hasOutgoingErc20 && hasIncomingErc20) {
+          tx.category = 'swap';
+        } else if (hasOutgoingErc20 || hasOutgoingNative) {
+          tx.category = 'send';
+        } else if (hasIncomingErc20 || hasIncomingNative) {
+          tx.category = 'receive';
+        } else if (tx.method_label && tx.method_label.toLowerCase().includes('approve')) {
+          tx.category = 'approval';
+        } else {
+          tx.category = 'contract';
+        }
       }
       
       return tx;

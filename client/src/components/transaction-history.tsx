@@ -128,8 +128,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Fetch transaction history
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['transactionHistory', walletAddress],
-    queryFn: () => fetchTransactionHistory(walletAddress, page, 100),
+    queryKey: ['transactionHistory', walletAddress, page],
+    queryFn: () => fetchTransactionHistory(walletAddress, 100, page > 1 ? String(page) : null),
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: !!walletAddress,
   });
