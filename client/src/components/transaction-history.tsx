@@ -856,8 +856,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       </div>
                     )}
                     
-                    {/* ERC20 Transfers */}
-                    {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
+                    {/* ERC20 Transfers - Only show if not a swap transaction */}
+                    {!tx.swap_details && tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                       <div key={`${tx.hash}-erc20-${i}`} className="flex items-center mt-2">
                         <TokenLogo 
                           address={transfer.address || ''}
@@ -1241,8 +1241,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 </div>
               )}
               
-              {/* ERC20 Transfers */}
-              {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
+              {/* ERC20 Transfers - Only show if not a swap transaction */}
+              {!tx.swap_details && tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                 <div key={`mobile-${tx.hash}-erc20-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                   <div className="flex items-center">
                     <TokenLogo 
