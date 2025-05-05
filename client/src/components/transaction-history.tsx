@@ -395,9 +395,46 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       setIsLoadingMore(false);
     }
   }, [nextCursor, isLoadingMore, walletAddress, requestTimeoutId]);
+  
+  // Extract token addresses for batch price fetching
+  useEffect(() => {
+    const addresses: string[] = [];
+    
+    transactions.forEach(tx => {
+      // Add addresses from ERC20 transfers
+      if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+        tx.erc20_transfers.forEach(transfer => {
+          if (transfer.address && !addresses.includes(transfer.address.toLowerCase())) {
+            addresses.push(transfer.address.toLowerCase());
+          }
+        });
+      }
+      
+      // Add addresses from contract interactions (approvals)
+      if (tx.contract_interactions?.approvals && tx.contract_interactions.approvals.length > 0) {
+        tx.contract_interactions.approvals.forEach(approval => {
+          if (approval.token.address && !addresses.includes(approval.token.address.toLowerCase())) {
+            addresses.push(approval.token.address.toLowerCase());
+          }
+        });
+      }
+    });
+    
+    // Update state with unique addresses
+    setVisibleTokenAddresses(addresses);
+  }, [transactions]);
 
-  // ...rest of the component as it was before
-
+  // Use our custom hooks for data prefetching - one for logos, one for prices
+  const { 
+    logos: prefetchedLogos, 
+    isLoading: isLogosPrefetching 
+  } = useTokenDataPrefetch(transactions);
+  
+  const {
+    prices: batchPrices,
+    isLoading: isPricesFetching
+  } = useBatchTokenPrices(visibleTokenAddresses);
+  
   // Calculate USD values for tokens based on batch prices
   const calculateUsdValue = useCallback((value: string, decimals: string = '18', tokenAddress?: string) => {
     if (!tokenAddress || !batchPrices[tokenAddress]) {
@@ -421,17 +458,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     const decimalValue = parseInt(decimals);
     return (parseInt(value) / 10 ** decimalValue).toFixed(decimalValue > 8 ? 4 : 2);
   };
-
-  // Use our custom hooks for data prefetching - one for logos, one for prices
-  const { 
-    logos: prefetchedLogos, 
-    isLoading: isLogosPrefetching 
-  } = useTokenDataPrefetch(transactions);
-  
-  const {
-    prices: batchPrices,
-    isLoading: isPricesFetching
-  } = useBatchTokenPrices(visibleTokenAddresses);
 
   return (
     <Card className="h-full overflow-hidden glass-card border-white/10">
