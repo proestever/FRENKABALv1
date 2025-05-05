@@ -103,28 +103,7 @@ export function formatDate(date: Date): string {
 /**
  * Shorten an Ethereum address for display
  */
-export function shortenAddress(address: string, startChars: number = 6, endChars: number = 4): string {
+export function shortenAddress(address: string): string {
   if (!address) return '';
-  
-  // Make sure we don't try to slice more characters than exist
-  if (startChars + endChars >= address.length) {
-    return address;
-  }
-  
-  return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
-}
-
-/**
- * Format a number with thousands separators and optional decimal places
- * @param num The number to format
- * @param decimals Number of decimal places to include (optional)
- */
-export function formatNumber(num: number, decimals?: number): string {
-  if (decimals !== undefined) {
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    }).format(num);
-  }
-  return num.toLocaleString('en-US');
+  return address.slice(0, 6) + '...' + address.slice(-4);
 }

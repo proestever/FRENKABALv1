@@ -251,57 +251,6 @@ export const getNativeBalance = async (walletAddress: string): Promise<{
 };
 
 /**
- * Get complete token information including metadata, logo, and price
- */
-export const getTokenFullMetadata = async (tokenAddress: string): Promise<{
-  address: string;
-  name: string;
-  symbol: string;
-  decimals: string;
-  logo?: string;
-  price?: number;
-  priceChange24h?: number;
-  verified?: boolean;
-} | null> => {
-  try {
-    // First try to get metadata including logo
-    const metadataResponse = await Moralis.EvmApi.token.getTokenMetadata({
-      chain: PULSECHAIN_CHAIN_ID,
-      addresses: [tokenAddress]
-    });
-    
-    if (!metadataResponse || !metadataResponse.raw || !metadataResponse.raw[0]) {
-      return null;
-    }
-    
-    const tokenData = metadataResponse.raw[0];
-    
-    // Then try to get price information
-    let priceInfo: MoralisTokenPriceResponse | null = null;
-    try {
-      priceInfo = await getTokenPrice(tokenAddress);
-    } catch (e) {
-      console.log(`Couldn't get price info for ${tokenAddress}: ${e}`);
-    }
-    
-    // Build the combined token data
-    return {
-      address: tokenAddress,
-      name: tokenData.name || 'Unknown',
-      symbol: tokenData.symbol || 'UNK',
-      decimals: tokenData.decimals?.toString() || '18',
-      logo: tokenData.logo || undefined,
-      price: priceInfo?.usdPrice,
-      priceChange24h: priceInfo?.usdPrice24hrPercentChange,
-      verified: tokenData.verified_contract || false
-    };
-  } catch (error) {
-    console.error(`Error getting token metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    return null;
-  }
-};
-
-/**
  * Get token price with SDK
  */
 export const getTokenPrice = async (tokenAddress: string): Promise<MoralisTokenPriceResponse | null> => {
@@ -399,360 +348,94 @@ export const getWrappedTokenPrice = async (
 };
 
 /**
- * Get transaction details for a specific transaction hash
- * 
- * @param transactionHash The transaction hash to fetch details for
- * @returns Detailed transaction information
- */
-export const getTransactionByHash = async (transactionHash: string) => {
-  try {
-    console.log(`Fetching detailed transaction data for hash: ${transactionHash}`);
-    
-    // Use the transaction verbose API for details
-    const response = await Moralis.EvmApi.transaction.getTransactionVerbose({
-      chain: PULSECHAIN_CHAIN_ID,
-      transactionHash
-    });
-    
-    if (!response || !response.toJSON()) {
-      throw new Error('Invalid response from Moralis getTransactionVerbose');
-    }
-    
-    // Use any type to allow adding custom properties
-    const txData: any = response.toJSON();
-    
-    // Process the transaction data similar to how we do in getTransactionHistory
-    if (txData) {
-      // Initialize empty arrays for transfers if they don't exist
-      if (!txData.erc20_transfers) {
-        txData.erc20_transfers = [];
-      }
-      
-      if (!txData.native_transfers) {
-        txData.native_transfers = [];
-      }
-      
-      // Process logs to extract additional information
-      if (txData.logs && txData.logs.length > 0) {
-        txData.logs.forEach((log: any) => {
-          // Look for ERC20 Transfer events
-          if (log.topic0 === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' && 
-              log.decoded_event && 
-              log.decoded_event.label === 'Transfer') {
-                
-            // Extract transfer details from the decoded event
-            const params = log.decoded_event.params;
-            if (params && params.length >= 3) {
-              const fromParam = params.find((p: any) => p.name === 'from');
-              const toParam = params.find((p: any) => p.name === 'to');
-              const valueParam = params.find((p: any) => p.name === 'value');
-              
-              if (fromParam && toParam && valueParam) {
-                // Create ERC20 transfer object
-                const transfer = {
-                  token_address: log.address,
-                  token_symbol: '', // Will be populated later if available
-                  token_name: '',
-                  token_decimals: '18', // Default decimals
-                  from_address: fromParam.value,
-                  to_address: toParam.value,
-                  value: valueParam.value,
-                  value_formatted: '', // Will calculate later if decimals are known
-                  log_index: log.log_index,
-                  transaction_hash: log.transaction_hash,
-                };
-                
-                // Add to ERC20 transfers
-                txData.erc20_transfers.push(transfer);
-                
-                // Fetch token metadata and enrich the transfer
-                try {
-                  getTokenFullMetadata(log.address).then(tokenData => {
-                    if (tokenData) {
-                      // Find the transfer we just added and update it with metadata
-                      const transferIndex = txData.erc20_transfers.findIndex((t: any) => 
-                        t.token_address === log.address && 
-                        t.log_index === log.log_index
-                      );
-                      
-                      if (transferIndex >= 0) {
-                        const transferToUpdate = txData.erc20_transfers[transferIndex];
-                        transferToUpdate.token_name = tokenData.name;
-                        transferToUpdate.token_symbol = tokenData.symbol;
-                        transferToUpdate.token_decimals = tokenData.decimals;
-                        transferToUpdate.token_logo = tokenData.logo;
-                        transferToUpdate.usd_price = tokenData.price;
-                        
-                        // Calculate formatted value and USD value if possible
-                        if (tokenData.decimals && transferToUpdate.value) {
-                          const valueNum = parseInt(transferToUpdate.value);
-                          const decimals = parseInt(tokenData.decimals);
-                          if (!isNaN(valueNum) && !isNaN(decimals)) {
-                            const valueFormatted = valueNum / Math.pow(10, decimals);
-                            transferToUpdate.value_formatted = valueFormatted.toString();
-                            
-                            // Add USD value if price is available
-                            if (tokenData.price) {
-                              transferToUpdate.usd_value = valueFormatted * tokenData.price;
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }).catch(e => {
-                    console.error(`Error enriching token data for ${log.address}:`, e);
-                  });
-                } catch (e) {
-                  console.error(`Failed to process token metadata for ${log.address}:`, e);
-                }
-              }
-            }
-          }
-          
-          // Look for Swap events
-          if (log.decoded_event && log.decoded_event.label === 'Swap') {
-            // Mark this transaction as a DEX swap
-            txData.category = 'swap';
-          }
-        });
-      }
-      
-      // Add native transfer if value is non-zero
-      if (txData.value && txData.value !== '0') {
-        const nativeTransfer = {
-          from_address: txData.from_address,
-          to_address: txData.to_address,
-          value: txData.value,
-          value_formatted: (parseInt(txData.value) / 1e18).toString(), // Format as PLS
-          token_symbol: 'PLS',
-          token_name: 'PulseChain',
-          token_decimals: '18',
-        };
-        
-        txData.native_transfers.push(nativeTransfer);
-      }
-      
-      // Add transaction method from decoded call if available
-      if (txData.decoded_call && txData.decoded_call.label && !txData.method_label) {
-        txData.method_label = txData.decoded_call.label;
-      }
-      
-      // Determine transaction category based on transfers if not already set
-      if (!txData.category) {
-        const hasErc20Transfers = txData.erc20_transfers && txData.erc20_transfers.length > 0;
-        const hasNativeTransfers = txData.native_transfers && txData.native_transfers.length > 0;
-        
-        if (hasErc20Transfers && hasNativeTransfers) {
-          txData.category = 'swap';
-        } else if (hasNativeTransfers) {
-          txData.category = 'transfer';
-        } else if (hasErc20Transfers) {
-          txData.category = 'token';
-        } else if (txData.method_label && txData.method_label.toLowerCase().includes('approve')) {
-          txData.category = 'approval';
-        } else {
-          txData.category = 'contract';
-        }
-      }
-    }
-    
-    return txData;
-  } catch (error) {
-    console.error(`Error fetching transaction ${transactionHash}:`, error);
-    return null;
-  }
-};
-
-/**
- * Get transaction history for a wallet address from Moralis verbose endpoint
- * This provides much richer data than the standard transaction endpoint
- * 
- * @param walletAddress Wallet address to fetch transaction history for
- * @param limit Maximum number of transactions to return (max 25 for verbose endpoint)
- * @param cursor Pagination cursor for fetching next page
- * @returns Transaction history with rich transaction data
+ * Get transaction history with SDK
+ * This implementation uses the Moralis SDK to fetch transaction history
+ * and processes the results to add direction information to transfers
  */
 export const getTransactionHistory = async (
   walletAddress: string,
-  limit: number = 25,
+  limit: number = 100,
   cursor: string | null = null
 ) => {
   try {
-    console.log(`Fetching transaction history for ${walletAddress} from Moralis API directly`);
+    console.log(`Fetching transaction history for ${walletAddress} from Moralis SDK`);
     
-    // Normalize wallet address to lowercase for consistency
+    // Normalize wallet address to lowercase for comparison
     const normalizedWalletAddress = walletAddress.toLowerCase();
     
-    // Get API key from Moralis config
-    const apiKey = Moralis.Core.config.get('apiKey') as string;
-    
-    // Configure the API request
-    const options: RequestInit = {
-      method: 'GET',
-      headers: {
-        'accept': 'application/json',
-        'X-API-Key': apiKey
-      }
+    const options: any = {
+      chain: PULSECHAIN_CHAIN_ID,
+      address: normalizedWalletAddress,
+      limit
     };
     
-    // Set up pagination parameters
-    const queryParams = new URLSearchParams({
-      'chain': 'pulse',
-      'order': 'DESC',
-      'limit': Math.min(limit, 100).toString(), // Cap at 100 per request
-    });
-    
-    // Add cursor if provided
     if (cursor) {
-      queryParams.append('cursor', cursor);
+      options.cursor = cursor;
     }
     
-    // Build the full URL
-    const url = `https://deep-index.moralis.io/api/v2.2/wallets/${normalizedWalletAddress}/history?${queryParams}`;
+    const response = await Moralis.EvmApi.transaction.getWalletTransactions(options);
     
-    // Hide API key in logs
-    const redactedUrl = url.replace(/X-API-Key=.*?(&|$)/, 'X-API-Key=[REDACTED]$1');
-    console.log(`Fetching transactions from: ${redactedUrl}`);
-    
-    // Make the API request
-    const response = await fetch(url, options);
-    
-    if (!response.ok) {
-      console.error(`API error: ${response.status} ${response.statusText}`);
-      throw new Error(`API request failed with status ${response.status}`);
+    if (!response || !response.raw) {
+      throw new Error('Invalid response from Moralis getWalletTransactions');
     }
     
-    // Parse the response data
-    const data = await response.json();
+    const responseData = response.raw;
     
-    // Debug response info
-    console.log(`Got transaction response with ${data.result?.length || 0} transactions`);
-    console.log('Transaction response keys:', Object.keys(data));
-    
-    if (data.result && data.result.length > 0) {
-      console.log(`Successfully fetched ${data.result.length} transactions for ${walletAddress}`);
-      
-      // Log sample transaction (first one)
-      const sampleTx = data.result[0];
-      console.log('First transaction summary:', sampleTx.summary || 'No summary available');
-      console.log('Transaction type:', sampleTx.category || 'unknown');
-      
-      // Log first transaction's ERC20 transfers count
-      if (sampleTx.erc20_transfers && sampleTx.erc20_transfers.length > 0) {
-        console.log(`First transaction has ${sampleTx.erc20_transfers.length} ERC20 transfers`);
-        
-        // Log the first transfer as sample
-        const sampleTransfer = sampleTx.erc20_transfers[0];
-        console.log('Sample transfer:', JSON.stringify({
-          token: sampleTransfer.token_symbol,
-          from: sampleTransfer.from_address,
-          to: sampleTransfer.to_address,
-          value: sampleTransfer.value_formatted,
-          direction: sampleTransfer.direction || 'unknown'
-        }));
-      }
-    } else {
-      console.log('No transactions found for this wallet address');
-    }
-    
-    // Process the transactions to ensure all transfers have direction
-    const result = data.result ? data.result.map((tx: any) => {
-      // Ensure transfer arrays exist
-      if (!tx.erc20_transfers) {
-        tx.erc20_transfers = [];
-      }
-      
-      if (!tx.native_transfers) {
-        tx.native_transfers = [];
-      }
-      
-      // Process ERC20 transfers to set direction property if not already set
-      if (tx.erc20_transfers.length > 0) {
+    // Process transaction data to add direction property to transfers
+    const result = responseData.result ? responseData.result.map((tx: any) => {
+      // Process ERC20 transfers to add direction
+      if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
         tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
-          // If direction is already set, keep it
-          if (transfer.direction) {
-            return transfer;
-          }
-          
-          // Otherwise, determine direction based on wallet address
-          const isReceiving = transfer.to_address?.toLowerCase() === normalizedWalletAddress;
-          const isSending = transfer.from_address?.toLowerCase() === normalizedWalletAddress;
-          
-          // Format the token value to make it human readable
-          let valueFormatted = '';
-          if (transfer.value && transfer.token_decimals) {
-            try {
-              const decimals = parseInt(transfer.token_decimals);
-              const value = transfer.value;
-              
-              // Convert the raw value to a human-readable number with proper decimals
-              const rawValue = parseFloat(value) / Math.pow(10, decimals);
-              
-              // Format with commas for thousands and proper decimal places
-              const maxDecimals = Math.min(4, decimals); // Cap at 4 decimal places for readability
-              valueFormatted = rawValue.toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: maxDecimals
-              });
-            } catch (e) {
-              console.warn(`Error formatting token value: ${e}`);
-            }
-          }
+          // Set direction based on from/to addresses
+          const isReceiving = transfer.to_address.toLowerCase() === normalizedWalletAddress;
+          const isSending = transfer.from_address.toLowerCase() === normalizedWalletAddress;
           
           return {
             ...transfer,
-            direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown'),
-            // Ensure token_address is set (sometimes it's in address property)
-            token_address: transfer.token_address || transfer.address,
-            // Add formatted value if it wasn't already provided
-            value_formatted: transfer.value_formatted || valueFormatted
+            direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
           };
         });
       }
       
-      // Add additional token swap indicators if not already categorized
-      if (!tx.category && tx.erc20_transfers && tx.erc20_transfers.length >= 2) {
-        const sentTokens = tx.erc20_transfers.filter((t: any) => 
-          t.direction === 'send' || t.from_address?.toLowerCase() === normalizedWalletAddress
-        );
-        
-        const receivedTokens = tx.erc20_transfers.filter((t: any) => 
-          t.direction === 'receive' || t.to_address?.toLowerCase() === normalizedWalletAddress
-        );
-        
-        if (sentTokens.length > 0 && receivedTokens.length > 0) {
-          tx.category = 'token swap';
+      // Process native transfers to add direction
+      if (tx.native_transfers && tx.native_transfers.length > 0) {
+        tx.native_transfers = tx.native_transfers.map((transfer: any) => {
+          // Set direction based on from/to addresses
+          const isReceiving = transfer.to_address.toLowerCase() === normalizedWalletAddress;
+          const isSending = transfer.from_address.toLowerCase() === normalizedWalletAddress;
           
-          // Create a summary if one doesn't exist
-          if (!tx.summary) {
-            const sentToken = sentTokens[0];
-            const receivedToken = receivedTokens[0];
-            
-            if (sentToken && receivedToken) {
-              // Format values with commas for thousands
-              const sentAmount = parseFloat(sentToken.value_formatted).toLocaleString(undefined, {
-                maximumFractionDigits: 2
-              });
-              const receivedAmount = parseFloat(receivedToken.value_formatted).toLocaleString(undefined, {
-                maximumFractionDigits: 2
-              });
-              
-              tx.summary = `Swapped ${sentAmount} ${sentToken.token_symbol} for ${receivedAmount} ${receivedToken.token_symbol}`;
-            }
-          }
-        }
+          return {
+            ...transfer,
+            direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+          };
+        });
       }
       
       return tx;
     }) : [];
     
-    // Return processed data
+    console.log(`Successfully fetched transaction history for ${walletAddress} - ${result.length} transactions`);
+    
+    // Log a sample of the first transaction (truncated to avoid huge logs)
+    if (result.length > 0) {
+      const sampleTx = { ...result[0] };
+      // Truncate large arrays to avoid excessive logging
+      if (sampleTx.erc20_transfers && sampleTx.erc20_transfers.length > 2) {
+        sampleTx.erc20_transfers = sampleTx.erc20_transfers.slice(0, 2);
+        sampleTx.erc20_transfers.push({ note: `...and ${result[0].erc20_transfers.length - 2} more transfers` });
+      }
+      console.log('First transaction sample:', JSON.stringify(sampleTx).substring(0, 300) + '...');
+    } else {
+      console.log('No transactions found');
+    }
+    
+    // Return processed data with the same structure as the original response
     return {
       result,
-      cursor: data.cursor || null,
-      page: data.page || 0,
-      page_size: data.page_size || limit,
-      total: data.total || result.length
+      cursor: responseData.cursor || null,
+      page: responseData.page || 0,
+      page_size: responseData.page_size || limit,
+      total: responseData.total || result.length
     };
   } catch (error) {
     console.error(`Error fetching transaction history: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -796,5 +479,25 @@ export const batchGetTokenPrices = async (tokenAddresses: string[]): Promise<Rec
   return results;
 };
 
-// Removing duplicate getTokenMetadata function
-
+/**
+ * Get token metadata with SDK
+ */
+export const getTokenMetadata = async (tokenAddress: string) => {
+  try {
+    console.log(`Fetching token metadata for ${tokenAddress}`);
+    
+    const response = await Moralis.EvmApi.token.getTokenMetadata({
+      chain: PULSECHAIN_CHAIN_ID,
+      addresses: [tokenAddress]
+    });
+    
+    if (!response || !response.raw || !response.raw.length) {
+      throw new Error('Invalid response from Moralis getTokenMetadata');
+    }
+    
+    return response.raw[0];
+  } catch (error) {
+    console.error(`Error fetching token metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return null;
+  }
+};

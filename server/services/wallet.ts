@@ -385,29 +385,6 @@ export async function getWalletTransactions(
 }
 
 /**
- * Get detailed transaction by hash
- */
-export async function getTransactionByHash(
-  transactionHash: string
-): Promise<Transaction | null> {
-  try {
-    // Get transaction details using Moralis SDK
-    const transaction = await moralisService.getTransactionByHash(transactionHash);
-    
-    if (!transaction) {
-      return null;
-    }
-    
-    // Cast the transaction to Transaction type with unknown as intermediate step
-    // to handle potential type mismatches safely
-    return transaction as unknown as Transaction;
-  } catch (error) {
-    console.error(`Error fetching transaction details for hash ${transactionHash}:`, error);
-    return null;
-  }
-}
-
-/**
  * Get token price information
  */
 export async function getTokenPriceInfo(tokenAddress: string) {
@@ -492,7 +469,7 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
     // For ERC20 tokens, we'll try to use the token metadata + balance APIs
     try {
       // First get the token metadata
-      const tokenMetadata = await moralisService.getTokenFullMetadata(tokenAddress);
+      const tokenMetadata = await moralisService.getTokenMetadata(tokenAddress);
       
       if (!tokenMetadata) {
         return null;
@@ -518,7 +495,7 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
           value: 0,
           logo: await getTokenLogoUrl(tokenAddress),
           exchange: '',
-          verified: tokenMetadata.verified || false,
+          verified: !!tokenMetadata.verified_contract,
           isNative: false
         };
       }
@@ -555,7 +532,7 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
         priceChange24h: priceData?.usdPrice24hrPercentChange,
         logo: await getTokenLogoUrl(tokenAddress),
         exchange: priceData?.exchangeName || '',
-        verified: tokenMetadata.verified || false,
+        verified: !!tokenData.verified_contract,
         isNative: false
       };
     } catch (error) {

@@ -256,43 +256,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
-  // API route to get detailed transaction information by hash
-  app.get("/api/transaction/:hash", async (req, res) => {
-    try {
-      // Set cache control headers to prevent caching
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
-      const { hash } = req.params;
-      
-      if (!hash || typeof hash !== 'string') {
-        return res.status(400).json({ message: "Invalid transaction hash" });
-      }
-      
-      // Validate transaction hash format (0x followed by 64 hex chars)
-      const hashRegex = /^0x[a-fA-F0-9]{64}$/;
-      if (!hashRegex.test(hash)) {
-        return res.status(400).json({ message: "Invalid transaction hash format" });
-      }
-      
-      // Call the moralis service to get detailed transaction info
-      const transaction = await moralisService.getTransactionByHash(hash);
-      
-      if (!transaction) {
-        return res.status(404).json({ message: "Transaction not found" });
-      }
-      
-      return res.json(transaction);
-    } catch (error) {
-      console.error("Error in transaction details endpoint:", error);
-      return res.status(500).json({ 
-        message: "Failed to fetch transaction details",
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
 
   // Token Logo API Routes
   app.get("/api/token-logos", async (_req, res) => {

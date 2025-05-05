@@ -167,65 +167,8 @@ export function clearHiddenTokens(): void {
 /**
  * Interface for paginated transaction response from server
  */
-/**
- * Interface for transaction transfers (token transfers in transactions)
- */
-export interface TransactionTransfer {
-  token_name?: string;
-  token_symbol?: string;
-  token_logo?: string | null;
-  token_decimals?: string;
-  from_address: string;
-  from_address_label?: string | null;
-  to_address: string;
-  to_address_label?: string | null;
-  address?: string;         // For backward compatibility
-  token_address?: string;   // Contract address of the token
-  log_index?: number;
-  value: string;
-  value_formatted?: string;
-  possible_spam?: boolean;
-  verified_contract?: boolean;
-  security_score?: number;
-  direction?: string;
-  internal_transaction?: boolean;
-  usd_price?: number;       // USD price of token at transaction time
-  usd_value?: number;       // Total USD value of the transfer (value * price)
-}
-
-/**
- * Interface for transaction data from Moralis API
- */
-export interface Transaction {
-  hash: string;
-  nonce: string;
-  transaction_index: string;
-  from_address: string;
-  from_address_label?: string | null;
-  to_address: string;
-  to_address_label?: string | null;
-  value: string;
-  gas: string;
-  gas_price: string;
-  receipt_gas_used: string;
-  receipt_status: string;
-  block_timestamp: string;
-  block_number: string;
-  transaction_fee: string;
-  method_label?: string;
-  erc20_transfers?: TransactionTransfer[];
-  native_transfers?: TransactionTransfer[];
-  nft_transfers?: any[];
-  summary?: string;
-  category?: string;
-  possible_spam?: boolean;
-}
-
-/**
- * Interface for transaction response from API
- */
 export interface TransactionResponse {
-  result: Transaction[];
+  result: any[];
   cursor: string | null;
   page: number;
   page_size: number;
@@ -265,35 +208,6 @@ export async function fetchTransactionHistory(
   } catch (error) {
     console.error('Error fetching transaction history:', error);
     throw error;
-  }
-}
-
-/**
- * Fetch detailed information for a specific transaction by hash
- * @param hash - Transaction hash to fetch details for
- * @returns Transaction details or null if not found
- */
-export async function fetchTransactionByHash(hash: string): Promise<Transaction | null> {
-  try {
-    // Make the API request with cache-busting timestamp
-    const timestamp = Date.now();
-    const response = await fetch(`/api/transaction/${hash}?_=${timestamp}`);
-    
-    if (response.status === 404) {
-      console.log(`Transaction ${hash} not found`);
-      return null;
-    }
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error(`Failed to fetch transaction ${hash}:`, errorData);
-      throw new Error(errorData.message || `Failed to fetch transaction ${hash}`);
-    }
-    
-    return response.json();
-  } catch (error) {
-    console.error(`Error fetching transaction ${hash}:`, error);
-    return null;
   }
 }
 

@@ -496,26 +496,21 @@ export async function getWalletTransactionHistory(
         throw new Error('Missing Moralis API key (MORALIS_API_KEY environment variable)');
       }
       
-      // Use the verbose endpoint which provides more detailed transaction data
-      // This endpoint includes token transfers, internal transactions, and more in a single call
-      let url = `https://deep-index.moralis.io/api/v2.2/${walletAddress}/verbose`;
+      // Build URL with parameters
+      let url = `https://deep-index.moralis.io/api/v2.2/wallets/${walletAddress}/history`;
       
       // Add query parameters
       const queryParams = new URLSearchParams();
       queryParams.append('chain', '0x171'); // PulseChain chain ID
       queryParams.append('order', 'DESC');
-      
-      // The verbose endpoint may have a lower limit - adjust if needed
-      // Typical limit is 25 for the verbose endpoint on free plans
-      const adjustedLimit = Math.min(limit, 25);
-      queryParams.append('limit', adjustedLimit.toString());
+      queryParams.append('limit', limit.toString());
       
       if (cursorParam) {
         queryParams.append('cursor', cursorParam);
       }
       
       url = `${url}?${queryParams.toString()}`;
-      console.log(`Making direct Moralis verbose API call to: ${url}`);
+      console.log(`Making direct Moralis API call to: ${url}`);
       
       // Make the direct API call with timeout
       const controller = new AbortController();

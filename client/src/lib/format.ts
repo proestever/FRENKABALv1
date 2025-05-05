@@ -1,55 +1,52 @@
-import { formatNumber, shortenAddress as utilsShortenAddress, formatCurrencyWithPrecision } from './utils';
-
 /**
- * Re-export shortenAddress function from utils
- * This is for backward compatibility
- */
-export const shortenAddress = utilsShortenAddress;
-
-/**
- * Format a wallet address for display (shortening it)
- * Same as shortenAddress but with a different name for backward compatibility
+ * Format a wallet address for display by showing only the first 6 and last 4 characters
+ * @param address The full wallet address
+ * @returns Shortened address format
  */
 export function formatAccount(address: string): string {
-  return shortenAddress(address);
+  if (!address) return '';
+  return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+}
+
+/**
+ * Alias for formatAccount - shortens an address for display
+ * @param address The full wallet address
+ * @returns Shortened address format
+ */
+export function shortenAddress(address: string): string {
+  return formatAccount(address);
 }
 
 /**
  * Format a number as currency
- * Re-exported from utils for backward compatibility
+ * @param value The number to format
+ * @param currency The currency code (default: USD)
+ * @returns Formatted currency string
  */
-export function formatCurrency(value: number): string {
-  return formatCurrencyWithPrecision(value, 2, 2);
+export function formatCurrency(value: number, currency = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
 }
 
 /**
- * Format a token value from raw blockchain representation to a human-readable format
- * 
- * @param value The raw token value (e.g. "1000000000000000000")
- * @param decimals The number of decimals the token uses (e.g. "18" for ETH)
- * @returns Formatted token value
+ * Format a token amount with appropriate decimal places
+ * @param amount The token amount
+ * @param decimals Number of decimal places to show (default: 4)
+ * @returns Formatted token amount
  */
-export function formatTokenValue(value: string | undefined, decimals: string | undefined): string {
-  if (!value || !decimals) return '0';
-  
-  try {
-    const dec = parseInt(decimals);
-    if (isNaN(dec)) return '0';
-    
-    // Convert from big integer string to number with correct decimal places
-    const amount = parseFloat(value) / Math.pow(10, dec);
-    if (isNaN(amount)) return '0';
-    
-    // Format based on size
-    if (amount > 1) {
-      return formatNumber(amount, 4);
-    } else if (amount > 0.0001) {
-      return formatNumber(amount, 6);
-    } else {
-      return formatNumber(amount, 10);
-    }
-  } catch (error) {
-    console.error('Error formatting token value:', error);
-    return '0';
+export function formatTokenAmount(amount: number, decimals = 4): string {
+  if (amount >= 1) {
+    // For values >= 1, show up to 'decimals' decimal places, but trim trailing zeros
+    return amount.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: decimals
+    });
+  } else {
+    // For small values, use fixed notation to ensure precision
+    return amount.toFixed(decimals);
   }
 }
