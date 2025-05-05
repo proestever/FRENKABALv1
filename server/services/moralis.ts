@@ -40,13 +40,34 @@ export function ensureValidTokenPriceResponse(response: any): MoralisTokenPriceR
     blockTimestamp: response.blockTimestamp || new Date().toISOString()
   };
   
-  // Add optional fields if they exist
+  // Handle 24h percent changes, ensuring they are available in a consistent format
+  // First check for usdPrice24hrPercentChange (our preferred field)
+  if (response.usdPrice24hrPercentChange !== undefined) {
+    validResponse.usdPrice24hrPercentChange = response.usdPrice24hrPercentChange;
+  } 
+  // Then check for 24hrPercentChange string field
+  else if (response['24hrPercentChange'] !== undefined) {
+    // Convert string percentage to number if needed
+    const percentChange = typeof response['24hrPercentChange'] === 'string' 
+      ? parseFloat(response['24hrPercentChange']) 
+      : response['24hrPercentChange'];
+    
+    validResponse.usdPrice24hrPercentChange = percentChange;
+    validResponse['24hrPercentChange'] = response['24hrPercentChange'];
+  }
+  // Default to 0 if no price change data is available
+  else {
+    validResponse.usdPrice24hrPercentChange = 0;
+  }
+  
+  // Add other optional fields if they exist
   if (response.tokenLogo) validResponse.tokenLogo = response.tokenLogo;
-  if (response['24hrPercentChange']) validResponse['24hrPercentChange'] = response['24hrPercentChange'];
-  if (response.usdPrice24hrPercentChange) validResponse.usdPrice24hrPercentChange = response.usdPrice24hrPercentChange;
   if (response.usdPrice24hrUsdChange) validResponse.usdPrice24hrUsdChange = response.usdPrice24hrUsdChange;
   if (response.possibleSpam !== undefined) validResponse.possibleSpam = response.possibleSpam;
   if (response.verifiedContract !== undefined) validResponse.verifiedContract = response.verifiedContract;
+  
+  // Log price changes when debugging
+  console.log(`Token ${validResponse.tokenSymbol} price change: ${validResponse.usdPrice24hrPercentChange}%`);
   
   return validResponse;
 }
@@ -71,6 +92,23 @@ export const processTokenData = (token: MoralisWalletTokenBalanceItem, logoUrl?:
   const decimals = parseInt(token.decimals || '18');
   const balanceFormatted = parseFloat(token.balance_formatted || '0');
   
+  // Ensure price and price change data are properly typed
+  const price = typeof token.usd_price === 'number' ? token.usd_price : 0;
+  
+  // Calculate token value (balance * price)
+  const value = balanceFormatted * price;
+  
+  // Ensure price change is properly handled
+  let priceChange24h: number | undefined = undefined;
+  if (typeof token.usd_price_24hr_percent_change === 'number') {
+    priceChange24h = token.usd_price_24hr_percent_change;
+  }
+  
+  // Log for debugging
+  if (price > 0) {
+    console.log(`Token ${token.symbol} processed: price=$${price}, change=${priceChange24h}%, value=$${value}`);
+  }
+  
   return {
     address: token.token_address,
     symbol: token.symbol || 'UNKNOWN',
@@ -78,9 +116,9 @@ export const processTokenData = (token: MoralisWalletTokenBalanceItem, logoUrl?:
     decimals,
     balance: token.balance || '0',
     balanceFormatted,
-    price: token.usd_price,
-    value: token.usd_value,
-    priceChange24h: token.usd_price_24hr_percent_change,
+    price,
+    value,
+    priceChange24h,
     logo: logoUrl || token.logo || getDefaultLogo(token.symbol),
     exchange: '', // Moralis doesn't always provide this
     verified: token.verified_contract === true,
@@ -143,8 +181,8 @@ export const getWalletTokenBalances = async (walletAddress: string): Promise<Mor
       };
       
       // Add optional properties if they exist
-      if (token.logo) processedToken.logo = token.logo;
-      if (token.thumbnail) processedToken.thumbnail = token.thumbnail;
+      if (token.logo) processedToken.logo = token.logo as string;
+      if (token.thumbnail) processedToken.thumbnail = token.thumbnail as string;
       
       // Calculate balance_formatted if it doesn't exist
       if (!('balance_formatted' in token)) {
@@ -152,13 +190,21 @@ export const getWalletTokenBalances = async (walletAddress: string): Promise<Mor
         const balanceFormatted = parseFloat(token.balance) / Math.pow(10, decimalsNum);
         processedToken.balance_formatted = balanceFormatted.toString();
       } else {
-        processedToken.balance_formatted = token.balance_formatted;
+        processedToken.balance_formatted = String(token.balance_formatted);
       }
       
-      // Add other price-related fields if they exist
-      if ('usd_price' in token) processedToken.usd_price = token.usd_price;
-      if ('usd_price_24hr_percent_change' in token) processedToken.usd_price_24hr_percent_change = token.usd_price_24hr_percent_change;
-      if ('usd_value' in token) processedToken.usd_value = token.usd_value;
+      // Add other price-related fields if they exist with proper type checking
+      if ('usd_price' in token && typeof token.usd_price === 'number') {
+        processedToken.usd_price = token.usd_price;
+      }
+      
+      if ('usd_price_24hr_percent_change' in token && typeof token.usd_price_24hr_percent_change === 'number') {
+        processedToken.usd_price_24hr_percent_change = token.usd_price_24hr_percent_change;
+      }
+      
+      if ('usd_value' in token && typeof token.usd_value === 'number') {
+        processedToken.usd_value = token.usd_value;
+      }
       
       return processedToken;
     });
