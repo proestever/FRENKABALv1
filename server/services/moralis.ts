@@ -584,7 +584,7 @@ export const getTransactionHistory = async (
     const normalizedWalletAddress = walletAddress.toLowerCase();
     
     // Get API key from Moralis config
-    const apiKey = Moralis.Core.config.get('apiKey');
+    const apiKey = Moralis.Core.config.get('apiKey') as string;
     
     // Configure the API request
     const options: RequestInit = {
@@ -610,7 +610,9 @@ export const getTransactionHistory = async (
     // Build the full URL
     const url = `https://deep-index.moralis.io/api/v2.2/wallets/${normalizedWalletAddress}/history?${queryParams}`;
     
-    console.log(`Fetching transactions from: ${url.replace(apiKey, '[REDACTED]')}`);
+    // Hide API key in logs
+    const redactedUrl = url.replace(/X-API-Key=.*?(&|$)/, 'X-API-Key=[REDACTED]$1');
+    console.log(`Fetching transactions from: ${redactedUrl}`);
     
     // Make the API request
     const response = await fetch(url, options);

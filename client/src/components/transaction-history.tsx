@@ -409,67 +409,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   {/* Expanded content */}
                   {isExpanded && (
                     <div className="mt-3 border-t border-white/10 pt-3">
-                      {/* Transaction Details Section */}
-                      <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
-                        <h4 className="text-sm font-medium mb-2 col-span-2">Transaction Details</h4>
-                        
-                        {/* Hash */}
-                        <div className="bg-black/20 p-2 rounded-md">
-                          <div className="text-white/60 text-xs mb-1">Hash</div>
-                          <div className="flex items-center gap-1">
-                            <span className="font-mono text-white text-xs truncate">{shortenAddress(displayTx.hash, 6, 6)}</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                copyToClipboard(displayTx.hash);
-                              }} 
-                              className="hover:text-blue-400"
-                            >
-                              {copiedAddresses[displayTx.hash] ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                            </button>
-                          </div>
-                        </div>
-                        
-                        {/* Status */}
-                        <div className="bg-black/20 p-2 rounded-md">
-                          <div className="text-white/60 text-xs mb-1">Status</div>
-                          <div className="text-green-400">
-                            {displayTx.receipt_status === "1" ? "Success" : "Failed"}
-                          </div>
-                        </div>
-                        
-                        {/* Block */}
-                        <div className="bg-black/20 p-2 rounded-md">
-                          <div className="text-white/60 text-xs mb-1">Block</div>
-                          <div>{displayTx.block_number}</div>
-                        </div>
-                        
-                        {/* Gas Used */}
-                        <div className="bg-black/20 p-2 rounded-md">
-                          <div className="text-white/60 text-xs mb-1">Gas Used</div>
-                          <div>{parseInt(displayTx.receipt_gas_used).toLocaleString()} gas</div>
-                        </div>
-                        
-                        {/* Gas Price */}
-                        <div className="bg-black/20 p-2 rounded-md">
-                          <div className="text-white/60 text-xs mb-1">Gas Price</div>
-                          <div>{(parseInt(displayTx.gas_price) / 1e9).toFixed(9)} Gwei</div>
-                        </div>
-                        
-                        {/* Total Fee */}
-                        <div className="bg-black/20 p-2 rounded-md">
-                          <div className="text-white/60 text-xs mb-1">Total Fee</div>
-                          <div>{displayTx.transaction_fee ? (parseFloat(displayTx.transaction_fee)).toFixed(8) : '0.00000000'} PLS</div>
-                        </div>
-                        
-                        {/* Method */}
-                        {displayTx.method_label && (
-                          <div className="bg-black/20 p-2 rounded-md col-span-2">
-                            <div className="text-white/60 text-xs mb-1">Method</div>
-                            <div className="font-mono">{displayTx.method_label}</div>
-                          </div>
-                        )}
-                      </div>
+                      {/* Token Transfers Section - Primary Content */}
                       
                       {/* Token transfers section */}
                       {(displayTx.erc20_transfers && displayTx.erc20_transfers.length > 0) || 
@@ -752,75 +692,66 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         </div>
                       )}
                       
-                      {/* Transaction details section */}
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Transaction Details</h4>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div className="flex flex-col p-2 bg-black/20 rounded-md">
-                            <span className="text-xs text-white/60">Hash</span>
-                            <div className="flex items-center mt-1">
-                              <span className="font-mono text-xs">{shortenAddress(tx.hash, 18)}</span>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  copyToClipboard(tx.hash);
-                                }}
-                                className="ml-1 text-white/50 hover:text-white transition-colors"
-                              >
-                                {copiedAddresses[tx.hash] ? (
-                                  <Check size={12} className="text-green-400" />
-                                ) : (
-                                  <Copy size={12} />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                          
-                          <div className="flex flex-col p-2 bg-black/20 rounded-md">
-                            <span className="text-xs text-white/60">Status</span>
-                            <span className={`mt-1 ${tx.receipt_status === '1' ? 'text-green-400' : 'text-red-400'}`}>
-                              {tx.receipt_status === '1' ? 'Success' : 'Failed'}
-                            </span>
-                          </div>
-                          
-                          <div className="flex flex-col p-2 bg-black/20 rounded-md">
-                            <span className="text-xs text-white/60">Block</span>
-                            <span className="font-mono mt-1">{tx.block_number}</span>
-                          </div>
-                          
-                          <div className="flex flex-col p-2 bg-black/20 rounded-md">
-                            <span className="text-xs text-white/60">Gas Used</span>
-                            <span className="mt-1">{formatNumber(parseInt(tx.receipt_gas_used))} gas</span>
-                          </div>
-                          
-                          <div className="flex flex-col p-2 bg-black/20 rounded-md">
-                            <span className="text-xs text-white/60">Gas Price</span>
-                            <span className="mt-1">{(parseInt(tx.gas_price) / 1e9).toFixed(2)} Gwei</span>
-                          </div>
-                          
-                          <div className="flex flex-col p-2 bg-black/20 rounded-md">
-                            <span className="text-xs text-white/60">Total Fee</span>
-                            <span className="mt-1">{(parseInt(tx.transaction_fee) / 1e18).toFixed(8)} PLS</span>
+                      {/* Transaction Details Section */}
+                      <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
+                        <h4 className="text-sm font-medium mb-2 col-span-2">Transaction Details</h4>
+                        
+                        {/* Hash */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Hash</div>
+                          <div className="flex items-center gap-1">
+                            <span className="font-mono text-white text-xs truncate">{shortenAddress(displayTx.hash, 6, 6)}</span>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyToClipboard(displayTx.hash);
+                              }} 
+                              className="hover:text-blue-400"
+                            >
+                              {copiedAddresses[displayTx.hash] ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                            </button>
                           </div>
                         </div>
-
-                        {/* Additional Transaction Details */}
-                        <div className="mt-4 space-y-2">
-                          {/* Method information if available */}
-                          {tx.method_label && (
-                            <div className="text-xs font-mono bg-white/10 rounded px-3 py-2 inline-block">
-                              Method: {tx.method_label}
-                            </div>
-                          )}
-
-                          {/* Summary if available */}
-                          {tx.summary && (
-                            <div className="text-white/80 text-sm">
-                              <span className="text-white/60">Summary: </span>
-                              {tx.summary}
-                            </div>
-                          )}
+                        
+                        {/* Status */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Status</div>
+                          <div className="text-green-400">
+                            {displayTx.receipt_status === "1" ? "Success" : "Failed"}
+                          </div>
                         </div>
+                        
+                        {/* Block */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Block</div>
+                          <div>{displayTx.block_number}</div>
+                        </div>
+                        
+                        {/* Gas Used */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Gas Used</div>
+                          <div>{parseInt(displayTx.receipt_gas_used).toLocaleString()} gas</div>
+                        </div>
+                        
+                        {/* Gas Price */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Gas Price</div>
+                          <div>{(parseInt(displayTx.gas_price) / 1e9).toFixed(9)} Gwei</div>
+                        </div>
+                        
+                        {/* Total Fee */}
+                        <div className="bg-black/20 p-2 rounded-md">
+                          <div className="text-white/60 text-xs mb-1">Total Fee</div>
+                          <div>{displayTx.transaction_fee ? (parseFloat(displayTx.transaction_fee)).toFixed(8) : '0.00000000'} PLS</div>
+                        </div>
+                        
+                        {/* Method */}
+                        {displayTx.method_label && (
+                          <div className="bg-black/20 p-2 rounded-md col-span-2">
+                            <div className="text-white/60 text-xs mb-1">Method</div>
+                            <div className="font-mono">{displayTx.method_label}</div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
