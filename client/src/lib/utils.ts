@@ -103,15 +103,15 @@ export function formatDate(date: Date): string {
 /**
  * Shorten an Ethereum address for display
  */
-export function shortenAddress(address: string, chars: number = 10): string {
+export function shortenAddress(address: string, startChars: number = 6, endChars: number = 4): string {
   if (!address) return '';
-  if (chars <= 10) {
-    return address.slice(0, 6) + '...' + address.slice(-4);
+  
+  // Make sure we don't try to slice more characters than exist
+  if (startChars + endChars >= address.length) {
+    return address;
   }
-  // For longer displays, show more characters
-  const start = Math.floor(chars / 2);
-  const end = Math.floor(chars / 2);
-  return address.slice(0, start) + '...' + address.slice(-end);
+  
+  return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
 }
 
 /**

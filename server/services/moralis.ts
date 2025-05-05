@@ -408,18 +408,39 @@ export const getTransactionByHash = async (transactionHash: string) => {
   try {
     console.log(`Fetching detailed transaction data for hash: ${transactionHash}`);
     
-    // Make the API request for the specific transaction
+    // Try to get transaction from the new API endpoint
+    try {
+      // Use the wallet-scoped endpoint instead for more details
+      // Get a list of transactions matching this hash
+      const response = await Moralis.EvmApi.transaction.getWalletTransactionsByHash({
+        chain: PULSECHAIN_CHAIN_ID,
+        transactionHash
+      });
+      
+      if (response && response.toJSON()) {
+        const responseData = response.toJSON() as any;
+        
+        // If we got a valid response with transaction data, return the first one
+        if (responseData && responseData.length > 0) {
+          return responseData[0];
+        }
+      }
+    } catch (e) {
+      console.log(`Failed to fetch with newer API, falling back to legacy API: ${e}`);
+    }
+    
+    // Fallback to the transaction verbose API if the wallet API fails
     const response = await Moralis.EvmApi.transaction.getTransactionVerbose({
       chain: PULSECHAIN_CHAIN_ID,
       transactionHash
     });
     
-    if (!response || !response.raw) {
+    if (!response || !response.toJSON()) {
       throw new Error('Invalid response from Moralis getTransactionVerbose');
     }
     
     // Use any type to allow adding custom properties
-    const txData: any = response.raw;
+    const txData: any = response.toJSON();
     
     // Process the transaction data similar to how we do in getTransactionHistory
     if (txData) {
@@ -598,22 +619,25 @@ export const getTransactionHistory = async (
     // Use the wallets.getWalletHistory endpoint for complete transaction data
     const response = await Moralis.EvmApi.wallets.getWalletHistory(options);
     
-    if (!response || !response.raw) {
+    if (!response || !response.toJSON()) {
       throw new Error('Invalid response from Moralis wallets.getWalletHistory');
     }
     
-    const responseData = response.raw;
+    const responseData = response.toJSON();
+    
+    // Cast responseData to any to work with properties
+    const typedResponse = responseData as any;
     
     // Return the raw data since it already contains all the token transfers and details we need
-    console.log(`Successfully fetched transaction history for ${walletAddress} - ${responseData.result?.length || 0} transactions`);
+    console.log(`Successfully fetched transaction history for ${walletAddress} - ${typedResponse.result?.length || 0} transactions`);
     
     // Log a sample of the first transaction (truncated to avoid huge logs)
-    if (responseData.result && responseData.result.length > 0) {
-      const sampleTx = { ...responseData.result[0] };
+    if (typedResponse.result && typedResponse.result.length > 0) {
+      const sampleTx = { ...typedResponse.result[0] };
       // Truncate large arrays to avoid excessive logging
       if (sampleTx.erc20_transfers && sampleTx.erc20_transfers.length > 2) {
         const truncatedErc20 = [...sampleTx.erc20_transfers.slice(0, 2)];
-        truncatedErc20.push({ note: `...and ${responseData.result[0].erc20_transfers.length - 2} more transfers` });
+        truncatedErc20.push({ note: `...and ${typedResponse.result[0].erc20_transfers.length - 2} more transfers` });
         sampleTx.erc20_transfers = truncatedErc20;
       }
       console.log('First transaction sample:', JSON.stringify(sampleTx).substring(0, 300) + '...');
@@ -622,7 +646,7 @@ export const getTransactionHistory = async (
     }
     
     // Process the transactions to ensure they have all the fields we expect
-    const result = responseData.result ? responseData.result.map((tx: any) => {
+    const result = typedResponse.result ? typedResponse.result.map((tx: any) => {
       // Ensure transfer arrays exist
       if (!tx.erc20_transfers) {
         tx.erc20_transfers = [];
@@ -679,10 +703,10 @@ export const getTransactionHistory = async (
     // Return processed data
     return {
       result,
-      cursor: responseData.cursor || null,
-      page: responseData.page || 0,
-      page_size: responseData.page_size || limit,
-      total: responseData.total || result.length
+      cursor: typedResponse.cursor || null,
+      page: typedResponse.page || 0,
+      page_size: typedResponse.page_size || limit,
+      total: typedResponse.total || result.length
     };
   } catch (error) {
     console.error(`Error fetching transaction history: ${error instanceof Error ? error.message : 'Unknown error'}`);
