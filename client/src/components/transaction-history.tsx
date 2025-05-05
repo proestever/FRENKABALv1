@@ -129,30 +129,35 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   // State for tracking pagination cursor
   const [cursor, setCursor] = useState<string | null>(null);
   
-  // Fetch transaction history
+  // Fetch transaction history - don't include cursor in the queryKey to prevent re-fetching
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['transactionHistory', walletAddress, cursor],
+    queryKey: ['transactionHistory', walletAddress],
     queryFn: () => fetchTransactionHistory(walletAddress, 100, cursor),
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: !!walletAddress,
+    refetchOnWindowFocus: false,
   });
   
-  // Update transactions when data changes
+  // Update transactions when data changes - use a stable reference for this effect
   useEffect(() => {
     if (data?.result) {
-      // Set transactions directly if it's the first request (cursor is null)
+      // Process the data in a stable way to prevent flickering
       if (!cursor) {
+        // Initial load
         setTransactions(data.result);
         console.log("Setting", data.result.length, "processed transactions");
       } else {
-        // Append to existing transactions if loading more pages
+        // Only append if we're loading more (cursor is not null)
         setTransactions(prev => [...prev, ...data.result]);
         console.log("Appending", data.result.length, "more transactions");
       }
       
-      // Store the cursor for next page
-      if (data.cursor) {
-        setCursor(data.cursor);
+      // Store the cursor for next page - but don't do this during rendering
+      if (data.cursor && data.cursor !== cursor) {
+        // Use a timeout to prevent immediate state updates during rendering
+        setTimeout(() => {
+          setCursor(data.cursor);
+        }, 0);
       }
       
       // Update hasMore based on if we received a full page of results and have a cursor
@@ -191,21 +196,23 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     }
   }, [data, cursor]);
   
-  // Function to load more transactions
+  // Function to load more transactions - this only triggers the refetch
   const loadMore = useCallback(async () => {
     if (isLoading || isLoadingMore || !hasMore) return;
     
     try {
       setIsLoadingMore(true);
-      // The cursor is already set in the data effect hook
-      // We don't need to increment the page number anymore
-      setPage(prevPage => prevPage + 1); // Keep this for UI state only
+      // Simply increment page number for UI state
+      setPage(prevPage => prevPage + 1);
+      
+      // Manually trigger a refetch (the cursor is already set)
+      await refetch();
     } catch (err) {
       console.error("Error loading more transactions:", err);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoading, isLoadingMore, hasMore]);
+  }, [isLoading, isLoadingMore, hasMore, refetch]);
   
   // Function to copy address to clipboard
   const copyToClipboard = useCallback((address: string) => {
@@ -516,39 +523,62 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return counts;
   }, {} as Record<string, number>);
   
-  // Extract token addresses for logos and prices
-  useEffect(() => {
-    if (transactions) {
-      // Use array instead of Set to avoid iteration issues
-      const addresses: string[] = [];
-      const addUniqueAddress = (address: string) => {
-        const normalizedAddress = address.toLowerCase();
-        if (!addresses.includes(normalizedAddress)) {
-          addresses.push(normalizedAddress);
-        }
-      };
+  // Extract token addresses for logos and prices - use useCallback to avoid recreating the function
+  const updateTokenAddresses = useCallback(() => {
+    if (!transactions || transactions.length === 0) return;
+    
+    // Use array instead of Set to avoid iteration issues 
+    const addresses: string[] = [];
+    const addUniqueAddress = (address: string) => {
+      const normalizedAddress = address.toLowerCase();
+      if (!addresses.includes(normalizedAddress)) {
+        addresses.push(normalizedAddress);
+      }
+    };
+    
+    transactions.forEach((tx: Transaction) => {
+      // Get token addresses from ERC20 transfers
+      if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+        tx.erc20_transfers.forEach((transfer: any) => {
+          const tokenAddress = getTokenAddress(transfer);
+          if (tokenAddress) {
+            addUniqueAddress(tokenAddress);
+          }
+        });
+      }
       
-      transactions.forEach((tx: Transaction) => {
-        // Get token addresses from ERC20 transfers
-        if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-          tx.erc20_transfers.forEach((transfer: any) => {
-            const tokenAddress = getTokenAddress(transfer);
-            if (tokenAddress) {
-              addUniqueAddress(tokenAddress);
-            }
-          });
-        }
-        
-        // Add native token address for native transfers
-        if (tx.native_transfers && tx.native_transfers.length > 0) {
-          addUniqueAddress('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
-        }
-      });
-      
+      // Add native token address for native transfers
+      if (tx.native_transfers && tx.native_transfers.length > 0) {
+        addUniqueAddress('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+      }
+    });
+    
+    // Only update if different to avoid unnecessary renders
+    if (addresses.length > 0) {
       console.log(`Collected ${addresses.length} unique token addresses from transactions`, addresses);
-      setVisibleTokenAddresses(addresses);
+      
+      // Check if the addresses array is different from the current state
+      let needsUpdate = addresses.length !== visibleTokenAddresses.length;
+      if (!needsUpdate) {
+        // Check if any address is different
+        for (let i = 0; i < addresses.length; i++) {
+          if (!visibleTokenAddresses.includes(addresses[i])) {
+            needsUpdate = true;
+            break;
+          }
+        }
+      }
+      
+      if (needsUpdate) {
+        setVisibleTokenAddresses(addresses);
+      }
     }
-  }, [transactions]);
+  }, [transactions, visibleTokenAddresses]);
+  
+  // Call the update function when transactions change
+  useEffect(() => {
+    updateTokenAddresses();
+  }, [updateTokenAddresses]);
   
   if (isLoading) {
     return (
