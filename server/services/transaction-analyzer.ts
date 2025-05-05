@@ -289,8 +289,9 @@ export async function extractTokenTransfers(
   tx: Transaction, 
   walletAddress: string
 ): Promise<{ sent: TransactionTokenDetail[], received: TransactionTokenDetail[] }> {
-  const sent: TransactionTokenDetail[] = [];
-  const received: TransactionTokenDetail[] = [];
+  // Use maps to aggregate transfers by token address
+  const sentTokenMap: Map<string, TransactionTokenDetail> = new Map();
+  const receivedTokenMap: Map<string, TransactionTokenDetail> = new Map();
   
   walletAddress = walletAddress.toLowerCase();
   
@@ -322,30 +323,50 @@ export async function extractTokenTransfers(
         }
       }
       
-      // Format the value
-      const amountFormatted = formatTokenAmount(transfer.value || '0', decimals);
+      const transferAmount = transfer.value || '0';
       
-      // Categorize as sent or received
+      // If wallet is sending tokens (outbound transfer)
       if (fromAddress === walletAddress) {
-        sent.push({
-          address: tokenAddress,
-          symbol: symbol || 'Unknown Token',
-          name: name,
-          amount: transfer.value || '0',
-          amountFormatted,
-          decimals
-        });
+        // If we already have this token in our map, aggregate the amounts
+        if (sentTokenMap.has(tokenAddress)) {
+          const existingToken = sentTokenMap.get(tokenAddress)!;
+          const newAmount = (BigInt(existingToken.amount) + BigInt(transferAmount)).toString();
+          existingToken.amount = newAmount;
+          existingToken.amountFormatted = formatTokenAmount(newAmount, decimals);
+          sentTokenMap.set(tokenAddress, existingToken);
+        } else {
+          // First time seeing this token
+          sentTokenMap.set(tokenAddress, {
+            address: tokenAddress,
+            symbol: symbol || 'Unknown Token',
+            name: name,
+            amount: transferAmount,
+            amountFormatted: formatTokenAmount(transferAmount, decimals),
+            decimals
+          });
+        }
       }
       
+      // If wallet is receiving tokens (inbound transfer)
       if (toAddress === walletAddress) {
-        received.push({
-          address: tokenAddress,
-          symbol: symbol || 'Unknown Token',
-          name: name,
-          amount: transfer.value || '0',
-          amountFormatted,
-          decimals
-        });
+        // If we already have this token in our map, aggregate the amounts
+        if (receivedTokenMap.has(tokenAddress)) {
+          const existingToken = receivedTokenMap.get(tokenAddress)!;
+          const newAmount = (BigInt(existingToken.amount) + BigInt(transferAmount)).toString();
+          existingToken.amount = newAmount;
+          existingToken.amountFormatted = formatTokenAmount(newAmount, decimals);
+          receivedTokenMap.set(tokenAddress, existingToken);
+        } else {
+          // First time seeing this token
+          receivedTokenMap.set(tokenAddress, {
+            address: tokenAddress,
+            symbol: symbol || 'Unknown Token',
+            name: name,
+            amount: transferAmount,
+            amountFormatted: formatTokenAmount(transferAmount, decimals),
+            decimals
+          });
+        }
       }
     }
   }
@@ -355,32 +376,58 @@ export async function extractTokenTransfers(
     const fromAddress = tx.from_address?.toLowerCase();
     const toAddress = tx.to_address?.toLowerCase();
     
-    const amountFormatted = formatTokenAmount(tx.value, 18);
+    const transferAmount = tx.value;
+    const amountFormatted = formatTokenAmount(transferAmount, 18);
     
     if (fromAddress === walletAddress && toAddress !== walletAddress) {
-      sent.push({
-        address: PLS_TOKEN_ADDRESS,
-        symbol: 'PLS',
-        name: 'PulseChain',
-        amount: tx.value,
-        amountFormatted,
-        decimals: 18
-      });
+      // If there's already a PLS amount sent, add to it
+      if (sentTokenMap.has(PLS_TOKEN_ADDRESS)) {
+        const existingToken = sentTokenMap.get(PLS_TOKEN_ADDRESS)!;
+        const newAmount = (BigInt(existingToken.amount) + BigInt(transferAmount)).toString();
+        existingToken.amount = newAmount;
+        existingToken.amountFormatted = formatTokenAmount(newAmount, 18);
+        sentTokenMap.set(PLS_TOKEN_ADDRESS, existingToken);
+      } else {
+        sentTokenMap.set(PLS_TOKEN_ADDRESS, {
+          address: PLS_TOKEN_ADDRESS,
+          symbol: 'PLS',
+          name: 'PulseChain',
+          amount: transferAmount,
+          amountFormatted,
+          decimals: 18
+        });
+      }
     }
     
     if (toAddress === walletAddress && fromAddress !== walletAddress) {
-      received.push({
-        address: PLS_TOKEN_ADDRESS,
-        symbol: 'PLS',
-        name: 'PulseChain',
-        amount: tx.value,
-        amountFormatted,
-        decimals: 18
-      });
+      // If there's already a PLS amount received, add to it
+      if (receivedTokenMap.has(PLS_TOKEN_ADDRESS)) {
+        const existingToken = receivedTokenMap.get(PLS_TOKEN_ADDRESS)!;
+        const newAmount = (BigInt(existingToken.amount) + BigInt(transferAmount)).toString();
+        existingToken.amount = newAmount;
+        existingToken.amountFormatted = formatTokenAmount(newAmount, 18);
+        receivedTokenMap.set(PLS_TOKEN_ADDRESS, existingToken);
+      } else {
+        receivedTokenMap.set(PLS_TOKEN_ADDRESS, {
+          address: PLS_TOKEN_ADDRESS,
+          symbol: 'PLS',
+          name: 'PulseChain',
+          amount: transferAmount,
+          amountFormatted,
+          decimals: 18
+        });
+      }
     }
   }
   
-  return { sent, received };
+  // Convert the maps back to arrays for return
+  const sentTokenArray = Array.from(sentTokenMap.values());
+  const receivedTokenArray = Array.from(receivedTokenMap.values());
+  
+  return { 
+    sent: sentTokenArray, 
+    received: receivedTokenArray 
+  };
 }
 
 /**
@@ -565,8 +612,9 @@ async function decodeVelocitySwap(
       return null;
     }
     
-    const sent: TransactionTokenDetail[] = [];
-    const received: TransactionTokenDetail[] = [];
+    // Use a map to aggregate token transfers by address
+    const sentTokenMap: Map<string, TransactionTokenDetail> = new Map();
+    const receivedTokenMap: Map<string, TransactionTokenDetail> = new Map();
     
     // Process all transfers in this transaction to find the swap path
     for (const transfer of erc20Transfers) {
@@ -595,32 +643,57 @@ async function decodeVelocitySwap(
         }
       }
       
-      const amountFormatted = formatTokenAmount(transfer.value || '0', decimals);
+      // Process the token amount
+      const transferAmount = transfer.value || '0';
       
       // If wallet is sending tokens, it's an outbound token in the swap
       if (fromAddress === walletAddrLower) {
-        sent.push({
-          address: tokenAddress,
-          symbol: symbol || 'Unknown Token',
-          name: name,
-          amount: transfer.value || '0',
-          amountFormatted,
-          decimals
-        });
+        // If we already have this token in our map, aggregate the amounts
+        if (sentTokenMap.has(tokenAddress)) {
+          const existingToken = sentTokenMap.get(tokenAddress)!;
+          const newAmount = (BigInt(existingToken.amount) + BigInt(transferAmount)).toString();
+          existingToken.amount = newAmount;
+          existingToken.amountFormatted = formatTokenAmount(newAmount, decimals);
+          sentTokenMap.set(tokenAddress, existingToken);
+        } else {
+          // First time seeing this token
+          sentTokenMap.set(tokenAddress, {
+            address: tokenAddress,
+            symbol: symbol || 'Unknown Token',
+            name: name,
+            amount: transferAmount,
+            amountFormatted: formatTokenAmount(transferAmount, decimals),
+            decimals
+          });
+        }
       }
       
       // If wallet is receiving tokens, it's an inbound token in the swap
       if (toAddress === walletAddrLower) {
-        received.push({
-          address: tokenAddress,
-          symbol: symbol || 'Unknown Token',
-          name: name,
-          amount: transfer.value || '0',
-          amountFormatted,
-          decimals
-        });
+        // If we already have this token in our map, aggregate the amounts
+        if (receivedTokenMap.has(tokenAddress)) {
+          const existingToken = receivedTokenMap.get(tokenAddress)!;
+          const newAmount = (BigInt(existingToken.amount) + BigInt(transferAmount)).toString();
+          existingToken.amount = newAmount;
+          existingToken.amountFormatted = formatTokenAmount(newAmount, decimals);
+          receivedTokenMap.set(tokenAddress, existingToken);
+        } else {
+          // First time seeing this token
+          receivedTokenMap.set(tokenAddress, {
+            address: tokenAddress,
+            symbol: symbol || 'Unknown Token',
+            name: name,
+            amount: transferAmount,
+            amountFormatted: formatTokenAmount(transferAmount, decimals),
+            decimals
+          });
+        }
       }
     }
+    
+    // Convert the maps back to arrays
+    const sent = Array.from(sentTokenMap.values());
+    const received = Array.from(receivedTokenMap.values());
     
     // If we have both sent and received tokens, this appears to be a valid swap
     if (sent.length > 0 && received.length > 0) {
