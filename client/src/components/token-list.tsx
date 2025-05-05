@@ -256,6 +256,18 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               • {formatTokenAmount(token.balanceFormatted || 0)}
                             </div>
                           </div>
+                          <div className="flex items-center gap-1 mt-1">
+                            <div className="text-sm text-white font-medium">
+                              {token.price !== undefined 
+                                ? formatCurrencyWithPrecision(token.price, 2, token.price < 0.01 ? 8 : 2) 
+                                : ''}
+                            </div>
+                            <span className={`text-xs font-medium ${priceChangeClass}`}>
+                              {token.priceChange24h !== undefined 
+                                ? `(${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%)` 
+                                : ''}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       
@@ -266,12 +278,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                             ? formatCurrency(token.value) 
                             : 'N/A'}
                         </div>
-                        <div className="flex gap-2 items-center">
-                          <span className={`text-base font-bold ${priceChangeClass}`}>
-                            {token.priceChange24h !== undefined 
-                              ? `${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%` 
-                              : ''}
-                          </span>
+                        <div className="flex gap-2 items-center mt-1">
                           <button 
                             onClick={() => handleToggleVisibility(token.address)}
                             className={`p-1.5 rounded-full glass-card hover:bg-black/20 ${isHidden ? 'text-white/60' : 'text-purple-400'}`}
@@ -299,14 +306,14 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                   <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
                     Balance
                   </th>
-                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
-                    Price
+                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/5">
+                    Price (24h)
                   </th>
                   <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
                     Value
                   </th>
-                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
-                    24h Change
+                  <th scope="col" className="hidden px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/12">
+                    {/* Hidden column */}
                   </th>
                   <th scope="col" className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/12 last:rounded-tr-md">
                     Visibility
@@ -374,10 +381,17 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className="text-base font-bold text-white">
-                          {token.price !== undefined 
-                            ? formatCurrencyWithPrecision(token.price, 2, token.price < 0.01 ? 8 : 2) 
-                            : 'N/A'}
+                        <div className="flex flex-col items-end">
+                          <div className="text-base font-bold text-white">
+                            {token.price !== undefined 
+                              ? formatCurrencyWithPrecision(token.price, 2, token.price < 0.01 ? 8 : 2) 
+                              : 'N/A'}
+                          </div>
+                          <div className={`text-sm font-medium ${priceChangeClass}`}>
+                            {token.priceChange24h !== undefined 
+                              ? `(${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%)` 
+                              : ''}
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right">
@@ -387,12 +401,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                             : 'N/A'}
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className={`text-base font-bold ${priceChangeClass}`}>
-                          {token.priceChange24h !== undefined 
-                            ? `${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%` 
-                            : 'N/A'}
-                        </div>
+                      <td className="hidden px-4 py-3 whitespace-nowrap text-right">
+                        {/* Column hidden but kept for structure */}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <button 
