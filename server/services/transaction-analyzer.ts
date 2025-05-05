@@ -537,6 +537,107 @@ async function getTokenUSDValue(tokenAddress: string, amount: string): Promise<n
 }
 
 /**
+ * Try to decode Velocity DEX transaction data
+ * Velocity uses a special multi-swap format that can be difficult to properly identify
+ */
+async function decodeVelocitySwap(
+  tx: Transaction,
+  walletAddress: string
+): Promise<{ sent: TransactionTokenDetail[], received: TransactionTokenDetail[] } | null> {
+  try {
+    const input = tx.input || '';
+    
+    // Check if this is a Velocity transaction
+    if (!tx.to_address || tx.to_address.toLowerCase() !== '0xda9aba4eacf54e0273f56dffee6b8f1e20b23bba') {
+      return null;
+    }
+    
+    // Check if this has the Velocity execute swap signature
+    if (!input.startsWith(METHOD_SIGNATURES.VELOCITY_EXECUTE_SWAP)) {
+      return null;
+    }
+    
+    console.log('Analyzing Velocity swap transaction:', tx.hash);
+    
+    // Get token transfers from the transaction
+    const erc20Transfers = tx.erc20_transfers || [];
+    if (erc20Transfers.length === 0) {
+      return null;
+    }
+    
+    const sent: TransactionTokenDetail[] = [];
+    const received: TransactionTokenDetail[] = [];
+    
+    // Process all transfers in this transaction to find the swap path
+    for (const transfer of erc20Transfers) {
+      const fromAddress = transfer.from_address?.toLowerCase();
+      const toAddress = transfer.to_address?.toLowerCase();
+      
+      if (!fromAddress || !toAddress) continue;
+      
+      const walletAddrLower = walletAddress.toLowerCase();
+      const tokenAddress = transfer.address?.toLowerCase() || '';
+      
+      let symbol = transfer.token_symbol || '';
+      let name = transfer.token_name || '';
+      let decimals = transfer.token_decimals ? parseInt(transfer.token_decimals) : 18;
+      
+      if (!symbol || !name) {
+        try {
+          const tokenMetadata = await moralisService.getTokenMetadata(tokenAddress);
+          if (tokenMetadata) {
+            symbol = symbol || tokenMetadata.symbol;
+            name = name || tokenMetadata.name;
+            decimals = decimals || parseInt(tokenMetadata.decimals);
+          }
+        } catch (error) {
+          console.error(`Error fetching token metadata for ${tokenAddress}:`, error);
+        }
+      }
+      
+      const amountFormatted = formatTokenAmount(transfer.value || '0', decimals);
+      
+      // If wallet is sending tokens, it's an outbound token in the swap
+      if (fromAddress === walletAddrLower) {
+        sent.push({
+          address: tokenAddress,
+          symbol: symbol || 'Unknown Token',
+          name: name,
+          amount: transfer.value || '0',
+          amountFormatted,
+          decimals
+        });
+      }
+      
+      // If wallet is receiving tokens, it's an inbound token in the swap
+      if (toAddress === walletAddrLower) {
+        received.push({
+          address: tokenAddress,
+          symbol: symbol || 'Unknown Token',
+          name: name,
+          amount: transfer.value || '0',
+          amountFormatted,
+          decimals
+        });
+      }
+    }
+    
+    // If we have both sent and received tokens, this appears to be a valid swap
+    if (sent.length > 0 && received.length > 0) {
+      console.log('Detected Velocity swap:', tx.hash);
+      console.log('Sent tokens:', sent.map(t => `${t.amountFormatted} ${t.symbol}`).join(', '));
+      console.log('Received tokens:', received.map(t => `${t.amountFormatted} ${t.symbol}`).join(', '));
+      return { sent, received };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error decoding Velocity swap:', error);
+    return null;
+  }
+}
+
+/**
  * Get detailed information for a transaction
  */
 export async function analyzeTransaction(
@@ -549,11 +650,27 @@ export async function analyzeTransaction(
     // First get the base transaction type
     let type = getBaseTransactionType(tx, walletAddress);
     
+    // Try to decode the transaction input for specific routers
+    let velocitySwapData = null;
+    
     // Extract token transfers
     const { sent, received } = await extractTokenTransfers(tx, walletAddress);
     
+    // Check if this is a Velocity swap first  
+    if (tx.to_address?.toLowerCase() === '0xda9aba4eacf54e0273f56dffee6b8f1e20b23bba') {
+      velocitySwapData = await decodeVelocitySwap(tx, walletAddress);
+      
+      // If we successfully decoded a Velocity swap, use those values
+      if (velocitySwapData) {
+        type = TransactionType.Swap;
+      }
+    }
+    
+    // Use the tokens we found if we successfully decoded a Velocity swap
+    const tokens = velocitySwapData || { sent, received };
+    
     // Enhance token information with USD values where possible
-    for (const token of [...sent, ...received]) {
+    for (const token of [...tokens.sent, ...tokens.received]) {
       try {
         if (token.amountFormatted) {
           const usdValue = await getTokenUSDValue(token.address, token.amountFormatted);
@@ -568,7 +685,7 @@ export async function analyzeTransaction(
     
     // For unknown types, try to classify based on more specific criteria
     if (type === TransactionType.Unknown || type === TransactionType.Contract) {
-      if (isSwapTransaction(tx) && sent.length > 0 && received.length > 0) {
+      if (isSwapTransaction(tx) && tokens.sent.length > 0 && tokens.received.length > 0) {
         type = TransactionType.Swap;
       } else if (isLiquidityOperation(tx)) {
         // Differentiate between adding and removing liquidity
@@ -605,15 +722,15 @@ export async function analyzeTransaction(
     const details: TransactionDetails = {
       type,
       methodName,
-      tokens: { sent, received },
+      tokens,
       protocolName,
       contractAddress: tx.to_address,
     };
     
     // For swaps, generate a more descriptive method name with token amounts
-    if (type === TransactionType.Swap && sent.length > 0 && received.length > 0) {
-      const outToken = sent[0];
-      const inToken = received[0];
+    if (type === TransactionType.Swap && tokens.sent.length > 0 && tokens.received.length > 0) {
+      const outToken = tokens.sent[0];
+      const inToken = tokens.received[0];
       
       details.methodName = `Swap ${outToken.amountFormatted} ${outToken.symbol} for ${inToken.amountFormatted} ${inToken.symbol}`;
     }
