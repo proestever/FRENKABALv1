@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'wouter';
+import { useQueryClient } from '@tanstack/react-query';
 import { SearchSection } from '@/components/search-section';
 import { WalletOverview } from '@/components/wallet-overview';
 import { TokenList } from '@/components/token-list';
@@ -20,10 +21,28 @@ export default function Home() {
   const params = useParams<{ walletAddress?: string }>();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Define search function
   const handleSearch = (address: string) => {
     if (!address) return;
+    
+    // If we're switching to a different address, invalidate React Query cache
+    if (searchedAddress !== address) {
+      console.log('Switching to new wallet address, clearing cache...');
+      
+      // Clear any existing wallet cache
+      if (searchedAddress) {
+        // Invalidate the previous wallet's cache
+        queryClient.invalidateQueries({ queryKey: [`wallet-all-${searchedAddress}`] });
+      }
+      
+      // Also invalidate the new wallet's cache to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: [`wallet-all-${address}`] });
+      
+      // Clear any other relevant caches
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+    }
     
     setSearchedAddress(address);
     
@@ -81,7 +100,25 @@ export default function Home() {
   }, [isError, error, toast]);
 
   const handleRefresh = () => {
-    refetch();
+    // Force a complete refresh by invalidating the query first
+    if (searchedAddress) {
+      // This will clear the cache and force a fresh network request
+      console.log('Forcing refresh for wallet:', searchedAddress);
+      
+      // First invalidate the query to clear the cache completely
+      queryClient.invalidateQueries({ queryKey: [`wallet-all-${searchedAddress}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+      
+      // Then trigger a refetch with cancellation of any in-flight requests
+      refetch({ cancelRefetch: true });
+      
+      // Show a toast to confirm the refresh action
+      toast({
+        title: "Refreshing wallet data",
+        description: "Getting the latest blockchain data for this wallet...",
+        duration: 3000,
+      });
+    }
   };
 
   const handleViewExample = () => {
