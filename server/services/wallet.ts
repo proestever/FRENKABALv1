@@ -396,11 +396,17 @@ export async function getWalletTransactions(
             for (const transfer of tokenTransfers) {
               try {
                 // Get token contract address from the transfer
-                const tokenContract = transfer.token_address || transfer.address;
+                // Different APIs return different property names
+                // Handle different property names in different API responses
+                // token_address is what we use in our standardized format
+                const tokenContract = transfer.token_address;
                 if (!tokenContract) {
                   console.warn(`No token address found for transfer in tx ${tx.hash}`);
                   continue;
                 }
+                
+                // Log for debugging
+                console.log(`Processing token transfer for contract ${tokenContract} in tx ${tx.hash}`)
                 
                 const tokenData = await moralisService.getTokenMetadata(tokenContract);
                 
