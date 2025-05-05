@@ -806,81 +806,115 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   <div className="text-sm font-semibold text-white">
                     {tx.summary || 'Transaction details'}
                     
-                    {/* Swap Transaction Display - Desktop */}
-                    {getTransactionType(tx) === 'swap' && (
-                      <div className="mt-2 p-2 rounded-md glass-card border border-white/10">
-                        <div className="flex items-center mb-2">
-                          <span className="bg-purple-500/20 px-2 py-0.5 rounded-md text-xs text-purple-300">
-                            Token Swap
-                          </span>
-                        </div>
-                        
-                        {(() => {
-                          const { tokenIn, tokenOut } = getSwapTokens(tx);
+                    {/* Swap Transactions Display */}
+                    {getTransactionType(tx) === 'swap' && (() => {
+                      const { tokenIn, tokenOut } = getSwapTokens(tx);
+                      return (
+                        <div className="mt-2">
+                          <div className="flex items-center mb-2">
+                            <span className="bg-purple-500/20 px-2 py-0.5 rounded-md text-xs text-purple-400">
+                              Swapped {tokenIn?.token_symbol || 'Token'} for {tokenOut?.token_symbol || 'Token'}
+                            </span>
+                          </div>
                           
-                          return (
-                            <div className="flex items-center space-x-4">
-                              {/* Token In */}
-                              {tokenIn && (
-                                <div className="flex flex-col items-center p-2 bg-black/20 rounded-md flex-1">
-                                  <div className="flex items-center w-full justify-between mb-1">
-                                    <div className="flex items-center">
-                                      <TokenLogo 
-                                        address={tokenIn.address || ''}
-                                        symbol={tokenIn.token_symbol || ''}
-                                        fallbackLogo={tokenIn.token_logo || ''}
-                                        size="sm"
-                                      />
-                                      <div className="ml-2 flex flex-col">
-                                        <span className="text-sm font-medium">{tokenIn.token_symbol || 'Unknown'}</span>
-                                        <span className="text-xs text-muted-foreground">{shortenAddress(tokenIn.address || '')}</span>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center">
-                                      <ArrowUpRight size={14} className="text-red-400 mr-1" />
-                                      <span className="text-sm font-bold text-red-400">
-                                        -{tokenIn.value_formatted || formatTokenValue(tokenIn.value, tokenIn.token_decimals)}
-                                      </span>
-                                    </div>
+                          {/* Show the token details in a clean format for swap transactions */}
+                          <div className="space-y-2">
+                            {/* Token In */}
+                            {tokenIn && (
+                              <div className="flex items-center">
+                                <TokenLogo 
+                                  address={tokenIn.address || ''}
+                                  symbol={tokenIn.token_symbol || ''}
+                                  fallbackLogo={tokenIn.token_logo || prefetchedLogos[tokenIn.address?.toLowerCase() || '']}
+                                  size="sm"
+                                />
+                                <div className="ml-2">
+                                  <div className="flex items-center">
+                                    <span className="text-sm font-medium">{tokenIn.token_symbol || 'Unknown'}</span>
+                                    {tokenIn.verified_contract && (
+                                      <span className="ml-1 px-1 py-0.5 bg-green-500/20 text-xs rounded-md text-green-400">✓</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    To: 
+                                    <Link 
+                                      to={`/${tokenIn.to_address}`}
+                                      className="text-white hover:text-gray-300 ml-1"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      {shortenAddress(tokenIn.to_address)}
+                                    </Link>
                                   </div>
                                 </div>
-                              )}
-                              
-                              {/* Arrow */}
-                              <div className="flex-shrink-0">
-                                <div className="w-6 h-px bg-white/20"></div>
                               </div>
-                              
-                              {/* Token Out */}
-                              {tokenOut && (
-                                <div className="flex flex-col items-center p-2 bg-black/20 rounded-md flex-1">
-                                  <div className="flex items-center w-full justify-between mb-1">
-                                    <div className="flex items-center">
-                                      <TokenLogo 
-                                        address={tokenOut.address || ''}
-                                        symbol={tokenOut.token_symbol || ''}
-                                        fallbackLogo={tokenOut.token_logo || ''}
-                                        size="sm"
-                                      />
-                                      <div className="ml-2 flex flex-col">
-                                        <span className="text-sm font-medium">{tokenOut.token_symbol || 'Unknown'}</span>
-                                        <span className="text-xs text-muted-foreground">{shortenAddress(tokenOut.address || '')}</span>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center">
-                                      <ArrowDownLeft size={14} className="text-green-400 mr-1" />
-                                      <span className="text-sm font-bold text-green-400">
-                                        +{tokenOut.value_formatted || formatTokenValue(tokenOut.value, tokenOut.token_decimals)}
-                                      </span>
-                                    </div>
+                            )}
+                            
+                            {/* Token Out */}
+                            {tokenOut && (
+                              <div className="flex items-center">
+                                <TokenLogo 
+                                  address={tokenOut.address || ''}
+                                  symbol={tokenOut.token_symbol || ''}
+                                  fallbackLogo={tokenOut.token_logo || prefetchedLogos[tokenOut.address?.toLowerCase() || '']}
+                                  size="sm"
+                                />
+                                <div className="ml-2">
+                                  <div className="flex items-center">
+                                    <span className="text-sm font-medium">{tokenOut.token_symbol || 'Unknown'}</span>
+                                    {tokenOut.verified_contract && (
+                                      <span className="ml-1 px-1 py-0.5 bg-green-500/20 text-xs rounded-md text-green-400">✓</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    From: 
+                                    <Link 
+                                      to={`/${tokenOut.from_address}`}
+                                      className="text-white hover:text-gray-300 ml-1"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      {shortenAddress(tokenOut.from_address)}
+                                    </Link>
                                   </div>
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    
+                    {/* Regular Transfers (non-swap) */}
+                    {getTransactionType(tx) !== 'swap' && tx.erc20_transfers && tx.erc20_transfers.length > 0 && tx.erc20_transfers.map((transfer, i) => (
+                      <div key={`${tx.hash}-desktop-erc20-${i}`} className="flex items-center mt-2">
+                        <TokenLogo 
+                          address={transfer.address || ''}
+                          symbol={transfer.token_symbol || ''}
+                          fallbackLogo={transfer.token_logo || prefetchedLogos[transfer.address?.toLowerCase() || '']}
+                          size="sm"
+                        />
+                        <div className="ml-2">
+                          <div className="flex items-center">
+                            <span className="text-sm font-medium">{transfer.token_symbol || 'Unknown'}</span>
+                            {transfer.verified_contract && (
+                              <span className="ml-1 px-1 py-0.5 bg-green-500/20 text-xs rounded-md text-green-400">✓</span>
+                            )}
+                          </div>
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            {transfer.direction === 'receive' ? 'From: ' : 'To: '}
+                            <Link 
+                              to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
+                              className="text-white hover:text-gray-300 ml-1"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
+                            </Link>
+                          </div>
+                        </div>
                       </div>
-                    )}
+                    ))}
                     
                     {/* Default transaction details when no transfers are available */}
                     {(!tx.erc20_transfers || tx.erc20_transfers.length === 0) && 
@@ -945,8 +979,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       </div>
                     ))}
                     
-                    {/* ERC20 Transfers */}
-                    {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
+                    {/* ERC20 Transfers - Only show for non-swap transactions */}
+                    {getTransactionType(tx) !== 'swap' && tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                       <div key={`${tx.hash}-erc20-${i}`} className="flex items-center mt-2">
                         <TokenLogo 
                           address={transfer.address || ''}
@@ -1146,7 +1180,62 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                  {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
+                  {/* For "swap" transactions, show the token in/out format */}
+                  {getTransactionType(tx) === 'swap' && tx.erc20_transfers && tx.erc20_transfers.length > 0 && (() => {
+                    // Get the 'send' and 'receive' tokens
+                    const { tokenIn, tokenOut } = getSwapTokens(tx);
+                    
+                    return (
+                      <div>
+                        {/* Token In (negative) */}
+                        {tokenIn && (
+                          <div className="flex flex-col">
+                            <div className="text-sm font-bold text-red-400">
+                              -{tokenIn.value_formatted || formatTokenValue(tokenIn.value, tokenIn.token_decimals)} {tokenIn.token_symbol || 'Unknown'}
+                            </div>
+                            {(() => {
+                              const tokenAddress = (tokenIn.address || '').toLowerCase();
+                              const usdValue = calculateUsdValue(tokenIn.value, tokenIn.token_decimals, tokenAddress);
+                              return usdValue ? (
+                                <div className="text-xs text-muted-foreground text-right">
+                                  {usdValue.toLocaleString('en-US', {
+                                    style: 'currency', 
+                                    currency: 'USD',
+                                    maximumFractionDigits: 2
+                                  })}
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
+                        )}
+                        
+                        {/* Token Out (positive) */}
+                        {tokenOut && (
+                          <div className="flex flex-col mt-2">
+                            <div className="text-sm font-bold text-green-400">
+                              +{tokenOut.value_formatted || formatTokenValue(tokenOut.value, tokenOut.token_decimals)} {tokenOut.token_symbol || 'Unknown'}
+                            </div>
+                            {(() => {
+                              const tokenAddress = (tokenOut.address || '').toLowerCase();
+                              const usdValue = calculateUsdValue(tokenOut.value, tokenOut.token_decimals, tokenAddress);
+                              return usdValue ? (
+                                <div className="text-xs text-muted-foreground text-right">
+                                  {usdValue.toLocaleString('en-US', {
+                                    style: 'currency', 
+                                    currency: 'USD',
+                                    maximumFractionDigits: 2
+                                  })}
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  
+                  {/* For regular transfers (non-swap) */}
+                  {getTransactionType(tx) !== 'swap' && tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                     <div key={`${tx.hash}-erc20-value-${i}`} className={`${i > 0 ? 'mt-2' : ''}`}>
                       <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
                         {transfer.direction === 'receive' ? '+' : '-'}
