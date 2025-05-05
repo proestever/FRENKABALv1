@@ -408,28 +408,7 @@ export const getTransactionByHash = async (transactionHash: string) => {
   try {
     console.log(`Fetching detailed transaction data for hash: ${transactionHash}`);
     
-    // Try to get transaction from the new API endpoint
-    try {
-      // Use the wallet-scoped endpoint instead for more details
-      // Get a list of transactions matching this hash
-      const response = await Moralis.EvmApi.transaction.getWalletTransactionsByHash({
-        chain: PULSECHAIN_CHAIN_ID,
-        transactionHash
-      });
-      
-      if (response && response.toJSON()) {
-        const responseData = response.toJSON() as any;
-        
-        // If we got a valid response with transaction data, return the first one
-        if (responseData && responseData.length > 0) {
-          return responseData[0];
-        }
-      }
-    } catch (e) {
-      console.log(`Failed to fetch with newer API, falling back to legacy API: ${e}`);
-    }
-    
-    // Fallback to the transaction verbose API if the wallet API fails
+    // Use the transaction verbose API for details
     const response = await Moralis.EvmApi.transaction.getTransactionVerbose({
       chain: PULSECHAIN_CHAIN_ID,
       transactionHash
@@ -617,6 +596,8 @@ export const getTransactionHistory = async (
     }
     
     // Use the wallets.getWalletHistory endpoint for complete transaction data
+    console.log('Calling Moralis wallets.getWalletHistory with options:', JSON.stringify(options));
+    
     const response = await Moralis.EvmApi.wallets.getWalletHistory(options);
     
     if (!response || !response.toJSON()) {
@@ -624,6 +605,14 @@ export const getTransactionHistory = async (
     }
     
     const responseData = response.toJSON();
+    
+    // Debug the response to see what we're getting
+    console.log('Raw response from getWalletHistory:', 
+                JSON.stringify({
+                  responseKeys: Object.keys(responseData),
+                  hasResult: !!responseData.result,
+                  resultLength: responseData.result ? responseData.result.length : 0
+                }));
     
     // Cast responseData to any to work with properties
     const typedResponse = responseData as any;
