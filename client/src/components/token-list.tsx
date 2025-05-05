@@ -10,8 +10,6 @@ import { TokenLogo } from '@/components/token-logo';
 import { getHiddenTokens, toggleHiddenToken, isTokenHidden } from '@/lib/api';
 import { useBatchTokenLogos } from '@/hooks/use-batch-token-logos';
 import { TransactionHistory } from '@/components/transaction-history';
-// Import PLS logo directly for consistent rendering
-import plsLogo from '../assets/pls-logo-optimized.png';
 
 interface TokenListProps {
   tokens: Token[];
@@ -229,21 +227,13 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       {/* Token Info */}
                       <div className="flex items-center flex-grow">
                         <div className="mr-3 flex-shrink-0">
-                          {/* Force use our PLS logo for PLS token in mobile view too */}
-                          {token.symbol === 'PLS' || token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? (
-                            <img 
-                              src={plsLogo} 
-                              alt="PLS" 
-                              className="w-11 h-11 rounded-full object-cover border border-white/10"
-                            />
-                          ) : (
-                            <TokenLogo 
-                              address={token.address}
-                              symbol={token.symbol}
-                              fallbackLogo={token.logo}
-                              size="lg"
-                            />
-                          )}
+                          {/* Use TokenLogo for all tokens for consistency */}
+                          <TokenLogo 
+                            address={token.address}
+                            symbol={token.symbol}
+                            fallbackLogo={token.logo}
+                            size="lg"
+                          />
                         </div>
                         <div className="min-w-0 flex-grow">
                           <div className="flex items-center gap-1">
@@ -334,21 +324,13 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="mr-3 flex-shrink-0">
-                            {/* Force use our PLS logo for PLS token */}
-                          {token.symbol === 'PLS' || token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ? (
-                            <img 
-                              src={plsLogo} 
-                              alt="PLS" 
-                              className="w-10 h-10 rounded-full object-cover border border-white/10"
-                            />
-                          ) : (
-                            <TokenLogo 
-                              address={token.address}
-                              symbol={token.symbol}
-                              fallbackLogo={token.logo}
-                              size="md"
-                            />
-                          )}
+                            {/* Use TokenLogo for all tokens for consistency */}
+                          <TokenLogo 
+                            address={token.address}
+                            symbol={token.symbol}
+                            fallbackLogo={token.logo}
+                            size="md"
+                          />
                           </div>
                           <div>
                             <div className="flex items-center gap-1">
