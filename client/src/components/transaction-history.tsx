@@ -787,8 +787,14 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           size="sm"
                         />
                         <div className="ml-2 flex items-center">
-                          <div className="mr-1 bg-blue-400/20 px-1 py-0.5 rounded-sm text-xs text-blue-300">
-                            Approve
+                          <div className="flex items-center">
+                            <div className="mr-1 bg-blue-400/20 px-1 py-0.5 rounded-sm text-xs text-blue-300">
+                              Approve
+                            </div>
+                            {/* Add security indicator for token approval */}
+                            <div className="mr-1 bg-yellow-400/20 px-1 py-0.5 rounded-sm text-xs text-yellow-300" title="Token approvals grant permission to spend your tokens">
+                              ⚠️ Security
+                            </div>
                           </div>
                           <div className="flex flex-col">
                             <div className="text-sm font-semibold whitespace-nowrap">
@@ -1153,8 +1159,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     />
                     <div className="ml-2">
                       <div className="flex items-center">
-                        <div className="bg-blue-400/20 px-1 py-0.5 rounded-sm text-xs text-blue-300 mr-1">
-                          Approve
+                        <div className="flex flex-wrap">
+                          <div className="bg-blue-400/20 px-1 py-0.5 rounded-sm text-xs text-blue-300 mr-1 mb-1">
+                            Approve
+                          </div>
+                          <div className="bg-yellow-400/20 px-1 py-0.5 rounded-sm text-xs text-yellow-300 mr-1 mb-1" title="Token approvals grant permission to spend your tokens">
+                            ⚠️ Security
+                          </div>
                         </div>
                         <div>
                           <span className="font-medium text-sm">{approval.token.token_symbol}</span>
@@ -1192,9 +1203,17 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         )}
                         <div className="group relative">
                           <span className="text-sm font-medium border-b border-dotted border-white/30" title={transfer.token_symbol}>
-                            {transfer.token_symbol && transfer.token_symbol.length > 15 
-                              ? `${transfer.token_symbol.substring(0, 15)}...` 
-                              : transfer.token_symbol}
+                            <span className="flex items-center">
+                              {transfer.token_symbol && transfer.token_symbol.length > 15 
+                                ? `${transfer.token_symbol.substring(0, 15)}...` 
+                                : transfer.token_symbol}
+                              {transfer.verified_contract && (
+                                <span className="ml-1 px-1 py-0.5 bg-green-500/20 text-xs rounded-md text-green-400">✓</span>
+                              )}
+                              {transfer.security_score && transfer.security_score > 80 && (
+                                <span className="ml-1 px-1 py-0.5 bg-green-500/20 text-xs rounded-md text-green-400">Safe</span>
+                              )}
+                            </span>
                           </span>
                           <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                             <div className="mb-2 text-xs">
@@ -1308,9 +1327,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         )}
                         <div className="group relative">
                           <span className="text-sm font-medium border-b border-dotted border-white/30" title={transfer.token_symbol || 'PLS'}>
-                            {(transfer.token_symbol && transfer.token_symbol.length > 15) 
-                              ? `${transfer.token_symbol.substring(0, 15)}...` 
-                              : (transfer.token_symbol || 'PLS')}
+                            <span className="flex items-center">
+                              {(transfer.token_symbol && transfer.token_symbol.length > 15) 
+                                ? `${transfer.token_symbol.substring(0, 15)}...` 
+                                : (transfer.token_symbol || 'PLS')}
+                              <span className="ml-1 px-1 py-0.5 bg-green-500/20 text-xs rounded-md text-green-400">Native</span>
+                              <span className="ml-1 px-1 py-0.5 bg-green-500/20 text-xs rounded-md text-green-400">Safe</span>
+                            </span>
                           </span>
                           <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                             <div className="mb-2 text-xs">
