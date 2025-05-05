@@ -559,17 +559,31 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     );
   }
 
-  if (isError) {
+  if (isError || apiError) {
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
         <div className="flex flex-col items-center justify-center min-h-[300px]">
+          <AlertCircle size={40} className="text-red-400 mb-4" />
           <h3 className="text-xl font-bold text-red-400 mb-2">Error Loading Transactions</h3>
           <p className="text-muted-foreground mb-4">
-            There was an error loading the transaction history.
-            <br />Please try again later or check your connection.
+            {apiError ? (
+              <>
+                <span className="block text-red-400 font-medium mb-2">API Error:</span>
+                {apiError}
+              </>
+            ) : (
+              <>
+                There was an error loading the transaction history.
+                <br />Please try again later or check your connection.
+              </>
+            )}
+          </p>
+          <p className="text-muted-foreground mb-4 text-sm">
+            This could be due to temporary API limitations or network issues.
           </p>
           <button
             onClick={() => {
+              setApiError(null);
               refetch();
             }}
             className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
