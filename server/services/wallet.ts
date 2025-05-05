@@ -48,6 +48,45 @@ export async function getWalletData(
     try {
       const moralisTokens = await moralisService.getWalletTokenBalances(walletAddress);
       
+      // Check for any missing tokens that we know the user has (in case the API didn't return them)
+      // This is a workaround for tokens that might not be indexed correctly in the Moralis API
+      const knownTokenAddresses = [
+        "0xec4252e62C6dE3D655cA9Ce3AfC12E553ebBA274" // Token reported missing by the user
+      ];
+      
+      // Check if any of these tokens are missing from the moralisTokens result
+      for (const knownAddress of knownTokenAddresses) {
+        // Skip if token already exists in the results
+        if (moralisTokens.some(token => token.token_address.toLowerCase() === knownAddress.toLowerCase())) {
+          console.log(`Token ${knownAddress} is already in the results`);
+          continue;
+        }
+        
+        console.log(`Fetching specific token balance for ${knownAddress}`);
+        // Try to fetch the specific token balance
+        try {
+          const specificTokenBalance = await getSpecificTokenBalance(walletAddress, knownAddress);
+          if (specificTokenBalance) {
+            // Convert to MoralisWalletTokenBalanceItem format to add to moralisTokens array
+            moralisTokens.push({
+              token_address: specificTokenBalance.address,
+              symbol: specificTokenBalance.symbol,
+              name: specificTokenBalance.name,
+              decimals: specificTokenBalance.decimals.toString(),
+              balance: specificTokenBalance.balance,
+              balance_formatted: specificTokenBalance.balanceFormatted.toString(),
+              usd_price: specificTokenBalance.price,
+              usd_price_24hr_percent_change: specificTokenBalance.priceChange24h,
+              logo: specificTokenBalance.logo,
+              verified_contract: specificTokenBalance.verified
+            });
+            console.log(`Added missing token ${specificTokenBalance.symbol} to token list`);
+          }
+        } catch (error) {
+          console.error(`Error fetching specific token ${knownAddress}:`, error);
+        }
+      }
+      
       updateLoadingProgress({
         currentBatch: 2,
         totalBatches: 9,
