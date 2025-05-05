@@ -75,38 +75,95 @@ const TRANSACTIONS_PER_BATCH = 100;
 // Define transaction type options
 type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contract';
 
+// Common DEX router addresses on PulseChain (lowercase)
+const DEX_ROUTERS = [
+  '0x165c3410fbed4528472e9e0d4d1c8d8cbd0723dd', // PulseX router
+  '0x29eA298FEfa2Efd3213A1aD637a41B9a640a1e9D'.toLowerCase(), // PulseX V2 router
+  '0x98bf93ebf5c380C0e6Ae8e192A7e2AE08edAcc02'.toLowerCase(), // HEX/USD PulseX pool
+  '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc'.toLowerCase(), // Uniswap V2 (and forks) common routers
+];
+
+// Known approval method signatures
+const APPROVAL_METHODS = [
+  'approve',
+  'increaseAllowance',
+  'decreaseAllowance',
+  'setApprovalForAll'
+];
+
 // Helper function to determine transaction type
 const getTransactionType = (tx: Transaction): TransactionType => {
-  if (!tx.category) {
-    // Try to infer from other properties if category is not available
-    if (tx.method_label?.toLowerCase().includes('swap')) {
+  // Check if this is an ERC20 approval transaction
+  if (
+    tx.method_label?.toLowerCase().includes('approve') || 
+    (APPROVAL_METHODS.some(method => tx.method_label?.toLowerCase().includes(method)))
+  ) {
+    return 'approval';
+  }
+  
+  // Check for DEX swaps by router addresses (more accurate than method inference)
+  if (DEX_ROUTERS.includes(tx.to_address.toLowerCase())) {
+    return 'swap';
+  }
+  
+  // Check if this is a token swap by looking for multiple token transfers
+  if (tx.erc20_transfers && tx.erc20_transfers.length >= 2) {
+    // Look for patterns where tokens are sent and received in the same transaction
+    const sentTokens = tx.erc20_transfers.filter(t => 
+      t.from_address.toLowerCase() === tx.from_address.toLowerCase()
+    );
+    
+    const receivedTokens = tx.erc20_transfers.filter(t => 
+      t.to_address.toLowerCase() === tx.from_address.toLowerCase()
+    );
+    
+    if (sentTokens.length > 0 && receivedTokens.length > 0) {
       return 'swap';
-    } else if (tx.method_label?.toLowerCase().includes('approve')) {
-      return 'approval';
-    } else if (tx.erc20_transfers && tx.erc20_transfers.some(t => t.from_address.toLowerCase() === t.to_address.toLowerCase())) {
-      return 'contract'; // Self-transfers are often contract interactions
-    } else if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-      return 'send'; // Default for token transfers
-    } else {
-      return 'all'; // Default fallback
     }
   }
   
-  // If category is provided, use it
-  const category = tx.category.toLowerCase();
+  // If category is provided, use it for additional classification
+  if (tx.category) {
+    const category = tx.category.toLowerCase();
+    
+    if (category.includes('swap') || category.includes('trade')) {
+      return 'swap';
+    } else if (category.includes('approve') || category.includes('approval')) {
+      return 'approval';
+    } else if (category.includes('receive')) {
+      return 'receive';
+    } else if (category.includes('send') || category.includes('transfer')) {
+      return 'send';
+    } else if (category.includes('contract') || category.includes('deploy') || category.includes('execute')) {
+      return 'contract';
+    }
+  }
   
-  if (category.includes('swap') || category.includes('trade')) {
-    return 'swap';
-  } else if (category.includes('send') || category.includes('transfer')) {
-    return 'send';
-  } else if (category.includes('receive')) {
-    return 'receive';
-  } else if (category.includes('approve') || category.includes('approval')) {
-    return 'approval';
-  } else if (category.includes('contract') || category.includes('deploy') || category.includes('execute')) {
+  // Determine direction based on transfers
+  if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+    // Check if all transfers are outgoing
+    const allOutgoing = tx.erc20_transfers.every(t => 
+      t.from_address.toLowerCase() === tx.from_address.toLowerCase() && 
+      t.to_address.toLowerCase() !== tx.from_address.toLowerCase()
+    );
+    
+    if (allOutgoing) return 'send';
+    
+    // Check if all transfers are incoming
+    const allIncoming = tx.erc20_transfers.every(t => 
+      t.to_address.toLowerCase() === tx.from_address.toLowerCase() && 
+      t.from_address.toLowerCase() !== tx.from_address.toLowerCase()
+    );
+    
+    if (allIncoming) return 'receive';
+  }
+  
+  // Check for contract interactions
+  if (tx.method_label && !tx.method_label.toLowerCase().includes('transfer')) {
     return 'contract';
   }
   
+  // Default for unclassified transactions
   return 'all';
 };
 
