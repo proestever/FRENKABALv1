@@ -79,8 +79,11 @@ interface Transaction {
   gas_price: string;
   receipt_gas_used: string;
   receipt_status: string;
+  receipt_cumulative_gas_used?: string;
+  receipt_contract_address?: string | null;
   block_timestamp: string;
   block_number: string;
+  block_hash?: string;
   transaction_fee: string;
   method_label?: string;
   erc20_transfers?: TransactionTransfer[];
@@ -1586,6 +1589,34 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         <span className="text-white">{tx.block_number}</span>
                       </div>
                       
+                      {tx.block_hash && (
+                        <div className="flex justify-between items-center bg-black/30 px-2 py-1.5 rounded-sm">
+                          <span className="text-white/70">Block Hash:</span>
+                          <div className="flex items-center">
+                            <span className="text-white truncate max-w-[100px]">{tx.block_hash}</span>
+                            {tx.block_hash && (
+                              <button 
+                                onClick={() => copyToClipboard(tx.block_hash as string)}
+                                className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
+                              >
+                                {tx.block_hash && copiedAddresses[tx.block_hash] ? (
+                                  <Check size={12} className="text-green-400" />
+                                ) : (
+                                  <Copy size={12} className="text-white/70 hover:text-white" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {tx.transaction_index && (
+                        <div className="flex justify-between items-center px-2 py-1.5">
+                          <span className="text-white/70">Tx Index:</span>
+                          <span className="text-white">{tx.transaction_index}</span>
+                        </div>
+                      )}
+                      
                       <div className="flex justify-between items-center bg-black/30 px-2 py-1.5 rounded-sm">
                         <span className="text-white/70">From:</span>
                         <div className="flex items-center">
@@ -1597,10 +1628,17 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           >
                             {shortenAddress(tx.from_address)}
                           </Link>
-                          {tx.from_address_label && (
+                          {(tx.from_address_label || tx.from_address_entity) && (
                             <span className="ml-1 px-1 py-0.5 bg-yellow-500/20 text-xs rounded-md text-yellow-300">
-                              {tx.from_address_label}
+                              {tx.from_address_label || (tx.from_address_entity ? tx.from_address_entity.name : null)}
                             </span>
+                          )}
+                          {tx.from_address_entity_logo && (
+                            <img 
+                              src={tx.from_address_entity_logo} 
+                              alt="Entity Logo" 
+                              className="ml-1 w-4 h-4 rounded-full"
+                            />
                           )}
                           <button 
                             onClick={() => copyToClipboard(tx.from_address)}
@@ -1626,10 +1664,17 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           >
                             {shortenAddress(tx.to_address)}
                           </Link>
-                          {tx.to_address_label && (
+                          {(tx.to_address_label || tx.to_address_entity) && (
                             <span className="ml-1 px-1 py-0.5 bg-yellow-500/20 text-xs rounded-md text-yellow-300">
-                              {tx.to_address_label}
+                              {tx.to_address_label || (tx.to_address_entity ? tx.to_address_entity.name : null)}
                             </span>
+                          )}
+                          {tx.to_address_entity_logo && (
+                            <img 
+                              src={tx.to_address_entity_logo} 
+                              alt="Entity Logo" 
+                              className="ml-1 w-4 h-4 rounded-full"
+                            />
                           )}
                           <button 
                             onClick={() => copyToClipboard(tx.to_address)}
@@ -1659,10 +1704,45 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         <span className="text-white">{parseInt(tx.receipt_gas_used).toLocaleString()}</span>
                       </div>
                       
+                      {tx.receipt_cumulative_gas_used && (
+                        <div className="flex justify-between items-center px-2 py-1.5">
+                          <span className="text-white/70">Cumulative Gas:</span>
+                          <span className="text-white">{parseInt(tx.receipt_cumulative_gas_used).toLocaleString()}</span>
+                        </div>
+                      )}
+                      
                       <div className="flex justify-between items-center px-2 py-1.5">
                         <span className="text-white/70">Gas Limit:</span>
                         <span className="text-white">{parseInt(tx.gas).toLocaleString()}</span>
                       </div>
+                      
+                      {tx.receipt_contract_address && (
+                        <div className="flex justify-between items-center bg-black/30 px-2 py-1.5 rounded-sm">
+                          <span className="text-white/70">Contract Created:</span>
+                          <div className="flex items-center">
+                            <Link 
+                              to={`/${tx.receipt_contract_address || ''}`}
+                              className="text-white hover:text-gray-300"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {tx.receipt_contract_address ? shortenAddress(tx.receipt_contract_address) : 'Unknown'}
+                            </Link>
+                            {tx.receipt_contract_address && (
+                              <button 
+                                onClick={() => copyToClipboard(tx.receipt_contract_address as string)}
+                                className="ml-1 p-1 rounded-sm hover:bg-black/50 transition-colors"
+                              >
+                                {tx.receipt_contract_address && copiedAddresses[tx.receipt_contract_address] ? (
+                                  <Check size={12} className="text-green-400" />
+                                ) : (
+                                  <Copy size={12} className="text-white/70 hover:text-white" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       
                       <div className="flex justify-between items-center bg-black/30 px-2 py-1.5 rounded-sm">
                         <span className="text-white/70">Transaction Fee:</span>
@@ -1733,7 +1813,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                   <span className="text-sm font-medium">{tokenIn.token_symbol || 'Unknown'}</span>
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {shortenAddress(tokenIn.address || '')}
+                                  {tokenIn.address ? shortenAddress(tokenIn.address) : 'Unknown Address'}
                                 </div>
                               </div>
                             </div>
@@ -1766,7 +1846,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                   <span className="text-sm font-medium">{tokenOut.token_symbol || 'Unknown'}</span>
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {shortenAddress(tokenOut.address || '')}
+                                  {tokenOut.address ? shortenAddress(tokenOut.address) : 'Unknown Address'}
                                 </div>
                               </div>
                             </div>
