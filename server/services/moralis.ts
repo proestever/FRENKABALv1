@@ -349,6 +349,8 @@ export const getWrappedTokenPrice = async (
 
 /**
  * Get transaction history with SDK
+ * This implementation uses the Moralis SDK to fetch transaction history
+ * and processes the results to add direction information to transfers
  */
 export const getTransactionHistory = async (
   walletAddress: string,
@@ -358,9 +360,12 @@ export const getTransactionHistory = async (
   try {
     console.log(`Fetching transaction history for ${walletAddress} from Moralis SDK`);
     
+    // Normalize wallet address to lowercase for comparison
+    const normalizedWalletAddress = walletAddress.toLowerCase();
+    
     const options: any = {
       chain: PULSECHAIN_CHAIN_ID,
-      address: walletAddress,
+      address: normalizedWalletAddress,
       limit
     };
     
@@ -374,7 +379,64 @@ export const getTransactionHistory = async (
       throw new Error('Invalid response from Moralis getWalletTransactions');
     }
     
-    return response.raw;
+    const responseData = response.raw;
+    
+    // Process transaction data to add direction property to transfers
+    const result = responseData.result ? responseData.result.map((tx: any) => {
+      // Process ERC20 transfers to add direction
+      if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+        tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
+          // Set direction based on from/to addresses
+          const isReceiving = transfer.to_address.toLowerCase() === normalizedWalletAddress;
+          const isSending = transfer.from_address.toLowerCase() === normalizedWalletAddress;
+          
+          return {
+            ...transfer,
+            direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+          };
+        });
+      }
+      
+      // Process native transfers to add direction
+      if (tx.native_transfers && tx.native_transfers.length > 0) {
+        tx.native_transfers = tx.native_transfers.map((transfer: any) => {
+          // Set direction based on from/to addresses
+          const isReceiving = transfer.to_address.toLowerCase() === normalizedWalletAddress;
+          const isSending = transfer.from_address.toLowerCase() === normalizedWalletAddress;
+          
+          return {
+            ...transfer,
+            direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+          };
+        });
+      }
+      
+      return tx;
+    }) : [];
+    
+    console.log(`Successfully fetched transaction history for ${walletAddress} - ${result.length} transactions`);
+    
+    // Log a sample of the first transaction (truncated to avoid huge logs)
+    if (result.length > 0) {
+      const sampleTx = { ...result[0] };
+      // Truncate large arrays to avoid excessive logging
+      if (sampleTx.erc20_transfers && sampleTx.erc20_transfers.length > 2) {
+        sampleTx.erc20_transfers = sampleTx.erc20_transfers.slice(0, 2);
+        sampleTx.erc20_transfers.push({ note: `...and ${result[0].erc20_transfers.length - 2} more transfers` });
+      }
+      console.log('First transaction sample:', JSON.stringify(sampleTx).substring(0, 300) + '...');
+    } else {
+      console.log('No transactions found');
+    }
+    
+    // Return processed data with the same structure as the original response
+    return {
+      result,
+      cursor: responseData.cursor || null,
+      page: responseData.page || 0,
+      page_size: responseData.page_size || limit,
+      total: responseData.total || result.length
+    };
   } catch (error) {
     console.error(`Error fetching transaction history: ${error instanceof Error ? error.message : 'Unknown error'}`);
     throw error;
