@@ -271,13 +271,13 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       
                       {/* Token Value & Hide Button */}
                       <div className="flex flex-col items-end">
-                        <div className="text-lg sm:text-xl font-bold text-white">
+                        <div className="text-base font-bold text-white">
                           {token.value !== undefined 
                             ? formatCurrency(token.value) 
                             : 'N/A'}
                         </div>
                         <div className="flex gap-2 items-center">
-                          <span className={`text-base font-medium ${priceChangeClass}`}>
+                          <span className={`text-base font-bold ${priceChangeClass}`}>
                             {token.priceChange24h !== undefined 
                               ? `${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%` 
                               : ''}
@@ -386,27 +386,27 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className="text-base font-medium text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
+                        <div className="text-base font-bold text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
                         <div className="text-sm text-muted-foreground" title={token.symbol}>
                           {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className="text-base font-medium text-white">
+                        <div className="text-base font-bold text-white">
                           {token.price !== undefined 
                             ? formatCurrencyWithPrecision(token.price, 2, token.price < 0.01 ? 8 : 2) 
                             : 'N/A'}
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className="text-lg font-bold text-white">
+                        <div className="text-base font-bold text-white">
                           {token.value !== undefined 
                             ? formatCurrency(token.value) 
                             : 'N/A'}
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className={`text-base font-medium ${priceChangeClass}`}>
+                        <div className={`text-base font-bold ${priceChangeClass}`}>
                           {token.priceChange24h !== undefined 
                             ? `${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%` 
                             : 'N/A'}
