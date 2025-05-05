@@ -151,17 +151,6 @@ export interface TransactionTransfer {
   internal_transaction?: boolean;
 }
 
-export interface SwapDetail {
-  symbol: string;
-  amount: string;
-  address: string;
-}
-
-export interface SwapDetails {
-  sent: SwapDetail[];
-  received: SwapDetail[];
-}
-
 export interface Transaction {
   hash: string;
   nonce: string;
@@ -185,8 +174,4 @@ export interface Transaction {
   summary?: string;
   category?: string;
   possible_spam?: boolean;
-  
-  // Enhanced transaction details
-  swap_details?: SwapDetails; // For swap transactions
-  input?: string; // Raw transaction input data
 }

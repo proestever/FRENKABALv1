@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
-import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check, AlertCircle } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
@@ -39,17 +39,6 @@ interface TransactionTransfer {
   internal_transaction?: boolean;
 }
 
-interface SwapDetail {
-  symbol: string;
-  amount: string;
-  address: string;
-}
-
-interface SwapDetails {
-  sent: SwapDetail[];
-  received: SwapDetail[];
-}
-
 interface Transaction {
   hash: string;
   nonce: string;
@@ -73,8 +62,6 @@ interface Transaction {
   summary?: string;
   category?: string;
   possible_spam?: boolean;
-  swap_details?: SwapDetails;  // Enhanced swap information
-  analyzed?: boolean;          // Flag indicating if transaction was analyzed with the new analyzer
 }
 
 interface TransactionHistoryProps {
@@ -90,11 +77,6 @@ type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contr
 
 // Helper function to determine transaction type
 const getTransactionType = (tx: Transaction): TransactionType => {
-  // First, check if we have swap details from our enhanced analysis
-  if (tx.swap_details) {
-    return 'swap';
-  }
-  
   if (!tx.category) {
     // Try to infer from other properties if category is not available
     if (tx.method_label?.toLowerCase().includes('swap')) {
@@ -104,15 +86,7 @@ const getTransactionType = (tx: Transaction): TransactionType => {
     } else if (tx.erc20_transfers && tx.erc20_transfers.some(t => t.from_address.toLowerCase() === t.to_address.toLowerCase())) {
       return 'contract'; // Self-transfers are often contract interactions
     } else if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-      // Check if it's likely a swap by looking at multiple token transfers with different directions
-      const receivedTokens = tx.erc20_transfers.filter(t => t.direction === 'receive').length;
-      const sentTokens = tx.erc20_transfers.filter(t => t.direction === 'send').length;
-      
-      if (receivedTokens > 0 && sentTokens > 0) {
-        return 'swap'; // If tokens are both sent and received, it's likely a swap
-      }
-      
-      return tx.erc20_transfers[0].direction === 'receive' ? 'receive' : 'send';
+      return 'send'; // Default for token transfers
     } else {
       return 'all'; // Default fallback
     }
@@ -150,9 +124,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Add state for transaction type filter
   const [selectedType, setSelectedType] = useState<TransactionType>('all');
-  
-  // Add state for API error message
-  const [apiError, setApiError] = useState<string | null>(null);
   
   // Function to copy text to clipboard
   const copyToClipboard = useCallback((text: string) => {
@@ -193,14 +164,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       const timeoutId = setTimeout(() => {
         console.log('Transaction history request is taking too long');
         setLoadingTimeout(true);
-      }, 30000); // 30 seconds timeout - increased to allow for slow API response
+      }, 20000); // 20 seconds timeout
       
       setRequestTimeoutId(timeoutId);
       setLoadingTimeout(false);
       
       try {
-        // Use timestamp to force fresh data from server
-        const timestamp = Date.now();
+        // Use the actual wallet address (not the token address)
         const response = await fetchTransactionHistory(walletAddress, TRANSACTIONS_PER_BATCH);
         
         // Clear timeout as we got a response
@@ -211,32 +181,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           response?.result ? `${response.result.length} transactions` : '', 
           'Response data:', JSON.stringify(response).substring(0, 300) + '...');
         
-        // Add a detailed log of the first transaction for debugging
-        if (response?.result?.length > 0) {
-          console.log('First transaction details:', JSON.stringify(response.result[0], null, 2));
-          console.log('Transaction structure check:', {
-            hasErc20Transfers: !!response.result[0].erc20_transfers,
-            erc20TransfersLength: response.result[0].erc20_transfers?.length,
-            hasNativeTransfers: !!response.result[0].native_transfers,
-            nativeTransfersLength: response.result[0].native_transfers?.length,
-            method: response.result[0].method_label,
-            timestamp: response.result[0].block_timestamp,
-            status: response.result[0].receipt_status
-          });
-        }
-        
         // Check if there's an error
         if (response?.error) {
           console.error('Error in transaction history response:', response.error);
-          setApiError(response.error);
-          // Return an empty result set instead of throwing, so we can display the error message
-          return { 
-            result: [], 
-            cursor: null, 
-            page: 0, 
-            page_size: TRANSACTIONS_PER_BATCH,
-            error: response.error 
-          };
+          throw new Error(response.error);
         }
         
         // Handle empty results specifically
@@ -247,30 +195,40 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           return { result: [], cursor: null, page: 0, page_size: TRANSACTIONS_PER_BATCH };
         }
         
-        // Extract unique token addresses for price fetching
-        const uniqueTokenAddresses = new Set<string>();
-        
-        // Process transactions to extract token addresses and collect data for token price fetching
-        (response.result || []).forEach(tx => {
-          // Process ERC20 transfers to collect token addresses
+        // Process the response data to add direction property to transfers
+        const processedTransactions = (response.result || []).map(tx => {
+          // Process ERC20 transfers to add direction
           if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-            tx.erc20_transfers.forEach((transfer: any) => {
-              if (transfer.address) {
-                uniqueTokenAddresses.add(transfer.address.toLowerCase());
-              }
+            // Use type assertion for TransactionTransfer
+            tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
+              // Set direction based on from/to addresses
+              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+              
+              return {
+                ...transfer,
+                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+              };
             });
           }
+          
+          // Process native transfers to add direction
+          if (tx.native_transfers && tx.native_transfers.length > 0) {
+            // Use type assertion for TransactionTransfer
+            tx.native_transfers = tx.native_transfers.map((transfer: any) => {
+              // Set direction based on from/to addresses
+              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+              
+              return {
+                ...transfer,
+                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+              };
+            });
+          }
+          
+          return tx;
         });
-        
-        // Log the collected token addresses
-        console.log('Collected unique token addresses from transactions', Array.from(uniqueTokenAddresses));
-        
-        // Update visible token addresses for the price fetching hook
-        setVisibleTokenAddresses(Array.from(uniqueTokenAddresses));
-        
-        // Now process any transaction data that might need additional enhancement
-        // This would normally be done on the server, but we can also do it here if needed
-        const processedTransactions = (response.result || []);
         
         // Update state with the processed data
         console.log(`Setting ${processedTransactions.length} processed transactions`);
@@ -311,7 +269,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       setLoadingTimeout(true);
       setIsLoadingMore(false);
       // Don't set hasMore to false to allow retry
-    }, 30000); // 30 seconds timeout (increased from 20s)
+    }, 20000); // 20 seconds timeout
     
     setRequestTimeoutId(timeoutId);
     
@@ -332,37 +290,41 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       }
       
       if (moreData?.result && moreData.result.length > 0) {
-        // Extract unique token addresses for price fetching
-        const newTokenAddresses = new Set<string>();
-        
-        // Process transactions to extract token addresses for price fetching
-        moreData.result.forEach(tx => {
-          // Process ERC20 transfers to collect token addresses
+        // Process the additional transactions
+        const processedTransactions = moreData.result.map(tx => {
+          // Process ERC20 transfers to add direction
           if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-            tx.erc20_transfers.forEach((transfer: any) => {
-              if (transfer.address) {
-                newTokenAddresses.add(transfer.address.toLowerCase());
-              }
+            tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
+              // Set direction based on from/to addresses
+              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+              
+              return {
+                ...transfer,
+                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+              };
             });
           }
+          
+          // Process native transfers to add direction
+          if (tx.native_transfers && tx.native_transfers.length > 0) {
+            tx.native_transfers = tx.native_transfers.map((transfer: any) => {
+              // Set direction based on from/to addresses
+              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+              
+              return {
+                ...transfer,
+                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+              };
+            });
+          }
+          
+          return tx;
         });
         
-        // Log the collected token addresses
-        console.log('Collected unique token addresses from new transactions', Array.from(newTokenAddresses));
-        
-        // Update visible token addresses for the price fetching hook by adding any new ones
-        setVisibleTokenAddresses(prev => {
-          const updated = [...prev];
-          newTokenAddresses.forEach(addr => {
-            if (!updated.includes(addr)) {
-              updated.push(addr);
-            }
-          });
-          return updated;
-        });
-        
-        // Append new transactions to existing list
-        setTransactions(prev => [...prev, ...moreData.result]);
+        // Append new processed transactions to existing list
+        setTransactions(prev => [...prev, ...processedTransactions]);
         setNextCursor(moreData.cursor);
         setHasMore(!!moreData.cursor); // Has more if cursor exists
       } else {
@@ -559,31 +521,17 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     );
   }
 
-  if (isError || apiError) {
+  if (isError) {
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
         <div className="flex flex-col items-center justify-center min-h-[300px]">
-          <AlertCircle size={40} className="text-red-400 mb-4" />
           <h3 className="text-xl font-bold text-red-400 mb-2">Error Loading Transactions</h3>
           <p className="text-muted-foreground mb-4">
-            {apiError ? (
-              <>
-                <span className="block text-red-400 font-medium mb-2">API Error:</span>
-                {apiError}
-              </>
-            ) : (
-              <>
-                There was an error loading the transaction history.
-                <br />Please try again later or check your connection.
-              </>
-            )}
-          </p>
-          <p className="text-muted-foreground mb-4 text-sm">
-            This could be due to temporary API limitations or network issues.
+            There was an error loading the transaction history.
+            <br />Please try again later or check your connection.
           </p>
           <button
             onClick={() => {
-              setApiError(null);
               refetch();
             }}
             className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
@@ -802,62 +750,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   <div className="text-sm font-semibold text-white">
                     {tx.summary || 'Transaction details'}
                     
-                    {/* Swap Details (Enhanced UI for Swaps) */}
-                    {tx.swap_details && (
-                      <div className="glass-card border border-white/10 rounded-lg mt-2 mb-3 p-3">
-                        <div className="text-sm font-medium text-white mb-2 flex items-center">
-                          <DollarSign size={14} className="text-purple-400 mr-1" />
-                          <span>Token Swap</span>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-2">
-                          {/* Sent Tokens */}
-                          {tx.swap_details.sent.length > 0 && (
-                            <div className="border-b border-white/5 pb-2">
-                              <div className="text-xs text-muted-foreground mb-1">Sent:</div>
-                              {tx.swap_details.sent.map((sent, i) => (
-                                <div key={`swap-sent-desktop-${i}`} className="flex items-center justify-between">
-                                  <div className="flex items-center">
-                                    <TokenLogo 
-                                      address={sent.address}
-                                      symbol={sent.symbol}
-                                      fallbackLogo={prefetchedLogos[sent.address?.toLowerCase() || '']}
-                                      size="sm"
-                                    />
-                                    <span className="text-sm font-medium ml-2">{sent.symbol}</span>
-                                  </div>
-                                  <div className="text-sm font-medium text-red-400">{sent.amount}</div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {/* Received Tokens */}
-                          {tx.swap_details.received.length > 0 && (
-                            <div>
-                              <div className="text-xs text-muted-foreground mb-1">Received:</div>
-                              {tx.swap_details.received.map((received, i) => (
-                                <div key={`swap-received-desktop-${i}`} className="flex items-center justify-between">
-                                  <div className="flex items-center">
-                                    <TokenLogo 
-                                      address={received.address}
-                                      symbol={received.symbol}
-                                      fallbackLogo={prefetchedLogos[received.address?.toLowerCase() || '']}
-                                      size="sm"
-                                    />
-                                    <span className="text-sm font-medium ml-2">{received.symbol}</span>
-                                  </div>
-                                  <div className="text-sm font-medium text-green-400">{received.amount}</div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* ERC20 Transfers - Only show if not a swap transaction */}
-                    {!tx.swap_details && tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
+                    {/* ERC20 Transfers */}
+                    {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                       <div key={`${tx.hash}-erc20-${i}`} className="flex items-center mt-2">
                         <TokenLogo 
                           address={transfer.address || ''}
@@ -1187,62 +1081,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 <div className="mb-2 text-sm">{tx.summary}</div>
               )}
               
-              {/* Swap Details (Enhanced UI for Swaps) */}
-              {tx.swap_details && (
-                <div className="glass-card border border-white/10 rounded-lg mb-3 p-3">
-                  <div className="text-sm font-medium text-white mb-2 flex items-center">
-                    <DollarSign size={14} className="text-purple-400 mr-1" />
-                    <span>Token Swap</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 gap-2">
-                    {/* Sent Tokens */}
-                    {tx.swap_details.sent.length > 0 && (
-                      <div className="border-b border-white/5 pb-2">
-                        <div className="text-xs text-muted-foreground mb-1">Sent:</div>
-                        {tx.swap_details.sent.map((sent, i) => (
-                          <div key={`swap-sent-${i}`} className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <TokenLogo 
-                                address={sent.address}
-                                symbol={sent.symbol}
-                                fallbackLogo={prefetchedLogos[sent.address?.toLowerCase() || '']}
-                                size="sm"
-                              />
-                              <span className="text-sm font-medium ml-2">{sent.symbol}</span>
-                            </div>
-                            <div className="text-sm font-medium text-red-400">{sent.amount}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Received Tokens */}
-                    {tx.swap_details.received.length > 0 && (
-                      <div>
-                        <div className="text-xs text-muted-foreground mb-1">Received:</div>
-                        {tx.swap_details.received.map((received, i) => (
-                          <div key={`swap-received-${i}`} className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <TokenLogo 
-                                address={received.address}
-                                symbol={received.symbol}
-                                fallbackLogo={prefetchedLogos[received.address?.toLowerCase() || '']}
-                                size="sm"
-                              />
-                              <span className="text-sm font-medium ml-2">{received.symbol}</span>
-                            </div>
-                            <div className="text-sm font-medium text-green-400">{received.amount}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* ERC20 Transfers - Only show if not a swap transaction */}
-              {!tx.swap_details && tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
+              {/* ERC20 Transfers */}
+              {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                 <div key={`mobile-${tx.hash}-erc20-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                   <div className="flex items-center">
                     <TokenLogo 
