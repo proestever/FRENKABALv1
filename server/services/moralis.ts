@@ -358,7 +358,8 @@ export const getTransactionHistory = async (
   try {
     console.log(`Fetching transaction history for ${walletAddress} from Moralis SDK`);
     
-    const options: any = {
+    // Create options for the API call with proper typing
+    const options: Moralis.EvmTransactionWalletTransactionsRequest = {
       chain: PULSECHAIN_CHAIN_ID,
       address: walletAddress,
       limit
@@ -368,10 +369,77 @@ export const getTransactionHistory = async (
       options.cursor = cursor;
     }
     
+    // Include ERC20 transfers option
+    options.include = "internal_transactions";
+    
+    // Add processing function for transaction data enhancement
+    const enhanceTransactionData = (tx: any) => {
+      // Add transfer direction information
+      if (tx?.erc20_transfers && Array.isArray(tx.erc20_transfers)) {
+        tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
+          const isReceiving = transfer.to_address?.toLowerCase() === walletAddress.toLowerCase();
+          const isSending = transfer.from_address?.toLowerCase() === walletAddress.toLowerCase();
+          
+          return {
+            ...transfer,
+            direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+          };
+        });
+      }
+      
+      // Add transfer direction for native transfers
+      if (tx?.native_transfers && Array.isArray(tx.native_transfers)) {
+        tx.native_transfers = tx.native_transfers.map((transfer: any) => {
+          const isReceiving = transfer.to_address?.toLowerCase() === walletAddress.toLowerCase();
+          const isSending = transfer.from_address?.toLowerCase() === walletAddress.toLowerCase();
+          
+          return {
+            ...transfer,
+            direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+          };
+        });
+      }
+      
+      // Try to infer transaction category if missing
+      if (!tx.category) {
+        if (tx.method_label?.toLowerCase().includes('swap')) {
+          tx.category = 'swap';
+        } else if (tx.method_label?.toLowerCase().includes('approve')) {
+          tx.category = 'approval';
+        } else if (
+          tx.erc20_transfers?.some((t: any) => 
+            t.from_address?.toLowerCase() === walletAddress.toLowerCase() &&
+            t.to_address?.toLowerCase() !== walletAddress.toLowerCase()
+          )
+        ) {
+          tx.category = 'send';
+        } else if (
+          tx.erc20_transfers?.some((t: any) => 
+            t.to_address?.toLowerCase() === walletAddress.toLowerCase() &&
+            t.from_address?.toLowerCase() !== walletAddress.toLowerCase()
+          )
+        ) {
+          tx.category = 'receive';
+        } else if (tx.to_address?.toLowerCase() === walletAddress.toLowerCase()) {
+          tx.category = 'receive';
+        } else if (tx.from_address?.toLowerCase() === walletAddress.toLowerCase()) {
+          tx.category = 'send';
+        }
+      }
+      
+      return tx;
+    };
+    
+    // Get transaction data from Moralis
     const response = await Moralis.EvmApi.transaction.getWalletTransactions(options);
     
     if (!response || !response.raw) {
       throw new Error('Invalid response from Moralis getWalletTransactions');
+    }
+    
+    // Enhance the transaction data
+    if (response.raw.result && Array.isArray(response.raw.result)) {
+      response.raw.result = response.raw.result.map(enhanceTransactionData);
     }
     
     return response.raw;

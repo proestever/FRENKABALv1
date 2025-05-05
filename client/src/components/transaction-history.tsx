@@ -164,13 +164,14 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       const timeoutId = setTimeout(() => {
         console.log('Transaction history request is taking too long');
         setLoadingTimeout(true);
-      }, 20000); // 20 seconds timeout
+      }, 30000); // 30 seconds timeout - increased to allow for slow API response
       
       setRequestTimeoutId(timeoutId);
       setLoadingTimeout(false);
       
       try {
-        // Use the actual wallet address (not the token address)
+        // Use timestamp to force fresh data from server
+        const timestamp = Date.now();
         const response = await fetchTransactionHistory(walletAddress, TRANSACTIONS_PER_BATCH);
         
         // Clear timeout as we got a response
@@ -195,40 +196,30 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           return { result: [], cursor: null, page: 0, page_size: TRANSACTIONS_PER_BATCH };
         }
         
-        // Process the response data to add direction property to transfers
-        const processedTransactions = (response.result || []).map(tx => {
-          // Process ERC20 transfers to add direction
+        // Extract unique token addresses for price fetching
+        const uniqueTokenAddresses = new Set<string>();
+        
+        // Process transactions to extract token addresses and collect data for token price fetching
+        (response.result || []).forEach(tx => {
+          // Process ERC20 transfers to collect token addresses
           if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-            // Use type assertion for TransactionTransfer
-            tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
-              // Set direction based on from/to addresses
-              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-              
-              return {
-                ...transfer,
-                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-              };
+            tx.erc20_transfers.forEach((transfer: any) => {
+              if (transfer.address) {
+                uniqueTokenAddresses.add(transfer.address.toLowerCase());
+              }
             });
           }
-          
-          // Process native transfers to add direction
-          if (tx.native_transfers && tx.native_transfers.length > 0) {
-            // Use type assertion for TransactionTransfer
-            tx.native_transfers = tx.native_transfers.map((transfer: any) => {
-              // Set direction based on from/to addresses
-              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-              
-              return {
-                ...transfer,
-                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-              };
-            });
-          }
-          
-          return tx;
         });
+        
+        // Log the collected token addresses
+        console.log('Collected unique token addresses from transactions', Array.from(uniqueTokenAddresses));
+        
+        // Update visible token addresses for the price fetching hook
+        setVisibleTokenAddresses(Array.from(uniqueTokenAddresses));
+        
+        // Now process any transaction data that might need additional enhancement
+        // This would normally be done on the server, but we can also do it here if needed
+        const processedTransactions = (response.result || []);
         
         // Update state with the processed data
         console.log(`Setting ${processedTransactions.length} processed transactions`);
