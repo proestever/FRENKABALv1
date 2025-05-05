@@ -489,12 +489,8 @@ export async function getWalletTransactionHistory(
     try {
       console.log(`Fetching transaction history for ${walletAddress} from Moralis (attempt ${attempt}/${MAX_RETRIES}, limit: ${limit}, cursor: ${cursorParam || 'none'})`);
       
-      // Get API key from environment variable
-      const apiKey = process.env.MORALIS_API_KEY;
-      
-      if (!apiKey) {
-        throw new Error('Missing Moralis API key (MORALIS_API_KEY environment variable)');
-      }
+      // Direct API call to Moralis as shown in the working example
+      const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98";
       
       // Build URL with parameters
       let url = `https://deep-index.moralis.io/api/v2.2/wallets/${walletAddress}/history`;

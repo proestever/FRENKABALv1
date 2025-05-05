@@ -1,15 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance } from "./services/api";
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
+import { getTokenPricesFromDexScreener } from "./services/dexscreener";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
-
-// Import our new services
-import * as walletService from "./services/wallet";
-import * as moralisService from "./services/moralis";
-import * as dexScreenerService from "./services/dexscreener";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -41,11 +38,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API route to get wallet data
   app.get("/api/wallet/:address", async (req, res) => {
     try {
-      // Set cache control headers to prevent caching
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
       const { address } = req.params;
       const { page = '1', limit = '100' } = req.query; // Default to page 1, limit 100
       
@@ -72,7 +64,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid limit parameter. Must be between 1 and 200" });
       }
       
-      const walletData = await walletService.getWalletData(address, pageNum, limitNum);
+      const walletData = await getWalletData(address, pageNum, limitNum);
       
       // Store this address in recent addresses (for future implementation)
       // For now we're just returning the data
@@ -102,7 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid token address format" });
       }
       
-      const priceData = await walletService.getTokenPriceInfo(address);
+      const priceData = await getTokenPrice(address);
       if (!priceData) {
         return res.status(404).json({ message: "Token price not found" });
       }
@@ -120,11 +112,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API route to get ALL wallet tokens without pagination
   app.get("/api/wallet/:address/all", async (req, res) => {
     try {
-      // Set cache control headers to prevent caching
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
       const { address } = req.params;
       
       if (!address || typeof address !== 'string') {
@@ -147,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all tokens without pagination (backend will still process in batches)
       // Pass a very large limit to essentially get all tokens
-      const walletData = await walletService.getWalletData(address, 1, 1000);
+      const walletData = await getWalletData(address, 1, 1000);
       
       // Store this address in recent addresses (for future implementation)
       // This would save the recent searches in the database
@@ -165,11 +152,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API route to get specific token balance for a wallet
   app.get("/api/wallet/:address/token/:tokenAddress", async (req, res) => {
     try {
-      // Set cache control headers to prevent caching
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
       const { address, tokenAddress } = req.params;
       
       if (!address || typeof address !== 'string') {
@@ -191,7 +173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get the specific token balance
-      const tokenData = await walletService.getSpecificTokenBalance(address, tokenAddress);
+      const tokenData = await getSpecificTokenBalance(address, tokenAddress);
       
       if (!tokenData) {
         return res.status(404).json({ message: "Token not found or no balance" });
@@ -210,11 +192,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API route to get wallet transaction history
   app.get("/api/wallet/:address/transactions", async (req, res) => {
     try {
-      // Set cache control headers to prevent caching
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
       const { address } = req.params;
       const { limit = '100', cursor = null } = req.query;
       
@@ -233,17 +210,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const parsedLimit = Math.min(parseInt(limit as string, 10) || 200, 200);
       
       // Call the API service with pagination parameters
-      const transactionHistory = await walletService.getWalletTransactions(
+      const transactionHistory = await getWalletTransactionHistory(
         address, 
         parsedLimit, 
         cursor as string | null
       );
       
-      // Return structured response
-      if (!transactionHistory) {
+      // Return structured response even if there are no transactions
+      if (!transactionHistory || transactionHistory.error) {
         return res.status(500).json({ 
           message: "Failed to fetch transaction history",
-          error: "Unknown error"
+          error: transactionHistory?.error || "Unknown error"
         });
       }
       
@@ -355,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await Promise.all(chunk.map(async (address) => {
           try {
             // Try to get token data from Moralis
-            const tokenData = await walletService.getTokenPriceInfo(address);
+            const tokenData = await getTokenPrice(address);
             
             if (tokenData && tokenData.tokenLogo) {
               const newLogo = {
@@ -469,7 +446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If not found in database, fetch from Moralis API and store
       if (!logo) {
         try {
-          const tokenData = await walletService.getTokenPriceInfo(address);
+          const tokenData = await getTokenPrice(address);
           
           if (tokenData && tokenData.tokenLogo) {
             const newLogo = {
@@ -1072,7 +1049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Fetching specific token ${tokenAddress} for wallet ${walletAddress}`);
       
       // Get token balance using the specialized function
-      const tokenData = await walletService.getSpecificTokenBalance(walletAddress, tokenAddress);
+      const tokenData = await getSpecificTokenBalance(walletAddress, tokenAddress);
       
       if (!tokenData) {
         return res.status(404).json({ message: "Token not found or no balance" });
@@ -1129,7 +1106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Try to get prices from DexScreener in batch first
-        const priceMap = await dexScreenerService.getTokenPricesFromDexScreener(uniqueAddresses);
+        const priceMap = await getTokenPricesFromDexScreener(uniqueAddresses);
         
         // If we have at least some prices, return what we got
         if (Object.keys(priceMap).length > 0) {
@@ -1157,7 +1134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             await Promise.all(batch.map(async (address) => {
               try {
-                const priceData = await walletService.getTokenPriceInfo(address);
+                const priceData = await getTokenPrice(address);
                 if (priceData?.usdPrice) {
                   fallbackPrices[address.toLowerCase()] = priceData.usdPrice;
                 }
@@ -1192,30 +1169,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
 
-  // Get specific token balance for a wallet
-  app.get("/api/wallet/:walletAddress/token/:tokenAddress", async (req, res) => {
-    try {
-      const { walletAddress, tokenAddress } = req.params;
-      if (!walletAddress || !tokenAddress) {
-        return res.status(400).json({ message: "Wallet address and token address are required" });
-      }
-      
-      console.log(`Getting specific token ${tokenAddress} balance for wallet ${walletAddress}`);
-      const tokenBalance = await walletService.getSpecificTokenBalance(walletAddress, tokenAddress);
-      
-      if (!tokenBalance) {
-        return res.status(404).json({ message: "Token not found or no balance for this wallet" });
-      }
-      
-      return res.json(tokenBalance);
-    } catch (error) {
-      console.error("Error fetching specific token balance:", error);
-      return res.status(500).json({ 
-        message: "Failed to fetch token balance",
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
-  
   return httpServer;
 }

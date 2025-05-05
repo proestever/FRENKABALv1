@@ -19,9 +19,7 @@ export interface ProcessedToken extends Token {
  * @param limit - Number of tokens per page (default: 50)
  */
 export function fetchWalletData(address: string, page: number = 1, limit: number = 50): Promise<Wallet> {
-  // Add a timestamp to prevent caching
-  const timestamp = Date.now();
-  return fetch(`/api/wallet/${address}?page=${page}&limit=${limit}&_=${timestamp}`)
+  return fetch(`/api/wallet/${address}?page=${page}&limit=${limit}`)
     .then(response => {
       if (!response.ok) {
         return response.json().then(errorData => {
@@ -37,9 +35,7 @@ export function fetchWalletData(address: string, page: number = 1, limit: number
  * @param address - Wallet address to fetch data for
  */
 export function fetchAllWalletTokens(address: string): Promise<Wallet> {
-  // Add a timestamp to prevent caching
-  const timestamp = Date.now();
-  return fetch(`/api/wallet/${address}/all?_=${timestamp}`)
+  return fetch(`/api/wallet/${address}/all`)
     .then(response => {
       if (!response.ok) {
         return response.json().then(errorData => {
@@ -188,9 +184,8 @@ export async function fetchTransactionHistory(
   cursor: string | null = null
 ): Promise<TransactionResponse> {
   try {
-    // Build URL with query parameters including cache-busting timestamp
-    const timestamp = Date.now();
-    let url = `/api/wallet/${address}/transactions?limit=${limit}&_=${timestamp}`;
+    // Build URL with query parameters
+    let url = `/api/wallet/${address}/transactions?limit=${limit}`;
     if (cursor) {
       url += `&cursor=${encodeURIComponent(cursor)}`;
     }
