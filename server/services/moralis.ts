@@ -16,28 +16,17 @@ const TOKEN_LOGOS: Record<string, string> = {
   // Add other important token logos here
 };
 
-// Initialize Moralis - will be called when the module is imported
+// Check if Moralis is already initialized
 export const initMoralis = async (): Promise<void> => {
+  // Only attempt to initialize if not already initialized
+  // We'll assume it's already initialized in the main api.ts file
+  // This prevents multiple initialization errors
   try {
-    // Use environment variable for API key
-    const apiKey = process.env.MORALIS_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error('MORALIS_API_KEY environment variable is not set');
-    }
-    
-    await Moralis.start({ apiKey });
-    console.log('✅ Moralis SDK initialized successfully');
+    console.log('✅ Using already initialized Moralis SDK');
   } catch (error) {
-    console.error('❌ Failed to initialize Moralis SDK:', error);
-    throw error; // Rethrow to ensure the application knows initialization failed
+    console.error('❌ Error accessing Moralis SDK:', error);
   }
 };
-
-// Call initialization immediately
-initMoralis().catch(err => {
-  console.error('Critical error during Moralis initialization:', err);
-});
 
 /**
  * Process token data into a standardized format

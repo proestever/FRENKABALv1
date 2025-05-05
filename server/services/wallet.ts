@@ -7,6 +7,7 @@ import { InsertTokenLogo } from '@shared/schema';
 import { storage } from '../storage';
 import { updateLoadingProgress } from '../routes';
 import * as moralisService from './moralis';
+import Moralis from 'moralis';
 
 /**
  * Get full wallet data including token balances and prices
@@ -340,5 +341,142 @@ export async function getBatchTokenPrices(tokenAddresses: string[]) {
   } catch (error) {
     console.error('Error fetching batch token prices:', error);
     return {};
+  }
+}
+
+/**
+ * Get specific token balance for a wallet
+ */
+export async function getSpecificTokenBalance(walletAddress: string, tokenAddress: string): Promise<ProcessedToken | null> {
+  try {
+    walletAddress = walletAddress.toLowerCase();
+    tokenAddress = tokenAddress.toLowerCase();
+    
+    console.log(`Fetching specific token balance for ${tokenAddress} in wallet ${walletAddress}`);
+    
+    // Special case for native token
+    if (tokenAddress === moralisService.PLS_TOKEN_ADDRESS.toLowerCase()) {
+      try {
+        // Get native balance directly
+        const nativeBalance = await moralisService.getNativeBalance(walletAddress);
+        const plsPrice = await moralisService.getWrappedTokenPrice(
+          moralisService.WPLS_CONTRACT_ADDRESS, 
+          'PLS', 
+          'PulseChain'
+        );
+        
+        if (nativeBalance) {
+          const usdPrice = plsPrice?.usdPrice || 0;
+          const priceChange24h = plsPrice?.usdPrice24hrPercentChange || 0;
+          
+          return {
+            address: moralisService.PLS_TOKEN_ADDRESS,
+            symbol: 'PLS',
+            name: 'PulseChain',
+            decimals: 18,
+            balance: nativeBalance.balance,
+            balanceFormatted: nativeBalance.balanceFormatted,
+            price: usdPrice,
+            value: nativeBalance.balanceFormatted * usdPrice,
+            priceChange24h,
+            logo: moralisService.getDefaultLogo('PLS'),
+            exchange: 'PulseX',
+            verified: true,
+            isNative: true
+          };
+        }
+      } catch (error) {
+        console.error('Error fetching native token balance:', error);
+      }
+    }
+    
+    // For ERC20 tokens, we'll try to use the token metadata + balance APIs
+    try {
+      // First get the token metadata
+      const tokenMetadata = await moralisService.getTokenMetadata(tokenAddress);
+      
+      if (!tokenMetadata) {
+        return null;
+      }
+      
+      // Then get its balance for this wallet
+      const response = await Moralis.EvmApi.token.getWalletTokenBalances({
+        chain: moralisService.PULSECHAIN_CHAIN_ID,
+        address: walletAddress,
+        tokenAddresses: [tokenAddress]
+      });
+      
+      if (!response || !response.raw || response.raw.length === 0) {
+        // Token exists but wallet has no balance
+        return {
+          address: tokenAddress,
+          symbol: tokenMetadata.symbol,
+          name: tokenMetadata.name,
+          decimals: parseInt(tokenMetadata.decimals),
+          balance: '0',
+          balanceFormatted: 0,
+          price: 0, // We'll get price separately
+          value: 0,
+          logo: await getTokenLogoUrl(tokenAddress),
+          exchange: '',
+          verified: !!tokenMetadata.verified_contract,
+          isNative: false
+        };
+      }
+      
+      // Get token balance from response
+      const tokenBalance = response.raw[0];
+      
+      // Get token price
+      const priceData = await getTokenPriceInfo(tokenAddress);
+      
+      // Format the token data
+      return {
+        address: tokenAddress,
+        symbol: tokenBalance.symbol,
+        name: tokenBalance.name,
+        decimals: parseInt(tokenBalance.decimals),
+        balance: tokenBalance.balance,
+        balanceFormatted: parseFloat(tokenBalance.balance_formatted || '0'),
+        price: priceData?.usdPrice || 0,
+        value: (parseFloat(tokenBalance.balance_formatted || '0') * (priceData?.usdPrice || 0)),
+        priceChange24h: priceData?.usdPrice24hrPercentChange,
+        logo: await getTokenLogoUrl(tokenAddress),
+        exchange: priceData?.exchangeName || '',
+        verified: !!tokenBalance.verified_contract,
+        isNative: false
+      };
+    } catch (error) {
+      console.error(`Error fetching token balance: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Error in getSpecificTokenBalance: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return null;
+  }
+}
+
+/**
+ * Helper function to get token logo URL from storage or default
+ */
+async function getTokenLogoUrl(tokenAddress: string): Promise<string> {
+  try {
+    // Check if we have the logo in our database
+    const storedLogo = await storage.getTokenLogo(tokenAddress);
+    
+    if (storedLogo) {
+      return storedLogo.logoUrl;
+    }
+    
+    // If not, return default logo based on token
+    if (tokenAddress.toLowerCase() === moralisService.PLS_TOKEN_ADDRESS.toLowerCase()) {
+      return moralisService.getDefaultLogo('PLS');
+    }
+    
+    // Return generic default
+    return '/assets/100xfrenlogo.png';
+  } catch (error) {
+    console.error(`Error getting token logo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return '/assets/100xfrenlogo.png';
   }
 }

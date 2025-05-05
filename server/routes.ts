@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid token address format" });
       }
       
-      const priceData = await getTokenPrice(address);
+      const priceData = await walletService.getTokenPriceInfo(address);
       if (!priceData) {
         return res.status(404).json({ message: "Token price not found" });
       }
@@ -190,7 +190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get the specific token balance
-      const tokenData = await getSpecificTokenBalance(address, tokenAddress);
+      const tokenData = await walletService.getSpecificTokenBalance(address, tokenAddress);
       
       if (!tokenData) {
         return res.status(404).json({ message: "Token not found or no balance" });
@@ -232,17 +232,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const parsedLimit = Math.min(parseInt(limit as string, 10) || 200, 200);
       
       // Call the API service with pagination parameters
-      const transactionHistory = await getWalletTransactionHistory(
+      const transactionHistory = await walletService.getWalletTransactions(
         address, 
         parsedLimit, 
         cursor as string | null
       );
       
-      // Return structured response even if there are no transactions
-      if (!transactionHistory || transactionHistory.error) {
+      // Return structured response
+      if (!transactionHistory) {
         return res.status(500).json({ 
           message: "Failed to fetch transaction history",
-          error: transactionHistory?.error || "Unknown error"
+          error: "Unknown error"
         });
       }
       
