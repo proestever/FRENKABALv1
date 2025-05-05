@@ -151,6 +151,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   // Add state for transaction type filter
   const [selectedType, setSelectedType] = useState<TransactionType>('all');
   
+  // Add state for API error message
+  const [apiError, setApiError] = useState<string | null>(null);
+  
   // Function to copy text to clipboard
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard.writeText(text)
@@ -225,7 +228,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         // Check if there's an error
         if (response?.error) {
           console.error('Error in transaction history response:', response.error);
-          throw new Error(response.error);
+          setApiError(response.error);
+          // Return an empty result set instead of throwing, so we can display the error message
+          return { 
+            result: [], 
+            cursor: null, 
+            page: 0, 
+            page_size: TRANSACTIONS_PER_BATCH,
+            error: response.error 
+          };
         }
         
         // Handle empty results specifically

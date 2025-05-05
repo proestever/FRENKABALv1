@@ -243,7 +243,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!transactionHistory) {
         return res.status(500).json({ 
           message: "Failed to fetch transaction history",
-          error: "Unknown error"
+          error: "Unknown error",
+          result: [],
+          cursor: null,
+          total: 0
+        });
+      }
+      
+      // If there was an error but we still got a response structure
+      if (transactionHistory.error) {
+        console.warn("Transaction history API returned error:", transactionHistory.error);
+        // We still return a 200 status with empty results and the error message
+        // This allows the frontend to handle the error gracefully
+        return res.json({
+          result: [],
+          cursor: null,
+          total: 0,
+          error: transactionHistory.error
         });
       }
       
@@ -252,7 +268,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching transaction history:", error);
       return res.status(500).json({ 
         message: "Failed to fetch transaction history",
-        error: error instanceof Error ? error.message : "Unknown error" 
+        error: error instanceof Error ? error.message : "Unknown error",
+        result: [],
+        cursor: null,
+        total: 0
       });
     }
   });
