@@ -384,9 +384,11 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                   <th scope="col" className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/5 first:rounded-tl-md">
                     Token
                   </th>
-                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
-                    Balance
-                  </th>
+                  {!showLiquidity && (
+                    <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
+                      Balance
+                    </th>
+                  )}
                   {!showLiquidity && (
                     <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/5">
                       Price (24h)
@@ -473,14 +475,16 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className="text-base font-bold text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
-                        {!token.isLp && (
-                          <div className="text-sm text-muted-foreground" title={token.symbol}>
-                            {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
-                          </div>
-                        )}
-                      </td>
+                      {!showLiquidity && (
+                        <td className="px-4 py-3 whitespace-nowrap text-right">
+                          <div className="text-base font-bold text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
+                          {!token.isLp && (
+                            <div className="text-sm text-muted-foreground" title={token.symbol}>
+                              {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                            </div>
+                          )}
+                        </td>
+                      )}
                       {!showLiquidity && (
                         <td className="px-4 py-3 whitespace-nowrap text-right">
                           <div className="flex flex-col items-end">
