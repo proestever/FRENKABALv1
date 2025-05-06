@@ -388,7 +388,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                     Balance
                   </th>
                   <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/5">
-                    Price (24h)
+                    {showLiquidity ? 'Price' : 'Price (24h)'}
                   </th>
                   <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
                     Value
@@ -483,11 +483,13 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               ? formatCurrencyWithPrecision(token.price, 2, token.price < 0.01 ? 8 : 2) 
                               : 'N/A'}
                           </div>
-                          <div className={`text-sm font-medium ${priceChangeClass}`}>
-                            {token.priceChange24h !== undefined 
-                              ? `(${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%)` 
-                              : ''}
-                          </div>
+                          {!showLiquidity && (
+                            <div className={`text-sm font-medium ${priceChangeClass}`}>
+                              {token.priceChange24h !== undefined 
+                                ? `(${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%)` 
+                                : ''}
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right">
