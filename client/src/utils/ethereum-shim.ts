@@ -1,8 +1,8 @@
 // This file creates a shim for ethereum integration
 // to avoid the console errors about "Cannot set property ethereum of #<Window> which has only a getter"
 
-// Define a minimal Ethereum provider interface
-interface MinimalEthereumProvider {
+// Define a minimal Ethereum provider interface that's compatible with the global window.ethereum
+interface EthereumProvider {
   isMetaMask?: boolean;
   isConnected: () => boolean;
   request: (request: { method: string; params?: any[] }) => Promise<any>;
@@ -21,12 +21,11 @@ interface MinimalEthereumProvider {
   [key: string]: any;
 }
 
-// Extend the Window interface to include our custom properties
+// Declare that we'll be adding some properties to the Window
 declare global {
   interface Window {
-    _dummyEthereum?: MinimalEthereumProvider;
-    _dummyEthereumShim?: MinimalEthereumProvider;
-    ethereum?: MinimalEthereumProvider;
+    _dummyEthereum?: EthereumProvider;
+    _dummyEthereumShim?: EthereumProvider;
   }
 }
 
@@ -37,7 +36,7 @@ if (typeof window !== 'undefined') {
     // This avoids conflicts with existing wallets
     if (!window.ethereum) {
       // Create a dummy ethereum object that does nothing but doesn't crash
-      const dummyEthereum: MinimalEthereumProvider = {
+      const dummyEthereum: EthereumProvider = {
         isMetaMask: false,
         isConnected: () => false,
         request: async () => {

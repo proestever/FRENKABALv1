@@ -1637,23 +1637,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {/* Gas Fee */}
               <div className="text-xs font-semibold text-white mt-2 text-right">
                 Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
-                {(() => {
-                  const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-                  const hasBatchPrice = !!batchPrices[plsAddress];
-                  const usdValue = calculateUsdValue(tx.transaction_fee.toString(), '18', plsAddress);
-                  
-                  return usdValue ? (
-                    <span className="ml-2 flex items-center">
-                      ({usdValue.toLocaleString('en-US', {
-                        style: 'currency',
-                        currency: 'USD',
-                        maximumFractionDigits: 2,
-                        minimumFractionDigits: 2
-                      })})
-                      {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
-                    </span>
-                  ) : null;
-                })()}
               </div>
             </div>
           </div>
