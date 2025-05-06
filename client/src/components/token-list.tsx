@@ -273,6 +273,15 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       </button>
                     </div>
                     
+                    {/* Mobile Value - Absolute Position Center Right */}
+                    <div className="absolute top-1/3 right-3 transform -translate-y-1/2 md:hidden">
+                      <div className="text-base font-bold text-white">
+                        {token.value !== undefined 
+                          ? formatCurrency(token.value) 
+                          : 'N/A'}
+                      </div>
+                    </div>
+                    
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                       {/* Token Info - Mobile: Stacked layout, Desktop: Side-by-side */}
                       <div className="flex flex-col md:flex-row md:items-center flex-grow">
@@ -332,15 +341,6 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                                 ? `(${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%)` 
                                 : ''}
                             </span>
-                          </div>
-                          
-                          {/* Mobile Value - Center Right */}
-                          <div className="flex justify-end md:hidden mt-3">
-                            <div className="text-base font-bold text-white">
-                              {token.value !== undefined 
-                                ? formatCurrency(token.value) 
-                                : 'N/A'}
-                            </div>
                           </div>
                         </div>
                       </div>
