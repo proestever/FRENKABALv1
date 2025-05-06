@@ -54,6 +54,19 @@ export const TokenSchema = z.object({
   lpToken1Symbol: z.string().optional(), // Second token symbol in the LP pair
   lpToken0Address: z.string().optional(), // First token address in the LP pair
   lpToken1Address: z.string().optional(), // Second token address in the LP pair
+  lpToken0Decimals: z.number().optional(), // First token decimals
+  lpToken1Decimals: z.number().optional(), // Second token decimals
+  lpToken0Balance: z.string().optional(), // First token balance in raw units
+  lpToken1Balance: z.string().optional(), // Second token balance in raw units
+  lpToken0BalanceFormatted: z.number().optional(), // First token balance formatted (with decimals)
+  lpToken1BalanceFormatted: z.number().optional(), // Second token balance formatted (with decimals)
+  lpToken0Price: z.number().optional(), // First token price in USD
+  lpToken1Price: z.number().optional(), // Second token price in USD
+  lpToken0Value: z.number().optional(), // First token value in USD
+  lpToken1Value: z.number().optional(), // Second token value in USD
+  lpTotalSupply: z.string().optional(), // Total supply of LP tokens
+  lpReserve0: z.string().optional(), // Reserve of token0 in the LP pool
+  lpReserve1: z.string().optional(), // Reserve of token1 in the LP pool
 });
 
 export type Token = z.infer<typeof TokenSchema>;

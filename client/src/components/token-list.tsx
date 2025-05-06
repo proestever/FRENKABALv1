@@ -271,6 +271,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                             <LpTokenDisplay 
                               token={token}
                               size="lg"
+                              showDetails={showLiquidity}
+                              expanded={showLiquidity}
                             />
                           ) : (
                             <TokenLogo 
@@ -415,6 +417,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               <LpTokenDisplay 
                                 token={token}
                                 size="md"
+                                showDetails={showLiquidity}
+                                expanded={showLiquidity}
                               />
                             ) : (
                               <TokenLogo 
