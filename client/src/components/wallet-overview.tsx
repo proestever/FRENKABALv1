@@ -125,10 +125,10 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
         {/* Header - Title, Address and Action Buttons */}
         <div className="flex flex-col mb-6">
           <div className="mb-3">
-            <h2 className="text-xl font-bold text-white flex items-center">
+            <h2 className="text-lg md:text-xl font-bold text-white flex items-center">
               Wallet Overview
               {existingBookmark && existingBookmark.label && (
-                <span className="ml-2 flex items-center">: <span className="text-green-400 font-bold text-xl ml-2">{existingBookmark.label}</span></span>
+                <span className="ml-2 flex items-center">: <span className="text-green-400 font-bold text-lg md:text-xl ml-2">{existingBookmark.label}</span></span>
               )}
             </h2>
             <div className="flex items-center mt-1 max-w-full overflow-hidden">
@@ -192,7 +192,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
           {/* Total Value Card - Now first */}
           <div className="glass-card rounded-lg p-4 border-white/15">
             <div className="text-sm text-muted-foreground mb-1">Total Value (Visible)</div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-xl md:text-2xl font-bold text-white">
               {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
             </div>
             <div className="text-sm mt-2 flex items-center">
@@ -210,7 +210,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               />
               <div className="text-sm text-muted-foreground ml-2">PLS Balance</div>
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-xl md:text-2xl font-bold text-white">
               {wallet.plsBalance !== null && wallet.plsBalance !== undefined ? 
                 `${formatTokenAmount(wallet.plsBalance)} PLS` : 
                 'N/A'
@@ -231,7 +231,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
           {/* Token Count Card */}
           <div className="glass-card rounded-lg p-4 border-white/15">
             <div className="text-sm text-muted-foreground mb-1">Token Count (Visible)</div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-xl md:text-2xl font-bold text-white">
               {visibleTokenCount || 0}
             </div>
             <div className="text-sm mt-2 flex items-center">
