@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance } from "./services/api";
@@ -8,7 +8,18 @@ import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
 import rateLimit from "express-rate-limit";
-import { getClientIp, shouldRequireCaptcha, recordCaptchaSuccess, verifyCaptcha } from "./services/captcha-service";
+import { shouldRequireCaptcha, recordCaptchaSuccess, verifyCaptcha } from "./services/captcha-service";
+
+// Helper function to get client IP from request
+function getClientIp(req: Request): string {
+  // Try to get IP from various headers (for proxied requests)
+  const xForwardedFor = req.headers['x-forwarded-for'];
+  const ip = typeof xForwardedFor === 'string' 
+    ? xForwardedFor.split(',')[0].trim()
+    : req.socket.remoteAddress || '0.0.0.0';
+  
+  return ip;
+}
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -98,15 +109,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If CAPTCHA is required and response provided, verify it
       if (captchaRequired && captchaResponse) {
-        // Since you said you've implemented Cloudflare Turnstile from their website,
-        // we'll assume the Turnstile verification is already handled.
-        // If you need actual verification, we can use this code:
-        
-        /*
+        // Verify the CAPTCHA response
         const captchaValid = await verifyCaptcha(
           captchaResponse as string,
-          clientIp,
-          process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY || ''
+          clientIp
         );
         
         if (!captchaValid) {
@@ -115,7 +121,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             captchaRequired: true
           });
         }
-        */
         
         // Record successful CAPTCHA verification
         recordCaptchaSuccess(clientIp);
@@ -211,6 +216,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If CAPTCHA is required and response provided, verify it
       if (captchaRequired && captchaResponse) {
+        // Verify the CAPTCHA response
+        const captchaValid = await verifyCaptcha(
+          captchaResponse as string,
+          clientIp
+        );
+        
+        if (!captchaValid) {
+          return res.status(403).json({ 
+            message: "CAPTCHA verification failed",
+            captchaRequired: true
+          });
+        }
+        
         // Record successful CAPTCHA verification
         recordCaptchaSuccess(clientIp);
       }

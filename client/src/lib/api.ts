@@ -213,12 +213,14 @@ export interface TransactionResponse {
  * @param address - Wallet address to fetch transactions for
  * @param limit - Number of transactions per page (default: 100, Moralis free plan limit)
  * @param cursor - Pagination cursor for fetching next page of results
+ * @param captchaResponse - Optional CAPTCHA response token if required
  * @returns Paginated transaction response
  */
 export async function fetchTransactionHistory(
   address: string,
   limit: number = 100,
-  cursor: string | null = null
+  cursor: string | null = null,
+  captchaResponse?: string
 ): Promise<TransactionResponse> {
   try {
     // Build URL with query parameters
@@ -227,11 +229,25 @@ export async function fetchTransactionHistory(
       url += `&cursor=${encodeURIComponent(cursor)}`;
     }
     
+    // Add captcha response if provided
+    if (captchaResponse) {
+      url += `&captchaResponse=${encodeURIComponent(captchaResponse)}`;
+    }
+    
     console.log(`Fetching transaction history: ${url}`);
     const response = await fetch(url);
     
     if (!response.ok) {
       const errorData = await response.json();
+      
+      // If CAPTCHA is required, throw special error
+      if (response.status === 429 && errorData.captchaRequired) {
+        const captchaError = new Error('CAPTCHA_REQUIRED');
+        // @ts-ignore - Add custom property
+        captchaError.captchaRequired = true;
+        throw captchaError;
+      }
+      
       console.error('Failed to fetch transaction history:', errorData);
       throw new Error(errorData.message || 'Failed to fetch transaction history');
     }
@@ -518,11 +534,13 @@ export async function updateUserProfile(userId: number, profileData: Partial<{
  * This API is used to get tokens that might not be detected by the standard wallet API
  * @param walletAddress Wallet address to check for the token
  * @param tokenAddress Token contract address to look up
+ * @param captchaResponse Optional CAPTCHA response token if required
  * @returns Token data including balance and price if available
  */
 export async function fetchSpecificToken(
   walletAddress: string,
-  tokenAddress: string
+  tokenAddress: string,
+  captchaResponse?: string
 ): Promise<ProcessedToken | null> {
   try {
     console.log(`Fetching specific token ${tokenAddress} for wallet ${walletAddress}`);
@@ -532,7 +550,15 @@ export async function fetchSpecificToken(
       throw new Error('Invalid wallet or token address format');
     }
     
-    const response = await fetch(`/api/wallet/${walletAddress}/token/${tokenAddress}`);
+    // Build URL with query parameters
+    let url = `/api/wallet/${walletAddress}/token/${tokenAddress}`;
+    
+    // Add captcha response if provided
+    if (captchaResponse) {
+      url += `?captchaResponse=${encodeURIComponent(captchaResponse)}`;
+    }
+    
+    const response = await fetch(url);
     
     if (response.status === 404) {
       console.log(`No balance found for token ${tokenAddress} in wallet ${walletAddress}`);
@@ -541,6 +567,15 @@ export async function fetchSpecificToken(
     
     if (!response.ok) {
       const errorData = await response.json();
+      
+      // If CAPTCHA is required, throw special error
+      if (response.status === 429 && errorData.captchaRequired) {
+        const captchaError = new Error('CAPTCHA_REQUIRED');
+        // @ts-ignore - Add custom property
+        captchaError.captchaRequired = true;
+        throw captchaError;
+      }
+      
       throw new Error(errorData.message || 'Failed to fetch token data');
     }
     
@@ -549,6 +584,6 @@ export async function fetchSpecificToken(
     return tokenData;
   } catch (error) {
     console.error('Error fetching specific token:', error);
-    return null;
+    throw error;
   }
 }
