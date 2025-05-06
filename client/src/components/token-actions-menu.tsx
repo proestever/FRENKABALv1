@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -20,6 +20,7 @@ interface TokenActionsMenuProps {
 export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbol }: TokenActionsMenuProps) {
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const handleCopyAddress = async () => {
     const success = await copyToClipboard(tokenAddress);
@@ -34,9 +35,30 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // For hover functionality
-  const handleHoverStart = () => setOpen(true);
-  const handleHoverEnd = () => setOpen(false);
+  // For hover functionality with delay to prevent flickering
+  const handleHoverStart = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setOpen(true);
+  };
+  
+  const handleHoverEnd = () => {
+    // Add a slight delay before closing to prevent flickering
+    timeoutRef.current = setTimeout(() => {
+      setOpen(false);
+    }, 300); // 300ms delay before closing
+  };
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div 
@@ -49,8 +71,10 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
           <div>{children}</div>
         </DropdownMenuTrigger>
         <DropdownMenuContent 
-          className="w-56 bg-black/90 border-white/10 backdrop-blur-md"
+          className="w-56 bg-black/90 border-white/10 backdrop-blur-md z-50"
           sideOffset={5}
+          onMouseEnter={handleHoverStart}
+          onMouseLeave={handleHoverEnd}
         >
           <DropdownMenuLabel className="font-bold text-gray-300">
             {tokenName} ({tokenSymbol})
