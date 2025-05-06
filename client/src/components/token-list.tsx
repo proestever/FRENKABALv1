@@ -450,9 +450,11 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               )}
                             </div>
                             <div className="flex items-center gap-2 overflow-hidden">
-                              <div className="text-sm text-muted-foreground" title={token.symbol}>
-                                {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
-                              </div>
+                              {!token.isLp && (
+                                <div className="text-sm text-muted-foreground" title={token.symbol}>
+                                  {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                                </div>
+                              )}
                               {token.exchange && (
                                 <div className="text-xs bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded-md border border-purple-500/30 flex-shrink-0">
                                   {token.exchange === "PancakeSwap v3" ? "9mm v3" : token.exchange}
@@ -473,9 +475,11 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right">
                         <div className="text-base font-bold text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
-                        <div className="text-sm text-muted-foreground" title={token.symbol}>
-                          {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
-                        </div>
+                        {!token.isLp && (
+                          <div className="text-sm text-muted-foreground" title={token.symbol}>
+                            {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                          </div>
+                        )}
                       </td>
                       {!showLiquidity && (
                         <td className="px-4 py-3 whitespace-nowrap text-right">
