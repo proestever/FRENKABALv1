@@ -72,7 +72,9 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
           style={{ maxHeight: '300px', transform: 'translateX(-10px)' }}
         >
           <div className="px-3 py-1 font-bold text-white/90 text-shadow-sm">
-            {tokenName} <span className="text-white/70">({tokenSymbol})</span>
+            <div className="truncate max-w-[200px]">
+              {tokenName} <span className="text-white/70">({tokenSymbol})</span>
+            </div>
           </div>
           
           <div className="h-px bg-white/10 mb-2" />
@@ -81,8 +83,10 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
             className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-[#111]/80 hover:backdrop-blur-sm transition-all duration-150 ease-in-out"
             onClick={handleCopyAddress}
           >
-            {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
-            <span>{copied ? 'Copied!' : 'Copy contract address'}</span>
+            <div className="flex-shrink-0">
+              {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+            </div>
+            <span className="truncate">{copied ? 'Copied!' : 'Copy contract address'}</span>
           </button>
           
           <div className="h-px bg-white/10 my-2" />
@@ -95,24 +99,30 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
             className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-[#111]/80 hover:backdrop-blur-sm transition-all duration-150 ease-in-out"
             onClick={(e) => openExternalLink(e, 'dexscreener')}
           >
-            <BarChart2 size={16} className="text-green-500" />
-            <span>DexScreener</span>
+            <div className="flex-shrink-0">
+              <BarChart2 size={16} className="text-green-500" />
+            </div>
+            <span className="truncate">DexScreener</span>
           </button>
           
           <button 
             className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-[#111]/80 hover:backdrop-blur-sm transition-all duration-150 ease-in-out"
             onClick={(e) => openExternalLink(e, 'pulsechain')}
           >
-            <Search size={16} className="text-blue-500" />
-            <span>PulseChain Scan</span>
+            <div className="flex-shrink-0">
+              <Search size={16} className="text-blue-500" />
+            </div>
+            <span className="truncate">PulseChain Scan</span>
           </button>
           
           <button 
             className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-[#111]/80 hover:backdrop-blur-sm transition-all duration-150 ease-in-out"
             onClick={(e) => openExternalLink(e, 'otterscan')}
           >
-            <Info size={16} className="text-orange-500" />
-            <span>OtterScan</span>
+            <div className="flex-shrink-0">
+              <Info size={16} className="text-orange-500" />
+            </div>
+            <span className="truncate">OtterScan</span>
           </button>
         </div>
       )}
