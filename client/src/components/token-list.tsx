@@ -436,7 +436,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               <span className="text-base font-bold text-foreground" title={token.name}>
                                 {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
                                   <span className="flex items-center">
-                                    {token.lpToken0Symbol}/{token.lpToken1Symbol} <span className="ml-1 text-xs text-primary">LP</span>
+                                    <span className="text-xs text-primary px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20">PLP</span>
                                   </span>
                                 ) : (
                                   token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name
