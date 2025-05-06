@@ -182,14 +182,14 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
     }
     
     return (
-      <div className="mt-2 pl-2 border-l border-primary/40 text-xs w-full">
+      <div className="mt-2 pl-2 border-l border-primary/40 text-xs w-full max-w-full">
         {/* LP position divider */}
         <div className="my-1 border-t border-white/5"></div>
         
         {/* Detailed list layout for LP tokens */}
-        <div className="mt-1 w-full">
+        <div className="mt-1 w-full max-w-full">
           {/* LP position header with pair indication */}
-          <div className="flex justify-between items-center p-3 bg-black/30 rounded-t-md border border-white/5 border-b-0 w-full">
+          <div className="flex justify-between items-center p-3 bg-black/30 rounded-t-md border border-white/5 border-b-0 w-full max-w-full">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 bg-primary/20 rounded-full flex items-center justify-center">
                 <span className="text-primary text-xs font-bold">LP</span>
@@ -209,9 +209,9 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
           </div>
           
           {/* Token details in side-by-side format */}
-          <div className="border border-white/5 rounded-b-md w-full">
+          <div className="border border-white/5 rounded-b-md w-full max-w-full">
             {/* Tokens in side-by-side horizontal layout */}
-            <div className="p-5 w-full">
+            <div className="p-5 w-full max-w-full">
               {/* LP symbol in center */}
               <div className="absolute left-1/2 transform -translate-x-1/2 top-[5.5rem] flex items-center justify-center pointer-events-none">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-token0-color/10 to-token1-color/10 border border-white/10 flex items-center justify-center z-10 shadow-lg">
@@ -219,7 +219,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-12 relative w-full">
+              <div className="grid grid-cols-2 gap-12 relative w-full max-w-full">
                 {/* Token 0 Side */}
                 <div className="pr-6 border-r border-white/5">
                   <div className="flex items-center justify-between w-full">
@@ -287,7 +287,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
   };
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full max-w-full">
       {renderSimpleDisplay()}
       {renderDetailedDisplay()}
     </div>
