@@ -353,7 +353,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
           {showLiquidity && (
             <div className="p-4 border-b border-white/10">
               <h3 className="text-xl font-semibold text-white flex items-center">
-                <Droplets size={20} className="mr-2 text-primary" />
+                <Droplets size={20} className="mr-2 text-sky-300" />
                 <span>Liquidity Positions</span>
                 <span className="ml-2 text-md text-white/60">({sortedTokens.length})</span>
               </h3>
@@ -366,7 +366,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
           {/* Empty state for Liquidity tab */}
           {showLiquidity && sortedTokens.length === 0 && !isLoading && (
             <div className="p-8 text-center">
-              <div className="inline-flex p-4 rounded-full bg-primary/10 text-primary mb-4">
+              <div className="inline-flex p-4 rounded-full bg-sky-300/10 text-sky-300 mb-4">
                 <Droplets size={32} />
               </div>
               <h3 className="text-xl font-bold mb-2">No Liquidity Positions Found</h3>
