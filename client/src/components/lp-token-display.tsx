@@ -64,7 +64,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
       />
       
       {/* PulseX indicator badge */}
-      <div className="absolute -top-1 -right-1 bg-gradient-to-br from-primary to-accent text-white text-[8px] px-1 rounded-sm font-bold">
+      <div className="absolute -top-1 -right-1 bg-purple-500/10 text-purple-400 text-xs px-1.5 py-0.5 rounded-md border border-purple-500/30 flex-shrink-0 font-semibold">
         PLP
       </div>
     </div>
@@ -97,7 +97,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
               </div>
               
               {/* LP Badge */}
-              <div className="absolute -bottom-1 -right-1 z-20 bg-primary text-[9px] text-background font-bold rounded-full w-5 h-5 flex items-center justify-center border border-background">
+              <div className="absolute -bottom-1 -right-1 z-20 bg-purple-500/10 text-purple-400 text-xs px-1.5 py-0.5 rounded-md border border-purple-500/30 flex-shrink-0 font-semibold">
                 LP
               </div>
             </div>
@@ -191,8 +191,8 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
           {/* LP position header with pair indication */}
           <div className="flex justify-between items-center p-3 bg-black/30 rounded-t-md border border-white/5 border-b-0 w-full max-w-full">
             <div className="flex items-center gap-2">
-              <div className="h-6 w-6 bg-white/20 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">LP</span>
+              <div className="bg-purple-500/10 text-purple-400 text-xs px-2 py-0.5 rounded-md border border-purple-500/30 flex-shrink-0 font-semibold">
+                LP
               </div>
               <div className="flex items-center">
                 <span className="text-white font-bold text-sm">{token0Symbol}</span>
@@ -214,8 +214,8 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
             <div className="p-5 w-full max-w-full">
               {/* LP symbol in center */}
               <div className="absolute left-1/2 transform -translate-x-1/2 top-[5.5rem] flex items-center justify-center pointer-events-none">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-token0-color/10 to-token1-color/10 border border-white/10 flex items-center justify-center z-10 shadow-lg">
-                  <span className="text-white text-sm font-bold">LP</span>
+                <div className="bg-purple-500/15 text-purple-400 px-3 py-1 rounded-md border border-purple-500/30 font-semibold shadow-lg z-10">
+                  LP
                 </div>
               </div>
               
