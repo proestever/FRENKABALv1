@@ -95,7 +95,8 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
   const [interestValueUsd, setInterestValueUsd] = useState(0);
   const [totalValueUsd, setTotalValueUsd] = useState(0);
   const [stakeCount, setStakeCount] = useState(0);
-  const [chainId, setChainId] = useState('0x171'); // Default to PulseChain
+  // Always use PulseChain now that we're focusing only on PulseChain stakes
+  const chainId = '0x171'; // PulseChain
 
   // Fetch hex stakes
   useEffect(() => {
@@ -106,10 +107,8 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
       setError(null);
       
       try {
-        // Get RPC provider
-        const rpcUrl = chainId === '0x1' 
-          ? 'https://rpc.ankr.com/eth' // Ethereum
-          : 'https://rpc-pulsechain.g4mm4.io'; // PulseChain
+        // Always use PulseChain RPC
+        const rpcUrl = 'https://rpc-pulsechain.g4mm4.io'; // PulseChain
         
         const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
         const hexContract = new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);
@@ -125,8 +124,8 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
           }
         } catch (error) {
           console.error('Error fetching HEX price:', error);
-          // Default price if API fails
-          currentHexPrice = chainId === '0x1' ? 0.007 : 0.005; // Fallback prices
+          // Default price if API fails (PulseChain-only now)
+          currentHexPrice = 0.005; // Fallback price for PulseChain
         }
         
         setHexPrice(currentHexPrice);
@@ -297,10 +296,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
     });
   };
   
-  // Handle network switch
-  const switchNetwork = (newChainId: string) => {
-    setChainId(newChainId);
-  };
+  // No network switching needed, we're only focusing on PulseChain now
   
   if (isLoading) {
     return (

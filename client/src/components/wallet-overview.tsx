@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Wallet, Bookmark } from '@shared/schema';
-import { ExternalLink, Copy, RotateCw, Bookmark as BookmarkIcon, CheckCircle, GitCompareArrows } from 'lucide-react';
+import { ExternalLink, Copy, RotateCw, Bookmark as BookmarkIcon, CheckCircle, GitCompareArrows, Zap } from 'lucide-react';
 import { formatCurrency, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass, truncateAddress } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
@@ -268,8 +268,8 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
                 />
                 <div className="text-sm text-muted-foreground ml-2">HEX Stakes</div>
                 <div className="flex items-center ml-auto">
-                  <GitCompareArrows size={16} className="text-purple-300 mr-1" />
-                  <span className="text-xs text-purple-300">Both PLS/ETH</span>
+                  <Zap size={16} className="text-purple-300 mr-1" />
+                  <span className="text-xs text-purple-300">PulseChain</span>
                 </div>
               </div>
               

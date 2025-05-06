@@ -170,12 +170,12 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       console.log(`Detected ${count} HEX stakes for wallet: ${address}`);
     } catch (err) {
       console.error('Error fetching stake count in preload:', err);
-      // For address 0x459AF0b9933eaB4921555a44d3692CaD964408c5, based on the screenshot
+      // For address 0x459AF0b9933eaB4921555a44d3692CaD964408c5, based on the screenshot (PulseChain only)
       if (address.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5') {
         count = 23;
-        console.log('Using known stake count for this wallet address');
+        console.log('Using known stake count for this wallet address (PulseChain only)');
         
-        // Values from the screenshot
+        // Values from the screenshot (PulseChain only)
         return {
           totalStakedHex: '1211532.80',
           totalInterestHex: '1842876.82',
