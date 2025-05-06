@@ -126,7 +126,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
               </div>
               <div className="flex items-center">
                 <div className="text-[10px] text-white/50 rounded-sm">
-                  PulseX LP • {token.balanceFormatted ? formatTokenAmount(token.balanceFormatted) : '0'} tokens
+                  PulseX • {token.balanceFormatted ? formatTokenAmount(token.balanceFormatted) : '0'} tokens
                 </div>
               </div>
             </>

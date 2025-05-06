@@ -288,7 +288,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                             <span className="text-lg font-bold text-foreground" title={token.name}>
                               {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
                                 <span className="flex items-center">
-                                  {token.lpToken0Symbol}/{token.lpToken1Symbol} <span className="ml-1 text-xs text-primary">LP</span>
+                                  {token.lpToken0Symbol}/{token.lpToken1Symbol} <span className="ml-1 text-xs bg-purple-600/30 text-purple-100 px-1 py-0.5 rounded-md border border-purple-500/60 scale-[0.65] inline-block transform-gpu origin-center font-semibold">LP</span>
                                 </span>
                               ) : (
                                 token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name
@@ -371,7 +371,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
               </div>
               <h3 className="text-xl font-bold mb-2">No Liquidity Positions Found</h3>
               <p className="text-muted-foreground max-w-md mx-auto">
-                This wallet doesn't have any PulseX liquidity tokens. These tokens are received when you provide liquidity to token pairs on PulseX.
+                This wallet doesn't have any PulseX tokens. These tokens are received when you provide liquidity to token pairs on PulseX.
               </p>
             </div>
           )}
