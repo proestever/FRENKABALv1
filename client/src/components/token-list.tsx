@@ -283,7 +283,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                             />
                           )}
                         </div>
-                        <div className="min-w-0 flex-grow">
+                        <div className="min-w-0 flex-grow hidden">
                           <div className="flex items-center gap-1">
                             <span className="text-lg font-bold text-foreground" title={token.name}>
                               {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
@@ -352,7 +352,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
           {/* Liquidity View Header - Only shown when Liquidity tab is active */}
           {showLiquidity && (
             <div className="p-4 border-b border-white/10">
-              <h3 className="text-xl font-semibold text-white flex items-center">
+              <h3 className="text-lg md:text-xl font-semibold text-white flex items-center">
                 <Droplets size={20} className="mr-2 text-sky-300" />
                 <span>Liquidity Positions</span>
                 <span className="ml-2 text-md text-white/60">({sortedTokens.length})</span>
@@ -369,7 +369,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
               <div className="inline-flex p-4 rounded-full bg-sky-300/10 text-sky-300 mb-4">
                 <Droplets size={32} />
               </div>
-              <h3 className="text-xl font-bold mb-2">No Liquidity Positions Found</h3>
+              <h3 className="text-lg md:text-xl font-bold mb-2">No Liquidity Positions Found</h3>
               <p className="text-muted-foreground max-w-md mx-auto">
                 This wallet doesn't have any PulseX tokens. These tokens are received when you provide liquidity to token pairs on PulseX.
               </p>
