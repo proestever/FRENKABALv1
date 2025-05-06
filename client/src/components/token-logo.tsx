@@ -133,7 +133,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', classNam
         <img 
           src="/assets/pls-logo-trimmed.png" 
           alt="PLS" 
-          className={`${sizeClass} rounded-full object-cover border border-white/10`}
+          className={`${sizeClass} rounded-full object-cover border border-white/10 ${className}`}
         />
       );
     }
@@ -144,7 +144,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', classNam
       const text = symbol.slice(0, 2).toUpperCase();
       
       return (
-        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold`}>
+        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold ${className}`}>
           {text}
         </div>
       );
@@ -156,7 +156,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', classNam
       const text = address.slice(2, 4).toUpperCase();
       
       return (
-        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white font-bold`}>
+        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white font-bold ${className}`}>
           {text}
         </div>
       );
@@ -164,7 +164,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', classNam
     
     // Ultimate fallback
     return (
-      <div className={`${sizeClass} rounded-full bg-gray-700 flex items-center justify-center text-white font-bold`}>
+      <div className={`${sizeClass} rounded-full bg-gray-700 flex items-center justify-center text-white font-bold ${className}`}>
         ?
       </div>
     );
