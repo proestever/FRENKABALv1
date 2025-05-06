@@ -107,10 +107,10 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
         </div>
         
         {/* Token pair info in list format */}
-        <div className="ml-3 flex flex-col justify-center">
+        <div className="ml-3 flex flex-col justify-center md:block hidden">
           {hasValidPair ? (
             <>
-              <div className="flex items-center gap-1">
+              <div className="hidden md:flex items-center gap-1">
                 <span className="text-white font-semibold">{token0Symbol}</span>
                 <span className="text-white/70">/</span>
                 <span className="text-white font-semibold">{token1Symbol}</span>
@@ -124,14 +124,14 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                   <ExternalLink size={12} />
                 </a>
               </div>
-              <div className="flex items-center">
+              <div className="hidden md:flex items-center">
                 <div className="text-[10px] text-white/50 rounded-sm">
                   PulseX • {token.balanceFormatted ? formatTokenAmount(token.balanceFormatted) : '0'} tokens
                 </div>
               </div>
             </>
           ) : (
-            <span className="font-medium">{token.symbol}</span>
+            <span className="font-medium md:block hidden">{token.symbol}</span>
           )}
         </div>
       </div>
