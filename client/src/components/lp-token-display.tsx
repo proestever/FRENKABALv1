@@ -138,22 +138,22 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
       
       <div className="flex items-center">
         {/* Value display with detailed button style */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center flex-wrap-reverse md:flex-nowrap justify-end md:justify-start w-full gap-2 md:gap-3">
+          {token.value !== undefined && showDetails && (
+            <div className="bg-gradient-to-r from-token0-color/20 to-token1-color/20 text-white px-2 md:px-3 py-1 md:py-1.5 rounded font-medium text-sm md:text-base">
+              {formatCurrency(token.value)}
+            </div>
+          )}
           {/* Show details badge */}
           {showDetails && hasDetailedData && (
             <button 
               onClick={toggleExpand}
-              className="text-xs text-white/70 hover:text-white/90 transition-colors flex items-center gap-0.5 bg-black/30 px-2 py-0.5 rounded"
+              className="text-[10px] md:text-xs text-white/70 hover:text-white/90 transition-colors flex items-center gap-0.5 bg-black/30 px-1.5 md:px-2 py-0.5 rounded"
               title={isExpanded ? "Hide details" : "Show details"}
             >
               {isExpanded ? "Hide details" : "View details"}
-              {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
             </button>
-          )}
-          {token.value !== undefined && showDetails && (
-            <div className="bg-gradient-to-r from-token0-color/20 to-token1-color/20 text-white px-3 py-1.5 rounded font-bold text-base md:text-lg">
-              {formatCurrency(token.value)}
-            </div>
           )}
         </div>
       </div>
@@ -182,7 +182,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
     }
     
     return (
-      <div className="mt-2 pl-2 border-l border-white/40 text-xs w-full max-w-full">
+      <div className="mt-2 pl-0 md:pl-2 border-l-0 md:border-l border-white/40 text-xs w-full max-w-full">
         {/* LP position divider */}
         <div className="my-1 border-t border-white/5"></div>
         
@@ -210,33 +210,33 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
           
           {/* Token details in side-by-side format */}
           <div className="border border-white/5 rounded-b-md w-full max-w-full">
-            {/* Tokens in side-by-side horizontal layout */}
-            <div className="p-5 w-full max-w-full">
+            {/* Tokens in side-by-side horizontal layout (vertical on mobile) */}
+            <div className="p-3 md:p-5 w-full max-w-full">
               {/* Center point (LP badge removed) */}
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-12 relative w-full max-w-full">
                 {/* Token 0 Side */}
                 <div className="md:pr-6 md:border-r md:border-white/5 pb-4 md:pb-0 border-b md:border-b-0 border-white/5">
-                  <div className="flex items-center justify-between w-full">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full gap-3 md:gap-0">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 mr-4 p-1.5 rounded-full bg-token0-color/10 border border-token0-color/15">
-                        <TokenLogo address={token.lpToken0Address || ''} symbol={token0Symbol} size="lg" />
+                      <div className="flex-shrink-0 mr-3 p-1.5 rounded-full bg-token0-color/10 border border-token0-color/15">
+                        <TokenLogo address={token.lpToken0Address || ''} symbol={token0Symbol} size="md" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-white font-bold text-lg">{token0Symbol}</span>
+                        <span className="text-white font-bold text-base md:text-lg">{token0Symbol}</span>
                         <span className="text-white/50 text-xs truncate max-w-[130px]">{token.lpToken0Name}</span>
                       </div>
                     </div>
                     
-                    <div className="flex flex-col items-end ml-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-white/60 font-medium text-sm">Balance:</span>
-                        <span className="text-white font-bold text-base">{formatTokenAmount(token0BalanceFormatted || 0)}</span>
+                    <div className="flex flex-row md:flex-col md:items-end justify-between pl-8 md:pl-0 md:ml-4">
+                      <div className="flex items-center gap-1 md:gap-2">
+                        <span className="text-white/60 font-medium text-xs md:text-sm">Balance:</span>
+                        <span className="text-white font-medium text-sm md:text-base">{formatTokenAmount(token0BalanceFormatted || 0)}</span>
                       </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-white/60 font-medium text-sm">Value:</span>
+                      <div className="flex items-center gap-1 md:gap-2 md:mt-1.5">
+                        <span className="text-white/60 font-medium text-xs md:text-sm">Value:</span>
                         {token0Value !== undefined && (
-                          <span className="text-white font-bold text-base">{formatCurrency(token0Value)}</span>
+                          <span className="text-white font-medium text-sm md:text-base">{formatCurrency(token0Value)}</span>
                         )}
                       </div>
                     </div>
@@ -245,26 +245,26 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                 
                 {/* Token 1 Side */}
                 <div className="md:pl-6 pt-4 md:pt-0">
-                  <div className="flex items-center justify-between w-full">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full gap-3 md:gap-0">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 mr-4 p-1.5 rounded-full bg-token1-color/10 border border-token1-color/15">
-                        <TokenLogo address={token.lpToken1Address || ''} symbol={token1Symbol} size="lg" />
+                      <div className="flex-shrink-0 mr-3 p-1.5 rounded-full bg-token1-color/10 border border-token1-color/15">
+                        <TokenLogo address={token.lpToken1Address || ''} symbol={token1Symbol} size="md" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-white font-bold text-lg">{token1Symbol}</span>
+                        <span className="text-white font-bold text-base md:text-lg">{token1Symbol}</span>
                         <span className="text-white/50 text-xs truncate max-w-[130px]">{token.lpToken1Name}</span>
                       </div>
                     </div>
                     
-                    <div className="flex flex-col items-end ml-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-white/60 font-medium text-sm">Balance:</span>
-                        <span className="text-white font-bold text-base">{formatTokenAmount(token1BalanceFormatted || 0)}</span>
+                    <div className="flex flex-row md:flex-col md:items-end justify-between pl-8 md:pl-0 md:ml-4">
+                      <div className="flex items-center gap-1 md:gap-2">
+                        <span className="text-white/60 font-medium text-xs md:text-sm">Balance:</span>
+                        <span className="text-white font-medium text-sm md:text-base">{formatTokenAmount(token1BalanceFormatted || 0)}</span>
                       </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-white/60 font-medium text-sm">Value:</span>
+                      <div className="flex items-center gap-1 md:gap-2 md:mt-1.5">
+                        <span className="text-white/60 font-medium text-xs md:text-sm">Value:</span>
                         {token1Value !== undefined && (
-                          <span className="text-white font-bold text-base">{formatCurrency(token1Value)}</span>
+                          <span className="text-white font-medium text-sm md:text-base">{formatCurrency(token1Value)}</span>
                         )}
                       </div>
                     </div>
