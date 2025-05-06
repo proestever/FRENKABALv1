@@ -7,7 +7,7 @@ interface TokenLogoProps {
   address: string;
   symbol?: string;
   fallbackLogo?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
 }
 
 export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenLogoProps) {
@@ -23,6 +23,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
 
   // Get the size class based on the size prop
   const sizeClass = 
+    size === 'xs' ? 'w-4 h-4' :
     size === 'sm' ? 'w-6 h-6' : 
     size === 'lg' ? 'w-10 h-10' : 
     'w-8 h-8'; // medium size default

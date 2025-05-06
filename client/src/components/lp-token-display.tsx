@@ -73,14 +73,44 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
   // Simple LP token display (for non-expanded view)
   const renderSimpleDisplay = () => (
     <div className="flex items-center">
-      {renderDualTokensIcon()}
+      {/* Dual token logos in the collapsed view */}
+      <div className="relative">
+        {hasValidPair && token.lpToken0Address && token.lpToken1Address ? (
+          <div className="flex relative">
+            <div className="z-10">
+              <TokenLogo 
+                address={token.lpToken0Address} 
+                symbol={token0Symbol} 
+                size={size === 'sm' ? 'xs' : 'sm'} 
+              />
+            </div>
+            <div className="absolute left-3">
+              <TokenLogo 
+                address={token.lpToken1Address} 
+                symbol={token1Symbol} 
+                size={size === 'sm' ? 'xs' : 'sm'} 
+              />
+            </div>
+          </div>
+        ) : (
+          renderDualTokensIcon()
+        )}
+        
+        {/* PulseX indicator badge */}
+        <div className="absolute -top-1 -right-1 bg-gradient-to-br from-primary to-accent text-white text-[8px] px-1 rounded-sm font-bold">
+          PLP
+        </div>
+      </div>
       
       {/* LP Token details */}
-      <div className={`flex flex-col ml-2 ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
+      <div className={`flex flex-col ml-4 ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
         <div className="font-medium">
           {hasValidPair ? (
-            <span>
-              {token0Symbol}/{token1Symbol} LP
+            <span className="flex items-center">
+              <span className="text-token0-color">{token0Symbol}</span>
+              <span className="mx-1">/</span>
+              <span className="text-token1-color">{token1Symbol}</span>
+              <span className="ml-1 text-xs text-primary/80">LP</span>
             </span>
           ) : (
             <span>{token.symbol}</span>
@@ -97,6 +127,9 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
           >
             <ExternalLink size={10} />
           </a>
+          {token.value !== undefined && (
+            <span className="ml-2 font-semibold">{formatCurrency(token.value)}</span>
+          )}
         </div>
       </div>
       
@@ -179,6 +212,42 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
               : 'Unknown'}
           </span>
         </div>
+        
+        {/* Show LP token supply and pool share if available */}
+        {token.lpTotalSupply && token.balance && (
+          <div className="mt-2 bg-white/5 rounded p-2 text-xs">
+            <div className="flex justify-between mb-1">
+              <span className="text-white/60">Your LP Tokens:</span>
+              <span>{formatTokenAmount(token.balanceFormatted)}</span>
+            </div>
+            
+            {/* Calculate and display the pool share percentage */}
+            {(() => {
+              try {
+                // Convert from string to BigInt for accurate calculation with large numbers
+                const userBalance = BigInt(token.balance);
+                const totalSupply = BigInt(token.lpTotalSupply);
+                
+                // Calculate share percentage (with 6 decimals of precision)
+                // Multiply by 10000 for 4 decimal places of percentage
+                const sharePercentage = Number(userBalance * BigInt(10000) / totalSupply) / 100;
+                
+                if (!isNaN(sharePercentage)) {
+                  return (
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Pool Share:</span>
+                      <span className="font-semibold text-primary">{sharePercentage.toFixed(2)}%</span>
+                    </div>
+                  );
+                }
+              } catch (e) {
+                // Fall back to not showing pool share if calculation fails
+                return null;
+              }
+              return null;
+            })()}
+          </div>
+        )}
       </div>
     );
   };
