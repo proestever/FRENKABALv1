@@ -377,8 +377,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     }
   }, [batchPrices]);
 
-  // Debug logging flag
+  // Debug logging flag - set to false to disable all logging
   const DEBUG_LOGGING = false;
+  
+  // Debug log function to centralize control of logging
+  const debugLog = (message: string, ...args: any[]) => {
+    if (DEBUG_LOGGING) {
+      console.log(message, ...args);
+    }
+  };
 
   // Function to calculate USD value for a transaction
   const calculateUsdValue = (value: string, decimals: string = '18', tokenAddress: string) => {
@@ -506,6 +513,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   }, {} as Record<string, number>);
   
   // Extract token addresses for logos and prices - memoized to prevent infinite loops
+  // Using stringified JSON of transactions to ensure stable dependency
+  const transactionsKey = useMemo(() => 
+    transactions.map(tx => tx.hash).join(','), 
+    [transactions]
+  );
+  
+  // Memoize the token address extraction to prevent unnecessary processing
   const extractTokenAddresses = useMemo(() => {
     if (!processedTransactions || processedTransactions.length === 0) {
       return [];
@@ -513,9 +527,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     
     // Use array instead of Set to avoid iteration issues
     const addresses: string[] = [];
+    const seen = new Set<string>(); // For faster lookups
+    
     const addUniqueAddress = (address: string) => {
       const normalizedAddress = address.toLowerCase();
-      if (!addresses.includes(normalizedAddress)) {
+      if (!seen.has(normalizedAddress)) {
+        seen.add(normalizedAddress);
         addresses.push(normalizedAddress);
       }
     };
@@ -536,14 +553,21 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       }
     });
     
-    console.log(`Collected ${addresses.length} unique token addresses from transactions`, addresses);
+    // DEBUG: Removed console.log that was causing console flooding
     return addresses;
-  }, [processedTransactions]);
+  }, [transactionsKey, processedTransactions.length]);
   
-  // Set visible token addresses once they're extracted
+  // Set visible token addresses once they're extracted - only if they change
   useEffect(() => {
     if (extractTokenAddresses.length > 0) {
-      setVisibleTokenAddresses(extractTokenAddresses);
+      setVisibleTokenAddresses(prev => {
+        // Only update if different
+        if (prev.length !== extractTokenAddresses.length || 
+            !prev.every((addr, i) => addr === extractTokenAddresses[i])) {
+          return extractTokenAddresses;
+        }
+        return prev;
+      });
     }
   }, [extractTokenAddresses]);
 

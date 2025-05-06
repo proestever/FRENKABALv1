@@ -23,16 +23,22 @@ export function useBatchTokenPrices(tokenAddresses: string[]) {
   }, []);
   
   useEffect(() => {
+    // Create a stable stringified representation of token addresses
+    const addressesKey = JSON.stringify([...tokenAddresses].sort());
+    
     if (!tokenAddresses || tokenAddresses.length === 0) {
       return;
     }
     
-    // Filter out duplicate addresses and normalize them using alternative approach to avoid Set iteration issues
-    const normalizedAddresses = tokenAddresses.map(addr => addr.toLowerCase());
+    // Create an array of unique addresses (using object to track unique values)
+    const uniqueMap: Record<string, boolean> = {};
     const uniqueAddresses: string[] = [];
-    normalizedAddresses.forEach(address => {
-      if (!uniqueAddresses.includes(address)) {
-        uniqueAddresses.push(address);
+    
+    tokenAddresses.forEach(addr => {
+      const normalized = addr.toLowerCase();
+      if (!uniqueMap[normalized]) {
+        uniqueMap[normalized] = true;
+        uniqueAddresses.push(normalized);
       }
     });
     
@@ -88,8 +94,10 @@ export function useBatchTokenPrices(tokenAddresses: string[]) {
             priceCache[normalizedAddress] = { price: price as number, timestamp };
           });
           
-          // Debug log - show how many new prices we received
-          console.log(`Batch token price fetch success: Received ${Object.keys(newPrices).length} prices`);
+          // Debug log - show how many new prices we received (but only if there are any to prevent console spam)
+          if (Object.keys(newPrices).length > 0) {
+            console.log(`Batch token price fetch success: Received ${Object.keys(newPrices).length} prices`);
+          }
           
           // Update state with combined cached and new prices
           setPrices(prev => ({ ...prev, ...newPrices }));
@@ -110,7 +118,7 @@ export function useBatchTokenPrices(tokenAddresses: string[]) {
       // All prices were found in cache
       setIsLoading(false);
     }
-  }, [tokenAddresses]);
+  }, [JSON.stringify(tokenAddresses.sort())]);
   
   return { prices, isLoading, error };
 }
