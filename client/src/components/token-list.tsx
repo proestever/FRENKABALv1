@@ -363,7 +363,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                                 tokenName={token.name} 
                                 tokenSymbol={token.symbol}
                               >
-                                <div className="flex items-center gap-1 cursor-pointer text-base font-bold text-foreground hover:text-primary transition-colors">
+                                <div className="flex items-center gap-1 cursor-pointer text-base font-bold text-foreground hover:text-gray-300 transition-colors">
                                   <span title={token.name}>
                                     {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
                                   </span>
@@ -524,7 +524,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                                   tokenName={token.name} 
                                   tokenSymbol={token.symbol}
                                 >
-                                  <div className="flex items-center gap-1 cursor-pointer text-base font-bold text-foreground hover:text-primary transition-colors">
+                                  <div className="flex items-center gap-1 cursor-pointer text-base font-bold text-foreground hover:text-gray-300 transition-colors">
                                     <span title={token.name}>
                                       {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
                                     </span>
