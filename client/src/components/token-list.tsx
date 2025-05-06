@@ -196,7 +196,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
               
               <button
                 onClick={() => setShowHidden(!showHidden)}
-                className={`p-2 rounded-md glass-card hover:bg-black/20 border-white/15 ${showHidden ? 'text-purple-400' : 'text-white/70'}`}
+                className={`p-2 hover:opacity-80 transition-opacity ${showHidden ? 'text-purple-400' : 'text-white/70'}`}
                 title={showHidden ? "Hide hidden tokens" : "Show hidden tokens"}
               >
                 {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -281,7 +281,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                         <div className="flex gap-2 items-center mt-1">
                           <button 
                             onClick={() => handleToggleVisibility(token.address)}
-                            className={`p-1.5 rounded-full glass-card hover:bg-black/20 ${isHidden ? 'text-white/60' : 'text-purple-400'}`}
+                            className={`p-1.5 hover:opacity-80 transition-opacity ${isHidden ? 'text-white/40' : 'text-white/70'}`}
                             title={isHidden ? "Show token" : "Hide token"}
                           >
                             {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -407,7 +407,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <button 
                           onClick={() => handleToggleVisibility(token.address)} 
-                          className={`p-1.5 rounded-full glass-card hover:bg-black/20 ${isHidden ? 'text-white/60' : 'text-purple-400'}`}
+                          className={`p-1.5 hover:opacity-80 transition-opacity ${isHidden ? 'text-white/40' : 'text-white/70'}`}
                           title={isHidden ? "Show token" : "Hide token"}
                         >
                           {isHidden ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -439,7 +439,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                   {!showHidden && (
                     <button 
                       onClick={() => setShowHidden(true)}
-                      className="text-xs px-2 py-1 glass-card text-purple-400 rounded-md border-white/15 hover:bg-black/20"
+                      className="text-xs px-2 py-1 text-white/70 hover:opacity-80 transition-opacity"
                     >
                       Show
                     </button>
