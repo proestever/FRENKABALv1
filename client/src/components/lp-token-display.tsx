@@ -128,7 +128,9 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
             <ExternalLink size={10} />
           </a>
           {token.value !== undefined && (
-            <span className="ml-2 font-semibold">{formatCurrency(token.value)}</span>
+            <span className="ml-2 bg-gradient-to-r from-token0-color/30 to-token1-color/30 text-white px-2 py-0.5 rounded-sm font-semibold">
+              {formatCurrency(token.value)}
+            </span>
           )}
         </div>
       </div>
@@ -173,7 +175,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
             </div>
           </div>
           {token0Value !== undefined && (
-            <div className="text-white font-medium">
+            <div className="text-token0-color font-medium">
               {formatCurrency(token0Value)}
             </div>
           )}
@@ -197,7 +199,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
             </div>
           </div>
           {token1Value !== undefined && (
-            <div className="text-white font-medium">
+            <div className="text-token1-color font-medium">
               {formatCurrency(token1Value)}
             </div>
           )}
@@ -206,7 +208,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
         {/* Total Position Value */}
         <div className="flex justify-between items-center mt-1 pt-1 border-t border-white/10 text-xs">
           <span className="text-white/60">Total Position Value</span>
-          <span className="font-semibold text-white">
+          <span className="bg-gradient-to-r from-token0-color/30 to-token1-color/30 px-2 py-0.5 rounded font-semibold text-white">
             {token.value !== undefined 
               ? formatCurrency(token.value)
               : 'Unknown'}

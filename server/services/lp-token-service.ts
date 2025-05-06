@@ -139,16 +139,47 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
     
     const [reserve0, reserve1] = reserves;
     
-    // 5. Calculate user share - convert everything to native JS numbers for simplicity
-    const userLpTokenBalance = ethers.BigNumber.from(token.balance);
-    const userShareRatio = Number(ethers.utils.formatEther(userLpTokenBalance)) / 
-                          Number(ethers.utils.formatEther(totalSupply));
+    // 5. Calculate user share - handle scientific notation properly
+    let token0Balance = '0';
+    let token1Balance = '0';
     
-    // 6. Calculate token balances based on user's share
-    const token0Balance = reserve0.mul(ethers.utils.parseEther(userShareRatio.toString()))
-                             .div(ethers.utils.parseEther('1')).toString();
-    const token1Balance = reserve1.mul(ethers.utils.parseEther(userShareRatio.toString()))
-                             .div(ethers.utils.parseEther('1')).toString();
+    try {
+      const userLpTokenBalance = ethers.BigNumber.from(token.balance);
+      
+      // Convert to decimal strings first to avoid scientific notation issues
+      const userBalanceDecimal = ethers.utils.formatEther(userLpTokenBalance);
+      const totalSupplyDecimal = ethers.utils.formatEther(totalSupply);
+      
+      // Parse as regular numbers for the ratio calculation
+      const userBalanceNumber = parseFloat(userBalanceDecimal);
+      const totalSupplyNumber = parseFloat(totalSupplyDecimal);
+      
+      // Calculate the share ratio
+      const userShareRatio = userBalanceNumber / totalSupplyNumber;
+      
+      // Handle very small numbers by using a string representation instead of scientific notation
+      let ratioString = userShareRatio.toString();
+      
+      // If scientific notation is present, convert to a regular decimal string
+      if (ratioString.includes('e-')) {
+        const match = ratioString.match(/^(\d)\.?(\d*)e-(\d+)$/);
+        if (match) {
+          const digit = match[1];
+          const decimal = match[2] || '';
+          const zeros = parseInt(match[3], 10) - 1;
+          ratioString = '0.' + '0'.repeat(zeros) + digit + decimal;
+        }
+      }
+      
+      // 6. Calculate token balances based on user's share
+      token0Balance = reserve0.mul(ethers.utils.parseEther(ratioString))
+                               .div(ethers.utils.parseEther('1')).toString();
+      token1Balance = reserve1.mul(ethers.utils.parseEther(ratioString))
+                               .div(ethers.utils.parseEther('1')).toString();
+    } catch (error) {
+      console.error(`Error calculating LP token shares for ${token.address}:`, error);
+      // Continue with default values if there's an error
+    }
     
     // 7. Format balances with proper decimals
     const token0BalanceFormatted = Number(ethers.utils.formatUnits(token0Balance, token0Decimals));
@@ -172,14 +203,14 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
     return {
       ...token,
       // Set symbols based on what we retrieved from the blockchain
-      lpToken0Symbol: token0Symbol || token.lpToken0Symbol || '?',
-      lpToken1Symbol: token1Symbol || token.lpToken1Symbol || '?',
+      lpToken0Symbol: safeToken0Symbol || token.lpToken0Symbol || '?',
+      lpToken1Symbol: safeToken1Symbol || token.lpToken1Symbol || '?',
       // Add token addresses
       lpToken0Address: token0Address,
       lpToken1Address: token1Address,
       // Add token names
-      lpToken0Name: token0Name || undefined,
-      lpToken1Name: token1Name || undefined,
+      lpToken0Name: safeToken0Name,
+      lpToken1Name: safeToken1Name,
       // Add token decimals
       lpToken0Decimals: token0Decimals,
       lpToken1Decimals: token1Decimals,
