@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { getHiddenTokens, isTokenHidden, isAddressBookmarked } from '@/lib/api';
 import { useAuth } from '@/providers/auth-provider';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
-import { useHexStakes } from '@/hooks/use-hex-stakes';
+import { useHexStakes, fetchHexStakesSummary } from '@/hooks/use-hex-stakes';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -30,6 +30,31 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
   
   // Get HEX stakes data
   const hexStakesSummary = useHexStakes(wallet?.address);
+  
+  // Manually fetch HEX stakes when wallet changes to ensure data is available for the card
+  const [manualHexSummary, setManualHexSummary] = useState(hexStakesSummary);
+  
+  useEffect(() => {
+    // Only run this if we have a wallet address
+    if (wallet?.address) {
+      // First immediately use any data from the hook
+      setManualHexSummary(hexStakesSummary);
+      
+      // Then manually fetch fresh data
+      console.log('Manually fetching HEX stakes for wallet overview card:', wallet.address);
+      fetchHexStakesSummary(wallet.address)
+        .then(summary => {
+          console.log('Manually fetched HEX summary data:', summary);
+          // Only update if we got stake data and it's different from what we have
+          if (summary.stakeCount > 0) {
+            setManualHexSummary(summary);
+          }
+        })
+        .catch(err => {
+          console.error('Error manually fetching HEX stakes for overview card:', err);
+        });
+    }
+  }, [wallet?.address]);
 
   // Check if the current wallet is bookmarked
   useEffect(() => {
@@ -232,8 +257,8 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             )}
           </div>
           
-          {/* HEX Stakes Card */}
-          {hexStakesSummary.stakeCount > 0 && (
+          {/* HEX Stakes Card - Using manualHexSummary for more consistent display */}
+          {(manualHexSummary.stakeCount > 0 || hexStakesSummary.stakeCount > 0) && (
             <div className="glass-card rounded-lg p-4 border-white/15">
               <div className="flex items-center mb-2">
                 <TokenLogo 
@@ -252,19 +277,19 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
                 <div>
                   <div className="text-xs text-muted-foreground">Total Staked</div>
                   <div className="text-lg font-bold text-white">
-                    {formatTokenAmount(parseFloat(hexStakesSummary.totalStakedHex))} HEX
+                    {formatTokenAmount(parseFloat(manualHexSummary.totalStakedHex || '0'))} HEX
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {formatCurrency(hexStakesSummary.totalStakeValueUsd)}
+                    {formatCurrency(manualHexSummary.totalStakeValueUsd || 0)}
                   </div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Total Interest</div>
                   <div className="text-lg font-bold text-green-400">
-                    {formatTokenAmount(parseFloat(hexStakesSummary.totalInterestHex))} HEX
+                    {formatTokenAmount(parseFloat(manualHexSummary.totalInterestHex || '0'))} HEX
                   </div>
                   <div className="text-xs text-green-400">
-                    {formatCurrency(hexStakesSummary.totalInterestValueUsd)}
+                    {formatCurrency(manualHexSummary.totalInterestValueUsd || 0)}
                   </div>
                 </div>
               </div>
@@ -272,19 +297,21 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               <div className="mt-2">
                 <div className="text-xs text-muted-foreground">Combined Value</div>
                 <div className="text-lg font-bold text-white">
-                  {formatTokenAmount(parseFloat(hexStakesSummary.totalCombinedHex))} HEX
+                  {formatTokenAmount(parseFloat(manualHexSummary.totalCombinedHex || '0'))} HEX
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {formatCurrency(hexStakesSummary.totalCombinedValueUsd)}
+                  {formatCurrency(manualHexSummary.totalCombinedValueUsd || 0)}
                 </div>
               </div>
               
               <div className="text-sm mt-2 flex items-center justify-between">
                 <span className="text-purple-400 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">
-                  {hexStakesSummary.stakeCount} {hexStakesSummary.stakeCount === 1 ? 'stake' : 'stakes'}
+                  {manualHexSummary.stakeCount || hexStakesSummary.stakeCount} 
+                  {(manualHexSummary.stakeCount || hexStakesSummary.stakeCount) === 1 ? ' stake' : ' stakes'}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {hexStakesSummary.hexPrice > 0 ? `1 HEX = ${formatCurrency(hexStakesSummary.hexPrice)}` : ''}
+                  {(manualHexSummary.hexPrice || hexStakesSummary.hexPrice) > 0 ? 
+                    `1 HEX = ${formatCurrency(manualHexSummary.hexPrice || hexStakesSummary.hexPrice)}` : ''}
                 </span>
               </div>
             </div>
