@@ -265,7 +265,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                     <div className="flex items-center justify-between">
                       {/* Token Info */}
                       <div className="flex items-center flex-grow">
-                        <div className="mr-3 flex-shrink-0">
+                        <div className={`mr-3 ${token.isLp && showLiquidity ? 'w-full' : 'flex-shrink-0'}`}>
                           {/* Use LP token display or regular token logo based on token type */}
                           {token.isLp ? (
                             <LpTokenDisplay 
@@ -419,7 +419,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                     <tr key={`desktop-${token.address}-${index}`} className="hover:bg-black/20 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="mr-3 flex-shrink-0">
+                          <div className={`mr-3 ${token.isLp && showLiquidity ? 'w-full' : 'flex-shrink-0'}`}>
                             {/* Use LP token display or regular token logo based on token type */}
                             {token.isLp ? (
                               <LpTokenDisplay 
