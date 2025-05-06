@@ -8,9 +8,10 @@ interface TokenLogoProps {
   symbol?: string;
   fallbackLogo?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg';
+  className?: string;
 }
 
-export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenLogoProps) {
+export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', className = '' }: TokenLogoProps) {
   // Disable all debugging logs
   const DEBUG_LOGGING = false;
   
@@ -172,7 +173,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
   // When loading
   if (isLoading) {
     return (
-      <div className={`${sizeClass} rounded-full bg-secondary/30 animate-pulse`}></div>
+      <div className={`${sizeClass} rounded-full bg-secondary/30 animate-pulse ${className}`}></div>
     );
   }
 
@@ -182,7 +183,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
       <img 
         src={logoUrl} 
         alt={symbol || 'Token logo'} 
-        className={`${sizeClass} rounded-full object-cover border border-white/10`}
+        className={`${sizeClass} rounded-full object-cover border border-white/10 ${className}`}
         onError={(e) => {
           // Prevent infinite error loops
           e.currentTarget.onerror = null;
