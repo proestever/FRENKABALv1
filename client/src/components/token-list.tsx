@@ -154,13 +154,13 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
     <Card className="shadow-lg glass-card">
       <div className="p-6 border-b border-border">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap overflow-x-auto pb-1">
             <button 
               onClick={() => {
                 setShowTransactions(false);
                 setShowLiquidity(false);
               }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 transition-all duration-200 
+              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
                 ${!showTransactions && !showLiquidity 
                   ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
                   : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
@@ -175,7 +175,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                 setShowTransactions(false);
                 setShowLiquidity(true);
               }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 transition-all duration-200 
+              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
                 ${showLiquidity 
                   ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
                   : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
@@ -191,7 +191,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                 setShowLiquidity(false);
                 setTxHistoryKey(Date.now());
               }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 transition-all duration-200 
+              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
                 ${showTransactions 
                   ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
                   : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
