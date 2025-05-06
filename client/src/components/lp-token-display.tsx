@@ -111,9 +111,9 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
           {hasValidPair ? (
             <>
               <div className="flex items-center gap-1">
-                <span className="text-token0-color font-semibold">{token0Symbol}</span>
+                <span className="text-white font-semibold">{token0Symbol}</span>
                 <span className="text-white/70">/</span>
-                <span className="text-token1-color font-semibold">{token1Symbol}</span>
+                <span className="text-white font-semibold">{token1Symbol}</span>
                 <a 
                   href={getPulseXPoolUrl()}
                   target="_blank"
