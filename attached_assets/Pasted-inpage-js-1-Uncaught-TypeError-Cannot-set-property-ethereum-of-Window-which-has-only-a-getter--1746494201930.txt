@@ -1,0 +1,309 @@
+inpage.js:1 Uncaught TypeError: Cannot set property ethereum of #<Window> which has only a getter
+    at d (inpage.js:1:43802)
+    at r.initializeProvider (inpage.js:1:43453)
+    at Object.<anonymous> (inpage.js:1:1111)
+    at Object.<anonymous> (inpage.js:1:4932)
+    at 1.../../shared/modules/provider-injection (inpage.js:1:4945)
+    at i (inpage.js:1:254)
+    at e (inpage.js:1:414)
+    at inpage.js:1:431Understand this error
+lockdown-install.js:1 Removing unpermitted intrinsics
+6772-9a2cc70eeb4e401c.js:1 Replit version 4d23d81b, pid2 version 0.0.1270
+_app-7d0ab62bae12f7c7.js:13 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+_app-7d0ab62bae12f7c7.js:13 [LaunchDarkly] LaunchDarkly client initialized
+inpage.js:1 Uncaught TypeError: Cannot set property ethereum of #<Window> which has only a getter
+    at d (inpage.js:1:43802)
+    at r.initializeProvider (inpage.js:1:43453)
+    at Object.<anonymous> (inpage.js:1:1111)
+    at Object.<anonymous> (inpage.js:1:4932)
+    at 1.../../shared/modules/provider-injection (inpage.js:1:4945)
+    at i (inpage.js:1:254)
+    at e (inpage.js:1:414)
+    at inpage.js:1:431Understand this error
+ Removing unpermitted intrinsics
+inpage.js:1 Uncaught TypeError: Cannot set property ethereum of #<Window> which has only a getter
+    at d (inpage.js:1:43802)
+    at r.initializeProvider (inpage.js:1:43453)
+    at Object.<anonymous> (inpage.js:1:1111)
+    at Object.<anonymous> (inpage.js:1:4932)
+    at 1.../../shared/modules/provider-injection (inpage.js:1:4945)
+    at i (inpage.js:1:254)
+    at e (inpage.js:1:414)
+    at inpage.js:1:431Understand this error
+lockdown-install.js:1 Removing unpermitted intrinsics
+inpage.js:1 Uncaught TypeError: Cannot set property ethereum of #<Window> which has only a getter
+    at d (inpage.js:1:43802)
+    at r.initializeProvider (inpage.js:1:43453)
+    at Object.<anonymous> (inpage.js:1:1111)
+    at Object.<anonymous> (inpage.js:1:4932)
+    at 1.../../shared/modules/provider-injection (inpage.js:1:4945)
+    at i (inpage.js:1:254)
+    at e (inpage.js:1:414)
+    at inpage.js:1:431Understand this error
+lockdown-install.js:1 Removing unpermitted intrinsics
+FrenKabal:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+35Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'battery'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'layout-animations'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'navigation-override'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'oversized-images'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'publickey-credentials'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+framework-4d8256df0f0ec9be.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-4d8256df0f0ec9be.js:1Understand this warning
+inpage.js:1 Uncaught TypeError: Cannot set property ethereum of #<Window> which has only a getter
+    at d (inpage.js:1:43802)
+    at r.initializeProvider (inpage.js:1:43453)
+    at Object.<anonymous> (inpage.js:1:1111)
+    at Object.<anonymous> (inpage.js:1:4932)
+    at 1.../../shared/modules/provider-injection (inpage.js:1:4945)
+    at i (inpage.js:1:254)
+    at e (inpage.js:1:414)
+    at inpage.js:1:431Understand this error
+lockdown-install.js:1 Removing unpermitted intrinsics
+inpage.js:1 Uncaught TypeError: Cannot set property ethereum of #<Window> which has only a getter
+    at d (inpage.js:1:43802)
+    at r.initializeProvider (inpage.js:1:43453)
+    at Object.<anonymous> (inpage.js:1:1111)
+    at Object.<anonymous> (inpage.js:1:4932)
+    at 1.../../shared/modules/provider-injection (inpage.js:1:4945)
+    at i (inpage.js:1:254)
+    at e (inpage.js:1:414)
+    at inpage.js:1:431Understand this error
+lockdown-install.js:1 Removing unpermitted intrinsics
+4_app-7d0ab62bae12f7c7.js:13 onClick is deprecated, please use onPress
+(anonymous) @ _app-7d0ab62bae12f7c7.js:13Understand this warning
+inpage.js:1 Uncaught TypeError: Cannot set property ethereum of #<Window> which has only a getter
+    at d (inpage.js:1:43802)
+    at r.initializeProvider (inpage.js:1:43453)
+    at Object.<anonymous> (inpage.js:1:1111)
+    at Object.<anonymous> (inpage.js:1:4932)
+    at 1.../../shared/modules/provider-injection (inpage.js:1:4945)
+    at i (inpage.js:1:254)
+    at e (inpage.js:1:414)
+    at inpage.js:1:431Understand this error
+lockdown-install.js:1 Removing unpermitted intrinsics
+6Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist.Understand this error
+FrenKabal:1 Access to fetch at 'https://sp.replit.com/v1/m' from origin 'https://replit.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disabled.Understand this error
+sp.replit.com/v1/m:1 
+            
+            
+           Failed to load resource: net::ERR_FAILEDUnderstand this error
+_app-7d0ab62bae12f7c7.js:13 Error sending segment performance metrics TypeError: Failed to fetch
+    at _app-7d0ab62bae12f7c7.js:13:9046
+    at o (sdk.min.js:1:23763)
+    at t.<anonymous> (remote-metrics.ts:138:12)
+    at tslib.es6.js:103:23
+    at Object.next (tslib.es6.js:108:37)
+    at tslib.es6.js:80:8
+    at new Promise (<anonymous>)
+    at u (tslib.es6.js:72:27)
+    at i.148.t.send (sdk.min.js:1:22021)
+    at t.<anonymous> (remote-metrics.ts:125:16)
+    at tslib.es6.js:103:23
+    at Object.next (tslib.es6.js:108:37)
+    at tslib.es6.js:80:8
+    at new Promise (<anonymous>)
+    at u (tslib.es6.js:72:27)
+    at t.flush (sdk.min.js:1:21754)
+    at l (remote-metrics.ts:83:14)
+    at r (_app-7d0ab62bae12f7c7.js:13:2959)
+(anonymous) @ _app-7d0ab62bae12f7c7.js:13Understand this error
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'ambient-light-sensor'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'battery'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'execution-while-not-rendered'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'layout-animations'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'navigation-override'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'oversized-images'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'publickey-credentials'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'speaker-selection'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'unoptimized-images'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Unrecognized feature: 'unsized-media'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+21265eee-888d-4ade-8d98-065557abd999-00-2mzjs8fi71m41.worf.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Arbh4%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
+cryptologos.cc/logos/pulse-pls-logo.png:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_RESPONSE.NotSameOriginUnderstand this error
+cryptologos.cc/logos/pulse-pls-logo.png:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_RESPONSE.NotSameOriginUnderstand this error
+cryptologos.cc/logos/pulse-pls-logo.png:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_RESPONSE.NotSameOriginUnderstand this error
+cryptologos.cc/logos/pulse-pls-logo.png:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_RESPONSE.NotSameOriginUnderstand this error
+cryptologos.cc/logos/pulse-pls-logo.png:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_RESPONSE.NotSameOriginUnderstand this error
+inpage.js:1 Uncaught TypeError: Cannot set property ethereum of #<Window> which has only a getter
+    at d (inpage.js:1:43802)
+    at r.initializeProvider (inpage.js:1:43453)
+    at Object.<anonymous> (inpage.js:1:1111)
+    at Object.<anonymous> (inpage.js:1:4932)
+    at 1.../../shared/modules/provider-injection (inpage.js:1:4945)
+    at i (inpage.js:1:254)
+    at e (inpage.js:1:414)
+    at inpage.js:1:431Understand this error
+lockdown-install.js:1 Removing unpermitted intrinsics
+inpage.js:1 Uncaught TypeError: Cannot set property ethereum of #<Window> which has only a getter
+    at d (inpage.js:1:43802)
+    at r.initializeProvider (inpage.js:1:43453)
+    at Object.<anonymous> (inpage.js:1:1111)
+    at Object.<anonymous> (inpage.js:1:4932)
+    at 1.../../shared/modules/provider-injection (inpage.js:1:4945)
+    at i (inpage.js:1:254)
+    at e (inpage.js:1:414)
+    at inpage.js:1:431Understand this error
+lockdown-install.js:1 Removing unpermitted intrinsics
+Console.js:61 Module "buffer" has been externalized for browser compatibility. Cannot access "buffer.Buffer" in client code. See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+Mt.forEach.n.<computed> @ Console.js:61Understand this warning
+Console.js:61 Wallet data changed: undefined
+Console.js:61 isLoading: false isFetching: false isError: false
+Console.js:61 Login token valid for 6 days and 16 hours
+Console.js:61 Searching wallet address, clearing cache to ensure fresh data: 0x592139A3f8cf019f628A152FC1262B8aEf5B7199
+Console.js:61 Invalidating cache for wallet: 0x592139A3f8cf019f628A152FC1262B8aEf5B7199
+Console.js:61 Wallet data changed: undefined
+Console.js:61 isLoading: true isFetching: true isError: false
+Console.js:61 Processing logo batch 1/1, size: 14
+Console.js:61 Wallet data changed: Object
+Console.js:61 isLoading: false isFetching: false isError: false
+Console.js:61 Processing logo batch 1/1, size: 14
+cryptologos.cc/logos/pulse-pls-logo.png:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_RESPONSE.NotSameOriginUnderstand this error
+2Console.js:61 Failed to load token logo for PLS https://cryptologos.cc/logos/pulse-pls-logo.png
+Mt.forEach.n.<computed> @ Console.js:61Understand this warning
+3Console.js:61 Processing logo batch 1/1, size: 14
+Console.js:61 Fetching transaction history for: 0x592139A3f8cf019f628A152FC1262B8aEf5B7199
+Console.js:61 Fetching transaction history: /api/wallet/0x592139A3f8cf019f628A152FC1262B8aEf5B7199/transactions?limit=100
+Console.js:61 Initial transaction history fetched: yes 100 transactions Response data: {"result":[{"hash":"0x41b00efb872f731645e63c38784453ad2276b49d02daff7dc1ba1d228eb5a2e1","nonce":"1682","transaction_index":"11","from_address_entity":null,"from_address_entity_logo":null,"from_address":"0x592139a3f8cf019f628a152fc1262b8aef5b7199","from_address_label":null,"to_address_entity":null,"t...
+Console.js:61 Setting 100 processed transactions
+Console.js:61 Batch token price fetch success: Received 23 prices
+
+                
+          
+          
+          
+         Chrome is moving towards a new experience that allows users to choose to browse without third-party cookies.Understand this warning
+Console.js:61 Transaction history request is taking too long
+pageProvider.js:2 Uncaught (in promise) {message: 'User rejected the request.', stack: 'Error: User rejected the request.\n    at a (chrome…gmoleebolmdjonilkdbch/content-script.js:2:168341)', code: 4001}
+onResponse @ pageProvider.js:2
+(anonymous) @ pageProvider.js:2
+o.emit @ pageProvider.js:2
+S @ pageProvider.js:2
+N @ pageProvider.js:2
+C.push @ pageProvider.js:2
+_onData @ pageProvider.js:2
+_onMessage @ pageProvider.js:2
+postMessage
+_postMessage @ content-script.js:2
+_write @ content-script.js:2
+I @ content-script.js:2
+(anonymous) @ content-script.js:2
+O.write @ content-script.js:2
+BroadcastChannelMessage.send @ content-script.js:2
+G.onRequest @ content-script.js:2Understand this error
+0x592139A3f8cf019f62…FC1262B8aEf5B7199:1 Uncaught (in promise) {code: 4001, message: 'User rejected the request.'}
+postMessage
+_postMessage @ content-script.js:2
+_write @ content-script.js:2
+I @ content-script.js:2
+(anonymous) @ content-script.js:2
+O.write @ content-script.js:2
+BroadcastChannelMessage.send @ content-script.js:2
+G.onRequest @ content-script.js:2Understand this error
+0x592139A3f8cf019f62…FC1262B8aEf5B7199:1 Uncaught (in promise) {code: 4001, message: 'User rejected the request.'}
+postMessage
+_postMessage @ content-script.js:2
+_write @ content-script.js:2
+I @ content-script.js:2
+(anonymous) @ content-script.js:2
+O.write @ content-script.js:2
+BroadcastChannelMessage.send @ content-script.js:2
+G.onRequest @ content-script.js:2Understand this error
+pageProvider.js:2 Uncaught (in promise) {message: 'User rejected the request.', stack: 'Error: User rejected the request.\n    at a (chrome…gmoleebolmdjonilkdbch/content-script.js:2:168341)', code: 4001}
+onResponse @ pageProvider.js:2
+(anonymous) @ pageProvider.js:2
+o.emit @ pageProvider.js:2
+S @ pageProvider.js:2
+N @ pageProvider.js:2
+C.push @ pageProvider.js:2
+_onData @ pageProvider.js:2
+_onMessage @ pageProvider.js:2
+postMessage
+_postMessage @ content-script.js:2
+_write @ content-script.js:2
+I @ content-script.js:2
+(anonymous) @ content-script.js:2
+O.write @ content-script.js:2
+BroadcastChannelMessage.send @ content-script.js:2
+G.onRequest @ content-script.js:2Understand this error
+
+                
+          
+          
+          
+         Chrome is moving towards a new experience that allows users to choose to browse without third-party cookies.Understand this warning
+inpage.js:1 Uncaught TypeError: Cannot set property ethereum of #<Window> which has only a getter
+    at d (inpage.js:1:43802)
+    at r.initializeProvider (inpage.js:1:43453)
+    at Object.<anonymous> (inpage.js:1:1111)
+    at Object.<anonymous> (inpage.js:1:4932)
+    at 1.../../shared/modules/provider-injection (inpage.js:1:4945)
+    at i (inpage.js:1:254)
+    at e (inpage.js:1:414)
+    at inpage.js:1:431
+d @ inpage.js:1
+r.initializeProvider @ inpage.js:1
+(anonymous) @ inpage.js:1
+(anonymous) @ inpage.js:1
+1.../../shared/modules/provider-injection @ inpage.js:1
+i @ inpage.js:1
+e @ inpage.js:1
+(anonymous) @ inpage.js:1Understand this error
+lockdown-install.js:1 Removing unpermitted intrinsics

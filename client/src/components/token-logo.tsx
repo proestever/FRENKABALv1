@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+
+// Logo cache to prevent excessive API calls
+const logoCache: Record<string, string> = {};
 
 interface TokenLogoProps {
   address: string;
@@ -8,14 +11,15 @@ interface TokenLogoProps {
 }
 
 export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenLogoProps) {
-  // Only log debugging information when explicitly enabled
+  // Disable all debugging logs
   const DEBUG_LOGGING = false;
-  if (DEBUG_LOGGING) {
-    console.log("TokenLogo props:", { address, symbol, fallbackLogo });
-  }
+  
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
+  
+  // Use ref to track if we've already attempted to fetch this logo
+  const attemptedFetch = useRef(false);
 
   // Get the size class based on the size prop
   const sizeClass = 
@@ -23,61 +27,65 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
     size === 'lg' ? 'w-10 h-10' : 
     'w-8 h-8'; // medium size default
 
-  // Get fallback logo from local storage/cache if possible
+  // Get token logo, using cache when possible
   useEffect(() => {
     if (!address) {
       setIsLoading(false);
       setError(true);
       return;
     }
-
+    
+    // Normalize address for consistency
+    const normalizedAddress = address.toLowerCase();
+    
     // If we have a direct fallback logo, use it immediately
     if (fallbackLogo) {
       setLogoUrl(fallbackLogo);
       setIsLoading(false);
       return;
     }
+    
+    // Check cache first
+    if (logoCache[normalizedAddress]) {
+      setLogoUrl(logoCache[normalizedAddress]);
+      setIsLoading(false);
+      return;
+    }
+
+    // Special cases that don't need API calls
+    // Handle special case for native PLS token - check both symbol and address format
+    if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || 
+        symbol?.toUpperCase() === 'PLS' || 
+        symbol === 'PulseChain') {
+      const plsLogo = '/assets/pls-logo-trimmed.png';
+      logoCache[normalizedAddress] = plsLogo;
+      setLogoUrl(plsLogo);
+      setIsLoading(false);
+      return;
+    }
+    
+    // Handle special case for Frenkabal placeholder logo
+    if (symbol && ['pDAI', 'frpl', 'PDAI'].includes(symbol)) {
+      const frenLogo = '/assets/100xfrenlogo.png';
+      logoCache[normalizedAddress] = frenLogo;
+      setLogoUrl(frenLogo);
+      setIsLoading(false);
+      return;
+    }
+
+    // Don't attempt to fetch the same logo multiple times in one session
+    if (attemptedFetch.current) {
+      return;
+    }
+    
+    // Set flag to indicate we've tried to fetch this logo
+    attemptedFetch.current = true;
 
     // Try to fetch the logo from our API
     const fetchLogo = async () => {
       try {
-        // Normalize address
-        const normalizedAddress = address.toLowerCase();
         setIsLoading(true);
         setError(false);
-
-        // Handle special case for native PLS token - check both symbol and address format
-        if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || 
-            symbol?.toUpperCase() === 'PLS' || 
-            symbol === 'PulseChain') {
-          if (DEBUG_LOGGING) {
-            console.log('Using native PLS token logo for:', address, symbol);
-          }
-          // Use the local asset
-          setLogoUrl('/assets/pls-logo-trimmed.png');
-          setIsLoading(false);
-          return;
-        }
-        
-        // Handle special case for Frenkabal placeholder logo
-        if (symbol && ['pDAI', 'frpl', 'PDAI'].includes(symbol)) {
-          if (DEBUG_LOGGING) {
-            console.log('Using Frenkabal logo for:', address, symbol);
-          }
-          setLogoUrl('/assets/100xfrenlogo.png');
-          setIsLoading(false);
-          return;
-        }
-        
-        // Handle token logos directly provided by the server
-        if (fallbackLogo && (fallbackLogo.startsWith('/assets/') || fallbackLogo.startsWith('https://') || fallbackLogo.startsWith('http://'))) {
-          if (DEBUG_LOGGING) {
-            console.log('Using provided fallback logo:', fallbackLogo);
-          }
-          setLogoUrl(fallbackLogo);
-          setIsLoading(false);
-          return;
-        }
 
         const response = await fetch(`/api/token-logo/${normalizedAddress}`);
         
@@ -87,16 +95,24 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
         
         const data = await response.json();
         if (data && data.logoUrl) {
+          // Save to cache
+          logoCache[normalizedAddress] = data.logoUrl;
           setLogoUrl(data.logoUrl);
         } else {
           // Default to the app logo if no logo found
-          setLogoUrl('/assets/100xfrenlogo.png');
+          const defaultLogo = '/assets/100xfrenlogo.png';
+          logoCache[normalizedAddress] = defaultLogo;
+          setLogoUrl(defaultLogo);
         }
       } catch (error) {
-        console.error('Error fetching token logo:', error);
+        if (DEBUG_LOGGING) {
+          console.error('Error fetching token logo:', error);
+        }
         setError(true);
         // Default to the app logo if error
-        setLogoUrl('/assets/100xfrenlogo.png');
+        const defaultLogo = '/assets/100xfrenlogo.png';
+        logoCache[normalizedAddress] = defaultLogo;
+        setLogoUrl(defaultLogo);
       } finally {
         setIsLoading(false);
       }
