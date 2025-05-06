@@ -36,6 +36,19 @@ export function useAllWalletTokens(walletAddress: string | null) {
     }
   }, [walletAddress, queryClient]);
   
+  // Handle successful CAPTCHA verification
+  const handleCaptchaSuccess = useCallback((token: string) => {
+    console.log('CAPTCHA verified successfully, token received');
+    setCaptchaToken(token);
+    setCaptchaRequired(false);
+  }, []);
+  
+  // Reset CAPTCHA state
+  const resetCaptcha = useCallback(() => {
+    setCaptchaToken(null);
+    setCaptchaRequired(false);
+  }, []);
+  
   // Fetch wallet data with all tokens
   const { 
     data: walletData,
@@ -45,13 +58,33 @@ export function useAllWalletTokens(walletAddress: string | null) {
     error,
     refetch
   } = useQuery({
-    queryKey: walletAddress ? [`wallet-all-${walletAddress}`] : ['wallet-all-empty'],
+    queryKey: walletAddress ? [`wallet-all-${walletAddress}`, captchaToken] : ['wallet-all-empty'],
     enabled: !!walletAddress,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     staleTime: 0, // Consider data always stale to force refetch
     gcTime: 0, // Don't cache between wallet loads (this is TanStack Query v5's replacement for cacheTime)
-    queryFn: () => walletAddress ? fetchAllWalletTokens(walletAddress) : Promise.reject('No wallet address'),
+    queryFn: () => {
+      if (!walletAddress) return Promise.reject('No wallet address');
+      console.log('Fetching all wallet tokens for:', walletAddress, 'captchaToken:', captchaToken ? 'present' : 'none');
+      return fetchAllWalletTokens(walletAddress, captchaToken || undefined)
+        .then(data => {
+          // Clear captcha token after successful fetch
+          if (captchaToken) {
+            resetCaptcha();
+          }
+          return data;
+        })
+        .catch(error => {
+          // Check if error is due to CAPTCHA requirement
+          // @ts-ignore - Custom property
+          if (error.message === 'CAPTCHA_REQUIRED' || error.captchaRequired) {
+            console.log('CAPTCHA required for wallet data fetch');
+            setCaptchaRequired(true);
+          }
+          throw error;
+        });
+    }
   });
   
   // Poll loading progress during fetching
@@ -95,6 +128,9 @@ export function useAllWalletTokens(walletAddress: string | null) {
     isError,
     error,
     refetch,
-    progress
+    progress,
+    captchaRequired,
+    handleCaptchaSuccess,
+    resetCaptcha
   };
 }

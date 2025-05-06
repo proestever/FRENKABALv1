@@ -11,6 +11,7 @@ import { saveRecentAddress, ProcessedToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
 import { Wallet, Token } from '@shared/schema';
+import CaptchaDialog from '@/components/captcha-dialog';
 
 // Example wallet address
 const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
@@ -80,6 +81,9 @@ export default function Home() {
     }
   }, [params.walletAddress, searchedAddress]);
 
+  // State for CAPTCHA dialog
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+  
   // Use our new hook for loading all wallet tokens without pagination
   const { 
     walletData, 
@@ -88,7 +92,10 @@ export default function Home() {
     error, 
     refetch,
     isFetching,
-    progress
+    progress,
+    captchaRequired,
+    handleCaptchaSuccess,
+    resetCaptcha
   } = useAllWalletTokens(searchedAddress)
   
   // Debug wallet data
@@ -96,6 +103,14 @@ export default function Home() {
     console.log('Wallet data changed:', walletData);
     console.log('isLoading:', isLoading, 'isFetching:', isFetching, 'isError:', isError);
   }, [walletData, isLoading, isFetching, isError]);
+  
+  // Handle CAPTCHA requirement
+  useEffect(() => {
+    if (captchaRequired) {
+      console.log('CAPTCHA verification required, opening dialog');
+      setCaptchaOpen(true);
+    }
+  }, [captchaRequired]);
 
   // Handle errors
   useEffect(() => {
@@ -174,8 +189,31 @@ export default function Home() {
       )]
     : manualTokens;
 
+  // CAPTCHA dialog handling functions
+  const handleCaptchaClose = () => {
+    setCaptchaOpen(false);
+    resetCaptcha();
+  };
+  
+  const onCaptchaSuccess = (token: string) => {
+    handleCaptchaSuccess(token);
+    setCaptchaOpen(false);
+    
+    // Refetch after successful CAPTCHA verification
+    setTimeout(() => {
+      refetch();
+    }, 100);
+  };
+  
   return (
     <main className="container mx-auto px-4 py-6">
+      {/* CAPTCHA Dialog */}
+      <CaptchaDialog 
+        isOpen={captchaOpen} 
+        onClose={handleCaptchaClose}
+        onSuccess={onCaptchaSuccess}
+      />
+      
       {/* Only show the search section at the top if no wallet has been searched yet */}
       {!searchedAddress && (
         <SearchSection 
