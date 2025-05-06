@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
-// HEX Contract on PulseChain & ETH - same address on both chains
+// HEX Contract on PulseChain (using same address as ETH but focusing only on PulseChain now)
 const HEX_CONTRACT_ADDRESS = '0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39';
 
 // HEX launch timestamp (2019-12-03T00:00:00Z)
@@ -156,9 +156,9 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
     }
     
     // If we couldn't get data from the DOM, use a different approach:
-    // We'll use server API call to get a basic estimate based on the wallet address pattern
+    // We'll use PulseChain RPC call to get a basic estimate based on the wallet address pattern
     
-    // Get RPC provider for PulseChain to get stake count
+    // Get RPC provider for PulseChain (we only use PulseChain now)
     const rpcUrl = 'https://rpc-pulsechain.g4mm4.io';
     const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
     const hexContract = new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);

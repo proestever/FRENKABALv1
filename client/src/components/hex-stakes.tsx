@@ -320,7 +320,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
     return (
       <div className="p-6 text-center hex-stakes-component">
         <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">No HEX Stakes Found</h3>
-        <p className="text-white/70 mb-4">This wallet doesn't have any active or historical HEX stakes on {chainId === '0x1' ? 'Ethereum' : 'PulseChain'}.</p>
+        <p className="text-white/70 mb-4">This wallet doesn't have any active or historical HEX stakes on PulseChain.</p>
       </div>
     );
   }
@@ -335,7 +335,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
             <span className="ml-2 text-sm text-white/60">({stakeCount})</span>
           </h3>
           <p className="text-xs md:text-sm text-white/70 mt-1">
-            Viewing stakes on {chainId === '0x1' ? 'Ethereum' : 'PulseChain'} network
+            Viewing stakes on PulseChain network
           </p>
         </div>
         
