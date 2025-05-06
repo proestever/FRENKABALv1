@@ -151,7 +151,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
             </button>
           )}
           {token.value !== undefined && (
-            <div className="bg-gradient-to-r from-token0-color/20 to-token1-color/20 text-white px-3 py-1 rounded font-bold text-sm">
+            <div className="bg-gradient-to-r from-token0-color/20 to-token1-color/20 text-white px-3 py-1.5 rounded font-bold text-base md:text-lg">
               {formatCurrency(token.value)}
             </div>
           )}
@@ -182,7 +182,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
     }
     
     return (
-      <div className="mt-2 pl-2 border-l border-primary/40 text-xs w-full max-w-full">
+      <div className="mt-2 pl-2 border-l border-white/40 text-xs w-full max-w-full">
         {/* LP position divider */}
         <div className="my-1 border-t border-white/5"></div>
         
@@ -191,8 +191,8 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
           {/* LP position header with pair indication */}
           <div className="flex justify-between items-center p-3 bg-black/30 rounded-t-md border border-white/5 border-b-0 w-full max-w-full">
             <div className="flex items-center gap-2">
-              <div className="h-6 w-6 bg-primary/20 rounded-full flex items-center justify-center">
-                <span className="text-primary text-xs font-bold">LP</span>
+              <div className="h-6 w-6 bg-white/20 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs font-bold">LP</span>
               </div>
               <div className="flex items-center">
                 <span className="text-token0-color font-bold text-sm">{token0Symbol}</span>
@@ -202,7 +202,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
               </div>
             </div>
             {poolSharePercentage && (
-              <div className="text-sm px-2 py-0.5 bg-primary/10 text-primary rounded-sm font-medium">
+              <div className="text-sm px-2 py-0.5 bg-white/10 text-white rounded-sm font-medium">
                 {poolSharePercentage}% pool share
               </div>
             )}
@@ -215,7 +215,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
               {/* LP symbol in center */}
               <div className="absolute left-1/2 transform -translate-x-1/2 top-[5.5rem] flex items-center justify-center pointer-events-none">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-token0-color/10 to-token1-color/10 border border-white/10 flex items-center justify-center z-10 shadow-lg">
-                  <span className="text-primary text-sm font-bold">LP</span>
+                  <span className="text-white text-sm font-bold">LP</span>
                 </div>
               </div>
               
