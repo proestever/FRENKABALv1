@@ -261,7 +261,18 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                 const isHidden = hiddenTokens.includes(token.address);
                 
                 return (
-                  <div key={`mobile-${token.address}-${index}`} className="p-3 glass-card rounded-lg hover:bg-black/20 transition-colors">
+                  <div key={`mobile-${token.address}-${index}`} className="p-3 glass-card rounded-lg hover:bg-black/20 transition-colors relative">
+                    {/* Visibility Toggle Button - Top Right on Mobile */}
+                    <div className="absolute top-3 right-3 md:hidden">
+                      <button 
+                        onClick={() => handleToggleVisibility(token.address)}
+                        className={`p-1.5 hover:opacity-80 transition-opacity ${isHidden ? 'text-white/40' : 'text-white/70'}`}
+                        title={isHidden ? "Show token" : "Hide token"}
+                      >
+                        {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                       {/* Token Info - Mobile: Stacked layout, Desktop: Side-by-side */}
                       <div className="flex flex-col md:flex-row md:items-center flex-grow">
@@ -322,11 +333,20 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                                 : ''}
                             </span>
                           </div>
+                          
+                          {/* Mobile Value - Center Right */}
+                          <div className="flex justify-end md:hidden mt-3">
+                            <div className="text-base font-bold text-white">
+                              {token.value !== undefined 
+                                ? formatCurrency(token.value) 
+                                : 'N/A'}
+                            </div>
+                          </div>
                         </div>
                       </div>
                       
-                      {/* Token Value & Hide Button */}
-                      <div className="flex flex-col items-start md:items-end mt-2 md:mt-0">
+                      {/* Token Value - Desktop Only */}
+                      <div className="hidden md:flex flex-col items-end">
                         <div className="text-base font-bold text-white">
                           {token.value !== undefined 
                             ? formatCurrency(token.value) 
