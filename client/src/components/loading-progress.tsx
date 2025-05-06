@@ -72,48 +72,50 @@ export function LoadingProgress({ isLoading, customProgress }: LoadingProgressPr
   };
   
   return (
-    <Card className="p-4 mb-4 glass-card border-white/15 backdrop-blur-md shadow-lg">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <StatusIcon />
-            <h3 className="text-sm font-bold text-white">
-              {progress.status === 'loading' ? 'Loading wallet data...' : 
-               progress.status === 'complete' ? 'Loading complete' : 
-               'Error loading data'}
-            </h3>
+    <div className="fixed inset-0 flex items-center justify-center z-50">
+      <Card className="p-4 glass-card border-white/15 backdrop-blur-md shadow-lg w-4/5 max-w-2xl">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <StatusIcon />
+              <h3 className="text-sm font-bold text-white">
+                {progress.status === 'loading' ? 'Loading wallet data...' : 
+                 progress.status === 'complete' ? 'Loading complete' : 
+                 'Error loading data'}
+              </h3>
+            </div>
+            <span className="text-xs text-muted-foreground font-mono">
+              Batch {progress.currentBatch}/{progress.totalBatches}
+            </span>
           </div>
-          <span className="text-xs text-muted-foreground font-mono">
-            Batch {progress.currentBatch}/{progress.totalBatches}
-          </span>
+          
+          <Progress 
+            value={animatedProgress} 
+            className="h-3 bg-black/30 relative overflow-hidden"
+            // Add dark background for the progress bar
+            style={{
+              background: 'rgba(0,0,0,0.3)',
+              borderRadius: '4px'
+            }}
+            // Add bright HEX gradient indicator
+            indicator={
+              <div 
+                className="h-full w-full absolute progress-shimmer"
+                style={{
+                  background: 'linear-gradient(90deg, #FFEA00 0%, #FF9800 15%, #FF5722 30%, #F50057 50%, #D500F9 70%, #651FFF 85%, #3D5AFE 100%)',
+                  transform: `translateX(-${100 - animatedProgress}%)`,
+                  transition: 'transform 120ms cubic-bezier(0.65, 0, 0.35, 1)',
+                  boxShadow: '0 0 10px rgba(255,80,120,0.7)'
+                }}
+              />
+            }
+          />
+          
+          <p className="text-xs text-muted-foreground mt-1">
+            {progress.message}
+          </p>
         </div>
-        
-        <Progress 
-          value={animatedProgress} 
-          className="h-3 bg-black/30 relative overflow-hidden"
-          // Add dark background for the progress bar
-          style={{
-            background: 'rgba(0,0,0,0.3)',
-            borderRadius: '4px'
-          }}
-          // Add bright HEX gradient indicator
-          indicator={
-            <div 
-              className="h-full w-full absolute progress-shimmer"
-              style={{
-                background: 'linear-gradient(90deg, #FFEA00 0%, #FF9800 15%, #FF5722 30%, #F50057 50%, #D500F9 70%, #651FFF 85%, #3D5AFE 100%)',
-                transform: `translateX(-${100 - animatedProgress}%)`,
-                transition: 'transform 120ms cubic-bezier(0.65, 0, 0.35, 1)',
-                boxShadow: '0 0 10px rgba(255,80,120,0.7)'
-              }}
-            />
-          }
-        />
-        
-        <p className="text-xs text-muted-foreground mt-1">
-          {progress.message}
-        </p>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
