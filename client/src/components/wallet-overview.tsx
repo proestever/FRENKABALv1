@@ -128,7 +128,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
             <h2 className="text-lg md:text-xl font-bold text-white flex items-center">
               Wallet Overview
               {existingBookmark && existingBookmark.label && (
-                <span className="ml-2 flex items-center">: <span className="text-green-400 font-bold text-lg md:text-xl ml-2">{existingBookmark.label}</span></span>
+                <span className="ml-2 flex items-center"><span className="text-green-400 font-bold text-lg md:text-xl ml-2">{existingBookmark.label}</span></span>
               )}
             </h2>
             <div className="flex items-center mt-1 max-w-full overflow-hidden">
