@@ -253,12 +253,6 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
       <div className="p-6 text-center">
         <h3 className="text-xl font-bold mb-2 text-red-400">Error Loading Stakes</h3>
         <p className="text-white/70 mb-4">{error}</p>
-        <button 
-          onClick={() => setChainId(chainId === '0x1' ? '0x171' : '0x1')}
-          className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-md transition-colors"
-        >
-          Try {chainId === '0x1' ? 'PulseChain' : 'Ethereum'} instead
-        </button>
       </div>
     );
   }
@@ -268,12 +262,6 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
       <div className="p-6 text-center">
         <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">No HEX Stakes Found</h3>
         <p className="text-white/70 mb-4">This wallet doesn't have any active or historical HEX stakes on {chainId === '0x1' ? 'Ethereum' : 'PulseChain'}.</p>
-        <button 
-          onClick={() => setChainId(chainId === '0x1' ? '0x171' : '0x1')}
-          className="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-md transition-colors"
-        >
-          Check on {chainId === '0x1' ? 'PulseChain' : 'Ethereum'} instead
-        </button>
       </div>
     );
   }
@@ -297,17 +285,6 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
             <div className="text-sm text-white/70">Total HEX Staked</div>
             <div className="text-lg font-bold text-white">{formatTokenAmount(parseFloat(totalHexStaked))}</div>
           </div>
-          
-          <button 
-            onClick={() => setChainId(chainId === '0x1' ? '0x171' : '0x1')}
-            className={`px-3 py-1.5 rounded-md transition-colors ${
-              chainId === '0x1' 
-                ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-600/30' 
-                : 'bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-600/30'
-            }`}
-          >
-            Switch to {chainId === '0x1' ? 'PulseChain' : 'Ethereum'}
-          </button>
         </div>
       </div>
       
