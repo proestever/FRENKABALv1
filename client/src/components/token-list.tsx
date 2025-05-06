@@ -273,8 +273,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       </button>
                     </div>
                     
-                    {/* Mobile Value - Positioned at bottom of card token information */}
-                    <div className="absolute bottom-3 right-3 md:hidden">
+                    {/* Mobile Value - Positioned center right of card */}
+                    <div className="absolute top-1/2 right-3 transform -translate-y-1/2 md:hidden">
                       <div className="text-base font-bold text-white">
                         {token.value !== undefined 
                           ? formatCurrency(token.value) 
@@ -283,14 +283,15 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                     </div>
                     
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                      {/* Token Info - Mobile: Stacked layout, Desktop: Side-by-side */}
-                      <div className="flex flex-col md:flex-row md:items-center flex-grow">
-                        <div className={`${token.isLp && showLiquidity ? 'w-full' : 'flex-shrink-0'} flex justify-start mb-3 md:mb-0 md:mr-3`}>
+                      {/* Token Info - Mobile: Side by side logo and info layout */}
+                      <div className="flex md:flex-row md:items-center flex-grow pr-20">
+                        {/* Logo aligned with text on mobile */}
+                        <div className={`${token.isLp && showLiquidity ? 'w-auto' : 'flex-shrink-0'} flex items-center mr-3`}>
                           {/* Use LP token display or regular token logo based on token type */}
                           {token.isLp ? (
                             <LpTokenDisplay 
                               token={token}
-                              size="lg"
+                              size="md"
                               showDetails={showLiquidity}
                               expanded={showLiquidity}
                             />
@@ -299,13 +300,13 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               address={token.address}
                               symbol={token.symbol}
                               fallbackLogo={token.logo}
-                              size="lg"
+                              size="md"
                             />
                           )}
                         </div>
-                        <div className="min-w-0 flex-grow text-left">
+                        <div className="min-w-0 flex-grow text-left flex flex-col justify-center">
                           <div className="flex items-center gap-1 justify-start">
-                            <span className="text-lg font-bold text-foreground" title={token.name}>
+                            <span className="text-base font-bold text-foreground" title={token.name}>
                               {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
                                 <span className="flex items-center">
                                   {token.lpToken0Symbol}/{token.lpToken1Symbol} <span className="ml-1 text-xs bg-purple-600/30 text-purple-100 px-1 py-0.5 rounded-md border border-purple-500/60 scale-[0.65] inline-block transform-gpu origin-center font-semibold">LP</span>
@@ -316,22 +317,22 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                             </span>
                             {token.verified && (
                               <span className="text-green-400 flex-shrink-0" title="Verified Contract">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                                   <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
                                 </svg>
                               </span>
                             )}
                           </div>
                           <div className="flex gap-1 items-center justify-start">
-                            <div className="text-base text-muted-foreground font-medium" title={token.symbol}>
+                            <div className="text-sm text-muted-foreground font-medium" title={token.symbol}>
                               {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
                             </div>
-                            <div className="text-sm text-gray-400">
+                            <div className="text-xs text-gray-400">
                               • {formatTokenAmount(token.balanceFormatted || 0)}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 mt-1 justify-start">
-                            <div className="text-sm text-white font-medium">
+                          <div className="flex items-center gap-1 mt-0.5 justify-start">
+                            <div className="text-xs text-white font-medium">
                               {token.price !== undefined 
                                 ? formatCurrencyWithPrecision(token.price, 2, token.price < 0.01 ? 8 : 2) 
                                 : ''}
