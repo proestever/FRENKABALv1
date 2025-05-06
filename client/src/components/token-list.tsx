@@ -11,6 +11,7 @@ import { LpTokenDisplay } from '@/components/lp-token-display';
 import { getHiddenTokens, toggleHiddenToken, isTokenHidden } from '@/lib/api';
 import { useBatchTokenLogos } from '@/hooks/use-batch-token-logos';
 import { TransactionHistory } from '@/components/transaction-history';
+import { TokenActionsMenu } from '@/components/token-actions-menu';
 
 interface TokenListProps {
   tokens: Token[];
@@ -350,22 +351,30 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                         
                         <div className="min-w-0 flex-grow text-left flex flex-col justify-center">
                           <div className="flex items-center gap-1 justify-start">
-                            <span className="text-base font-bold text-foreground" title={token.name}>
-                              {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
+                            {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
+                              <span className="text-base font-bold text-foreground" title={token.name}>
                                 <span className="flex items-center">
                                   {token.lpToken0Symbol}/{token.lpToken1Symbol} <span className="ml-1 text-xs bg-purple-600/30 text-purple-100 px-1 py-0.5 rounded-md border border-purple-500/60 scale-[0.65] inline-block transform-gpu origin-center font-semibold">LP</span>
                                 </span>
-                              ) : (
-                                token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name
-                              )}
-                            </span>
-                              {token.verified && (
-                                <span className="text-green-400 flex-shrink-0" title="Verified Contract">
-                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                    <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
-                                  </svg>
+                              </span>
+                            ) : (
+                              <TokenActionsMenu 
+                                tokenAddress={token.address} 
+                                tokenName={token.name} 
+                                tokenSymbol={token.symbol}
+                              >
+                                <span className="text-base font-bold text-foreground cursor-pointer hover:text-primary transition-colors" title={token.name}>
+                                  {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
                                 </span>
-                              )}
+                              </TokenActionsMenu>
+                            )}
+                            {token.verified && (
+                              <span className="text-green-400 flex-shrink-0" title="Verified Contract">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                  <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                                </svg>
+                              </span>
+                            )}
                           </div>
                           <div className="flex gap-1 items-center justify-start">
                             <div className="text-sm text-muted-foreground font-medium" title={token.symbol}>
@@ -500,14 +509,21 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                           )}
                           <div>
                             <div className="flex items-center gap-1">
-                              <span className="text-base font-bold text-foreground" title={token.name}>
-                                {/* Empty name for LP tokens, regular name for other tokens */}
-                                {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
+                              {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
+                                <span className="text-base font-bold text-foreground" title={token.name}>
                                   <span></span>
-                                ) : (
-                                  token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name
-                                )}
-                              </span>
+                                </span>
+                              ) : (
+                                <TokenActionsMenu 
+                                  tokenAddress={token.address} 
+                                  tokenName={token.name} 
+                                  tokenSymbol={token.symbol}
+                                >
+                                  <span className="text-base font-bold text-foreground cursor-pointer hover:text-primary transition-colors" title={token.name}>
+                                    {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
+                                  </span>
+                                </TokenActionsMenu>
+                              )}
                               {token.verified && (
                                 <span className="text-green-400 flex-shrink-0" title="Verified Contract">
                                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">

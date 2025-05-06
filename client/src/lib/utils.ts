@@ -107,3 +107,34 @@ export function shortenAddress(address: string): string {
   if (!address) return '';
   return address.slice(0, 6) + '...' + address.slice(-4);
 }
+
+/**
+ * Copy text to clipboard
+ */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (err) {
+    console.error('Failed to copy: ', err);
+    return false;
+  }
+}
+
+/**
+ * Get external link for token on various platforms
+ */
+export function getTokenExternalLink(tokenAddress: string, platform: 'dexscreener' | 'pulsechain' | 'otterscan'): string {
+  if (!tokenAddress) return '';
+  
+  switch (platform) {
+    case 'dexscreener':
+      return `https://dexscreener.com/pulsechain/${tokenAddress}`;
+    case 'pulsechain':
+      return `https://scan.pulsechain.com/address/${tokenAddress}`;
+    case 'otterscan':
+      return `https://otter.pulsechain.com/address/${tokenAddress}`;
+    default:
+      return '';
+  }
+}
