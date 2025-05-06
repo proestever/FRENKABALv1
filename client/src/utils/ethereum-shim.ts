@@ -8,15 +8,25 @@ interface MinimalEthereumProvider {
   request: (request: { method: string; params?: any[] }) => Promise<any>;
   on: (event: string, listener: (...args: any[]) => void) => void;
   removeListener: (event: string, listener: (...args: any[]) => void) => void;
+  selectedAddress?: string;
+  chainId?: string;
+  networkVersion?: string;
+  autoRefreshOnNetworkChange?: boolean;
+  _state?: {
+    accounts: string[];
+    isConnected: boolean;
+    isUnlocked: boolean;
+    initialized: boolean;
+  };
   [key: string]: any;
 }
 
 // Extend the Window interface to include our custom properties
 declare global {
   interface Window {
-    ethereum?: MinimalEthereumProvider;
     _dummyEthereum?: MinimalEthereumProvider;
     _dummyEthereumShim?: MinimalEthereumProvider;
+    ethereum: MinimalEthereumProvider | undefined;
   }
 }
 

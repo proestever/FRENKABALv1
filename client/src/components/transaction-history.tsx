@@ -1329,18 +1329,58 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     const sendTransfers = tx.erc20_transfers.filter(t => t.direction === 'send');
                     const receiveTransfers = tx.erc20_transfers.filter(t => t.direction === 'receive');
                     
-                    // If we have exactly one send and one receive token, it's a clean swap
+                    // If we have both send and receive tokens, it's a swap
                     if (sendTransfers.length > 0 && receiveTransfers.length > 0) {
-                      const sendTransfer = sendTransfers[0];
-                      const receiveTransfer = receiveTransfers[0];
+                      // If there are multiple send or receive tokens, try to focus on the main ones
+                      // For this case we'll prioritize tokens with proper symbols and skip LP tokens
+                      const filteredSendTransfers = sendTransfers
+                        .filter(t => t.token_symbol && 
+                          !t.token_symbol.toLowerCase().includes('lp') && 
+                          !t.token_symbol.toLowerCase().includes('pulsex'));
                       
-                      // Format the amounts
-                      const sendAmount = sendTransfer.value_formatted || 
-                        formatTokenValue(sendTransfer.value, sendTransfer.token_decimals);
-                      const receiveAmount = receiveTransfer.value_formatted || 
-                        formatTokenValue(receiveTransfer.value, receiveTransfer.token_decimals);
+                      const filteredReceiveTransfers = receiveTransfers
+                        .filter(t => t.token_symbol && 
+                          !t.token_symbol.toLowerCase().includes('lp') && 
+                          !t.token_symbol.toLowerCase().includes('pulsex'));
                       
-                      return `Swapped ${sendAmount} ${sendTransfer.token_symbol || 'tokens'} for ${receiveAmount} ${receiveTransfer.token_symbol || 'tokens'}`;
+                      // Use filtered transfers if available, otherwise default to original
+                      const effectiveSendTransfers = filteredSendTransfers.length > 0 ? 
+                        filteredSendTransfers : sendTransfers;
+                      
+                      const effectiveReceiveTransfers = filteredReceiveTransfers.length > 0 ? 
+                        filteredReceiveTransfers : receiveTransfers;
+                      
+                      // For multiple tokens of the same type, combine them in the description
+                      if (effectiveSendTransfers.length > 1 || effectiveReceiveTransfers.length > 1) {
+                        const sendParts = effectiveSendTransfers.map(transfer => {
+                          const amount = transfer.value_formatted || 
+                            formatTokenValue(transfer.value, transfer.token_decimals);
+                          return `${amount} ${transfer.token_symbol || 'tokens'}`;
+                        });
+                        
+                        const receiveParts = effectiveReceiveTransfers.map(transfer => {
+                          const amount = transfer.value_formatted || 
+                            formatTokenValue(transfer.value, transfer.token_decimals);
+                          return `${amount} ${transfer.token_symbol || 'tokens'}`;
+                        });
+                        
+                        const sendText = sendParts.join(' and ');
+                        const receiveText = receiveParts.join(' and ');
+                        
+                        return `Swapped ${sendText} for ${receiveText}`;
+                      } else {
+                        // Simple case with one main send and one main receive token
+                        const sendTransfer = effectiveSendTransfers[0];
+                        const receiveTransfer = effectiveReceiveTransfers[0];
+                        
+                        // Format the amounts
+                        const sendAmount = sendTransfer.value_formatted || 
+                          formatTokenValue(sendTransfer.value, sendTransfer.token_decimals);
+                        const receiveAmount = receiveTransfer.value_formatted || 
+                          formatTokenValue(receiveTransfer.value, receiveTransfer.token_decimals);
+                        
+                        return `Swapped ${sendAmount} ${sendTransfer.token_symbol || 'tokens'} for ${receiveAmount} ${receiveTransfer.token_symbol || 'tokens'}`;
+                      }
                     }
                     return null;
                   })()}
