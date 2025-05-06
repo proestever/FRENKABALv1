@@ -107,6 +107,19 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
 
   // Generate the fallback logo/text
   const getFallbackLogo = () => {
+    // Special case for PLS token
+    if (symbol?.toUpperCase() === 'PLS' || 
+        symbol === 'PulseChain' || 
+        address?.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+      return (
+        <img 
+          src="/assets/pls-logo-trimmed.png" 
+          alt="PLS" 
+          className={`${sizeClass} rounded-full object-cover border border-white/10`}
+        />
+      );
+    }
+
     // Use the symbol if available
     if (symbol) {
       // Get the first 2 characters of the symbol
