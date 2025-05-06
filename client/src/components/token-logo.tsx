@@ -51,7 +51,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
           if (DEBUG_LOGGING) {
             console.log('Using native PLS token logo for:', address, symbol);
           }
-          setLogoUrl('/pls-logo.png');
+          setLogoUrl('/assets/pls-logo-trimmed.png');
           setIsLoading(false);
           return;
         }
