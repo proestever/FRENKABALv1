@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchWalletData } from '@/lib/api';
 import { Wallet } from '@shared/schema';
@@ -9,13 +9,15 @@ import { Wallet } from '@shared/schema';
  */
 export function usePagedWallet(walletAddress: string | null, initialPage: number = 1) {
   const [currentPage, setCurrentPage] = useState(initialPage);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Define a query key base that doesn't include the page
   const baseQueryKey = walletAddress ? `/api/wallet/${walletAddress}` : null;
   
   // The actual query key includes the page number
-  const queryKey = walletAddress ? [baseQueryKey, currentPage] : [];
+  const queryKey = walletAddress ? [baseQueryKey, currentPage, captchaToken] : [];
 
   // Main wallet data query
   const {

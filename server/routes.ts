@@ -298,6 +298,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If CAPTCHA is required and response provided, verify it
       if (captchaRequired && captchaResponse) {
+        // Verify the CAPTCHA response
+        const captchaValid = await verifyCaptcha(
+          captchaResponse as string,
+          clientIp
+        );
+        
+        if (!captchaValid) {
+          return res.status(403).json({ 
+            message: "CAPTCHA verification failed",
+            captchaRequired: true
+          });
+        }
+        
         // Record successful CAPTCHA verification
         recordCaptchaSuccess(clientIp);
       }
@@ -351,6 +364,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If CAPTCHA is required and response provided, verify it
       if (captchaRequired && captchaResponse) {
+        // Verify the CAPTCHA response
+        const captchaValid = await verifyCaptcha(
+          captchaResponse as string,
+          clientIp
+        );
+        
+        if (!captchaValid) {
+          return res.status(403).json({ 
+            message: "CAPTCHA verification failed",
+            captchaRequired: true
+          });
+        }
+        
         // Record successful CAPTCHA verification
         recordCaptchaSuccess(clientIp);
       }
