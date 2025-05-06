@@ -95,11 +95,30 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
       return token;
     }
     
-    // 3. Get token information (decimals, symbols) for both tokens
-    const [token0Decimals, token1Decimals] = await Promise.all([
+    // 3. Get token information (decimals, symbols, names) for both tokens
+    const [
+      token0Decimals, 
+      token1Decimals, 
+      token0Symbol, 
+      token1Symbol,
+      token0Name,
+      token1Name
+    ] = await Promise.all([
       callContractFunction<number>(token0Address, ERC20_ABI, 'decimals'),
-      callContractFunction<number>(token1Address, ERC20_ABI, 'decimals')
+      callContractFunction<number>(token1Address, ERC20_ABI, 'decimals'),
+      callContractFunction<string>(token0Address, ERC20_ABI, 'symbol'),
+      callContractFunction<string>(token1Address, ERC20_ABI, 'symbol'),
+      callContractFunction<string>(token0Address, ERC20_ABI, 'name'),
+      callContractFunction<string>(token1Address, ERC20_ABI, 'name')
     ]);
+    
+    // Convert null values to undefined for type safety
+    const safeToken0Symbol = token0Symbol === null ? undefined : token0Symbol;
+    const safeToken1Symbol = token1Symbol === null ? undefined : token1Symbol;
+    const safeToken0Name = token0Name === null ? undefined : token0Name; 
+    const safeToken1Name = token1Name === null ? undefined : token1Name;
+    
+    console.log(`LP Token pair: ${safeToken0Symbol || '?'}/${safeToken1Symbol || '?'}`);
     
     if (!token0Decimals || !token1Decimals) {
       console.log(`Could not get token decimals for LP pair ${token.address}`);
@@ -145,21 +164,38 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
     const token0Value = token0Price ? token0BalanceFormatted * token0Price.usdPrice : undefined;
     const token1Value = token1Price ? token1BalanceFormatted * token1Price.usdPrice : undefined;
     
+    // 9. Calculate combined value
+    const combinedValue = 
+      (token0Value || 0) + (token1Value || 0);
+    
     // 10. Update the token with LP details
     return {
       ...token,
+      // Set symbols based on what we retrieved from the blockchain
+      lpToken0Symbol: token0Symbol || token.lpToken0Symbol || '?',
+      lpToken1Symbol: token1Symbol || token.lpToken1Symbol || '?',
+      // Add token addresses
       lpToken0Address: token0Address,
       lpToken1Address: token1Address,
+      // Add token names
+      lpToken0Name: token0Name || undefined,
+      lpToken1Name: token1Name || undefined,
+      // Add token decimals
       lpToken0Decimals: token0Decimals,
       lpToken1Decimals: token1Decimals,
+      // Add balance details
       lpToken0Balance: token0Balance,
       lpToken1Balance: token1Balance,
       lpToken0BalanceFormatted: token0BalanceFormatted,
       lpToken1BalanceFormatted: token1BalanceFormatted,
+      // Add price and value data
       lpToken0Price: token0Price?.usdPrice,
       lpToken1Price: token1Price?.usdPrice,
       lpToken0Value: token0Value,
       lpToken1Value: token1Value,
+      // Update the overall token value to be the sum of underlying token values
+      value: combinedValue > 0 ? combinedValue : token.value,
+      // Add supply and reserve data
       lpTotalSupply: totalSupply.toString(),
       lpReserve0: reserve0.toString(),
       lpReserve1: reserve1.toString()

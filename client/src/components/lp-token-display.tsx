@@ -107,9 +107,9 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
         <div className="font-medium">
           {hasValidPair ? (
             <span className="flex items-center">
-              <span className="text-token0-color">{token0Symbol}</span>
+              <span className="text-token0-color font-semibold">{token0Symbol}</span>
               <span className="mx-1">/</span>
-              <span className="text-token1-color">{token1Symbol}</span>
+              <span className="text-token1-color font-semibold">{token1Symbol}</span>
               <span className="ml-1 text-xs text-primary/80">LP</span>
             </span>
           ) : (

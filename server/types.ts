@@ -112,6 +112,8 @@ export interface ProcessedToken {
   isLp?: boolean;
   lpToken0Symbol?: string;
   lpToken1Symbol?: string;
+  lpToken0Name?: string;
+  lpToken1Name?: string;
   lpToken0Address?: string;
   lpToken1Address?: string;
   lpToken0Decimals?: number;

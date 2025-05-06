@@ -52,6 +52,8 @@ export const TokenSchema = z.object({
   isLp: z.boolean().optional(), // Flag for LP (Liquidity Pool) tokens
   lpToken0Symbol: z.string().optional(), // First token symbol in the LP pair
   lpToken1Symbol: z.string().optional(), // Second token symbol in the LP pair
+  lpToken0Name: z.string().optional(), // First token name in the LP pair
+  lpToken1Name: z.string().optional(), // Second token name in the LP pair
   lpToken0Address: z.string().optional(), // First token address in the LP pair
   lpToken1Address: z.string().optional(), // Second token address in the LP pair
   lpToken0Decimals: z.number().optional(), // First token decimals
