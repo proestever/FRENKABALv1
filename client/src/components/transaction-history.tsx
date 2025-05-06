@@ -434,14 +434,72 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return usdValue;
   };
 
+  // Helper function to consolidate swap transfers of the same token
+  const consolidateSwapTransfers = (tx: Transaction): Transaction => {
+    // Only process swap transactions with multiple ERC20 transfers
+    if (getTransactionType(tx) !== 'swap' || !tx.erc20_transfers || tx.erc20_transfers.length <= 1) {
+      return tx;
+    }
+  
+    // New list for consolidated transfers
+    const consolidatedTransfers: TransactionTransfer[] = [];
+    
+    // Create a map to group transfers by token address and direction
+    const transferMap: Record<string, TransactionTransfer> = {};
+    
+    // Process all transfers to combine by token and direction
+    tx.erc20_transfers.forEach(transfer => {
+      // Create a key combining token address and direction
+      const tokenAddress = (transfer.address || '').toLowerCase();
+      const direction = transfer.direction || 'unknown';
+      const key = `${tokenAddress}-${direction}`;
+      
+      if (transferMap[key]) {
+        // If we already have this token+direction, add the values
+        const existingTransfer = transferMap[key];
+        const existingValue = BigInt(existingTransfer.value || '0');
+        const newValue = BigInt(transfer.value || '0');
+        const totalValue = (existingValue + newValue).toString();
+        
+        // Update the value in the map
+        transferMap[key] = {
+          ...existingTransfer,
+          value: totalValue,
+          // Update formatted value if it exists
+          value_formatted: transfer.token_decimals ? 
+            (Number(totalValue) / 10 ** Number(transfer.token_decimals)).toFixed(4) : undefined
+        };
+      } else {
+        // First occurrence of this token+direction
+        transferMap[key] = transfer;
+      }
+    });
+    
+    // Convert map back to array
+    for (const key in transferMap) {
+      consolidatedTransfers.push(transferMap[key]);
+    }
+    
+    // Return the transaction with consolidated transfers
+    return {
+      ...tx,
+      erc20_transfers: consolidatedTransfers
+    };
+  };
+  
+  // Apply consolidation to transactions with multiple swap transfers of the same token
+  const processedTransactions = transactions.map(tx => {
+    return consolidateSwapTransfers(tx);
+  });
+  
   // Filter transactions based on selected type
-  const filteredTransactions = transactions.filter(tx => {
+  const filteredTransactions = processedTransactions.filter(tx => {
     if (selectedType === 'all') return true; // Show all transactions
     return getTransactionType(tx) === selectedType;
   });
   
   // Count transactions by type
-  const transactionCounts = transactions.reduce((counts, tx) => {
+  const transactionCounts = processedTransactions.reduce((counts, tx) => {
     const type = getTransactionType(tx);
     counts[type] = (counts[type] || 0) + 1;
     return counts;
@@ -449,7 +507,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Extract token addresses for logos and prices
   useEffect(() => {
-    if (transactions) {
+    if (processedTransactions && processedTransactions.length > 0) {
       // Use array instead of Set to avoid iteration issues
       const addresses: string[] = [];
       const addUniqueAddress = (address: string) => {
@@ -459,7 +517,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         }
       };
       
-      transactions.forEach((tx: Transaction) => {
+      processedTransactions.forEach((tx: Transaction) => {
         // Get token addresses from ERC20 transfers
         if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
           tx.erc20_transfers.forEach((transfer: any) => {
@@ -478,7 +536,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       console.log(`Collected ${addresses.length} unique token addresses from transactions`, addresses);
       setVisibleTokenAddresses(addresses);
     }
-  }, [transactions]);
+  }, [processedTransactions]);
 
   if (isLoading) {
     return (
@@ -748,7 +806,34 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm font-semibold text-white">
-                    {tx.summary || 'Transaction details'}
+                    {(() => {
+                      // If there's a summary provided by the API, use it
+                      if (tx.summary) return tx.summary;
+                      
+                      // Generate a swap summary for consolidated transactions
+                      if (getTransactionType(tx) === 'swap' && tx.erc20_transfers && tx.erc20_transfers.length >= 2) {
+                        // Find send and receive transfers
+                        const sendTransfers = tx.erc20_transfers.filter(t => t.direction === 'send');
+                        const receiveTransfers = tx.erc20_transfers.filter(t => t.direction === 'receive');
+                        
+                        // If we have both send and receive tokens, it's a swap
+                        if (sendTransfers.length > 0 && receiveTransfers.length > 0) {
+                          const sendTransfer = sendTransfers[0];
+                          const receiveTransfer = receiveTransfers[0];
+                          
+                          // Format the amounts
+                          const sendAmount = sendTransfer.value_formatted || 
+                            formatTokenValue(sendTransfer.value, sendTransfer.token_decimals);
+                          const receiveAmount = receiveTransfer.value_formatted || 
+                            formatTokenValue(receiveTransfer.value, receiveTransfer.token_decimals);
+                          
+                          return `Swapped ${sendAmount} ${sendTransfer.token_symbol || 'tokens'} for ${receiveAmount} ${receiveTransfer.token_symbol || 'tokens'}`;
+                        }
+                      }
+                      
+                      // Default fallback
+                      return 'Transaction details';
+                    })()}
                     
                     {/* ERC20 Transfers */}
                     {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
@@ -1079,6 +1164,32 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {/* Transaction summary if available */}
               {tx.summary && (
                 <div className="mb-2 text-sm">{tx.summary}</div>
+              )}
+              
+              {/* Generate a swap summary for consolidated transactions */}
+              {!tx.summary && getTransactionType(tx) === 'swap' && tx.erc20_transfers && tx.erc20_transfers.length >= 2 && (
+                <div className="mb-2 text-sm font-medium">
+                  {(() => {
+                    // Find send and receive transfers
+                    const sendTransfers = tx.erc20_transfers.filter(t => t.direction === 'send');
+                    const receiveTransfers = tx.erc20_transfers.filter(t => t.direction === 'receive');
+                    
+                    // If we have exactly one send and one receive token, it's a clean swap
+                    if (sendTransfers.length > 0 && receiveTransfers.length > 0) {
+                      const sendTransfer = sendTransfers[0];
+                      const receiveTransfer = receiveTransfers[0];
+                      
+                      // Format the amounts
+                      const sendAmount = sendTransfer.value_formatted || 
+                        formatTokenValue(sendTransfer.value, sendTransfer.token_decimals);
+                      const receiveAmount = receiveTransfer.value_formatted || 
+                        formatTokenValue(receiveTransfer.value, receiveTransfer.token_decimals);
+                      
+                      return `Swapped ${sendAmount} ${sendTransfer.token_symbol || 'tokens'} for ${receiveAmount} ${receiveTransfer.token_symbol || 'tokens'}`;
+                    }
+                    return null;
+                  })()}
+                </div>
               )}
               
               {/* ERC20 Transfers */}
