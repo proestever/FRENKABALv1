@@ -325,8 +325,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                         </div>
                       </div>
                       
-                      {/* Token Value & Hide Button */}
-                      <div className="flex flex-col items-end">
+                      {/* Token Value & Hide Button - Hidden on mobile */}
+                      <div className="hidden md:flex flex-col items-end">
                         <div className="text-base font-bold text-white">
                           {token.value !== undefined 
                             ? formatCurrency(token.value) 
