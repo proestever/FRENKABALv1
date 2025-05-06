@@ -12,6 +12,7 @@ import {
 import { storage } from '../storage';
 import { InsertTokenLogo } from '@shared/schema';
 import { updateLoadingProgress } from '../routes';
+import { processLpTokens } from './lp-token-service';
 
 // Initialize Moralis
 try {
