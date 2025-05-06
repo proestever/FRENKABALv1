@@ -71,117 +71,94 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
   );
   
   // Simple LP token display (for non-expanded view)
-  const renderSimpleDisplay = () => {
-    return (
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        {/* Main LP content (Logo + Pair Info) */}
-        <div className="flex items-center w-full justify-between md:justify-start"> 
-          <div className="flex items-center">
-            {/* Enhanced dual token logos display */}
+  const renderSimpleDisplay = () => (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center">
+        {/* Enhanced dual token logos display */}
+        <div className="relative">
+          {hasValidPair && token.lpToken0Address && token.lpToken1Address ? (
             <div className="relative">
-              {hasValidPair && token.lpToken0Address && token.lpToken1Address ? (
-                <div className="relative">
-                  <div className="flex">
-                    {/* Token logos side by side with slight overlap */}
-                    <div className="rounded-full border-2 border-background z-10">
-                      <TokenLogo 
-                        address={token.lpToken0Address} 
-                        symbol={token0Symbol} 
-                        size={size === 'sm' ? 'xs' : 'sm'} 
-                      />
-                    </div>
-                    <div className="-ml-2 rounded-full border-2 border-background">
-                      <TokenLogo 
-                        address={token.lpToken1Address} 
-                        symbol={token1Symbol} 
-                        size={size === 'sm' ? 'xs' : 'sm'} 
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* LP Badge */}
-                  <div className="absolute -bottom-1 -right-1 z-20 bg-purple-600/30 text-purple-100 text-[0.65rem] px-1 py-0.5 rounded-md border border-purple-500/60 flex-shrink-0 font-semibold scale-[0.65] origin-bottom-right">
-                    LP
-                  </div>
+              <div className="flex">
+                {/* Token logos side by side with slight overlap */}
+                <div className="rounded-full border-2 border-background z-10">
+                  <TokenLogo 
+                    address={token.lpToken0Address} 
+                    symbol={token0Symbol} 
+                    size={size === 'sm' ? 'xs' : 'sm'} 
+                  />
                 </div>
-              ) : (
-                renderDualTokensIcon()
-              )}
+                <div className="-ml-2 rounded-full border-2 border-background">
+                  <TokenLogo 
+                    address={token.lpToken1Address} 
+                    symbol={token1Symbol} 
+                    size={size === 'sm' ? 'xs' : 'sm'} 
+                  />
+                </div>
+              </div>
+              
+              {/* LP Badge */}
+              <div className="absolute -bottom-1 -right-1 z-20 bg-purple-600/30 text-purple-100 text-[0.65rem] px-1 py-0.5 rounded-md border border-purple-500/60 flex-shrink-0 font-semibold scale-[0.65] origin-bottom-right">
+                LP
+              </div>
             </div>
-            
-            {/* Token pair info in list format */}
-            <div className="ml-3 flex flex-col justify-center md:block hidden">
-              {hasValidPair ? (
-                <>
-                  <div className="hidden md:flex items-center gap-1">
-                    <span className="text-white font-semibold">{token0Symbol}</span>
-                    <span className="text-white/70">/</span>
-                    <span className="text-white font-semibold">{token1Symbol}</span>
-                    <a 
-                      href={getPulseXPoolUrl()}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-1 text-white/60 hover:text-white/90 transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <ExternalLink size={12} />
-                    </a>
-                  </div>
-                  <div className="hidden md:flex items-center">
-                    <div className="text-[10px] text-white/50 rounded-sm">
-                      PulseX • {token.balanceFormatted ? formatTokenAmount(token.balanceFormatted) : '0'} tokens
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <span className="font-medium md:block hidden">{token.symbol}</span>
-              )}
-            </div>
-          </div>
-          
-          {/* Show details badge - Only on mobile and always at the top */}
-          {showDetails && hasDetailedData && (
-            <div className="md:hidden">
-              <button 
-                onClick={toggleExpand}
-                className="text-[10px] md:text-xs text-white/70 hover:text-white/90 transition-colors flex items-center gap-0.5 bg-black/30 px-1.5 md:px-2 py-0.5 rounded"
-                title={isExpanded ? "Hide details" : "Show details"}
-              >
-                {isExpanded ? "Hide details" : "View details"}
-                {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-              </button>
-            </div>
+          ) : (
+            renderDualTokensIcon()
           )}
         </div>
         
-        {/* Detailed button and value on desktop, only value container on mobile - MOVED BELOW TSHARE CARD ON MOBILE*/}
-        <div className="flex items-center mt-1.5 md:mt-0">
-          <div className="flex items-center flex-wrap-reverse md:flex-nowrap justify-end md:justify-start w-full gap-2 md:gap-3">
-            {/* Value display - Always visible */}
-            {token.value !== undefined && showDetails && (
-              <div className="bg-gradient-to-r from-token0-color/20 to-token1-color/20 text-white px-2 md:px-3 py-1 md:py-1.5 rounded font-medium text-sm md:text-base">
-                {formatCurrency(token.value)}
-              </div>
-            )}
-            
-            {/* Show details badge - Only on desktop */}
-            {showDetails && hasDetailedData && (
-              <div className="hidden md:block">
-                <button 
-                  onClick={toggleExpand}
-                  className="text-[10px] md:text-xs text-white/70 hover:text-white/90 transition-colors flex items-center gap-0.5 bg-black/30 px-1.5 md:px-2 py-0.5 rounded"
-                  title={isExpanded ? "Hide details" : "Show details"}
+        {/* Token pair info in list format */}
+        <div className="ml-3 flex flex-col justify-center md:block hidden">
+          {hasValidPair ? (
+            <>
+              <div className="hidden md:flex items-center gap-1">
+                <span className="text-white font-semibold">{token0Symbol}</span>
+                <span className="text-white/70">/</span>
+                <span className="text-white font-semibold">{token1Symbol}</span>
+                <a 
+                  href={getPulseXPoolUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-1 text-white/60 hover:text-white/90 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {isExpanded ? "Hide details" : "View details"}
-                  {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-                </button>
+                  <ExternalLink size={12} />
+                </a>
               </div>
-            )}
-          </div>
+              <div className="hidden md:flex items-center">
+                <div className="text-[10px] text-white/50 rounded-sm">
+                  PulseX • {token.balanceFormatted ? formatTokenAmount(token.balanceFormatted) : '0'} tokens
+                </div>
+              </div>
+            </>
+          ) : (
+            <span className="font-medium md:block hidden">{token.symbol}</span>
+          )}
         </div>
       </div>
-    );
-  };
+      
+      <div className="flex items-center">
+        {/* Value display with detailed button style */}
+        <div className="flex items-center flex-wrap-reverse md:flex-nowrap justify-end md:justify-start w-full gap-2 md:gap-3">
+          {token.value !== undefined && showDetails && (
+            <div className="bg-gradient-to-r from-token0-color/20 to-token1-color/20 text-white px-2 md:px-3 py-1 md:py-1.5 rounded font-medium text-sm md:text-base">
+              {formatCurrency(token.value)}
+            </div>
+          )}
+          {/* Show details badge */}
+          {showDetails && hasDetailedData && (
+            <button 
+              onClick={toggleExpand}
+              className="text-[10px] md:text-xs text-white/70 hover:text-white/90 transition-colors flex items-center gap-0.5 bg-black/30 px-1.5 md:px-2 py-0.5 rounded"
+              title={isExpanded ? "Hide details" : "Show details"}
+            >
+              {isExpanded ? "Hide details" : "View details"}
+              {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   // Detailed LP token display with breakdown
   const renderDetailedDisplay = () => {
