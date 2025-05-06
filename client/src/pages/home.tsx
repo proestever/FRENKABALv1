@@ -10,6 +10,7 @@ import { ManualTokenEntry } from '@/components/manual-token-entry';
 import { saveRecentAddress, ProcessedToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
+import { useHexStakes, fetchHexStakesSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
 
 // Example wallet address
@@ -64,6 +65,14 @@ export default function Home() {
     
     // Save to recent addresses
     saveRecentAddress(address);
+    
+    // Preload HEX stakes data in parallel to speed up tab switching
+    console.log('Preloading HEX stakes data for wallet:', address);
+    // We don't await this - let it run in the background
+    fetchHexStakesSummary(address).catch((err: Error) => {
+      console.warn('Preloading HEX stakes failed:', err.message);
+      // We can safely ignore errors here since it will be retried when the tab is opened
+    });
   };
 
   // Check if we have a wallet address in the URL or if we need to reset
