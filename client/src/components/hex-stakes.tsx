@@ -85,6 +85,8 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalHexStaked, setTotalHexStaked] = useState('0');
+  const [totalInterest, setTotalInterest] = useState('0');
+  const [totalStakePlusInterest, setTotalStakePlusInterest] = useState('0');
   const [stakeCount, setStakeCount] = useState(0);
   const [chainId, setChainId] = useState('0x171'); // Default to PulseChain
 
@@ -117,6 +119,8 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         if (count === 0) {
           setStakes([]);
           setTotalHexStaked('0');
+          setTotalInterest('0');
+          setTotalStakePlusInterest('0');
           setIsLoading(false);
           return;
         }
@@ -124,6 +128,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         // Fetch all stakes
         const stakesData: HexStake[] = [];
         let totalHexStakedBN = ethers.BigNumber.from(0);
+        let totalInterestBN = 0;
         
         for (let i = 0; i < count; i++) {
           const stake = await hexContract.stakeLists(walletAddress, i);
@@ -181,6 +186,9 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
             const principalHex = parseFloat(hexAmount);
             const interestHex = principalHex * estimatedInterestRate;
             interestEarned = interestHex.toFixed(2);
+            
+            // Add to total interest
+            totalInterestBN += parseFloat(interestEarned);
           }
           
           // Add to total staked HEX
@@ -210,8 +218,15 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
           return new Date(b.lockDate).getTime() - new Date(a.lockDate).getTime();
         });
         
+        // Format and set state values
+        const formattedTotalHexStaked = ethers.utils.formatUnits(totalHexStakedBN, 8);
+        const formattedTotalInterest = totalInterestBN.toFixed(2);
+        const totalStakePlusInterestValue = (parseFloat(formattedTotalHexStaked) + totalInterestBN).toFixed(2);
+        
         setStakes(stakesData);
-        setTotalHexStaked(ethers.utils.formatUnits(totalHexStakedBN, 8));
+        setTotalHexStaked(formattedTotalHexStaked);
+        setTotalInterest(formattedTotalInterest);
+        setTotalStakePlusInterest(totalStakePlusInterestValue);
         
       } catch (err) {
         console.error('Error fetching HEX stakes:', err);
@@ -280,10 +295,22 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="text-right">
             <div className="text-sm text-white/70">Total HEX Staked</div>
             <div className="text-lg font-bold text-white">{formatTokenAmount(parseFloat(totalHexStaked))}</div>
+          </div>
+          
+          <div className="text-right">
+            <div className="text-sm text-white/70">Total Interest</div>
+            <div className="text-lg font-bold text-teal-400">+{formatTokenAmount(parseFloat(totalInterest))}</div>
+          </div>
+          
+          <div className="text-right">
+            <div className="text-sm text-white/70">Total Stake + Interest</div>
+            <div className="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+              {formatTokenAmount(parseFloat(totalStakePlusInterest))}
+            </div>
           </div>
         </div>
       </div>
