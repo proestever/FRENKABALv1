@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import plsLogoPath from '../assets/pls-logo.png';
-import frenLogoPath from '../assets/frenklabal_applogo-6_AgUeHs.png';
 
 interface TokenLogoProps {
   address: string;
@@ -53,7 +51,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
           if (DEBUG_LOGGING) {
             console.log('Using native PLS token logo for:', address, symbol);
           }
-          setLogoUrl(plsLogoPath);
+          setLogoUrl('/pls-logo.png');
           setIsLoading(false);
           return;
         }
@@ -63,7 +61,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
           if (DEBUG_LOGGING) {
             console.log('Using Frenkabal logo for:', address, symbol);
           }
-          setLogoUrl(frenLogoPath);
+          setLogoUrl('/assets/100xfrenlogo.png');
           setIsLoading(false);
           return;
         }
