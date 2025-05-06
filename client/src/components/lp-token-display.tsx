@@ -188,13 +188,18 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
         
         {/* Detailed list layout for LP tokens */}
         <div className="mt-1">
-          {/* LP position header */}
+          {/* LP position header with pair indication */}
           <div className="flex justify-between items-center p-2 bg-black/30 rounded-t-md border border-white/5 border-b-0">
             <div className="flex items-center gap-1.5">
               <div className="h-5 w-5 bg-primary/20 rounded-full flex items-center justify-center">
                 <span className="text-primary text-xs font-bold">LP</span>
               </div>
-              <span className="text-white/70 text-xs">Position Breakdown</span>
+              <div className="flex items-center">
+                <span className="text-token0-color font-medium text-xs">{token0Symbol}</span>
+                <span className="mx-1 text-white/40">•</span>
+                <span className="text-token1-color font-medium text-xs">{token1Symbol}</span>
+                <span className="ml-1 text-white/70 text-xs">Pair</span>
+              </div>
             </div>
             {poolSharePercentage && (
               <div className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-sm">
@@ -203,20 +208,32 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
             )}
           </div>
           
-          {/* Token details in list format */}
+          {/* Token details in side-by-side format */}
           <div className="border border-white/5 rounded-b-md">
-            {/* Token 0 row */}
-            <div className="flex items-center p-2 border-b border-white/5">
-              <div className="flex-shrink-0 mr-2">
-                <TokenLogo address={token.lpToken0Address || ''} symbol={token0Symbol} size="xs" />
+            {/* Tokens side by side with pair connector */}
+            <div className="relative grid grid-cols-2 border-b border-white/5">
+              {/* Visual connector between tokens */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-token0-color/10 to-token1-color/10 border border-white/10 flex items-center justify-center z-10 shadow-sm">
+                  <span className="text-primary text-xs font-bold">LP</span>
+                </div>
+                <div className="absolute w-full h-[1px] bg-gradient-to-r from-token0-color/20 to-token1-color/20"></div>
               </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <span className="text-token0-color font-medium">{token0Symbol}</span>
-                    <span className="text-white/40 text-xs">{token.lpToken0Name}</span>
+              
+              {/* Token 0 column */}
+              <div className="p-3 flex flex-col border-r border-white/5">
+                <div className="flex items-center mb-2">
+                  <div className="flex-shrink-0 mr-2 p-1 rounded-full bg-token0-color/5 border border-token0-color/10">
+                    <TokenLogo address={token.lpToken0Address || ''} symbol={token0Symbol} size="sm" />
                   </div>
-                  <div className="text-white text-sm">{formatTokenAmount(token0BalanceFormatted || 0)}</div>
+                  <div className="flex flex-col">
+                    <span className="text-token0-color font-medium">{token0Symbol}</span>
+                    <span className="text-white/40 text-[10px] truncate max-w-[100px]">{token.lpToken0Name}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-white/50">Balance</span>
+                  <span className="text-white">{formatTokenAmount(token0BalanceFormatted || 0)}</span>
                 </div>
                 <div className="flex justify-between items-center mt-1 text-xs">
                   <span className="text-white/50">Value</span>
@@ -225,20 +242,21 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                   )}
                 </div>
               </div>
-            </div>
-            
-            {/* Token 1 row */}
-            <div className="flex items-center p-2 border-b border-white/5">
-              <div className="flex-shrink-0 mr-2">
-                <TokenLogo address={token.lpToken1Address || ''} symbol={token1Symbol} size="xs" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <span className="text-token1-color font-medium">{token1Symbol}</span>
-                    <span className="text-white/40 text-xs">{token.lpToken1Name}</span>
+              
+              {/* Token 1 column */}
+              <div className="p-3 flex flex-col">
+                <div className="flex items-center mb-2">
+                  <div className="flex-shrink-0 mr-2 p-1 rounded-full bg-token1-color/5 border border-token1-color/10">
+                    <TokenLogo address={token.lpToken1Address || ''} symbol={token1Symbol} size="sm" />
                   </div>
-                  <div className="text-white text-sm">{formatTokenAmount(token1BalanceFormatted || 0)}</div>
+                  <div className="flex flex-col">
+                    <span className="text-token1-color font-medium">{token1Symbol}</span>
+                    <span className="text-white/40 text-[10px] truncate max-w-[100px]">{token.lpToken1Name}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-white/50">Balance</span>
+                  <span className="text-white">{formatTokenAmount(token1BalanceFormatted || 0)}</span>
                 </div>
                 <div className="flex justify-between items-center mt-1 text-xs">
                   <span className="text-white/50">Value</span>
