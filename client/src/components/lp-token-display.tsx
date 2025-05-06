@@ -266,14 +266,6 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                 </div>
               </div>
             </div>
-            
-            {/* Total position value row */}
-            <div className="flex items-center justify-between p-2 bg-gradient-to-r from-token0-color/5 to-token1-color/5">
-              <div className="text-xs font-medium text-white/80">Total Position Value</div>
-              <div className="bg-gradient-to-r from-token0-color/30 to-token1-color/30 px-2 py-0.5 rounded-sm font-semibold text-white text-sm">
-                {token.value !== undefined ? formatCurrency(token.value) : 'Unknown'}
-              </div>
-            </div>
           </div>
         </div>
       </div>
