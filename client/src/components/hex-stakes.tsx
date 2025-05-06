@@ -73,6 +73,9 @@ interface HexStake {
   hexAmount: string;
   daysRemaining: number | null;
   interestEarned?: string;
+  valueUsd?: number;
+  interestValueUsd?: number;
+  totalValueUsd?: number;
 }
 
 interface HexStakesProps {
@@ -87,6 +90,10 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
   const [totalHexStaked, setTotalHexStaked] = useState('0');
   const [totalInterest, setTotalInterest] = useState('0');
   const [totalStakePlusInterest, setTotalStakePlusInterest] = useState('0');
+  const [hexPrice, setHexPrice] = useState(0);
+  const [stakedValueUsd, setStakedValueUsd] = useState(0);
+  const [interestValueUsd, setInterestValueUsd] = useState(0);
+  const [totalValueUsd, setTotalValueUsd] = useState(0);
   const [stakeCount, setStakeCount] = useState(0);
   const [chainId, setChainId] = useState('0x171'); // Default to PulseChain
 
@@ -106,6 +113,23 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         
         const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
         const hexContract = new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);
+        
+        // Fetch HEX price
+        let currentHexPrice = 0;
+        try {
+          // Use API to fetch price
+          const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
+          const priceData = await response.json();
+          if (priceData && priceData.price) {
+            currentHexPrice = priceData.price;
+          }
+        } catch (error) {
+          console.error('Error fetching HEX price:', error);
+          // Default price if API fails
+          currentHexPrice = chainId === '0x1' ? 0.007 : 0.005; // Fallback prices
+        }
+        
+        setHexPrice(currentHexPrice);
         
         // Get the current day from contract
         const currentDayBN = await hexContract.currentDay();
@@ -194,6 +218,11 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
           // Add to total staked HEX
           totalHexStakedBN = totalHexStakedBN.add(ethers.BigNumber.from(stakedHearts));
           
+          // Calculate USD values for this stake
+          const stakeValueUsd = parseFloat(hexAmount) * currentHexPrice;
+          const stakeInterestValueUsd = parseFloat(interestEarned) * currentHexPrice;
+          const stakeTotalValueUsd = stakeValueUsd + stakeInterestValueUsd;
+          
           stakesData.push({
             stakeId,
             stakedHearts,
@@ -209,7 +238,10 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
             progressPercentage,
             hexAmount,
             daysRemaining,
-            interestEarned
+            interestEarned,
+            valueUsd: stakeValueUsd,
+            interestValueUsd: stakeInterestValueUsd,
+            totalValueUsd: stakeTotalValueUsd
           });
         }
         
@@ -223,10 +255,18 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         const formattedTotalInterest = totalInterestBN.toFixed(2);
         const totalStakePlusInterestValue = (parseFloat(formattedTotalHexStaked) + totalInterestBN).toFixed(2);
         
+        // Calculate USD values
+        const stakedHexUsd = parseFloat(formattedTotalHexStaked) * currentHexPrice;
+        const interestHexUsd = totalInterestBN * currentHexPrice;
+        const totalValueUsd = parseFloat(totalStakePlusInterestValue) * currentHexPrice;
+        
         setStakes(stakesData);
         setTotalHexStaked(formattedTotalHexStaked);
         setTotalInterest(formattedTotalInterest);
         setTotalStakePlusInterest(totalStakePlusInterestValue);
+        setStakedValueUsd(stakedHexUsd);
+        setInterestValueUsd(interestHexUsd);
+        setTotalValueUsd(totalValueUsd);
         
       } catch (err) {
         console.error('Error fetching HEX stakes:', err);
@@ -246,6 +286,14 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
+    });
+  };
+  
+  // Format USD value with 2 decimal places
+  const formatUsd = (value: number) => {
+    return value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     });
   };
   
@@ -299,11 +347,13 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
           <div className="text-right">
             <div className="text-sm text-white/70">Total HEX Staked</div>
             <div className="text-lg font-bold text-white">{formatTokenAmount(parseFloat(totalHexStaked))}</div>
+            <div className="text-xs text-gray-400">${formatUsd(stakedValueUsd)}</div>
           </div>
           
           <div className="text-right">
             <div className="text-sm text-white/70">Total Interest</div>
             <div className="text-lg font-bold text-teal-400">+{formatTokenAmount(parseFloat(totalInterest))}</div>
+            <div className="text-xs text-gray-400">+${formatUsd(interestValueUsd)}</div>
           </div>
           
           <div className="text-right">
@@ -311,6 +361,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
             <div className="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
               {formatTokenAmount(parseFloat(totalStakePlusInterest))}
             </div>
+            <div className="text-xs text-gray-400">${formatUsd(totalValueUsd)}</div>
           </div>
         </div>
       </div>
@@ -335,8 +386,15 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
                       {stake.isActive ? 'Active' : 'Ended'}
                     </div>
                   </div>
-                  <div className="mt-2 md:mt-0 text-white font-bold">
-                    {formatTokenAmount(parseFloat(stake.hexAmount))} HEX
+                  <div className="mt-2 md:mt-0 text-right">
+                    <div className="text-white font-bold">
+                      {formatTokenAmount(parseFloat(stake.hexAmount))} HEX
+                    </div>
+                    {stake.valueUsd !== undefined && (
+                      <div className="text-xs text-gray-400">
+                        ${formatUsd(stake.valueUsd)}
+                      </div>
+                    )}
                   </div>
                 </div>
                 
