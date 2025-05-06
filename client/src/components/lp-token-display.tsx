@@ -64,7 +64,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
       />
       
       {/* PulseX indicator badge */}
-      <div className="absolute -top-1 -right-1 bg-purple-500/20 text-purple-300 text-xs px-1.5 py-0.5 rounded-md border border-purple-500/40 flex-shrink-0 font-semibold">
+      <div className="absolute -top-1 -right-1 bg-purple-600/30 text-purple-100 text-xs px-1.5 py-0.5 rounded-md border border-purple-500/60 flex-shrink-0 font-semibold">
         PLP
       </div>
     </div>
@@ -97,7 +97,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
               </div>
               
               {/* LP Badge */}
-              <div className="absolute -bottom-1 -right-1 z-20 bg-purple-500/20 text-purple-300 text-xs px-1.5 py-0.5 rounded-md border border-purple-500/40 flex-shrink-0 font-semibold">
+              <div className="absolute -bottom-1 -right-1 z-20 bg-purple-600/30 text-purple-100 text-xs px-1.5 py-0.5 rounded-md border border-purple-500/60 flex-shrink-0 font-semibold">
                 LP
               </div>
             </div>
@@ -191,7 +191,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
           {/* LP position header with pair indication */}
           <div className="flex justify-between items-center p-3 bg-black/30 rounded-t-md border border-white/5 border-b-0 w-full max-w-full">
             <div className="flex items-center gap-2">
-              <div className="bg-purple-500/20 text-purple-300 text-xs px-2 py-0.5 rounded-md border border-purple-500/40 flex-shrink-0 font-semibold">
+              <div className="bg-purple-600/30 text-purple-100 text-xs px-2 py-0.5 rounded-md border border-purple-500/60 flex-shrink-0 font-semibold">
                 LP
               </div>
               <div className="flex items-center">
@@ -214,7 +214,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
             <div className="p-5 w-full max-w-full">
               {/* LP symbol in center */}
               <div className="absolute left-1/2 transform -translate-x-1/2 top-[5.5rem] flex items-center justify-center pointer-events-none">
-                <div className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-md border border-purple-500/40 font-semibold shadow-lg z-10">
+                <div className="bg-purple-600/30 text-purple-100 px-3 py-1 rounded-md border border-purple-500/60 font-semibold shadow-lg z-10">
                   LP
                 </div>
               </div>
