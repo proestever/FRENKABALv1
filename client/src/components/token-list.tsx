@@ -152,97 +152,100 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
 
   return (
     <Card className="shadow-lg glass-card">
-      <div className="p-6 border-b border-border">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-2 flex-wrap overflow-x-auto pb-1">
-            <button 
-              onClick={() => {
-                setShowTransactions(false);
-                setShowLiquidity(false);
-              }}
-              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
-                ${!showTransactions && !showLiquidity 
-                  ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
-                  : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
-              title="View all token holdings"
-            >
-              <Wallet size={18} />
-              <span className="text-sm font-medium">Tokens{!showLiquidity && !showTransactions ? ` (${sortedTokens.length})` : ''}</span>
-            </button>
+      {/* Tabs Container */}
+      <div className="p-4 border-b border-border bg-black/20">
+        <div className="flex items-center gap-2 flex-wrap overflow-x-auto pb-1">
+          <button 
+            onClick={() => {
+              setShowTransactions(false);
+              setShowLiquidity(false);
+            }}
+            className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
+              ${!showTransactions && !showLiquidity 
+                ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
+                : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
+            title="View all token holdings"
+          >
+            <Wallet size={18} />
+            <span className="text-sm font-medium">Tokens{!showLiquidity && !showTransactions ? ` (${sortedTokens.length})` : ''}</span>
+          </button>
+          
+          <button 
+            onClick={() => {
+              setShowTransactions(false);
+              setShowLiquidity(true);
+            }}
+            className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
+              ${showLiquidity 
+                ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
+                : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
+            title="View liquidity positions"
+          >
+            <Droplets size={18} />
+            <span className="text-sm font-medium">Liquidity{lpTokens.length > 0 ? ` (${lpTokens.length})` : ''}</span>
+          </button>
+          
+          <button
+            onClick={() => {
+              setShowTransactions(true);
+              setShowLiquidity(false);
+              setTxHistoryKey(Date.now());
+            }}
+            className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
+              ${showTransactions 
+                ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
+                : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
+            title="View transaction history"
+          >
+            <History size={18} />
+            <span className="text-sm font-medium">Transactions</span>
+          </button>
+        </div>
+      </div>
+      
+      {/* Filter and Sort Container */}
+      <div className="p-4 border-b border-border">
+        {!showTransactions && (
+          <div className="flex flex-col sm:flex-row gap-2 w-full justify-end">
+            <div className="relative">
+              <Input 
+                type="text" 
+                placeholder="Filter tokens..." 
+                value={filterText}
+                onChange={(e) => setFilterText(e.target.value)}
+                className="pl-8 w-full md:w-48 glass-card border-border/50 text-foreground bg-black/30"
+              />
+              <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
+            </div>
             
-            <button 
-              onClick={() => {
-                setShowTransactions(false);
-                setShowLiquidity(true);
-              }}
-              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
-                ${showLiquidity 
-                  ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
-                  : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
-              title="View liquidity positions"
+            <Select
+              value={sortBy}
+              onValueChange={(value) => setSortBy(value as SortOption)}
             >
-              <Droplets size={18} />
-              <span className="text-sm font-medium">Liquidity{lpTokens.length > 0 ? ` (${lpTokens.length})` : ''}</span>
-            </button>
+              <SelectTrigger className="w-full md:w-48 glass-card border-border/50 text-foreground bg-black/30">
+                <div className="flex items-center">
+                  <span>Sort by: </span>
+                  <SelectValue placeholder="Value" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="bg-black/80 border-white/10 text-white backdrop-blur-md">
+                <SelectItem value="value">Value</SelectItem>
+                <SelectItem value="balance">Balance</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="price">Price</SelectItem>
+                <SelectItem value="change">24h Change</SelectItem>
+              </SelectContent>
+            </Select>
             
             <button
-              onClick={() => {
-                setShowTransactions(true);
-                setShowLiquidity(false);
-                setTxHistoryKey(Date.now());
-              }}
-              className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
-                ${showTransactions 
-                  ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
-                  : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
-              title="View transaction history"
+              onClick={() => setShowHidden(!showHidden)}
+              className={`p-2 hover:opacity-80 transition-opacity ${showHidden ? 'text-purple-400' : 'text-white/70'}`}
+              title={showHidden ? "Hide hidden tokens" : "Show hidden tokens"}
             >
-              <History size={18} />
-              <span className="text-sm font-medium">Transactions</span>
+              {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          {!showTransactions && (
-            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-              <div className="relative">
-                <Input 
-                  type="text" 
-                  placeholder="Filter tokens..." 
-                  value={filterText}
-                  onChange={(e) => setFilterText(e.target.value)}
-                  className="pl-8 w-full md:w-48 glass-card border-border/50 text-foreground bg-black/30"
-                />
-                <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
-              </div>
-              
-              <Select
-                value={sortBy}
-                onValueChange={(value) => setSortBy(value as SortOption)}
-              >
-                <SelectTrigger className="w-full md:w-48 glass-card border-border/50 text-foreground bg-black/30">
-                  <div className="flex items-center">
-                    <span>Sort by: </span>
-                    <SelectValue placeholder="Value" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="bg-black/80 border-white/10 text-white backdrop-blur-md">
-                  <SelectItem value="value">Value</SelectItem>
-                  <SelectItem value="balance">Balance</SelectItem>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="price">Price</SelectItem>
-                  <SelectItem value="change">24h Change</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <button
-                onClick={() => setShowHidden(!showHidden)}
-                className={`p-2 hover:opacity-80 transition-opacity ${showHidden ? 'text-purple-400' : 'text-white/70'}`}
-                title={showHidden ? "Hide hidden tokens" : "Show hidden tokens"}
-              >
-                {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {showTransactions ? (
