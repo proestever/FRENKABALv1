@@ -51,6 +51,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     message: { message: "Too many transaction history requests, please try again later." }
   });
   
+  // Logo batch API rate limiter
+  const logoBatchLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 5, // limit each IP to 5 batch requests per minute
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many logo batch requests, please try again later." }
+  });
+  
   // API endpoint to get loading progress
   app.get("/api/loading-progress", (_req, res) => {
     res.json(loadingProgress);
@@ -171,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // API route to get specific token balance for a wallet
-  app.get("/api/wallet/:address/token/:tokenAddress", async (req, res) => {
+  app.get("/api/wallet/:address/token/:tokenAddress", walletDataLimiter, async (req, res) => {
     try {
       const { address, tokenAddress } = req.params;
       
@@ -211,7 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // API route to get wallet transaction history
-  app.get("/api/wallet/:address/transactions", async (req, res) => {
+  app.get("/api/wallet/:address/transactions", txHistoryLimiter, async (req, res) => {
     try {
       const { address } = req.params;
       const { limit = '100', cursor = null } = req.query;
@@ -270,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Batch API for fetching multiple logos at once
-  app.post("/api/token-logos/batch", async (req, res) => {
+  app.post("/api/token-logos/batch", logoBatchLimiter, async (req, res) => {
     try {
       const { addresses } = req.body;
       
