@@ -363,13 +363,10 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                                 tokenName={token.name} 
                                 tokenSymbol={token.symbol}
                               >
-                                <div className="flex items-center gap-1 cursor-pointer text-base font-bold text-foreground hover:text-gray-300 transition-colors">
+                                <div className="cursor-pointer text-base font-bold text-foreground hover:text-gray-300 transition-colors">
                                   <span title={token.name}>
                                     {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
                                   </span>
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mt-[1px]">
-                                    <path d="m7 10 5 5 5-5"/>
-                                  </svg>
                                 </div>
                               </TokenActionsMenu>
                             )}
@@ -524,13 +521,10 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                                   tokenName={token.name} 
                                   tokenSymbol={token.symbol}
                                 >
-                                  <div className="flex items-center gap-1 cursor-pointer text-base font-bold text-foreground hover:text-gray-300 transition-colors">
+                                  <div className="cursor-pointer text-base font-bold text-foreground hover:text-gray-300 transition-colors">
                                     <span title={token.name}>
                                       {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
                                     </span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mt-[1px]">
-                                      <path d="m7 10 5 5 5-5"/>
-                                    </svg>
                                   </div>
                                 </TokenActionsMenu>
                               )}
