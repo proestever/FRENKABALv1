@@ -195,9 +195,9 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                 <span className="text-white text-xs font-bold">LP</span>
               </div>
               <div className="flex items-center">
-                <span className="text-token0-color font-bold text-sm">{token0Symbol}</span>
+                <span className="text-white font-bold text-sm">{token0Symbol}</span>
                 <span className="mx-1 text-white/40">•</span>
-                <span className="text-token1-color font-bold text-sm">{token1Symbol}</span>
+                <span className="text-white font-bold text-sm">{token1Symbol}</span>
                 <span className="ml-1 text-white/70 text-sm">Pair</span>
               </div>
             </div>
@@ -228,7 +228,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                         <TokenLogo address={token.lpToken0Address || ''} symbol={token0Symbol} size="lg" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-token0-color font-bold text-lg">{token0Symbol}</span>
+                        <span className="text-white font-bold text-lg">{token0Symbol}</span>
                         <span className="text-white/50 text-xs truncate max-w-[130px]">{token.lpToken0Name}</span>
                       </div>
                     </div>
@@ -241,7 +241,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                       <div className="flex items-center gap-2 mt-1.5">
                         <span className="text-white/60 font-medium text-sm">Value:</span>
                         {token0Value !== undefined && (
-                          <span className="text-token0-color font-bold text-base">{formatCurrency(token0Value)}</span>
+                          <span className="text-white font-bold text-base">{formatCurrency(token0Value)}</span>
                         )}
                       </div>
                     </div>
@@ -256,7 +256,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                         <TokenLogo address={token.lpToken1Address || ''} symbol={token1Symbol} size="lg" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-token1-color font-bold text-lg">{token1Symbol}</span>
+                        <span className="text-white font-bold text-lg">{token1Symbol}</span>
                         <span className="text-white/50 text-xs truncate max-w-[130px]">{token.lpToken1Name}</span>
                       </div>
                     </div>
@@ -269,7 +269,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                       <div className="flex items-center gap-2 mt-1.5">
                         <span className="text-white/60 font-medium text-sm">Value:</span>
                         {token1Value !== undefined && (
-                          <span className="text-token1-color font-bold text-base">{formatCurrency(token1Value)}</span>
+                          <span className="text-white font-bold text-base">{formatCurrency(token1Value)}</span>
                         )}
                       </div>
                     </div>
