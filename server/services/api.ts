@@ -974,7 +974,7 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
     // Process tokens in batches to avoid overwhelming API
     console.log(`Processing ${tokens.length} tokens in batches for price data...`);
     const BATCH_SIZE = 15; // Process 15 tokens at a time (increased from 5 for faster loading)
-    const tokensWithPrice: ProcessedToken[] = [];
+    let tokensWithPrice: ProcessedToken[] = [];
     const totalBatches = Math.ceil(tokens.length/BATCH_SIZE);
     
     // Update existing loading progress for fallback method
@@ -1293,11 +1293,36 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       }
     }
     
+    // Process LP tokens to get detailed information about the underlying token pairs
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: totalBatches + 8, // Account for previous steps
+      totalBatches: totalBatches + 9, // Add one more step for LP processing
+      message: 'Processing liquidity pool tokens...'
+    });
+    
+    // Count LP tokens for processing estimation
+    const lpTokenCount = tokensWithPrice.filter(token => token.isLp).length;
+    console.log(`Found ${lpTokenCount} LP tokens to process`);
+    
+    if (lpTokenCount > 0) {
+      try {
+        // Process LP tokens in batches to get details on the underlying token pairs
+        const processedTokens = await processLpTokens(tokensWithPrice, walletAddress);
+        // Update tokensWithPrice with the processed tokens
+        tokensWithPrice = processedTokens;
+        console.log(`Processed ${lpTokenCount} LP tokens with detailed pair information`);
+      } catch (lpError) {
+        console.error('Error processing LP tokens:', lpError);
+        // Continue with the original tokens even if LP processing fails
+      }
+    }
+    
     // Update loading progress to complete
     updateLoadingProgress({
       status: 'complete',
-      currentBatch: totalBatches + 8, // Account for the extra step
-      totalBatches: totalBatches + 8, // Ensure we have the right total
+      currentBatch: totalBatches + 9, // Account for all steps including LP processing
+      totalBatches: totalBatches + 9, // Ensure we have the right total
       message: 'Data loaded successfully'
     });
     

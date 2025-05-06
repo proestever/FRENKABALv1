@@ -114,6 +114,19 @@ export interface ProcessedToken {
   lpToken1Symbol?: string;
   lpToken0Address?: string;
   lpToken1Address?: string;
+  lpToken0Decimals?: number;
+  lpToken1Decimals?: number;
+  lpToken0Balance?: string;
+  lpToken1Balance?: string;
+  lpToken0BalanceFormatted?: number;
+  lpToken1BalanceFormatted?: number;
+  lpToken0Price?: number;
+  lpToken1Price?: number;
+  lpToken0Value?: number;
+  lpToken1Value?: number;
+  lpTotalSupply?: string;
+  lpReserve0?: string;
+  lpReserve1?: string;
 }
 
 export interface WalletData {
