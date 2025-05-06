@@ -1182,12 +1182,19 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     ))}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
+                <td className="px-6 py-4 text-right">
                   {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                     <div key={`${tx.hash}-erc20-value-${i}`} className={`${i > 0 ? 'mt-2' : ''}`}>
-                      <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
-                        {transfer.direction === 'receive' ? '+' : '-'}
-                        {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol && transfer.token_symbol.length > 15 ? `${transfer.token_symbol.substring(0, 15)}...` : transfer.token_symbol}
+                      <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'} flex flex-wrap justify-end`}>
+                        <span className="break-all">
+                          {transfer.direction === 'receive' ? '+' : '-'}
+                          {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)}
+                        </span>
+                        <span className="ml-1 break-all">
+                          {transfer.token_symbol && transfer.token_symbol.length > 6 
+                            ? `${transfer.token_symbol.substring(0, 6)}...` 
+                            : transfer.token_symbol}
+                        </span>
                       </div>
                       {/* Add USD value display using batch token prices */}
                       {(() => {
@@ -1213,9 +1220,16 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   
                   {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
                     <div key={`${tx.hash}-native-value-${i}`} className={`${(tx.erc20_transfers && tx.erc20_transfers.length > 0) || i > 0 ? 'mt-2' : ''}`}>
-                      <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
-                        {transfer.direction === 'receive' ? '+' : '-'}
-                        {transfer.value_formatted || formatTokenValue(transfer.value)} {(transfer.token_symbol && transfer.token_symbol.length > 15) ? `${transfer.token_symbol.substring(0, 15)}...` : (transfer.token_symbol || 'PLS')}
+                      <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'} flex flex-wrap justify-end`}>
+                        <span className="break-all">
+                          {transfer.direction === 'receive' ? '+' : '-'}
+                          {transfer.value_formatted || formatTokenValue(transfer.value)}
+                        </span>
+                        <span className="ml-1">
+                          {(transfer.token_symbol && transfer.token_symbol.length > 6) 
+                            ? `${transfer.token_symbol.substring(0, 6)}...` 
+                            : (transfer.token_symbol || 'PLS')}
+                        </span>
                       </div>
                       {/* Add USD value display for native PLS token using batch token prices */}
                       {(() => {
@@ -1390,24 +1404,24 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {/* ERC20 Transfers */}
               {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                 <div key={`mobile-${tx.hash}-erc20-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                  <div className="flex items-center">
+                  <div className="flex items-center max-w-[65%]">
                     <TokenLogo 
                       address={transfer.address || ''}
                       symbol={transfer.token_symbol || ''}
                       fallbackLogo={prefetchedLogos[transfer.address?.toLowerCase() || '']}
                       size="sm"
                     />
-                    <div className="ml-2">
+                    <div className="ml-2 min-w-0">
                       <div className="flex items-center">
                         {transfer.direction === 'receive' ? (
-                          <ArrowDownLeft size={14} className="text-green-400 mr-1" />
+                          <ArrowDownLeft size={14} className="text-green-400 mr-1 flex-shrink-0" />
                         ) : (
-                          <ArrowUpRight size={14} className="text-red-400 mr-1" />
+                          <ArrowUpRight size={14} className="text-red-400 mr-1 flex-shrink-0" />
                         )}
-                        <div className="group relative">
-                          <span className="text-sm font-medium border-b border-dotted border-white/30" title={transfer.token_symbol}>
-                            {transfer.token_symbol && transfer.token_symbol.length > 15 
-                              ? `${transfer.token_symbol.substring(0, 15)}...` 
+                        <div className="group relative overflow-hidden">
+                          <span className="text-sm font-medium border-b border-dotted border-white/30 truncate block" title={transfer.token_symbol}>
+                            {transfer.token_symbol && transfer.token_symbol.length > 8
+                              ? `${transfer.token_symbol.substring(0, 8)}...` 
                               : transfer.token_symbol}
                           </span>
                           <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
@@ -1507,23 +1521,23 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {/* Native Transfers */}
               {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
                 <div key={`mobile-${tx.hash}-native-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                  <div className="flex items-center">
+                  <div className="flex items-center max-w-[65%]">
                     <img 
                       src="/assets/pls-logo-trimmed.png"
                       alt="PLS"
-                      className="w-6 h-6 rounded-full object-cover border border-white/10"
+                      className="w-6 h-6 rounded-full object-cover border border-white/10 flex-shrink-0"
                     />
-                    <div className="ml-2">
+                    <div className="ml-2 min-w-0">
                       <div className="flex items-center">
                         {transfer.direction === 'receive' ? (
-                          <ArrowDownLeft size={14} className="text-green-400 mr-1" />
+                          <ArrowDownLeft size={14} className="text-green-400 mr-1 flex-shrink-0" />
                         ) : (
-                          <ArrowUpRight size={14} className="text-red-400 mr-1" />
+                          <ArrowUpRight size={14} className="text-red-400 mr-1 flex-shrink-0" />
                         )}
-                        <div className="group relative">
-                          <span className="text-sm font-medium border-b border-dotted border-white/30" title={transfer.token_symbol || 'PLS'}>
-                            {(transfer.token_symbol && transfer.token_symbol.length > 15) 
-                              ? `${transfer.token_symbol.substring(0, 15)}...` 
+                        <div className="group relative overflow-hidden">
+                          <span className="text-sm font-medium border-b border-dotted border-white/30 truncate block" title={transfer.token_symbol || 'PLS'}>
+                            {(transfer.token_symbol && transfer.token_symbol.length > 8) 
+                              ? `${transfer.token_symbol.substring(0, 8)}...` 
                               : (transfer.token_symbol || 'PLS')}
                           </span>
                           <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">

@@ -26,7 +26,7 @@ declare global {
   interface Window {
     _dummyEthereum?: MinimalEthereumProvider;
     _dummyEthereumShim?: MinimalEthereumProvider;
-    ethereum: MinimalEthereumProvider | undefined;
+    ethereum?: MinimalEthereumProvider;
   }
 }
 
