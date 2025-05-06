@@ -7,6 +7,7 @@ import { Token } from '@shared/schema';
 import { Search, ArrowDownUp, Eye, EyeOff, Wallet, History } from 'lucide-react';
 import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass } from '@/lib/utils';
 import { TokenLogo } from '@/components/token-logo';
+import { LpTokenDisplay } from '@/components/lp-token-display';
 import { getHiddenTokens, toggleHiddenToken, isTokenHidden } from '@/lib/api';
 import { useBatchTokenLogos } from '@/hooks/use-batch-token-logos';
 import { TransactionHistory } from '@/components/transaction-history';
@@ -227,18 +228,31 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       {/* Token Info */}
                       <div className="flex items-center flex-grow">
                         <div className="mr-3 flex-shrink-0">
-                          {/* Use TokenLogo for all tokens for consistency */}
-                          <TokenLogo 
-                            address={token.address}
-                            symbol={token.symbol}
-                            fallbackLogo={token.logo}
-                            size="lg"
-                          />
+                          {/* Use LP token display or regular token logo based on token type */}
+                          {token.isLp ? (
+                            <LpTokenDisplay 
+                              token={token}
+                              size="lg"
+                            />
+                          ) : (
+                            <TokenLogo 
+                              address={token.address}
+                              symbol={token.symbol}
+                              fallbackLogo={token.logo}
+                              size="lg"
+                            />
+                          )}
                         </div>
                         <div className="min-w-0 flex-grow">
                           <div className="flex items-center gap-1">
                             <span className="text-lg font-bold text-foreground" title={token.name}>
-                              {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
+                              {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
+                                <span className="flex items-center">
+                                  {token.lpToken0Symbol}/{token.lpToken1Symbol} <span className="ml-1 text-xs text-primary">LP</span>
+                                </span>
+                              ) : (
+                                token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name
+                              )}
                             </span>
                             {token.verified && (
                               <span className="text-green-400 flex-shrink-0" title="Verified Contract">
@@ -250,7 +264,11 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                           </div>
                           <div className="flex gap-1 items-center">
                             <div className="text-base text-muted-foreground font-medium" title={token.symbol}>
-                              {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                              {token.isLp ? (
+                                <span className="text-primary/80">PulseX LP Token</span>
+                              ) : (
+                                token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol
+                              )}
                             </div>
                             <div className="text-sm text-gray-400">
                               • {formatTokenAmount(token.balanceFormatted || 0)}
@@ -331,18 +349,31 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="mr-3 flex-shrink-0">
-                            {/* Use TokenLogo for all tokens for consistency */}
-                          <TokenLogo 
-                            address={token.address}
-                            symbol={token.symbol}
-                            fallbackLogo={token.logo}
-                            size="md"
-                          />
+                            {/* Use LP token display or regular token logo based on token type */}
+                            {token.isLp ? (
+                              <LpTokenDisplay 
+                                token={token}
+                                size="md"
+                              />
+                            ) : (
+                              <TokenLogo 
+                                address={token.address}
+                                symbol={token.symbol}
+                                fallbackLogo={token.logo}
+                                size="md"
+                              />
+                            )}
                           </div>
                           <div>
                             <div className="flex items-center gap-1">
                               <span className="text-base font-bold text-foreground" title={token.name}>
-                                {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
+                                {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
+                                  <span className="flex items-center">
+                                    {token.lpToken0Symbol}/{token.lpToken1Symbol} <span className="ml-1 text-xs text-primary">LP</span>
+                                  </span>
+                                ) : (
+                                  token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name
+                                )}
                               </span>
                               {token.verified && (
                                 <span className="text-green-400 flex-shrink-0" title="Verified Contract">
@@ -354,7 +385,11 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                             </div>
                             <div className="flex items-center gap-2 overflow-hidden">
                               <div className="text-sm text-muted-foreground" title={token.symbol}>
-                                {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                                {token.isLp ? (
+                                  <span className="text-primary/80">PulseX LP Token</span>
+                                ) : (
+                                  token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol
+                                )}
                               </div>
                               {token.exchange && (
                                 <div className="text-xs bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded-md border border-purple-500/30 flex-shrink-0">
