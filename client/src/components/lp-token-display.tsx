@@ -202,7 +202,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
               </div>
             </div>
             {poolSharePercentage && (
-              <div className="text-xs md:text-sm px-2 py-0.5 bg-white/10 text-white rounded-sm font-medium">
+              <div className="text-xs md:text-sm px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/30 rounded-sm font-medium">
                 {poolSharePercentage}% pool share
               </div>
             )}
