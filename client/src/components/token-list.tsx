@@ -358,7 +358,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                 <span className="ml-2 text-md text-white/60">({sortedTokens.length})</span>
               </h3>
               <p className="text-sm text-white/70 mt-1">
-                PulseX LP tokens representing your liquidity positions
+                PulseX tokens representing your liquidity positions
               </p>
             </div>
           )}
@@ -371,7 +371,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
               </div>
               <h3 className="text-xl font-bold mb-2">No Liquidity Positions Found</h3>
               <p className="text-muted-foreground max-w-md mx-auto">
-                This wallet doesn't have any PulseX LP tokens. LP tokens are received when you provide liquidity to token pairs on PulseX.
+                This wallet doesn't have any PulseX liquidity tokens. These tokens are received when you provide liquidity to token pairs on PulseX.
               </p>
             </div>
           )}
