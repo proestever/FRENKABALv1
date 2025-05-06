@@ -46,11 +46,14 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
         setIsLoading(true);
         setError(false);
 
-        // Handle special case for native PLS token
-        if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || symbol === 'PLS') {
+        // Handle special case for native PLS token - check both symbol and address format
+        if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || 
+            symbol?.toUpperCase() === 'PLS' || 
+            symbol === 'PulseChain') {
           if (DEBUG_LOGGING) {
             console.log('Using native PLS token logo for:', address, symbol);
           }
+          // Use the local asset
           setLogoUrl('/assets/pls-logo-trimmed.png');
           setIsLoading(false);
           return;
