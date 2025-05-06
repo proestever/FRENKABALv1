@@ -8,7 +8,7 @@ const HEX_CONTRACT_ADDRESS = '0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39';
 const LAUNCH_TS = 1575331200;
 const DAY_SECONDS = 86400;
 
-// Simplified ABI with just the functions we need
+// Extended ABI with all the functions we need
 const HEX_ABI = [
   {
     "constant": true,
@@ -27,8 +27,46 @@ const HEX_ABI = [
     "payable": false,
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {"internalType": "address", "name": "stakerAddr", "type": "address"},
+      {"internalType": "uint256", "name": "stakeIndex", "type": "uint256"},
+      {"internalType": "uint256", "name": "stakeIdParam", "type": "uint256"}
+    ],
+    "name": "stakeDataFetch",
+    "outputs": [
+      {"internalType": "uint40", "name": "", "type": "uint40"},
+      {"internalType": "uint72", "name": "", "type": "uint72"},
+      {"internalType": "uint72", "name": "", "type": "uint72"},
+      {"internalType": "uint16", "name": "", "type": "uint16"},
+      {"internalType": "uint16", "name": "", "type": "uint16"},
+      {"internalType": "uint16", "name": "", "type": "uint16"},
+      {"internalType": "bool", "name": "", "type": "bool"},
+      {"internalType": "uint72", "name": "", "type": "uint72"},
+      {"internalType": "uint72", "name": "", "type": "uint72"},
+      {"internalType": "uint72", "name": "", "type": "uint72"}
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
   }
 ];
+
+// Interface for individual stake data
+interface StakeData {
+  stakeId: string;
+  stakedHearts: ethers.BigNumber;
+  stakeShares: ethers.BigNumber;
+  lockedDay: number;
+  stakedDays: number;
+  unlockedDay: number;
+  isAutoStake: boolean;
+  interestHearts: ethers.BigNumber;
+  payout: ethers.BigNumber;
+  penalty: ethers.BigNumber;
+}
 
 export interface HexStakeSummary {
   totalStakedHex: string;
@@ -72,15 +110,28 @@ export function useHexStakes(walletAddress: string | undefined) {
         // Fetch HEX price
         let currentHexPrice = 0;
         try {
+          // Use simple and hardcoded price data for now - this will be replaced with actual API call
+          // Adding a fixed hardcoded price until API is working
+          currentHexPrice = 0.00004;
+
+          // Try fetching from API
           const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
           const priceData = await response.json();
-          if (priceData && priceData.price) {
+          
+          // Check various possible formats (API might return different formats)
+          if (priceData && priceData.usdPrice) {
+            currentHexPrice = priceData.usdPrice;
+          } else if (priceData && priceData.price) {
             currentHexPrice = priceData.price;
           }
         } catch (error) {
           console.error('Error fetching HEX price for summary:', error);
-          currentHexPrice = 0.005; // Fallback price
+          // Keep using the fallback price set above
         }
+        
+        // Get current day
+        const currentDayBN = await hexContract.currentDay();
+        const currentDay = Number(currentDayBN);
         
         // Get stake count
         const countBN = await hexContract.stakeCount(walletAddress);
@@ -103,13 +154,86 @@ export function useHexStakes(walletAddress: string | undefined) {
           return;
         }
         
-        // For summary view, we'll just get basic stats without fetching all stakes
-        // We'll use estimates based on typical values
-        const averageStakeSize = 30000; // HEX
-        const averageInterestRate = 0.20; // 20% (conservative estimate)
+        // We'll try to fetch actual stake data for better accuracy
+        const stakes: StakeData[] = [];
+        let totalStakedHexBN = ethers.BigNumber.from(0);
+        let totalInterestHexBN = ethers.BigNumber.from(0);
         
-        const totalStakedHex = (averageStakeSize * count).toFixed(2);
-        const totalInterestHex = (averageStakeSize * count * averageInterestRate).toFixed(2);
+        try {
+          // Fetching data for each stake (limiting to first 10 to avoid overloading)
+          const stakesToFetch = Math.min(count, 10);
+          
+          for (let i = 0; i < stakesToFetch; i++) {
+            try {
+              // stakeId is set to 0 as we're using index-based lookup
+              const stakeData = await hexContract.stakeDataFetch(walletAddress, i, 0);
+              
+              // Parse returned data
+              const stake: StakeData = {
+                stakeId: i.toString(),
+                stakedHearts: stakeData[1],
+                stakeShares: stakeData[2],
+                lockedDay: Number(stakeData[3]),
+                stakedDays: Number(stakeData[4]),
+                unlockedDay: Number(stakeData[5]),
+                isAutoStake: stakeData[6],
+                interestHearts: stakeData[7],
+                payout: stakeData[8],
+                penalty: stakeData[9]
+              };
+              
+              stakes.push(stake);
+              
+              // Add to totals
+              totalStakedHexBN = totalStakedHexBN.add(stake.stakedHearts);
+              
+              // If stake is active (not ended yet), we calculate current interest based on shares
+              if (stake.unlockedDay === 0 || stake.unlockedDay > currentDay) {
+                totalInterestHexBN = totalInterestHexBN.add(stake.interestHearts);
+              }
+            } catch (stakeError) {
+              console.error(`Error fetching stake ${i}:`, stakeError);
+            }
+          }
+        } catch (stakesError) {
+          console.error('Error fetching stake data:', stakesError);
+          // Fall back to estimated approach
+          const averageStakeSize = 10000; // HEX
+          const averageInterestRate = 0.10; // 10% (conservative estimate)
+          
+          const estimatedTotalStaked = averageStakeSize * count;
+          const estimatedTotalInterest = estimatedTotalStaked * averageInterestRate;
+          
+          const totalStakedHex = estimatedTotalStaked.toFixed(2);
+          const totalInterestHex = estimatedTotalInterest.toFixed(2);
+          const totalCombinedHex = (estimatedTotalStaked + estimatedTotalInterest).toFixed(2);
+          
+          // Calculate USD values
+          const totalStakeValueUsd = estimatedTotalStaked * currentHexPrice;
+          const totalInterestValueUsd = estimatedTotalInterest * currentHexPrice;
+          const totalCombinedValueUsd = (estimatedTotalStaked + estimatedTotalInterest) * currentHexPrice;
+          
+          setSummary({
+            totalStakedHex,
+            totalInterestHex,
+            totalCombinedHex,
+            totalStakeValueUsd,
+            totalInterestValueUsd,
+            totalCombinedValueUsd,
+            stakeCount: count,
+            hexPrice: currentHexPrice,
+            isLoading: false,
+            error: null
+          });
+          return;
+        }
+        
+        // Convert from Hearts (smallest HEX unit) to HEX (1 HEX = 10^8 Hearts)
+        const decimals = 8;
+        const divisor = ethers.BigNumber.from(10).pow(decimals);
+        
+        const totalStakedHex = (Number(ethers.utils.formatUnits(totalStakedHexBN, decimals))).toFixed(2);
+        const totalInterestHex = (Number(ethers.utils.formatUnits(totalInterestHexBN, decimals))).toFixed(2);
         const totalCombinedHex = (parseFloat(totalStakedHex) + parseFloat(totalInterestHex)).toFixed(2);
         
         // Calculate USD values

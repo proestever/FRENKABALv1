@@ -79,8 +79,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // API route to get token prices
-  app.get("/api/token/price/:address", async (req, res) => {
+  // API route to get token prices - with backward compatibility
+  app.get(["/api/token/price/:address", "/api/token-price/:address"], async (req, res) => {
     try {
       const { address } = req.params;
       
