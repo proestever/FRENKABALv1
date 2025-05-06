@@ -262,19 +262,15 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                 
                 return (
                   <div key={`mobile-${token.address}-${index}`} className="p-3 glass-card rounded-lg hover:bg-black/20 transition-colors relative">
-                    {/* Visibility Toggle Button - Top Right on Mobile */}
-                    <div className="absolute top-3 right-3 md:hidden">
+                    {/* Mobile Value and Visibility - Positioned center right of card */}
+                    <div className="absolute top-1/2 right-3 transform -translate-y-1/2 md:hidden flex items-center gap-2">
                       <button 
                         onClick={() => handleToggleVisibility(token.address)}
-                        className={`p-1.5 hover:opacity-80 transition-opacity ${isHidden ? 'text-white/40' : 'text-white/70'}`}
+                        className={`p-1 hover:opacity-80 transition-opacity ${isHidden ? 'text-white/40' : 'text-white/70'}`}
                         title={isHidden ? "Show token" : "Hide token"}
                       >
-                        {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+                        {isHidden ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
-                    </div>
-                    
-                    {/* Mobile Value - Positioned center right of card */}
-                    <div className="absolute top-1/2 right-3 transform -translate-y-1/2 md:hidden">
                       <div className="text-base font-bold text-white">
                         {token.value !== undefined 
                           ? formatCurrency(token.value) 
