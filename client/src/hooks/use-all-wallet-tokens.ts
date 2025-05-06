@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAllWalletTokens } from '@/lib/api';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 /**
  * Hook for retrieving all wallet tokens at once (not paginated)
@@ -9,6 +9,8 @@ import { useEffect, useState, useRef } from 'react';
 export function useAllWalletTokens(walletAddress: string | null) {
   const queryClient = useQueryClient();
   const prevWalletAddress = useRef<string | null>(null);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   
   const [progress, setProgress] = useState({
     currentBatch: 0,
