@@ -150,7 +150,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
               {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </button>
           )}
-          {token.value !== undefined && (
+          {token.value !== undefined && showDetails && (
             <div className="bg-gradient-to-r from-token0-color/20 to-token1-color/20 text-white px-3 py-1.5 rounded font-bold text-base md:text-lg">
               {formatCurrency(token.value)}
             </div>
