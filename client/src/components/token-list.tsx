@@ -394,15 +394,19 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       Price (24h)
                     </th>
                   )}
-                  <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
-                    Value
-                  </th>
+                  {!showLiquidity && (
+                    <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
+                      Value
+                    </th>
+                  )}
                   <th scope="col" className="hidden px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/12">
                     {/* Hidden column */}
                   </th>
-                  <th scope="col" className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/12 last:rounded-tr-md">
-                    Visibility
-                  </th>
+                  {!showLiquidity && (
+                    <th scope="col" className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/12 last:rounded-tr-md">
+                      Visibility
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
@@ -501,25 +505,29 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                           </div>
                         </td>
                       )}
-                      <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className="text-base font-bold text-white">
-                          {token.value !== undefined 
-                            ? formatCurrency(token.value) 
-                            : 'N/A'}
-                        </div>
-                      </td>
+                      {!showLiquidity && (
+                        <td className="px-4 py-3 whitespace-nowrap text-right">
+                          <div className="text-base font-bold text-white">
+                            {token.value !== undefined 
+                              ? formatCurrency(token.value) 
+                              : 'N/A'}
+                          </div>
+                        </td>
+                      )}
                       <td className="hidden px-4 py-3 whitespace-nowrap text-right">
                         {/* Column hidden but kept for structure */}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center">
-                        <button 
-                          onClick={() => handleToggleVisibility(token.address)} 
-                          className={`p-1.5 hover:opacity-80 transition-opacity ${isHidden ? 'text-white/40' : 'text-white/70'}`}
-                          title={isHidden ? "Show token" : "Hide token"}
-                        >
-                          {isHidden ? <EyeOff size={20} /> : <Eye size={20} />}
-                        </button>
-                      </td>
+                      {!showLiquidity && (
+                        <td className="px-4 py-3 whitespace-nowrap text-center">
+                          <button 
+                            onClick={() => handleToggleVisibility(token.address)} 
+                            className={`p-1.5 hover:opacity-80 transition-opacity ${isHidden ? 'text-white/40' : 'text-white/70'}`}
+                            title={isHidden ? "Show token" : "Hide token"}
+                          >
+                            {isHidden ? <EyeOff size={20} /> : <Eye size={20} />}
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
