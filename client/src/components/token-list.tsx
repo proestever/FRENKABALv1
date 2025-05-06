@@ -262,10 +262,10 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                 
                 return (
                   <div key={`mobile-${token.address}-${index}`} className="p-3 glass-card rounded-lg hover:bg-black/20 transition-colors">
-                    <div className="flex items-center justify-between">
-                      {/* Token Info */}
-                      <div className="flex items-center flex-grow">
-                        <div className={`mr-3 ${token.isLp && showLiquidity ? 'w-full' : 'flex-shrink-0'}`}>
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                      {/* Token Info - Mobile: Stacked layout, Desktop: Side-by-side */}
+                      <div className="flex flex-col md:flex-row md:items-center flex-grow">
+                        <div className={`${token.isLp && showLiquidity ? 'w-full' : 'flex-shrink-0'} flex justify-center md:justify-start mb-3 md:mb-0 md:mr-3`}>
                           {/* Use LP token display or regular token logo based on token type */}
                           {token.isLp ? (
                             <LpTokenDisplay 
@@ -283,8 +283,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                             />
                           )}
                         </div>
-                        <div className="min-w-0 flex-grow">
-                          <div className="flex items-center gap-1">
+                        <div className="min-w-0 flex-grow text-center md:text-left">
+                          <div className="flex items-center gap-1 justify-center md:justify-start">
                             <span className="text-lg font-bold text-foreground" title={token.name}>
                               {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
                                 <span className="flex items-center">
@@ -302,7 +302,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               </span>
                             )}
                           </div>
-                          <div className="flex gap-1 items-center">
+                          <div className="flex gap-1 items-center justify-center md:justify-start">
                             <div className="text-base text-muted-foreground font-medium" title={token.symbol}>
                               {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
                             </div>
@@ -310,7 +310,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                               • {formatTokenAmount(token.balanceFormatted || 0)}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 mt-1">
+                          <div className="flex items-center gap-1 mt-1 justify-center md:justify-start">
                             <div className="text-sm text-white font-medium">
                               {token.price !== undefined 
                                 ? formatCurrencyWithPrecision(token.price, 2, token.price < 0.01 ? 8 : 2) 
@@ -326,7 +326,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       </div>
                       
                       {/* Token Value & Hide Button */}
-                      <div className="flex flex-col items-end">
+                      <div className="flex flex-col items-center md:items-end mt-2 md:mt-0">
                         <div className="text-base font-bold text-white">
                           {token.value !== undefined 
                             ? formatCurrency(token.value) 
