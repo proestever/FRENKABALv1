@@ -191,6 +191,70 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
         const balance = item.value || '0';
         const balanceFormatted = parseFloat(balance) / Math.pow(10, decimals);
         
+        // Check if this is a PulseX LP token
+        const isLp = 
+          // Check symbol conventions
+          item.token?.symbol?.includes('PLP-') || 
+          item.token?.symbol?.includes('-LP') || 
+          item.token?.symbol?.includes('PulseX-LP') ||
+          // Match well-known PulseX v1 and v2 LP formats 
+          (item.token?.symbol?.toLowerCase().includes('lp') && 
+          (item.token?.name?.toLowerCase().includes('pulsex') || 
+           item.token?.name?.toLowerCase().includes('pulseswap') || 
+           item.token?.name?.toLowerCase().includes('plp')));
+        
+        // Extract token symbols from LP token name if possible
+        let lpToken0Symbol = undefined;
+        let lpToken1Symbol = undefined;
+        let lpToken0Address = undefined;
+        let lpToken1Address = undefined;
+        
+        // Different naming conventions for LP tokens
+        if (isLp) {
+          console.log(`Found LP token: ${item.token?.symbol} - ${item.token?.name}`);
+          
+          // Try to extract token pairs from the symbol
+          if (item.token?.symbol?.includes('-')) {
+            const parts = item.token?.symbol.split('-');
+            // PLP-TOKEN1-TOKEN2 or TOKEN1-TOKEN2-LP
+            if (parts.length >= 3) {
+              // Determine format based on prefix/suffix
+              if (parts[0].toUpperCase() === 'PLP') {
+                lpToken0Symbol = parts[1];
+                lpToken1Symbol = parts[2];
+              } else if (parts[parts.length-1].toUpperCase() === 'LP') {
+                lpToken0Symbol = parts[0];
+                lpToken1Symbol = parts[1];
+              }
+            } else if (parts.length === 2) {
+              // Simple TOKEN1-TOKEN2 format
+              lpToken0Symbol = parts[0];
+              lpToken1Symbol = parts[1];
+            }
+          }
+          
+          // If we couldn't extract from symbol, try the name
+          if (!lpToken0Symbol && !lpToken1Symbol && item.token?.name) {
+            // Try to extract from name formats like "PulseX LPs TOKEN1/TOKEN2"
+            if (item.token.name.includes('/')) {
+              const nameParts = item.token.name.split('/');
+              if (nameParts.length >= 2) {
+                // Extract the last part as it might contain the symbols
+                const lastPart = nameParts[nameParts.length - 1];
+                // Look for TOKEN1/TOKEN2 format
+                const pairParts = lastPart.split(' ');
+                if (pairParts.length >= 1) {
+                  const pairSymbols = pairParts[0].split('/');
+                  if (pairSymbols.length === 2) {
+                    lpToken0Symbol = pairSymbols[0].trim();
+                    lpToken1Symbol = pairSymbols[1].trim();
+                  }
+                }
+              }
+            }
+          }
+        }
+        
         return {
           address: item.token?.address || '0x0000000000000000000000000000000000000000',
           symbol: item.token?.symbol || 'UNKNOWN',
@@ -199,6 +263,11 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
           balance,
           balanceFormatted,
           logo: (item.token?.icon_url) ? item.token.icon_url : getDefaultLogo(item.token?.symbol),
+          isLp,
+          lpToken0Symbol,
+          lpToken1Symbol,
+          lpToken0Address,
+          lpToken1Address,
         };
       } catch (itemError) {
         console.error('Error processing token item:', itemError);

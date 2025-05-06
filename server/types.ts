@@ -109,6 +109,11 @@ export interface ProcessedToken {
   verified?: boolean;
   securityScore?: number;
   isNative?: boolean;
+  isLp?: boolean;
+  lpToken0Symbol?: string;
+  lpToken1Symbol?: string;
+  lpToken0Address?: string;
+  lpToken1Address?: string;
 }
 
 export interface WalletData {

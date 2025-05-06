@@ -49,6 +49,11 @@ export const TokenSchema = z.object({
   verified: z.boolean().optional(),
   securityScore: z.number().optional(),
   isNative: z.boolean().optional(), // Add isNative flag to properly identify native tokens
+  isLp: z.boolean().optional(), // Flag for LP (Liquidity Pool) tokens
+  lpToken0Symbol: z.string().optional(), // First token symbol in the LP pair
+  lpToken1Symbol: z.string().optional(), // Second token symbol in the LP pair
+  lpToken0Address: z.string().optional(), // First token address in the LP pair
+  lpToken1Address: z.string().optional(), // Second token address in the LP pair
 });
 
 export type Token = z.infer<typeof TokenSchema>;
