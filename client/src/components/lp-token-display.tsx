@@ -138,22 +138,22 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
       
       <div className="flex items-center">
         {/* Value display with detailed button style */}
-        <div className="flex flex-col items-end">
-          {token.value !== undefined && (
-            <div className="bg-gradient-to-r from-token0-color/20 to-token1-color/20 text-white px-2 py-0.5 rounded font-medium text-xs">
-              {formatCurrency(token.value)}
-            </div>
-          )}
+        <div className="flex items-center gap-3">
           {/* Show details badge */}
           {showDetails && hasDetailedData && (
             <button 
               onClick={toggleExpand}
-              className="mt-1 text-[10px] text-white/60 hover:text-white/90 transition-colors flex items-center gap-0.5"
+              className="text-xs text-white/70 hover:text-white/90 transition-colors flex items-center gap-0.5 bg-black/30 px-2 py-0.5 rounded"
               title={isExpanded ? "Hide details" : "Show details"}
             >
               {isExpanded ? "Hide details" : "View details"}
-              {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+              {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </button>
+          )}
+          {token.value !== undefined && (
+            <div className="bg-gradient-to-r from-token0-color/20 to-token1-color/20 text-white px-3 py-1 rounded font-bold text-sm">
+              {formatCurrency(token.value)}
+            </div>
           )}
         </div>
       </div>
