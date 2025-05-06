@@ -189,7 +189,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
         {/* Detailed list layout for LP tokens */}
         <div className="mt-1 w-full max-w-full">
           {/* LP position header with pair indication */}
-          <div className="flex justify-between items-center p-3 bg-black/30 rounded-t-md border border-white/5 border-b-0 w-full max-w-full">
+          <div className="flex flex-col md:flex-row md:justify-between gap-2 md:gap-0 items-start md:items-center p-3 bg-black/30 rounded-t-md border border-white/5 border-b-0 w-full max-w-full">
             <div className="flex items-center gap-2">
               <div className="bg-purple-600/30 text-purple-100 text-[0.65rem] px-1.5 py-0.5 rounded-md border border-purple-500/60 flex-shrink-0 font-semibold scale-[0.65] origin-center">
                 LP
@@ -202,7 +202,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
               </div>
             </div>
             {poolSharePercentage && (
-              <div className="text-sm px-2 py-0.5 bg-white/10 text-white rounded-sm font-medium">
+              <div className="text-xs md:text-sm px-2 py-0.5 bg-white/10 text-white rounded-sm font-medium">
                 {poolSharePercentage}% pool share
               </div>
             )}
@@ -214,9 +214,9 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
             <div className="p-5 w-full max-w-full">
               {/* Center point (LP badge removed) */}
               
-              <div className="grid grid-cols-2 gap-12 relative w-full max-w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-12 relative w-full max-w-full">
                 {/* Token 0 Side */}
-                <div className="pr-6 border-r border-white/5">
+                <div className="md:pr-6 md:border-r md:border-white/5 pb-4 md:pb-0 border-b md:border-b-0 border-white/5">
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 mr-4 p-1.5 rounded-full bg-token0-color/10 border border-token0-color/15">
@@ -244,7 +244,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                 </div>
                 
                 {/* Token 1 Side */}
-                <div className="pl-6">
+                <div className="md:pl-6 pt-4 md:pt-0">
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 mr-4 p-1.5 rounded-full bg-token1-color/10 border border-token1-color/15">
@@ -271,8 +271,8 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                   </div>
                 </div>
                 
-                {/* Horizontal connecting line */}
-                <div className="absolute left-0 right-0 top-1/2 h-[2px] bg-gradient-to-r from-token0-color/30 to-token1-color/30 pointer-events-none"></div>
+                {/* Horizontal connecting line - only on desktop */}
+                <div className="hidden md:block absolute left-0 right-0 top-1/2 h-[2px] bg-gradient-to-r from-token0-color/30 to-token1-color/30 pointer-events-none"></div>
               </div>
             </div>
           </div>
