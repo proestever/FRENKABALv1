@@ -212,12 +212,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
           <div className="border border-white/5 rounded-b-md w-full max-w-full">
             {/* Tokens in side-by-side horizontal layout */}
             <div className="p-5 w-full max-w-full">
-              {/* LP symbol in center */}
-              <div className="absolute left-1/2 transform -translate-x-1/2 top-[5.5rem] flex items-center justify-center pointer-events-none">
-                <div className="bg-purple-600/30 text-purple-100 px-2 py-0.5 rounded-md border border-purple-500/60 font-semibold shadow-lg z-10 scale-[0.75] origin-center">
-                  LP
-                </div>
-              </div>
+              {/* Center point (LP badge removed) */}
               
               <div className="grid grid-cols-2 gap-12 relative w-full max-w-full">
                 {/* Token 0 Side */}
