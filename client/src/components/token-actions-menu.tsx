@@ -1,13 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { Copy, ExternalLink, Check, BarChart2, Search, Info } from 'lucide-react';
+import { Copy, Check, BarChart2, Search, Info } from 'lucide-react';
 import { copyToClipboard, getTokenExternalLink } from '@/lib/utils';
 
 interface TokenActionsMenuProps {
@@ -19,10 +11,12 @@ interface TokenActionsMenuProps {
 
 export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbol }: TokenActionsMenuProps) {
   const [copied, setCopied] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [show, setShow] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const handleCopyAddress = async () => {
+  const handleCopyAddress = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     const success = await copyToClipboard(tokenAddress);
     if (success) {
       setCopied(true);
@@ -30,25 +24,24 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
     }
   };
 
-  const openExternalLink = (platform: 'dexscreener' | 'pulsechain' | 'otterscan') => {
+  const openExternalLink = (e: React.MouseEvent, platform: 'dexscreener' | 'pulsechain' | 'otterscan') => {
+    e.stopPropagation();
     const url = getTokenExternalLink(tokenAddress, platform);
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // For hover functionality with delay to prevent flickering
-  const handleHoverStart = () => {
+  const handleMouseEnter = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    setOpen(true);
+    setShow(true);
   };
-  
-  const handleHoverEnd = () => {
-    // Add a slight delay before closing to prevent flickering
+
+  const handleMouseLeave = () => {
     timeoutRef.current = setTimeout(() => {
-      setOpen(false);
-    }, 300); // 300ms delay before closing
+      setShow(false);
+    }, 300);
   };
 
   // Clean up timeout on unmount
@@ -62,58 +55,67 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
 
   return (
     <div 
+      ref={containerRef}
       className="relative inline-block"
-      onMouseEnter={handleHoverStart}
-      onMouseLeave={handleHoverEnd}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger asChild className="cursor-pointer focus:outline-none">
-          <div>{children}</div>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent 
-          className="w-56 bg-black/90 border-white/10 backdrop-blur-md z-50"
-          sideOffset={5}
-          onMouseEnter={handleHoverStart}
-          onMouseLeave={handleHoverEnd}
+      <div className="cursor-pointer focus:outline-none">
+        {children}
+      </div>
+      
+      {show && (
+        <div 
+          className="absolute top-full left-0 mt-1 w-56 rounded-md border border-white/10 bg-black/90 backdrop-blur-md py-2 shadow-lg z-50"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          style={{ maxHeight: '300px', transform: 'translateX(-10px)' }}
         >
-          <DropdownMenuLabel className="font-bold text-gray-300">
+          <div className="px-3 pb-2 font-bold text-gray-300">
             {tokenName} ({tokenSymbol})
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-white/10" />
-          <DropdownMenuItem 
-            className="flex items-center gap-2 cursor-pointer"
+          </div>
+          
+          <div className="h-px bg-white/10 mb-2" />
+          
+          <button 
+            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-gray-800/50 transition-colors"
             onClick={handleCopyAddress}
           >
             {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
             <span>{copied ? 'Copied!' : 'Copy contract address'}</span>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator className="bg-white/10" />
-          <DropdownMenuLabel className="text-xs text-muted-foreground">
+          </button>
+          
+          <div className="h-px bg-white/10 my-2" />
+          
+          <div className="px-3 pt-1 pb-2 text-xs text-muted-foreground">
             View on:
-          </DropdownMenuLabel>
-          <DropdownMenuItem 
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => openExternalLink('dexscreener')}
+          </div>
+          
+          <button 
+            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-gray-800/50 transition-colors"
+            onClick={(e) => openExternalLink(e, 'dexscreener')}
           >
             <BarChart2 size={16} className="text-green-500" />
             <span>DexScreener</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => openExternalLink('pulsechain')}
+          </button>
+          
+          <button 
+            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-gray-800/50 transition-colors"
+            onClick={(e) => openExternalLink(e, 'pulsechain')}
           >
             <Search size={16} className="text-blue-500" />
             <span>PulseChain Scan</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => openExternalLink('otterscan')}
+          </button>
+          
+          <button 
+            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-gray-800/50 transition-colors"
+            onClick={(e) => openExternalLink(e, 'otterscan')}
           >
             <Info size={16} className="text-orange-500" />
             <span>OtterScan</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
