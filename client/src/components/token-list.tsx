@@ -286,10 +286,9 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                         <div className="min-w-0 flex-grow">
                           <div className="flex items-center gap-1">
                             <span className="text-lg font-bold text-foreground" title={token.name}>
+                              {/* Hide here for LP tokens - will show at the bottom */}
                               {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
-                                <span className="flex items-center">
-                                  {token.lpToken0Symbol}/{token.lpToken1Symbol} <span className="ml-1 text-xs bg-purple-600/30 text-purple-100 px-1 py-0.5 rounded-md border border-purple-500/60 scale-[0.65] inline-block transform-gpu origin-center font-semibold">LP</span>
-                                </span>
+                                <span></span>
                               ) : (
                                 token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name
                               )}
@@ -322,6 +321,18 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                                 : ''}
                             </span>
                           </div>
+                          
+                          {/* LP token title moved below the token info - Only for LP tokens */}
+                          {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol && (
+                            <div className="flex items-center mt-2">
+                              <span className="text-base font-bold text-foreground flex items-center">
+                                {token.lpToken0Symbol}/{token.lpToken1Symbol} 
+                                <span className="ml-1 text-xs bg-purple-600/30 text-purple-100 px-1 py-0.5 rounded-md border border-purple-500/60 scale-[0.65] inline-block transform-gpu origin-center font-semibold">
+                                  LP
+                                </span>
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       
