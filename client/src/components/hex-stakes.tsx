@@ -304,7 +304,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
   
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 min-h-[200px]">
+      <div className="flex flex-col items-center justify-center p-8 min-h-[200px] hex-stakes-component">
         <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
         <p className="text-white/80">Loading HEX stakes data...</p>
       </div>
@@ -313,7 +313,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
   
   if (error) {
     return (
-      <div className="p-6 text-center">
+      <div className="p-6 text-center hex-stakes-component">
         <h3 className="text-xl font-bold mb-2 text-red-400">Error Loading Stakes</h3>
         <p className="text-white/70 mb-4">{error}</p>
       </div>
@@ -322,7 +322,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
   
   if (stakes.length === 0) {
     return (
-      <div className="p-6 text-center">
+      <div className="p-6 text-center hex-stakes-component">
         <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">No HEX Stakes Found</h3>
         <p className="text-white/70 mb-4">This wallet doesn't have any active or historical HEX stakes on {chainId === '0x1' ? 'Ethereum' : 'PulseChain'}.</p>
       </div>
@@ -330,7 +330,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
   }
   
   return (
-    <div className="p-4">
+    <div className="p-4 hex-stakes-component">
       {/* Network and Overview Section */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -346,19 +346,24 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="text-right">
             <div className="text-sm text-white/70">Total HEX Staked</div>
-            <div className="text-lg font-bold text-white">{formatTokenAmount(parseFloat(totalHexStaked))}</div>
+            <div className="text-lg font-bold text-white" data-total-staked={totalHexStaked}>
+              {formatTokenAmount(parseFloat(totalHexStaked))}
+            </div>
             <div className="text-xs text-gray-400">${formatUsd(stakedValueUsd)}</div>
           </div>
           
           <div className="text-right">
             <div className="text-sm text-white/70">Total Interest</div>
-            <div className="text-lg font-bold text-teal-400">+{formatTokenAmount(parseFloat(totalInterest))}</div>
+            <div className="text-lg font-bold text-teal-400" data-total-interest={totalInterest}>
+              +{formatTokenAmount(parseFloat(totalInterest))}
+            </div>
             <div className="text-xs text-gray-400">+${formatUsd(interestValueUsd)}</div>
           </div>
           
           <div className="text-right">
             <div className="text-sm text-white/70">Total Stake + Interest</div>
-            <div className="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+            <div className="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent"
+                 data-total-combined={totalStakePlusInterest}>
               {formatTokenAmount(parseFloat(totalStakePlusInterest))}
             </div>
             <div className="text-xs text-gray-400">${formatUsd(totalValueUsd)}</div>
@@ -369,7 +374,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
       {/* Stakes List */}
       <div className="space-y-4">
         {stakes.map((stake, index) => (
-          <Card key={`stake-${stake.stakeId}-${index}`} className="p-4 border-white/10 glass-card">
+          <Card key={`stake-${stake.stakeId}-${index}`} className="p-4 border-white/10 glass-card stake-item">
             <div className="flex flex-col md:flex-row gap-4">
               {/* Left side - Stake Details */}
               <div className="flex-1">
