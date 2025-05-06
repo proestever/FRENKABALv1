@@ -1,0 +1,268 @@
+
+// HEX Contract on PulseChain & ETH - same address on both chains
+const HEX_CONTRACT_ADDRESS = '0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39';
+
+// HEX launch timestamp (2019-12-03T00:00:00Z)
+const LAUNCH_TS = 1575331200;
+const DAY_SECONDS = 86400;
+
+// Simplified ABI with just the functions we need for stakes
+const HEX_ABI = [
+  // Read stakeCount 
+  {
+    "constant": true,
+    "inputs": [{"internalType": "address", "name": "stakerAddr", "type": "address"}],
+    "name": "stakeCount",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  // Read stakeLists
+  {
+    "constant": true,
+    "inputs": [
+      {"internalType": "address", "name": "stakerAddr", "type": "address"},
+      {"internalType": "uint256", "name": "stakeIndex", "type": "uint256"}
+    ],
+    "name": "stakeLists",
+    "outputs": [
+      {"internalType": "uint40", "name": "stakeId", "type": "uint40"},
+      {"internalType": "uint72", "name": "stakedHearts", "type": "uint72"},
+      {"internalType": "uint72", "name": "stakeShares", "type": "uint72"},
+      {"internalType": "uint16", "name": "lockedDay", "type": "uint16"},
+      {"internalType": "uint16", "name": "stakedDays", "type": "uint16"},
+      {"internalType": "uint16", "name": "unlockedDay", "type": "uint16"},
+      {"internalType": "bool", "name": "isAutoStake", "type": "bool"}
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  // Get the current day
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "currentDay",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  }
+];
+
+// Get the provider (RPC connection)
+const getRpcProvider = (chainId: string) => {
+  // Default to PulseChain
+  const rpcUrl = chainId === '0x1' 
+    ? 'https://rpc.ankr.com/eth' // Ethereum
+    : 'https://rpc-pulsechain.g4mm4.io'; // PulseChain
+    
+  return new ethers.providers.JsonRpcProvider(rpcUrl);
+};
+
+// Get the HEX contract
+const getHexContract = (chainId: string) => {
+  const provider = getRpcProvider(chainId);
+  return new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);
+};
+
+interface HexStake {
+  stakeId: string;
+  stakedHearts: string;
+  stakeShares: string;
+  lockedDay: number;
+  stakedDays: number;
+  unlockedDay: number;
+  isAutoStake: boolean;
+  lockDate: string;
+  unlockDate: string | null;
+  endDate: string;
+  isActive: boolean;
+  progressPercentage: number;
+  hexAmount: string;
+  daysRemaining: number | null;
+  interestEarned?: string;
+}
+
+/**
+ * Get HEX stakes for a wallet address - ONE-AND-DONE implementation with caching
+ */
+hexStakesRouter.get('/:chain/:address', async (req: Request, res: Response) => {
+  const { address, chain } = req.params;
+  
+  try {
+    // Normalize the address to checksum format
+    const checksumAddress = ethers.utils.getAddress(address);
+    
+    // Update the address in the request to the normalized version
+    req.params.address = checksumAddress;
+  } catch (error) {
+    // If ethers.utils.getAddress throws, the address is invalid
+    console.error(`Invalid address format: ${address}`);
+    return res.status(400).json({ error: 'Invalid address' });
+  }
+  
+  // Create a cache key based on chain and address
+  const cacheKey = `${chain}:${address.toLowerCase()}`;
+  
+  // Check if we have cached data
+  const cachedStakes = stakesCache.get(cacheKey);
+  if (cachedStakes) {
+    console.log(`🔄 ONE-AND-DONE: Using cached HEX stakes data for ${address} on ${chain}`);
+    
+    // Set cache control headers to enable browser caching 
+    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+    
+    return res.json(cachedStakes);
+  }
+  
+  console.log(`🔄 ONE-AND-DONE: Fetching fresh HEX stakes data for ${address} on ${chain}`);
+  
+  try {
+    // Get chain ID
+    const chainId = chain === 'ethereum' ? '0x1' : '0x171'; // Ethereum or PulseChain
+    
+    const hexContract = getHexContract(chainId);
+    
+    // Get the current day from contract
+    const currentDayBN = await hexContract.currentDay();
+    const currentDay = Number(currentDayBN);
+    
+    // Get stake count for address
+    const countBN = await hexContract.stakeCount(address);
+    const count = Number(countBN);
+    
+    // Prepare the response object
+    const response = {
+      stakes: [] as HexStake[],
+      totalStakes: count,
+      totalHexStaked: '0'
+    };
+    
+    if (count === 0) {
+      // Cache even empty results to prevent repeated lookups
+      stakesCache.set(cacheKey, response);
+      
+      // Set cache control headers
+      res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+      
+      return res.json(response);
+    }
+    
+    // Fetch all stakes
+    const stakes: HexStake[] = [];
+    let totalHexStaked = ethers.utils.parseUnits('0', 'wei');
+    
+    for (let i = 0; i < count; i++) {
+      const stake = await hexContract.stakeLists(address, i);
+      
+      // Parse raw stake data
+      const stakeId = stake[0].toString();
+      const stakedHearts = stake[1].toString();
+      const stakeShares = stake[2].toString();
+      const lockedDay = Number(stake[3]);
+      const stakedDays = Number(stake[4]);
+      const unlockedDay = Number(stake[5]);
+      const isAutoStake = stake[6];
+      
+      // Convert locked/unlocked days to dates
+      const lockDate = new Date((LAUNCH_TS + lockedDay * DAY_SECONDS) * 1000);
+      const unlockDate = unlockedDay === 0
+        ? null // Still locked
+        : new Date((LAUNCH_TS + unlockedDay * DAY_SECONDS) * 1000);
+      
+      // Calculate end date (maturity date)
+      const endDate = new Date((LAUNCH_TS + (lockedDay + stakedDays) * DAY_SECONDS) * 1000);
+      
+      // Determine if stake is still active
+      const isActive = unlockedDay === 0;
+      
+      // Calculate progress percentage
+      let progressPercentage = 0;
+      const endDay = lockedDay + stakedDays;
+      
+      if (isActive && currentDay >= lockedDay) {
+        // If stake is active and we're past the lock day
+        const daysPassed = currentDay - lockedDay;
+        progressPercentage = Math.min(100, Math.floor((daysPassed / stakedDays) * 100));
+      } else if (!isActive) {
+        // Stake is ended
+        progressPercentage = 100;
+      }
+      
+      // Calculate days remaining
+      let daysRemaining = null;
+      if (isActive) {
+        daysRemaining = Math.max(0, endDay - currentDay);
+      }
+      
+      // Format HEX amount (8 decimals)
+      const hexAmount = ethers.utils.formatUnits(stakedHearts, 8);
+      
+      // Calculate estimated interest (for display purposes)
+      // This is a simple estimate - in practice would need more complex calculation
+      // For active stakes, estimate interest based on progress % 
+      // For ended stakes, calculate actual interest based on stake shares vs hearts
+      let interestEarned = "0";
+      if (progressPercentage > 0) {
+        // Very simple interest estimation - in a real implementation we would use actual HEX yield data
+        // Average HEX yield is roughly 38% APY, for simplicity we'll use a conservative estimate
+        const annualRate = 0.35; // 35% APY (conservative estimate)
+        const yearsStaked = stakedDays / 365;
+        const estimatedInterestRate = annualRate * yearsStaked * (progressPercentage / 100);
+        const principalHex = parseFloat(hexAmount);
+        const interestHex = principalHex * estimatedInterestRate;
+        interestEarned = interestHex.toFixed(2);
+      }
+      
+      // Add to total staked HEX
+      totalHexStaked = totalHexStaked.add(ethers.utils.parseUnits(hexAmount, 8));
+      
+      stakes.push({
+        stakeId,
+        stakedHearts,
+        stakeShares,
+        lockedDay,
+        stakedDays,
+        unlockedDay,
+        isAutoStake,
+        lockDate: lockDate.toISOString(),
+        unlockDate: unlockDate ? unlockDate.toISOString() : null,
+        endDate: endDate.toISOString(),
+        isActive,
+        progressPercentage,
+        hexAmount,
+        daysRemaining,
+        interestEarned
+      });
+    }
+    
+    // Sort stakes by lock date (newest first)
+    stakes.sort((a, b) => {
+      return new Date(b.lockDate).getTime() - new Date(a.lockDate).getTime();
+    });
+    
+    // Prepare the final response with data
+    response.stakes = stakes;
+    response.totalHexStaked = ethers.utils.formatUnits(totalHexStaked, 8);
+    
+    // Store in cache for future requests
+    stakesCache.set(cacheKey, response);
+    
+    // Set cache control headers
+    res.set('Cache-Control', 'public, max-age=300'); // 5 minutes
+    
+    console.log(`🔄 ONE-AND-DONE: Successfully cached HEX stakes for ${address}: ${stakes.length} stakes`);
+    
+    return res.json(response);
+  } catch (error: any) {
+    console.error('Error fetching HEX stakes:', error);
+    return res.status(500).json({ 
+      error: 'Failed to fetch HEX stakes', 
+      message: error.message 
+    });
+  }
+});
+
+export default hexStakesRouter;
