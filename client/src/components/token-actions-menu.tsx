@@ -66,19 +66,19 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
       
       {show && (
         <div 
-          className="absolute top-full left-0 mt-1 w-56 rounded-md border border-white/10 bg-black/90 backdrop-blur-md py-2 shadow-lg z-50"
+          className="absolute top-full left-0 mt-1 w-56 rounded-xl border border-white/10 bg-black/60 backdrop-blur-xl py-2 shadow-xl z-50 animate-in fade-in-50 zoom-in-95 duration-150"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           style={{ maxHeight: '300px', transform: 'translateX(-10px)' }}
         >
-          <div className="px-3 pb-2 font-bold text-gray-300">
-            {tokenName} ({tokenSymbol})
+          <div className="px-3 py-1 font-bold text-white/90 text-shadow-sm">
+            {tokenName} <span className="text-white/70">({tokenSymbol})</span>
           </div>
           
           <div className="h-px bg-white/10 mb-2" />
           
           <button 
-            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-gray-800/50 transition-colors"
+            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-white/5 transition-all duration-150 ease-in-out"
             onClick={handleCopyAddress}
           >
             {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
@@ -92,7 +92,7 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
           </div>
           
           <button 
-            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-gray-800/50 transition-colors"
+            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-white/5 transition-all duration-150 ease-in-out"
             onClick={(e) => openExternalLink(e, 'dexscreener')}
           >
             <BarChart2 size={16} className="text-green-500" />
@@ -100,7 +100,7 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
           </button>
           
           <button 
-            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-gray-800/50 transition-colors"
+            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-white/5 transition-all duration-150 ease-in-out"
             onClick={(e) => openExternalLink(e, 'pulsechain')}
           >
             <Search size={16} className="text-blue-500" />
@@ -108,7 +108,7 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
           </button>
           
           <button 
-            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-gray-800/50 transition-colors"
+            className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left hover:bg-white/5 transition-all duration-150 ease-in-out"
             onClick={(e) => openExternalLink(e, 'otterscan')}
           >
             <Info size={16} className="text-orange-500" />
