@@ -282,7 +282,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
   };
 
   return (
-    <div className="flex flex-col w-full max-w-full flex-grow">
+    <div className="flex flex-col w-full max-w-full flex-grow block">
       {renderSimpleDisplay()}
       {renderDetailedDisplay()}
     </div>

@@ -274,6 +274,21 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                 const priceChangeClass = getChangeColorClass(token.priceChange24h);
                 const isHidden = hiddenTokens.includes(token.address);
                 
+                // If it's an LP token in liquidity view, render expanded
+                if (token.isLp && showLiquidity) {
+                  return (
+                    <div key={`mobile-lp-${token.address}-${index}`} className="p-3 glass-card rounded-lg hover:bg-black/20 transition-colors">
+                      <LpTokenDisplay 
+                        token={token}
+                        size="md"
+                        showDetails={true}
+                        expanded={true}
+                      />
+                    </div>
+                  );
+                }
+                
+                // Regular token view
                 return (
                   <div key={`mobile-${token.address}-${index}`} className="p-3 glass-card rounded-lg hover:bg-black/20 transition-colors relative">
                     {/* Mobile Value and Visibility - Positioned center right of card */}
@@ -296,14 +311,13 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       {/* Token Info - Mobile: Side by side logo and info layout */}
                       <div className="flex md:flex-row md:items-center flex-grow pr-20">
                         {/* Logo aligned with text on mobile */}
-                        <div className={`${token.isLp && showLiquidity ? 'w-auto' : 'flex-shrink-0'} flex items-center mr-3`}>
-                          {/* Use LP token display or regular token logo based on token type */}
+                        <div className="flex-shrink-0 flex items-center mr-3">
                           {token.isLp ? (
                             <LpTokenDisplay 
                               token={token}
                               size="md"
-                              showDetails={showLiquidity}
-                              expanded={showLiquidity}
+                              showDetails={false}
+                              expanded={false}
                             />
                           ) : (
                             <TokenLogo 
@@ -314,6 +328,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                             />
                           )}
                         </div>
+                        
                         <div className="min-w-0 flex-grow text-left flex flex-col justify-center">
                           <div className="flex items-center gap-1 justify-start">
                             <span className="text-base font-bold text-foreground" title={token.name}>
@@ -325,13 +340,13 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                                 token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name
                               )}
                             </span>
-                            {token.verified && (
-                              <span className="text-green-400 flex-shrink-0" title="Verified Contract">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                  <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
-                                </svg>
-                              </span>
-                            )}
+                              {token.verified && (
+                                <span className="text-green-400 flex-shrink-0" title="Verified Contract">
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                    <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                                  </svg>
+                                </span>
+                              )}
                           </div>
                           <div className="flex gap-1 items-center justify-start">
                             <div className="text-sm text-muted-foreground font-medium" title={token.symbol}>
@@ -450,24 +465,34 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                     <tr key={`desktop-${token.address}-${index}`} className="hover:bg-black/20 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className={`mr-3 ${token.isLp && showLiquidity ? 'w-full' : 'flex-shrink-0'}`}>
-                            {/* Use LP token display or regular token logo based on token type */}
-                            {token.isLp ? (
+                          {token.isLp && showLiquidity ? (
+                            <div className="w-full">
                               <LpTokenDisplay 
                                 token={token}
                                 size="md"
                                 showDetails={showLiquidity}
                                 expanded={showLiquidity}
                               />
-                            ) : (
-                              <TokenLogo 
-                                address={token.address}
-                                symbol={token.symbol}
-                                fallbackLogo={token.logo}
-                                size="md"
-                              />
-                            )}
-                          </div>
+                            </div>
+                          ) : (
+                            <div className="mr-3 flex-shrink-0">
+                              {token.isLp ? (
+                                <LpTokenDisplay 
+                                  token={token}
+                                  size="md"
+                                  showDetails={false}
+                                  expanded={false}
+                                />
+                              ) : (
+                                <TokenLogo 
+                                  address={token.address}
+                                  symbol={token.symbol}
+                                  fallbackLogo={token.logo}
+                                  size="md"
+                                />
+                              )}
+                            </div>
+                          )}
                           <div>
                             <div className="flex items-center gap-1">
                               <span className="text-base font-bold text-foreground" title={token.name}>
