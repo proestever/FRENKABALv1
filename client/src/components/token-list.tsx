@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from "@/components/ui/switch";
 import { Token } from '@shared/schema';
-import { Search, ArrowDownUp, Eye, EyeOff, Wallet, History, Droplets } from 'lucide-react';
+import { Search, ArrowDownUp, Eye, EyeOff, Wallet, History, Droplets, GitCompareArrows } from 'lucide-react';
 import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass } from '@/lib/utils';
 import { TokenLogo } from '@/components/token-logo';
 import { LpTokenDisplay } from '@/components/lp-token-display';
@@ -12,6 +12,7 @@ import { getHiddenTokens, toggleHiddenToken, isTokenHidden } from '@/lib/api';
 import { useBatchTokenLogos } from '@/hooks/use-batch-token-logos';
 import { TransactionHistory } from '@/components/transaction-history';
 import { TokenActionsMenu } from '@/components/token-actions-menu';
+import { HexStakes } from '@/components/hex-stakes';
 
 interface TokenListProps {
   tokens: Token[];
@@ -36,7 +37,9 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
   const [hiddenTokens, setHiddenTokens] = useState<string[]>(getHiddenTokens());
   const [showTransactions, setShowTransactions] = useState(false);
   const [showLiquidity, setShowLiquidity] = useState(false);
+  const [showHexStakes, setShowHexStakes] = useState(false);
   const [txHistoryKey, setTxHistoryKey] = useState(Date.now());
+  const [hexStakesKey, setHexStakesKey] = useState(Date.now());
   // NOTE: We don't maintain our own page state, we get it from pagination prop
   // and use onPageChange callback to request page changes from the parent
 
@@ -160,21 +163,23 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
             onClick={() => {
               setShowTransactions(false);
               setShowLiquidity(false);
+              setShowHexStakes(false);
             }}
             className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
-              ${!showTransactions && !showLiquidity 
+              ${!showTransactions && !showLiquidity && !showHexStakes
                 ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
                 : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
             title="View all token holdings"
           >
             <Wallet size={18} />
-            <span className="text-sm font-medium">Tokens{!showLiquidity && !showTransactions ? ` (${sortedTokens.length})` : ''}</span>
+            <span className="text-sm font-medium">Tokens{!showLiquidity && !showTransactions && !showHexStakes ? ` (${sortedTokens.length})` : ''}</span>
           </button>
           
           <button 
             onClick={() => {
               setShowTransactions(false);
               setShowLiquidity(true);
+              setShowHexStakes(false);
             }}
             className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
               ${showLiquidity 
@@ -190,6 +195,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
             onClick={() => {
               setShowTransactions(true);
               setShowLiquidity(false);
+              setShowHexStakes(false);
               setTxHistoryKey(Date.now());
             }}
             className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
@@ -201,15 +207,32 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
             <History size={18} />
             <span className="text-sm font-medium">Transactions</span>
           </button>
+          
+          <button
+            onClick={() => {
+              setShowTransactions(false);
+              setShowLiquidity(false);
+              setShowHexStakes(true);
+              setHexStakesKey(Date.now());
+            }}
+            className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-nowrap rounded-md glass-card border border-white/10 transition-all duration-200 
+              ${showHexStakes 
+                ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
+                : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
+            title="View HEX stakes"
+          >
+            <GitCompareArrows size={18} />
+            <span className="text-sm font-medium">HEX Stakes</span>
+          </button>
         </div>
       </div>
       
       {/* Filter and Sort Container */}
       <div className="p-4 border-b border-border">
-        {!showTransactions && (
+        {!showTransactions && !showHexStakes && (
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             {/* Tokens or Liquidity Header */}
-            {!showLiquidity && !showTransactions && (
+            {!showLiquidity && !showTransactions && !showHexStakes && (
               <div>
                 <h3 className="text-lg md:text-xl font-semibold text-white flex items-center">
                   <Wallet size={18} className="mr-2 text-blue-300" />
@@ -283,6 +306,11 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
           walletAddress={effectiveWalletAddress} 
           onClose={() => setShowTransactions(false)}
           key={`tx-${effectiveWalletAddress}-${txHistoryKey}`} // Force remount on toggle
+        />
+      ) : showHexStakes ? (
+        <HexStakes 
+          walletAddress={effectiveWalletAddress}
+          key={`hex-stakes-${effectiveWalletAddress}-${hexStakesKey}`} // Force remount on toggle
         />
       ) : (
         <>

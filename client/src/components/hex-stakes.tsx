@@ -1,0 +1,419 @@
+import { useState, useEffect } from 'react';
+import { Card } from '@/components/ui/card';
+import { ethers } from 'ethers';
+import { Progress } from '@/components/ui/progress';
+import { Loader2 } from 'lucide-react';
+import { formatCurrency, formatTokenAmount } from '@/lib/utils';
+
+// HEX Contract on PulseChain & ETH - same address on both chains
+const HEX_CONTRACT_ADDRESS = '0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39';
+
+// HEX launch timestamp (2019-12-03T00:00:00Z)
+const LAUNCH_TS = 1575331200;
+const DAY_SECONDS = 86400;
+
+// Simplified ABI with just the functions we need for stakes
+const HEX_ABI = [
+  // Read stakeCount 
+  {
+    "constant": true,
+    "inputs": [{"internalType": "address", "name": "stakerAddr", "type": "address"}],
+    "name": "stakeCount",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  // Read stakeLists
+  {
+    "constant": true,
+    "inputs": [
+      {"internalType": "address", "name": "stakerAddr", "type": "address"},
+      {"internalType": "uint256", "name": "stakeIndex", "type": "uint256"}
+    ],
+    "name": "stakeLists",
+    "outputs": [
+      {"internalType": "uint40", "name": "stakeId", "type": "uint40"},
+      {"internalType": "uint72", "name": "stakedHearts", "type": "uint72"},
+      {"internalType": "uint72", "name": "stakeShares", "type": "uint72"},
+      {"internalType": "uint16", "name": "lockedDay", "type": "uint16"},
+      {"internalType": "uint16", "name": "stakedDays", "type": "uint16"},
+      {"internalType": "uint16", "name": "unlockedDay", "type": "uint16"},
+      {"internalType": "bool", "name": "isAutoStake", "type": "bool"}
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  // Get the current day
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "currentDay",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  }
+];
+
+interface HexStake {
+  stakeId: string;
+  stakedHearts: string;
+  stakeShares: string;
+  lockedDay: number;
+  stakedDays: number;
+  unlockedDay: number;
+  isAutoStake: boolean;
+  lockDate: string;
+  unlockDate: string | null;
+  endDate: string;
+  isActive: boolean;
+  progressPercentage: number;
+  hexAmount: string;
+  daysRemaining: number | null;
+  interestEarned?: string;
+}
+
+interface HexStakesProps {
+  walletAddress: string;
+  onClose?: () => void;
+}
+
+export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
+  const [stakes, setStakes] = useState<HexStake[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalHexStaked, setTotalHexStaked] = useState('0');
+  const [stakeCount, setStakeCount] = useState(0);
+  const [chainId, setChainId] = useState('0x171'); // Default to PulseChain
+
+  // Fetch hex stakes
+  useEffect(() => {
+    const fetchHexStakes = async () => {
+      if (!walletAddress) return;
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Get RPC provider
+        const rpcUrl = chainId === '0x1' 
+          ? 'https://rpc.ankr.com/eth' // Ethereum
+          : 'https://rpc-pulsechain.g4mm4.io'; // PulseChain
+        
+        const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+        const hexContract = new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);
+        
+        // Get the current day from contract
+        const currentDayBN = await hexContract.currentDay();
+        const currentDay = Number(currentDayBN);
+        
+        // Get stake count for address
+        const countBN = await hexContract.stakeCount(walletAddress);
+        const count = Number(countBN);
+        setStakeCount(count);
+        
+        if (count === 0) {
+          setStakes([]);
+          setTotalHexStaked('0');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Fetch all stakes
+        const stakesData: HexStake[] = [];
+        let totalHexStakedBN = ethers.BigNumber.from(0);
+        
+        for (let i = 0; i < count; i++) {
+          const stake = await hexContract.stakeLists(walletAddress, i);
+          
+          // Parse raw stake data
+          const stakeId = stake[0].toString();
+          const stakedHearts = stake[1].toString();
+          const stakeShares = stake[2].toString();
+          const lockedDay = Number(stake[3]);
+          const stakedDays = Number(stake[4]);
+          const unlockedDay = Number(stake[5]);
+          const isAutoStake = stake[6];
+          
+          // Convert locked/unlocked days to dates
+          const lockDate = new Date((LAUNCH_TS + lockedDay * DAY_SECONDS) * 1000);
+          const unlockDate = unlockedDay === 0
+            ? null // Still locked
+            : new Date((LAUNCH_TS + unlockedDay * DAY_SECONDS) * 1000);
+          
+          // Calculate end date (maturity date)
+          const endDate = new Date((LAUNCH_TS + (lockedDay + stakedDays) * DAY_SECONDS) * 1000);
+          
+          // Determine if stake is still active
+          const isActive = unlockedDay === 0;
+          
+          // Calculate progress percentage
+          let progressPercentage = 0;
+          const endDay = lockedDay + stakedDays;
+          
+          if (isActive && currentDay >= lockedDay) {
+            // If stake is active and we're past the lock day
+            const daysPassed = currentDay - lockedDay;
+            progressPercentage = Math.min(100, Math.floor((daysPassed / stakedDays) * 100));
+          } else if (!isActive) {
+            // Stake is ended
+            progressPercentage = 100;
+          }
+          
+          // Calculate days remaining
+          let daysRemaining = null;
+          if (isActive) {
+            daysRemaining = Math.max(0, endDay - currentDay);
+          }
+          
+          // Format HEX amount (8 decimals)
+          const hexAmount = ethers.utils.formatUnits(stakedHearts, 8);
+          
+          // Calculate estimated interest (for display purposes)
+          let interestEarned = "0";
+          if (progressPercentage > 0) {
+            // Simple interest estimation
+            const annualRate = 0.35; // 35% APY (conservative estimate)
+            const yearsStaked = stakedDays / 365;
+            const estimatedInterestRate = annualRate * yearsStaked * (progressPercentage / 100);
+            const principalHex = parseFloat(hexAmount);
+            const interestHex = principalHex * estimatedInterestRate;
+            interestEarned = interestHex.toFixed(2);
+          }
+          
+          // Add to total staked HEX
+          totalHexStakedBN = totalHexStakedBN.add(ethers.BigNumber.from(stakedHearts));
+          
+          stakesData.push({
+            stakeId,
+            stakedHearts,
+            stakeShares,
+            lockedDay,
+            stakedDays,
+            unlockedDay,
+            isAutoStake,
+            lockDate: lockDate.toISOString(),
+            unlockDate: unlockDate ? unlockDate.toISOString() : null,
+            endDate: endDate.toISOString(),
+            isActive,
+            progressPercentage,
+            hexAmount,
+            daysRemaining,
+            interestEarned
+          });
+        }
+        
+        // Sort stakes by lock date (newest first)
+        stakesData.sort((a, b) => {
+          return new Date(b.lockDate).getTime() - new Date(a.lockDate).getTime();
+        });
+        
+        setStakes(stakesData);
+        setTotalHexStaked(ethers.utils.formatUnits(totalHexStakedBN, 8));
+        
+      } catch (err) {
+        console.error('Error fetching HEX stakes:', err);
+        setError('Failed to fetch HEX stakes. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchHexStakes();
+  }, [walletAddress, chainId]);
+  
+  // Format date in a user-friendly way
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+  
+  // Handle network switch
+  const switchNetwork = (newChainId: string) => {
+    setChainId(newChainId);
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 min-h-[200px]">
+        <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+        <p className="text-white/80">Loading HEX stakes data...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="p-6 text-center">
+        <h3 className="text-xl font-bold mb-2 text-red-400">Error Loading Stakes</h3>
+        <p className="text-white/70 mb-4">{error}</p>
+        <button 
+          onClick={() => setChainId(chainId === '0x1' ? '0x171' : '0x1')}
+          className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-md transition-colors"
+        >
+          Try {chainId === '0x1' ? 'PulseChain' : 'Ethereum'} instead
+        </button>
+      </div>
+    );
+  }
+  
+  if (stakes.length === 0) {
+    return (
+      <div className="p-6 text-center">
+        <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">No HEX Stakes Found</h3>
+        <p className="text-white/70 mb-4">This wallet doesn't have any active or historical HEX stakes on {chainId === '0x1' ? 'Ethereum' : 'PulseChain'}.</p>
+        <button 
+          onClick={() => setChainId(chainId === '0x1' ? '0x171' : '0x1')}
+          className="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-md transition-colors"
+        >
+          Check on {chainId === '0x1' ? 'PulseChain' : 'Ethereum'} instead
+        </button>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="p-4">
+      {/* Network and Overview Section */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-lg md:text-xl font-semibold text-white">
+            <span className="bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">HEX Stakes</span>
+            <span className="ml-2 text-sm text-white/60">({stakeCount})</span>
+          </h3>
+          <p className="text-xs md:text-sm text-white/70 mt-1">
+            Viewing stakes on {chainId === '0x1' ? 'Ethereum' : 'PulseChain'} network
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <div className="text-sm text-white/70">Total HEX Staked</div>
+            <div className="text-lg font-bold text-white">{formatTokenAmount(parseFloat(totalHexStaked))}</div>
+          </div>
+          
+          <button 
+            onClick={() => setChainId(chainId === '0x1' ? '0x171' : '0x1')}
+            className={`px-3 py-1.5 rounded-md transition-colors ${
+              chainId === '0x1' 
+                ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-600/30' 
+                : 'bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-600/30'
+            }`}
+          >
+            Switch to {chainId === '0x1' ? 'PulseChain' : 'Ethereum'}
+          </button>
+        </div>
+      </div>
+      
+      {/* Stakes List */}
+      <div className="space-y-4">
+        {stakes.map((stake, index) => (
+          <Card key={`stake-${stake.stakeId}-${index}`} className="p-4 border-white/10 glass-card">
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Left side - Stake Details */}
+              <div className="flex-1">
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded-md text-xs font-semibold border border-purple-600/30">
+                      Stake ID: {stake.stakeId}
+                    </div>
+                    <div className={`px-2 py-1 rounded-md text-xs font-semibold ${
+                      stake.isActive 
+                        ? 'bg-green-600/20 text-green-400 border border-green-600/30' 
+                        : 'bg-gray-600/20 text-gray-400 border border-gray-600/30'
+                    }`}>
+                      {stake.isActive ? 'Active' : 'Ended'}
+                    </div>
+                  </div>
+                  <div className="mt-2 md:mt-0 text-white font-bold">
+                    {formatTokenAmount(parseFloat(stake.hexAmount))} HEX
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3">
+                  <div>
+                    <div className="text-xs text-white/50">Start Date</div>
+                    <div className="text-sm text-white">{formatDate(stake.lockDate)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-white/50">End Date</div>
+                    <div className="text-sm text-white">{formatDate(stake.endDate)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-white/50">Term Length</div>
+                    <div className="text-sm text-white">{stake.stakedDays} days</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-white/50">{stake.isActive ? 'Days Remaining' : 'Completed'}</div>
+                    <div className="text-sm text-white">
+                      {stake.isActive 
+                        ? (stake.daysRemaining !== null ? `${stake.daysRemaining} days` : 'Calculating...') 
+                        : 'Stake completed'}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="mb-2">
+                  <div className="flex justify-between items-center mb-1">
+                    <div className="text-xs text-white/60">Progress</div>
+                    <div className="text-xs font-medium text-white/80">{stake.progressPercentage}%</div>
+                  </div>
+                  <Progress value={stake.progressPercentage} className="h-2" 
+                    style={{
+                      background: 'rgba(255,255,255,0.1)',
+                      '--progress-background': stake.isActive 
+                        ? 'linear-gradient(90deg, rgba(106,0,185,0.5) 0%, rgba(192,0,255,0.7) 100%)' 
+                        : 'linear-gradient(90deg, rgba(20,184,166,0.5) 0%, rgba(56,189,248,0.7) 100%)'
+                    } as React.CSSProperties}
+                  />
+                </div>
+              </div>
+              
+              {/* Right side - Estimated Earnings */}
+              <div className="md:w-64 p-3 bg-black/20 rounded-md border border-white/5">
+                <div className="text-center mb-2">
+                  <div className="text-xs text-white/60">
+                    {stake.isActive ? 'Estimated Earnings' : 'Final Earnings'}
+                  </div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-lg md:text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+                    +{formatTokenAmount(parseFloat(stake.interestEarned || '0'))} HEX
+                  </div>
+                  {stake.isActive && (
+                    <div className="text-xs text-white/50 mt-1">
+                      Based on current progress ({stake.progressPercentage}%)
+                    </div>
+                  )}
+                </div>
+                
+                {stake.isActive && stake.daysRemaining !== null && stake.daysRemaining > 0 && (
+                  <div className="mt-3 pt-3 border-t border-white/10 text-center">
+                    <div className="text-xs text-white/60 mb-1">
+                      Estimated Completion
+                    </div>
+                    <div className="text-sm font-medium text-white/80">
+                      {new Date(Date.now() + (stake.daysRemaining * 24 * 60 * 60 * 1000)).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
