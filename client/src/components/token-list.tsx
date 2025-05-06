@@ -363,9 +363,14 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                                 tokenName={token.name} 
                                 tokenSymbol={token.symbol}
                               >
-                                <span className="text-base font-bold text-foreground cursor-pointer hover:text-primary transition-colors" title={token.name}>
-                                  {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
-                                </span>
+                                <div className="flex items-center gap-1 cursor-pointer text-base font-bold text-foreground hover:text-primary transition-colors">
+                                  <span title={token.name}>
+                                    {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
+                                  </span>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mt-[1px]">
+                                    <path d="m7 10 5 5 5-5"/>
+                                  </svg>
+                                </div>
                               </TokenActionsMenu>
                             )}
                             {token.verified && (
@@ -519,9 +524,14 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                                   tokenName={token.name} 
                                   tokenSymbol={token.symbol}
                                 >
-                                  <span className="text-base font-bold text-foreground cursor-pointer hover:text-primary transition-colors" title={token.name}>
-                                    {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
-                                  </span>
+                                  <div className="flex items-center gap-1 cursor-pointer text-base font-bold text-foreground hover:text-primary transition-colors">
+                                    <span title={token.name}>
+                                      {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
+                                    </span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mt-[1px]">
+                                      <path d="m7 10 5 5 5-5"/>
+                                    </svg>
+                                  </div>
                                 </TokenActionsMenu>
                               )}
                               {token.verified && (

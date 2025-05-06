@@ -35,7 +35,7 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild className="cursor-pointer">
+      <DropdownMenuTrigger className="cursor-pointer focus:outline-none">
         {children}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56 bg-black/90 border-white/10 backdrop-blur-md">
