@@ -46,9 +46,9 @@ if (typeof window !== 'undefined') {
         on: () => {},
         removeListener: () => {},
         autoRefreshOnNetworkChange: false,
-        chainId: null,
-        selectedAddress: null,
-        networkVersion: null,
+        chainId: undefined,
+        selectedAddress: undefined,
+        networkVersion: undefined,
         _state: {
           accounts: [],
           isConnected: false,
