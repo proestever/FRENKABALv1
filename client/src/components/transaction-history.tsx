@@ -77,37 +77,55 @@ type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contr
 
 // Helper function to determine transaction type
 const getTransactionType = (tx: Transaction): TransactionType => {
-  if (!tx.category) {
-    // Try to infer from other properties if category is not available
-    if (tx.method_label?.toLowerCase().includes('swap')) {
+  // First check if there are both send and receive transfers in the same transaction
+  // This pattern strongly indicates a swap transaction
+  const hasSendTransfers = tx.erc20_transfers?.some(t => t.direction === 'send');
+  const hasReceiveTransfers = tx.erc20_transfers?.some(t => t.direction === 'receive');
+  
+  // If we have at least one send and one receive in the same transaction, it's likely a swap
+  if (hasSendTransfers && hasReceiveTransfers && tx.erc20_transfers && tx.erc20_transfers.length >= 2) {
+    return 'swap';
+  }
+  
+  // Check method labels that indicate swaps
+  const swapMethodSignatures = ['swap', 'trade', 'multicall', 'exactinput', 'exactoutput'];
+  if (tx.method_label && swapMethodSignatures.some(sig => tx.method_label?.toLowerCase().includes(sig))) {
+    return 'swap';
+  }
+  
+  // If a category is provided, use it
+  if (tx.category) {
+    const category = tx.category.toLowerCase();
+    
+    if (category.includes('swap') || category.includes('trade')) {
       return 'swap';
-    } else if (tx.method_label?.toLowerCase().includes('approve')) {
+    } else if (category.includes('send') || category.includes('transfer')) {
+      return 'send';
+    } else if (category.includes('receive')) {
+      return 'receive';
+    } else if (category.includes('approve') || category.includes('approval')) {
       return 'approval';
-    } else if (tx.erc20_transfers && tx.erc20_transfers.some(t => t.from_address.toLowerCase() === t.to_address.toLowerCase())) {
-      return 'contract'; // Self-transfers are often contract interactions
-    } else if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-      return 'send'; // Default for token transfers
-    } else {
-      return 'all'; // Default fallback
+    } else if (category.includes('contract') || category.includes('deploy') || category.includes('execute')) {
+      return 'contract';
     }
   }
   
-  // If category is provided, use it
-  const category = tx.category.toLowerCase();
-  
-  if (category.includes('swap') || category.includes('trade')) {
-    return 'swap';
-  } else if (category.includes('send') || category.includes('transfer')) {
-    return 'send';
-  } else if (category.includes('receive')) {
-    return 'receive';
-  } else if (category.includes('approve') || category.includes('approval')) {
+  // Try to infer from other properties if category is not available
+  if (tx.method_label?.toLowerCase().includes('approve')) {
     return 'approval';
-  } else if (category.includes('contract') || category.includes('deploy') || category.includes('execute')) {
-    return 'contract';
+  } else if (tx.erc20_transfers && tx.erc20_transfers.some(t => t.from_address.toLowerCase() === t.to_address.toLowerCase())) {
+    return 'contract'; // Self-transfers are often contract interactions
+  } else if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+    // If we only have one direction of transfers, determine if it's send or receive
+    if (hasSendTransfers && !hasReceiveTransfers) {
+      return 'send';
+    } else if (hasReceiveTransfers && !hasSendTransfers) {
+      return 'receive';
+    }
+    return 'send'; // Default for token transfers
   }
   
-  return 'all';
+  return 'all'; // Default fallback
 };
 
 export function TransactionHistory({ walletAddress, onClose }: TransactionHistoryProps) {
@@ -454,11 +472,35 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     // Create a map to group transfers by token address and direction
     const transferMap: Record<string, TransactionTransfer> = {};
     
+    // Track swap router addresses for later reference
+    const routerAddresses = new Set<string>();
+    
     // Process all transfers to combine by token and direction
     tx.erc20_transfers.forEach(transfer => {
       // Create a key combining token address and direction
       const tokenAddress = (transfer.address || '').toLowerCase();
       const direction = transfer.direction || 'unknown';
+      
+      // Skip LP token deposits/withdrawals and unknown directions to better isolate the true swap tokens
+      if (
+        (transfer.token_symbol && 
+         (transfer.token_symbol.includes('LP') || 
+          transfer.token_symbol.toLowerCase().includes('lp') || 
+          transfer.token_symbol.includes('PulseX'))) ||
+        direction === 'unknown'
+      ) {
+        return; // Skip this transfer as it's likely intermediate
+      }
+            
+      // If this is a transfer to/from a router contract, note the router address
+      // This helps us identify the primary swap tokens vs intermediary tokens
+      if (transfer.to_address && transfer.to_address.includes('Router')) {
+        routerAddresses.add(transfer.to_address.toLowerCase());
+      }
+      if (transfer.from_address && transfer.from_address.includes('Router')) {
+        routerAddresses.add(transfer.from_address.toLowerCase());
+      }
+      
       const key = `${tokenAddress}-${direction}`;
       
       if (transferMap[key]) {
@@ -468,17 +510,57 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         const newValue = BigInt(transfer.value || '0');
         const totalValue = (existingValue + newValue).toString();
         
+        // Calculate formatted value properly
+        let formattedValue: string | undefined = undefined;
+        if (transfer.token_decimals) {
+          try {
+            // Handle large numbers more carefully
+            const decimalValue = Number(transfer.token_decimals);
+            if (totalValue.length > 15) {
+              // Parse with decimal point to avoid JS number precision issues
+              const integerPart = totalValue.substring(0, totalValue.length - decimalValue) || '0';
+              const decimalPart = totalValue.substring(totalValue.length - decimalValue) || '0';
+              formattedValue = `${integerPart}.${decimalPart}`;
+            } else {
+              formattedValue = (Number(totalValue) / 10 ** decimalValue).toFixed(6);
+            }
+          } catch (e) {
+            console.warn('Error formatting token value:', e);
+          }
+        }
+        
         // Update the value in the map
         transferMap[key] = {
           ...existingTransfer,
           value: totalValue,
-          // Update formatted value if it exists
-          value_formatted: transfer.token_decimals ? 
-            (Number(totalValue) / 10 ** Number(transfer.token_decimals)).toFixed(4) : undefined
+          value_formatted: formattedValue
         };
       } else {
         // First occurrence of this token+direction
-        transferMap[key] = transfer;
+        // Format the value properly
+        let formattedValue = transfer.value_formatted;
+        if (!formattedValue && transfer.token_decimals && transfer.value) {
+          try {
+            const decimalValue = Number(transfer.token_decimals);
+            const valueStr = transfer.value;
+            
+            if (valueStr.length > 15) {
+              // Parse with decimal point to avoid JS number precision issues
+              const integerPart = valueStr.substring(0, valueStr.length - decimalValue) || '0';
+              const decimalPart = valueStr.substring(valueStr.length - decimalValue).padEnd(decimalValue, '0') || '0';
+              formattedValue = `${integerPart}.${decimalPart}`;
+            } else {
+              formattedValue = (Number(valueStr) / 10 ** decimalValue).toFixed(6);
+            }
+          } catch (e) {
+            console.warn('Error formatting token value:', e);
+          }
+        }
+        
+        transferMap[key] = {
+          ...transfer,
+          value_formatted: formattedValue
+        };
       }
     });
     
@@ -851,16 +933,56 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         
                         // If we have both send and receive tokens, it's a swap
                         if (sendTransfers.length > 0 && receiveTransfers.length > 0) {
-                          const sendTransfer = sendTransfers[0];
-                          const receiveTransfer = receiveTransfers[0];
+                          // If there are multiple send or receive tokens, try to focus on the main ones
+                          // For this case we'll prioritize tokens with proper symbols and skip LP tokens
+                          const filteredSendTransfers = sendTransfers
+                            .filter(t => t.token_symbol && 
+                              !t.token_symbol.toLowerCase().includes('lp') && 
+                              !t.token_symbol.toLowerCase().includes('pulsex'));
                           
-                          // Format the amounts
-                          const sendAmount = sendTransfer.value_formatted || 
-                            formatTokenValue(sendTransfer.value, sendTransfer.token_decimals);
-                          const receiveAmount = receiveTransfer.value_formatted || 
-                            formatTokenValue(receiveTransfer.value, receiveTransfer.token_decimals);
+                          const filteredReceiveTransfers = receiveTransfers
+                            .filter(t => t.token_symbol && 
+                              !t.token_symbol.toLowerCase().includes('lp') && 
+                              !t.token_symbol.toLowerCase().includes('pulsex'));
                           
-                          return `Swapped ${sendAmount} ${sendTransfer.token_symbol || 'tokens'} for ${receiveAmount} ${receiveTransfer.token_symbol || 'tokens'}`;
+                          // Use filtered transfers if available, otherwise default to original
+                          const effectiveSendTransfers = filteredSendTransfers.length > 0 ? 
+                            filteredSendTransfers : sendTransfers;
+                          
+                          const effectiveReceiveTransfers = filteredReceiveTransfers.length > 0 ? 
+                            filteredReceiveTransfers : receiveTransfers;
+                          
+                          // For multiple tokens of the same type, combine them in the description
+                          if (effectiveSendTransfers.length > 1 || effectiveReceiveTransfers.length > 1) {
+                            const sendParts = effectiveSendTransfers.map(transfer => {
+                              const amount = transfer.value_formatted || 
+                                formatTokenValue(transfer.value, transfer.token_decimals);
+                              return `${amount} ${transfer.token_symbol || 'tokens'}`;
+                            });
+                            
+                            const receiveParts = effectiveReceiveTransfers.map(transfer => {
+                              const amount = transfer.value_formatted || 
+                                formatTokenValue(transfer.value, transfer.token_decimals);
+                              return `${amount} ${transfer.token_symbol || 'tokens'}`;
+                            });
+                            
+                            const sendText = sendParts.join(' and ');
+                            const receiveText = receiveParts.join(' and ');
+                            
+                            return `Swapped ${sendText} for ${receiveText}`;
+                          } else {
+                            // Simple case with one main send and one main receive token
+                            const sendTransfer = effectiveSendTransfers[0];
+                            const receiveTransfer = effectiveReceiveTransfers[0];
+                            
+                            // Format the amounts
+                            const sendAmount = sendTransfer.value_formatted || 
+                              formatTokenValue(sendTransfer.value, sendTransfer.token_decimals);
+                            const receiveAmount = receiveTransfer.value_formatted || 
+                              formatTokenValue(receiveTransfer.value, receiveTransfer.token_decimals);
+                            
+                            return `Swapped ${sendAmount} ${sendTransfer.token_symbol || 'tokens'} for ${receiveAmount} ${receiveTransfer.token_symbol || 'tokens'}`;
+                          }
                         }
                       }
                       
