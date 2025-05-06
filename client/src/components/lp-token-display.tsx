@@ -77,18 +77,17 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
         {/* Enhanced dual token logos display */}
         <div className="relative">
           {hasValidPair && token.lpToken0Address && token.lpToken1Address ? (
-            <div className="relative w-full h-full">
-              <div className="relative w-8 h-8">
-                {/* First token logo with border */}
-                <div className="absolute top-0 left-0 z-10 border-2 rounded-full border-background">
+            <div className="relative">
+              <div className="flex">
+                {/* Token logos side by side with slight overlap */}
+                <div className="rounded-full border-2 border-background z-10">
                   <TokenLogo 
                     address={token.lpToken0Address} 
                     symbol={token0Symbol} 
                     size={size === 'sm' ? 'xs' : 'sm'} 
                   />
                 </div>
-                {/* Second token logo with border */}
-                <div className="absolute bottom-0 right-0 z-0 border-2 rounded-full border-background">
+                <div className="-ml-2 rounded-full border-2 border-background">
                   <TokenLogo 
                     address={token.lpToken1Address} 
                     symbol={token1Symbol} 
@@ -97,7 +96,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                 </div>
               </div>
               
-              {/* Circular PLP badge */}
+              {/* LP Badge */}
               <div className="absolute -bottom-1 -right-1 z-20 bg-primary text-[9px] text-background font-bold rounded-full w-5 h-5 flex items-center justify-center border border-background">
                 LP
               </div>
@@ -107,28 +106,28 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
           )}
         </div>
         
-        {/* LP Token details - more compact */}
-        <div className={`flex flex-col ml-3 ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
+        {/* Token pair info in list format */}
+        <div className="ml-3 flex flex-col justify-center">
           {hasValidPair ? (
             <>
-              <div className="font-medium flex items-center">
-                <div className="bg-gradient-to-r from-token0-color/10 to-token1-color/10 px-2 py-0.5 rounded-sm flex items-center gap-1">
-                  <span className="text-token0-color font-semibold">{token0Symbol}</span>
-                  <span className="text-white/60">/</span>
-                  <span className="text-token1-color font-semibold">{token1Symbol}</span>
-                </div>
+              <div className="flex items-center gap-1">
+                <span className="text-token0-color font-semibold">{token0Symbol}</span>
+                <span className="text-white/70">/</span>
+                <span className="text-token1-color font-semibold">{token1Symbol}</span>
                 <a 
                   href={getPulseXPoolUrl()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-1 opacity-70 hover:opacity-100 transition-opacity"
+                  className="ml-1 text-white/60 hover:text-white/90 transition-colors"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <ExternalLink size={10} />
+                  <ExternalLink size={12} />
                 </a>
               </div>
-              <div className="text-[10px] text-white/50 mt-0.5">
-                PulseX Liquidity Pool
+              <div className="flex items-center">
+                <div className="text-[10px] text-white/50 rounded-sm">
+                  PulseX LP • {token.balanceFormatted ? formatTokenAmount(token.balanceFormatted) : '0'} tokens
+                </div>
               </div>
             </>
           ) : (
@@ -138,23 +137,25 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
       </div>
       
       <div className="flex items-center">
-        {/* Value display with gradient background */}
-        {token.value !== undefined && (
-          <span className="bg-gradient-to-r from-token0-color/30 to-token1-color/30 text-white px-2 py-0.5 rounded-sm font-semibold text-xs">
-            {formatCurrency(token.value)}
-          </span>
-        )}
-        
-        {/* Show expand button if we have detailed data and showDetails is true */}
-        {showDetails && hasDetailedData && (
-          <button 
-            onClick={toggleExpand}
-            className="ml-2 bg-gradient-to-r from-token0-color/10 to-token1-color/10 hover:from-token0-color/20 hover:to-token1-color/20 p-1 rounded transition-colors"
-            title={isExpanded ? "Hide details" : "Show details"}
-          >
-            {isExpanded ? <ChevronUp size={16} className="text-white/80" /> : <ChevronDown size={16} className="text-white/80" />}
-          </button>
-        )}
+        {/* Value display with detailed button style */}
+        <div className="flex flex-col items-end">
+          {token.value !== undefined && (
+            <div className="bg-gradient-to-r from-token0-color/20 to-token1-color/20 text-white px-2 py-0.5 rounded font-medium text-xs">
+              {formatCurrency(token.value)}
+            </div>
+          )}
+          {/* Show details badge */}
+          {showDetails && hasDetailedData && (
+            <button 
+              onClick={toggleExpand}
+              className="mt-1 text-[10px] text-white/60 hover:text-white/90 transition-colors flex items-center gap-0.5"
+              title={isExpanded ? "Hide details" : "Show details"}
+            >
+              {isExpanded ? "Hide details" : "View details"}
+              {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -182,71 +183,79 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
     
     return (
       <div className="mt-2 pl-2 border-l border-primary/40 text-xs">
-        {/* Compact LP position summary */}
-        <div className="flex items-center justify-between py-1">
-          <div className="text-white/70 font-medium">Your position</div>
-          {poolSharePercentage && (
-            <div className="text-primary font-medium">
-              {poolSharePercentage}% of pool
-            </div>
-          )}
-        </div>
+        {/* LP position divider */}
+        <div className="my-1 border-t border-white/5"></div>
         
-        {/* More compact token display */}
-        <div className="bg-gradient-to-r from-black/30 to-black/40 border border-white/5 rounded-md mt-1 p-2">
-          <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-center">
-            {/* Token 0 */}
-            <TokenLogo address={token.lpToken0Address || ''} symbol={token0Symbol} size="xs" />
-            <div>
-              <div className="font-medium text-token0-color flex items-center gap-1">
-                <span>{token0Symbol}</span>
-                <span className="text-white/40 text-xs">
-                  {formatTokenAmount(token0BalanceFormatted || 0)}
-                </span>
+        {/* Detailed list layout for LP tokens */}
+        <div className="mt-1">
+          {/* LP position header */}
+          <div className="flex justify-between items-center p-2 bg-black/30 rounded-t-md border border-white/5 border-b-0">
+            <div className="flex items-center gap-1.5">
+              <div className="h-5 w-5 bg-primary/20 rounded-full flex items-center justify-center">
+                <span className="text-primary text-xs font-bold">LP</span>
               </div>
-              <div className="text-[10px] text-white/50 truncate max-w-[120px]">{token.lpToken0Name}</div>
+              <span className="text-white/70 text-xs">Position Breakdown</span>
             </div>
-            {token0Value !== undefined && (
-              <div className="text-xs bg-token0-color/20 text-token0-color px-2 py-0.5 rounded-sm font-medium">
-                {formatCurrency(token0Value)}
-              </div>
-            )}
-          </div>
-          
-          <div className="my-1.5 border-t border-white/5"></div>
-          
-          {/* Token 1 */}
-          <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-center">
-            <TokenLogo address={token.lpToken1Address || ''} symbol={token1Symbol} size="xs" />
-            <div>
-              <div className="font-medium text-token1-color flex items-center gap-1">
-                <span>{token1Symbol}</span>
-                <span className="text-white/40 text-xs">
-                  {formatTokenAmount(token1BalanceFormatted || 0)}
-                </span>
-              </div>
-              <div className="text-[10px] text-white/50 truncate max-w-[120px]">{token.lpToken1Name}</div>
-            </div>
-            {token1Value !== undefined && (
-              <div className="text-xs bg-token1-color/20 text-token1-color px-2 py-0.5 rounded-sm font-medium">
-                {formatCurrency(token1Value)}
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {/* Total Position Value */}
-        <div className="flex justify-between items-center mt-2 p-2 border border-white/10 rounded bg-gradient-to-r from-token0-color/5 to-token1-color/5">
-          <div className="flex flex-col">
-            <span className="text-white/70 text-xs">Total Position Value</span>
             {poolSharePercentage && (
-              <span className="text-[10px] text-primary/70">
+              <div className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-sm">
                 {poolSharePercentage}% pool share
-              </span>
+              </div>
             )}
           </div>
-          <div className="bg-gradient-to-r from-token0-color/30 to-token1-color/30 px-2 py-0.5 rounded-sm font-semibold text-white text-sm">
-            {token.value !== undefined ? formatCurrency(token.value) : 'Unknown'}
+          
+          {/* Token details in list format */}
+          <div className="border border-white/5 rounded-b-md">
+            {/* Token 0 row */}
+            <div className="flex items-center p-2 border-b border-white/5">
+              <div className="flex-shrink-0 mr-2">
+                <TokenLogo address={token.lpToken0Address || ''} symbol={token0Symbol} size="xs" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <span className="text-token0-color font-medium">{token0Symbol}</span>
+                    <span className="text-white/40 text-xs">{token.lpToken0Name}</span>
+                  </div>
+                  <div className="text-white text-sm">{formatTokenAmount(token0BalanceFormatted || 0)}</div>
+                </div>
+                <div className="flex justify-between items-center mt-1 text-xs">
+                  <span className="text-white/50">Value</span>
+                  {token0Value !== undefined && (
+                    <span className="text-token0-color font-medium">{formatCurrency(token0Value)}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Token 1 row */}
+            <div className="flex items-center p-2 border-b border-white/5">
+              <div className="flex-shrink-0 mr-2">
+                <TokenLogo address={token.lpToken1Address || ''} symbol={token1Symbol} size="xs" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <span className="text-token1-color font-medium">{token1Symbol}</span>
+                    <span className="text-white/40 text-xs">{token.lpToken1Name}</span>
+                  </div>
+                  <div className="text-white text-sm">{formatTokenAmount(token1BalanceFormatted || 0)}</div>
+                </div>
+                <div className="flex justify-between items-center mt-1 text-xs">
+                  <span className="text-white/50">Value</span>
+                  {token1Value !== undefined && (
+                    <span className="text-token1-color font-medium">{formatCurrency(token1Value)}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Total position value row */}
+            <div className="flex items-center justify-between p-2 bg-gradient-to-r from-token0-color/5 to-token1-color/5">
+              <div className="text-xs font-medium text-white/80">Total Position Value</div>
+              <div className="bg-gradient-to-r from-token0-color/30 to-token1-color/30 px-2 py-0.5 rounded-sm font-semibold text-white text-sm">
+                {token.value !== undefined ? formatCurrency(token.value) : 'Unknown'}
+              </div>
+            </div>
           </div>
         </div>
       </div>
