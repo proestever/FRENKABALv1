@@ -167,7 +167,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
               title="View all token holdings"
             >
               <Wallet size={18} />
-              <span className="text-sm font-medium">Tokens</span>
+              <span className="text-sm font-medium">Tokens{!showLiquidity && !showTransactions ? ` (${sortedTokens.length})` : ''}</span>
             </button>
             
             <button 
@@ -253,6 +253,20 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
         />
       ) : (
         <>
+          {/* Tokens View Header - Only shown when Tokens tab is active (not liquidity or transactions) */}
+          {!showLiquidity && !showTransactions && (
+            <div className="p-4 border-b border-white/10">
+              <h3 className="text-lg md:text-xl font-semibold text-white flex items-center">
+                <Wallet size={18} className="mr-2 text-blue-300" />
+                <span>Tokens</span>
+                <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens.length})</span>
+              </h3>
+              <p className="text-xs md:text-sm text-white/70 mt-1">
+                All tokens in this wallet
+              </p>
+            </div>
+          )}
+
           {/* Mobile View - Only shown on small screens */}
           <div className="block md:hidden">
             <div className="space-y-1">
