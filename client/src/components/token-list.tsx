@@ -206,44 +206,73 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
       {/* Filter and Sort Container */}
       <div className="p-4 border-b border-border">
         {!showTransactions && (
-          <div className="flex flex-col sm:flex-row gap-2 w-full justify-end">
-            <div className="relative">
-              <Input 
-                type="text" 
-                placeholder="Filter tokens..." 
-                value={filterText}
-                onChange={(e) => setFilterText(e.target.value)}
-                className="pl-8 w-full md:w-48 glass-card border-border/50 text-foreground bg-black/30"
-              />
-              <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            {/* Tokens or Liquidity Header */}
+            {!showLiquidity && !showTransactions && (
+              <div>
+                <h3 className="text-lg md:text-xl font-semibold text-white flex items-center">
+                  <Wallet size={18} className="mr-2 text-blue-300" />
+                  <span>Tokens</span>
+                  <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens.length})</span>
+                </h3>
+                <p className="text-xs md:text-sm text-white/70 mt-1">
+                  All tokens in this wallet
+                </p>
+              </div>
+            )}
+            {showLiquidity && (
+              <div>
+                <h3 className="text-lg md:text-xl font-semibold text-white flex items-center">
+                  <Droplets size={18} className="mr-2 text-sky-300" />
+                  <span>Liquidity Positions</span>
+                  <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens.length})</span>
+                </h3>
+                <p className="text-xs md:text-sm text-white/70 mt-1">
+                  PulseX tokens representing your liquidity positions
+                </p>
+              </div>
+            )}
+            
+            {/* Filter, Sort and Visibility Controls */}
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto justify-end">
+              <div className="relative">
+                <Input 
+                  type="text" 
+                  placeholder="Filter tokens..." 
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  className="pl-8 w-full md:w-48 glass-card border-border/50 text-foreground bg-black/30"
+                />
+                <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
+              </div>
+              
+              <Select
+                value={sortBy}
+                onValueChange={(value) => setSortBy(value as SortOption)}
+              >
+                <SelectTrigger className="w-full md:w-48 glass-card border-border/50 text-foreground bg-black/30">
+                  <div className="flex items-center">
+                    <span>Sort by: </span>
+                    <SelectValue placeholder="Value" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="bg-black/80 border-white/10 text-white backdrop-blur-md">
+                  <SelectItem value="value">Value</SelectItem>
+                  <SelectItem value="balance">Balance</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="price">Price</SelectItem>
+                  <SelectItem value="change">24h Change</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <button
+                onClick={() => setShowHidden(!showHidden)}
+                className={`p-2 hover:opacity-80 transition-opacity ${showHidden ? 'text-purple-400' : 'text-white/70'}`}
+                title={showHidden ? "Hide hidden tokens" : "Show hidden tokens"}
+              >
+                {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
-            
-            <Select
-              value={sortBy}
-              onValueChange={(value) => setSortBy(value as SortOption)}
-            >
-              <SelectTrigger className="w-full md:w-48 glass-card border-border/50 text-foreground bg-black/30">
-                <div className="flex items-center">
-                  <span>Sort by: </span>
-                  <SelectValue placeholder="Value" />
-                </div>
-              </SelectTrigger>
-              <SelectContent className="bg-black/80 border-white/10 text-white backdrop-blur-md">
-                <SelectItem value="value">Value</SelectItem>
-                <SelectItem value="balance">Balance</SelectItem>
-                <SelectItem value="name">Name</SelectItem>
-                <SelectItem value="price">Price</SelectItem>
-                <SelectItem value="change">24h Change</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <button
-              onClick={() => setShowHidden(!showHidden)}
-              className={`p-2 hover:opacity-80 transition-opacity ${showHidden ? 'text-purple-400' : 'text-white/70'}`}
-              title={showHidden ? "Hide hidden tokens" : "Show hidden tokens"}
-            >
-              {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
           </div>
         )}
       </div>
@@ -256,19 +285,6 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
         />
       ) : (
         <>
-          {/* Tokens View Header - Only shown when Tokens tab is active (not liquidity or transactions) */}
-          {!showLiquidity && !showTransactions && (
-            <div className="p-4 border-b border-white/10">
-              <h3 className="text-lg md:text-xl font-semibold text-white flex items-center">
-                <Wallet size={18} className="mr-2 text-blue-300" />
-                <span>Tokens</span>
-                <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens.length})</span>
-              </h3>
-              <p className="text-xs md:text-sm text-white/70 mt-1">
-                All tokens in this wallet
-              </p>
-            </div>
-          )}
 
           {/* Mobile View - Only shown on small screens */}
           <div className="block md:hidden">
@@ -397,20 +413,6 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
               })}
             </div>
           </div>
-          
-          {/* Liquidity View Header - Only shown when Liquidity tab is active */}
-          {showLiquidity && (
-            <div className="p-4 border-b border-white/10">
-              <h3 className="text-lg md:text-xl font-semibold text-white flex items-center">
-                <Droplets size={18} className="mr-2 text-sky-300" />
-                <span>Liquidity Positions</span>
-                <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens.length})</span>
-              </h3>
-              <p className="text-xs md:text-sm text-white/70 mt-1">
-                PulseX tokens representing your liquidity positions
-              </p>
-            </div>
-          )}
           
           {/* Empty state for Liquidity tab */}
           {showLiquidity && sortedTokens.length === 0 && !isLoading && (
