@@ -17,35 +17,14 @@ export interface ProcessedToken extends Token {
  * @param address - Wallet address to fetch data for
  * @param page - Page number for pagination (default: 1)
  * @param limit - Number of tokens per page (default: 50)
- * @param captchaResponse - Optional CAPTCHA response token if required
  */
-export function fetchWalletData(
-  address: string, 
-  page: number = 1, 
-  limit: number = 50,
-  captchaResponse?: string
-): Promise<Wallet> {
-  let url = `/api/wallet/${address}?page=${page}&limit=${limit}`;
-  
-  // Add captcha response if provided
-  if (captchaResponse) {
-    url += `&captchaResponse=${encodeURIComponent(captchaResponse)}`;
-  }
-  
-  return fetch(url)
-    .then(async response => {
+export function fetchWalletData(address: string, page: number = 1, limit: number = 50): Promise<Wallet> {
+  return fetch(`/api/wallet/${address}?page=${page}&limit=${limit}`)
+    .then(response => {
       if (!response.ok) {
-        const errorData = await response.json();
-        
-        // If CAPTCHA is required, throw special error
-        if (response.status === 429 && errorData.captchaRequired) {
-          const captchaError = new Error('CAPTCHA_REQUIRED');
-          // @ts-ignore - Add custom property
-          captchaError.captchaRequired = true;
-          throw captchaError;
-        }
-        
-        throw new Error(errorData.message || 'Failed to fetch wallet data');
+        return response.json().then(errorData => {
+          throw new Error(errorData.message || 'Failed to fetch wallet data');
+        });
       }
       return response.json();
     });
@@ -54,30 +33,14 @@ export function fetchWalletData(
 /**
  * Fetch ALL wallet tokens in a single request (will be loaded in batches on server)
  * @param address - Wallet address to fetch data for
- * @param captchaResponse - Optional CAPTCHA response token if required
  */
-export function fetchAllWalletTokens(address: string, captchaResponse?: string): Promise<Wallet> {
-  let url = `/api/wallet/${address}/all`;
-  
-  // Add captcha response if provided
-  if (captchaResponse) {
-    url += `?captchaResponse=${encodeURIComponent(captchaResponse)}`;
-  }
-  
-  return fetch(url)
-    .then(async response => {
+export function fetchAllWalletTokens(address: string): Promise<Wallet> {
+  return fetch(`/api/wallet/${address}/all`)
+    .then(response => {
       if (!response.ok) {
-        const errorData = await response.json();
-        
-        // If CAPTCHA is required, throw special error
-        if (response.status === 429 && errorData.captchaRequired) {
-          const captchaError = new Error('CAPTCHA_REQUIRED');
-          // @ts-ignore - Add custom property
-          captchaError.captchaRequired = true;
-          throw captchaError;
-        }
-        
-        throw new Error(errorData.message || 'Failed to fetch all wallet tokens');
+        return response.json().then(errorData => {
+          throw new Error(errorData.message || 'Failed to fetch all wallet tokens');
+        });
       }
       return response.json();
     });
@@ -213,14 +176,12 @@ export interface TransactionResponse {
  * @param address - Wallet address to fetch transactions for
  * @param limit - Number of transactions per page (default: 100, Moralis free plan limit)
  * @param cursor - Pagination cursor for fetching next page of results
- * @param captchaResponse - Optional CAPTCHA response token if required
  * @returns Paginated transaction response
  */
 export async function fetchTransactionHistory(
   address: string,
   limit: number = 100,
-  cursor: string | null = null,
-  captchaResponse?: string
+  cursor: string | null = null
 ): Promise<TransactionResponse> {
   try {
     // Build URL with query parameters
@@ -229,25 +190,11 @@ export async function fetchTransactionHistory(
       url += `&cursor=${encodeURIComponent(cursor)}`;
     }
     
-    // Add captcha response if provided
-    if (captchaResponse) {
-      url += `&captchaResponse=${encodeURIComponent(captchaResponse)}`;
-    }
-    
     console.log(`Fetching transaction history: ${url}`);
     const response = await fetch(url);
     
     if (!response.ok) {
       const errorData = await response.json();
-      
-      // If CAPTCHA is required, throw special error
-      if (response.status === 429 && errorData.captchaRequired) {
-        const captchaError = new Error('CAPTCHA_REQUIRED');
-        // @ts-ignore - Add custom property
-        captchaError.captchaRequired = true;
-        throw captchaError;
-      }
-      
       console.error('Failed to fetch transaction history:', errorData);
       throw new Error(errorData.message || 'Failed to fetch transaction history');
     }
@@ -534,13 +481,11 @@ export async function updateUserProfile(userId: number, profileData: Partial<{
  * This API is used to get tokens that might not be detected by the standard wallet API
  * @param walletAddress Wallet address to check for the token
  * @param tokenAddress Token contract address to look up
- * @param captchaResponse Optional CAPTCHA response token if required
  * @returns Token data including balance and price if available
  */
 export async function fetchSpecificToken(
   walletAddress: string,
-  tokenAddress: string,
-  captchaResponse?: string
+  tokenAddress: string
 ): Promise<ProcessedToken | null> {
   try {
     console.log(`Fetching specific token ${tokenAddress} for wallet ${walletAddress}`);
@@ -550,15 +495,7 @@ export async function fetchSpecificToken(
       throw new Error('Invalid wallet or token address format');
     }
     
-    // Build URL with query parameters
-    let url = `/api/wallet/${walletAddress}/token/${tokenAddress}`;
-    
-    // Add captcha response if provided
-    if (captchaResponse) {
-      url += `?captchaResponse=${encodeURIComponent(captchaResponse)}`;
-    }
-    
-    const response = await fetch(url);
+    const response = await fetch(`/api/wallet/${walletAddress}/token/${tokenAddress}`);
     
     if (response.status === 404) {
       console.log(`No balance found for token ${tokenAddress} in wallet ${walletAddress}`);
@@ -567,15 +504,6 @@ export async function fetchSpecificToken(
     
     if (!response.ok) {
       const errorData = await response.json();
-      
-      // If CAPTCHA is required, throw special error
-      if (response.status === 429 && errorData.captchaRequired) {
-        const captchaError = new Error('CAPTCHA_REQUIRED');
-        // @ts-ignore - Add custom property
-        captchaError.captchaRequired = true;
-        throw captchaError;
-      }
-      
       throw new Error(errorData.message || 'Failed to fetch token data');
     }
     
@@ -584,6 +512,6 @@ export async function fetchSpecificToken(
     return tokenData;
   } catch (error) {
     console.error('Error fetching specific token:', error);
-    throw error;
+    return null;
   }
 }

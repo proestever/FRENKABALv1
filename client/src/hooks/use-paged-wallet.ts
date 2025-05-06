@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchWalletData } from '@/lib/api';
 import { Wallet } from '@shared/schema';
@@ -9,29 +9,14 @@ import { Wallet } from '@shared/schema';
  */
 export function usePagedWallet(walletAddress: string | null, initialPage: number = 1) {
   const [currentPage, setCurrentPage] = useState(initialPage);
-  const [captchaRequired, setCaptchaRequired] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Define a query key base that doesn't include the page
   const baseQueryKey = walletAddress ? `/api/wallet/${walletAddress}` : null;
   
   // The actual query key includes the page number
-  const queryKey = walletAddress ? [baseQueryKey, currentPage, captchaToken] : [];
+  const queryKey = walletAddress ? [baseQueryKey, currentPage] : [];
 
-  // Handle successful CAPTCHA verification
-  const handleCaptchaSuccess = useCallback((token: string) => {
-    console.log('CAPTCHA verified successfully, token received');
-    setCaptchaToken(token);
-    setCaptchaRequired(false);
-  }, []);
-  
-  // Reset CAPTCHA state
-  const resetCaptcha = useCallback(() => {
-    setCaptchaToken(null);
-    setCaptchaRequired(false);
-  }, []);
-  
   // Main wallet data query
   const {
     data: walletData,
@@ -44,23 +29,13 @@ export function usePagedWallet(walletAddress: string | null, initialPage: number
     queryKey,
     queryFn: () => {
       if (!walletAddress) throw new Error('No address provided');
-      console.log('Fetching wallet data for:', walletAddress, 'page:', currentPage, 'captchaToken:', captchaToken ? 'present' : 'none');
-      return fetchWalletData(walletAddress, currentPage, 100, captchaToken || undefined)
+      console.log('Fetching wallet data for:', walletAddress, 'page:', currentPage);
+      return fetchWalletData(walletAddress, currentPage)
         .then(data => {
           console.log('Wallet data fetched successfully');
-          // Clear captcha token after successful fetch
-          if (captchaToken) {
-            resetCaptcha();
-          }
           return data;
         })
         .catch(error => {
-          // Check if error is due to CAPTCHA requirement
-          // @ts-ignore - Custom property
-          if (error.message === 'CAPTCHA_REQUIRED' || error.captchaRequired) {
-            console.log('CAPTCHA required for wallet data fetch');
-            setCaptchaRequired(true);
-          }
           console.error('Error fetching wallet data:', error);
           throw error;
         });
@@ -81,8 +56,8 @@ export function usePagedWallet(walletAddress: string | null, initialPage: number
       const nextPage = page + 1;
       console.log('Prefetching next page:', nextPage);
       queryClient.prefetchQuery({
-        queryKey: [baseQueryKey, nextPage, captchaToken],
-        queryFn: () => fetchWalletData(walletAddress, nextPage, 100, captchaToken || undefined),
+        queryKey: [baseQueryKey, nextPage],
+        queryFn: () => fetchWalletData(walletAddress, nextPage),
       });
     }
     
@@ -103,8 +78,5 @@ export function usePagedWallet(walletAddress: string | null, initialPage: number
     currentPage,
     changePage,
     refetch,
-    captchaRequired,
-    handleCaptchaSuccess,
-    resetCaptcha
   };
 }

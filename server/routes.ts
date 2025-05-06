@@ -1,4 +1,4 @@
-import type { Express, Request } from "express";
+import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance } from "./services/api";
@@ -7,19 +7,6 @@ import { getTokenPricesFromDexScreener } from "./services/dexscreener";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
-import rateLimit from "express-rate-limit";
-import { shouldRequireCaptcha, recordCaptchaSuccess, verifyCaptcha } from "./services/captcha-service";
-
-// Helper function to get client IP from request
-function getClientIp(req: Request): string {
-  // Try to get IP from various headers (for proxied requests)
-  const xForwardedFor = req.headers['x-forwarded-for'];
-  const ip = typeof xForwardedFor === 'string' 
-    ? xForwardedFor.split(',')[0].trim()
-    : req.socket.remoteAddress || '0.0.0.0';
-  
-  return ip;
-}
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -43,45 +30,16 @@ export const updateLoadingProgress = (progress: Partial<LoadingProgress>) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Create specialized rate limiters for intensive endpoints
-  
-  // Wallet data rate limiter (more strict)
-  const walletDataLimiter = rateLimit({
-    windowMs: 2 * 60 * 1000, // 2 minutes
-    max: 20, // limit each IP to 20 wallet lookups per window
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { message: "Too many wallet lookup requests, please try again later." }
-  });
-  
-  // Transaction history rate limiter
-  const txHistoryLimiter = rateLimit({
-    windowMs: 2 * 60 * 1000, // 2 minutes
-    max: 10, // limit each IP to 10 transaction history requests per window
-    standardHeaders: true, 
-    legacyHeaders: false,
-    message: { message: "Too many transaction history requests, please try again later." }
-  });
-  
-  // Logo batch API rate limiter
-  const logoBatchLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    max: 5, // limit each IP to 5 batch requests per minute
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { message: "Too many logo batch requests, please try again later." }
-  });
-  
   // API endpoint to get loading progress
   app.get("/api/loading-progress", (_req, res) => {
     res.json(loadingProgress);
   });
   
   // API route to get wallet data
-  app.get("/api/wallet/:address", walletDataLimiter, async (req, res) => {
+  app.get("/api/wallet/:address", async (req, res) => {
     try {
       const { address } = req.params;
-      const { page = '1', limit = '100', captchaResponse } = req.query; // Add captchaResponse as query param
+      const { page = '1', limit = '100' } = req.query; // Default to page 1, limit 100
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -91,39 +49,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {
         return res.status(400).json({ message: "Invalid wallet address format" });
-      }
-      
-      // Get client IP for rate limiting and CAPTCHA verification
-      const clientIp = getClientIp(req);
-      
-      // Check if CAPTCHA is required based on search count
-      const captchaRequired = shouldRequireCaptcha(clientIp);
-      
-      // If CAPTCHA is required but no response provided, return error
-      if (captchaRequired && !captchaResponse) {
-        return res.status(429).json({ 
-          message: "CAPTCHA verification required",
-          captchaRequired: true
-        });
-      }
-      
-      // If CAPTCHA is required and response provided, verify it
-      if (captchaRequired && captchaResponse) {
-        // Verify the CAPTCHA response
-        const captchaValid = await verifyCaptcha(
-          captchaResponse as string,
-          clientIp
-        );
-        
-        if (!captchaValid) {
-          return res.status(403).json({ 
-            message: "CAPTCHA verification failed",
-            captchaRequired: true
-          });
-        }
-        
-        // Record successful CAPTCHA verification
-        recordCaptchaSuccess(clientIp);
       }
       
       // Convert query string parameters to numbers
@@ -185,10 +110,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // API route to get ALL wallet tokens without pagination
-  app.get("/api/wallet/:address/all", walletDataLimiter, async (req, res) => {
+  app.get("/api/wallet/:address/all", async (req, res) => {
     try {
       const { address } = req.params;
-      const { captchaResponse } = req.query; // Add captchaResponse as query param
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -198,39 +122,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {
         return res.status(400).json({ message: "Invalid wallet address format" });
-      }
-      
-      // Get client IP for rate limiting and CAPTCHA verification
-      const clientIp = getClientIp(req);
-      
-      // Check if CAPTCHA is required based on search count
-      const captchaRequired = shouldRequireCaptcha(clientIp);
-      
-      // If CAPTCHA is required but no response provided, return error
-      if (captchaRequired && !captchaResponse) {
-        return res.status(429).json({ 
-          message: "CAPTCHA verification required",
-          captchaRequired: true
-        });
-      }
-      
-      // If CAPTCHA is required and response provided, verify it
-      if (captchaRequired && captchaResponse) {
-        // Verify the CAPTCHA response
-        const captchaValid = await verifyCaptcha(
-          captchaResponse as string,
-          clientIp
-        );
-        
-        if (!captchaValid) {
-          return res.status(403).json({ 
-            message: "CAPTCHA verification failed",
-            captchaRequired: true
-          });
-        }
-        
-        // Record successful CAPTCHA verification
-        recordCaptchaSuccess(clientIp);
       }
       
       // Set loading progress to indicate we're fetching all tokens
@@ -259,10 +150,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // API route to get specific token balance for a wallet
-  app.get("/api/wallet/:address/token/:tokenAddress", walletDataLimiter, async (req, res) => {
+  app.get("/api/wallet/:address/token/:tokenAddress", async (req, res) => {
     try {
       const { address, tokenAddress } = req.params;
-      const { captchaResponse } = req.query;
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -280,39 +170,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!addressRegex.test(tokenAddress)) {
         return res.status(400).json({ message: "Invalid token address format" });
-      }
-      
-      // Get client IP for rate limiting and CAPTCHA verification
-      const clientIp = getClientIp(req);
-      
-      // Check if CAPTCHA is required based on search count
-      const captchaRequired = shouldRequireCaptcha(clientIp);
-      
-      // If CAPTCHA is required but no response provided, return error
-      if (captchaRequired && !captchaResponse) {
-        return res.status(429).json({ 
-          message: "CAPTCHA verification required",
-          captchaRequired: true
-        });
-      }
-      
-      // If CAPTCHA is required and response provided, verify it
-      if (captchaRequired && captchaResponse) {
-        // Verify the CAPTCHA response
-        const captchaValid = await verifyCaptcha(
-          captchaResponse as string,
-          clientIp
-        );
-        
-        if (!captchaValid) {
-          return res.status(403).json({ 
-            message: "CAPTCHA verification failed",
-            captchaRequired: true
-          });
-        }
-        
-        // Record successful CAPTCHA verification
-        recordCaptchaSuccess(clientIp);
       }
       
       // Get the specific token balance
@@ -333,10 +190,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // API route to get wallet transaction history
-  app.get("/api/wallet/:address/transactions", txHistoryLimiter, async (req, res) => {
+  app.get("/api/wallet/:address/transactions", async (req, res) => {
     try {
       const { address } = req.params;
-      const { limit = '100', cursor = null, captchaResponse } = req.query;
+      const { limit = '100', cursor = null } = req.query;
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -346,39 +203,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {
         return res.status(400).json({ message: "Invalid wallet address format" });
-      }
-      
-      // Get client IP for rate limiting and CAPTCHA verification
-      const clientIp = getClientIp(req);
-      
-      // Check if CAPTCHA is required based on search count
-      const captchaRequired = shouldRequireCaptcha(clientIp);
-      
-      // If CAPTCHA is required but no response provided, return error
-      if (captchaRequired && !captchaResponse) {
-        return res.status(429).json({ 
-          message: "CAPTCHA verification required",
-          captchaRequired: true
-        });
-      }
-      
-      // If CAPTCHA is required and response provided, verify it
-      if (captchaRequired && captchaResponse) {
-        // Verify the CAPTCHA response
-        const captchaValid = await verifyCaptcha(
-          captchaResponse as string,
-          clientIp
-        );
-        
-        if (!captchaValid) {
-          return res.status(403).json({ 
-            message: "CAPTCHA verification failed",
-            captchaRequired: true
-          });
-        }
-        
-        // Record successful CAPTCHA verification
-        recordCaptchaSuccess(clientIp);
       }
       
       // Parse limit to integer with a maximum value to prevent abuse
@@ -425,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Batch API for fetching multiple logos at once
-  app.post("/api/token-logos/batch", logoBatchLimiter, async (req, res) => {
+  app.post("/api/token-logos/batch", async (req, res) => {
     try {
       const { addresses } = req.body;
       
