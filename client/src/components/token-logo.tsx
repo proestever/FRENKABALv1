@@ -186,7 +186,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
         onError={(e) => {
           // Prevent infinite error loops
           e.currentTarget.onerror = null;
-          console.warn(`Failed to load token logo for ${symbol || address}`, logoUrl);
+          // Quietly handle the error - no console warnings
           setError(true);
           setLogoUrl(null);
         }}

@@ -61,15 +61,14 @@ export function getBufferImplementation(): BufferType {
   try {
     // Try to access Buffer from global scope (when using browserify/webpack)
     if (typeof window !== 'undefined' && (window as any).Buffer) {
-      console.log('Using Buffer from window object');
+      // Silently use Buffer from window object (no logging)
       return (window as any).Buffer;
     }
     
     // In Node.js environments or with successful dynamic import
-    console.log('Using safeBuffer polyfill (no Buffer available in this environment)');
     return safeBuffer;
   } catch (error) {
-    console.warn('Buffer is not available, using polyfill', error);
+    // Silently use our polyfill
     return safeBuffer;
   }
 }
