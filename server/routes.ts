@@ -7,6 +7,7 @@ import { getTokenPricesFromDexScreener } from "./services/dexscreener";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
+import rateLimit from "express-rate-limit";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -30,13 +31,33 @@ export const updateLoadingProgress = (progress: Partial<LoadingProgress>) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Create specialized rate limiters for intensive endpoints
+  
+  // Wallet data rate limiter (more strict)
+  const walletDataLimiter = rateLimit({
+    windowMs: 2 * 60 * 1000, // 2 minutes
+    max: 20, // limit each IP to 20 wallet lookups per window
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many wallet lookup requests, please try again later." }
+  });
+  
+  // Transaction history rate limiter
+  const txHistoryLimiter = rateLimit({
+    windowMs: 2 * 60 * 1000, // 2 minutes
+    max: 10, // limit each IP to 10 transaction history requests per window
+    standardHeaders: true, 
+    legacyHeaders: false,
+    message: { message: "Too many transaction history requests, please try again later." }
+  });
+  
   // API endpoint to get loading progress
   app.get("/api/loading-progress", (_req, res) => {
     res.json(loadingProgress);
   });
   
   // API route to get wallet data
-  app.get("/api/wallet/:address", async (req, res) => {
+  app.get("/api/wallet/:address", walletDataLimiter, async (req, res) => {
     try {
       const { address } = req.params;
       const { page = '1', limit = '100' } = req.query; // Default to page 1, limit 100
@@ -110,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // API route to get ALL wallet tokens without pagination
-  app.get("/api/wallet/:address/all", async (req, res) => {
+  app.get("/api/wallet/:address/all", walletDataLimiter, async (req, res) => {
     try {
       const { address } = req.params;
       
