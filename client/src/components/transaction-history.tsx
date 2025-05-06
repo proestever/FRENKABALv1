@@ -505,38 +505,47 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return counts;
   }, {} as Record<string, number>);
   
-  // Extract token addresses for logos and prices
-  useEffect(() => {
-    if (processedTransactions && processedTransactions.length > 0) {
-      // Use array instead of Set to avoid iteration issues
-      const addresses: string[] = [];
-      const addUniqueAddress = (address: string) => {
-        const normalizedAddress = address.toLowerCase();
-        if (!addresses.includes(normalizedAddress)) {
-          addresses.push(normalizedAddress);
-        }
-      };
-      
-      processedTransactions.forEach((tx: Transaction) => {
-        // Get token addresses from ERC20 transfers
-        if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-          tx.erc20_transfers.forEach((transfer: any) => {
-            if (transfer.address) {
-              addUniqueAddress(transfer.address);
-            }
-          });
-        }
-        
-        // Add native token address for native transfers
-        if (tx.native_transfers && tx.native_transfers.length > 0) {
-          addUniqueAddress('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
-        }
-      });
-      
-      console.log(`Collected ${addresses.length} unique token addresses from transactions`, addresses);
-      setVisibleTokenAddresses(addresses);
+  // Extract token addresses for logos and prices - memoized to prevent infinite loops
+  const extractTokenAddresses = useMemo(() => {
+    if (!processedTransactions || processedTransactions.length === 0) {
+      return [];
     }
+    
+    // Use array instead of Set to avoid iteration issues
+    const addresses: string[] = [];
+    const addUniqueAddress = (address: string) => {
+      const normalizedAddress = address.toLowerCase();
+      if (!addresses.includes(normalizedAddress)) {
+        addresses.push(normalizedAddress);
+      }
+    };
+    
+    processedTransactions.forEach((tx: Transaction) => {
+      // Get token addresses from ERC20 transfers
+      if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+        tx.erc20_transfers.forEach((transfer: any) => {
+          if (transfer.address) {
+            addUniqueAddress(transfer.address);
+          }
+        });
+      }
+      
+      // Add native token address for native transfers
+      if (tx.native_transfers && tx.native_transfers.length > 0) {
+        addUniqueAddress('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+      }
+    });
+    
+    console.log(`Collected ${addresses.length} unique token addresses from transactions`, addresses);
+    return addresses;
   }, [processedTransactions]);
+  
+  // Set visible token addresses once they're extracted
+  useEffect(() => {
+    if (extractTokenAddresses.length > 0) {
+      setVisibleTokenAddresses(extractTokenAddresses);
+    }
+  }, [extractTokenAddresses]);
 
   if (isLoading) {
     return (
