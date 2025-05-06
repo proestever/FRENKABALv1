@@ -198,7 +198,6 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
                 <span className="text-white font-bold text-sm">{token0Symbol}</span>
                 <span className="mx-1 text-white/40">•</span>
                 <span className="text-white font-bold text-sm">{token1Symbol}</span>
-                <span className="ml-1 text-white/70 text-sm">Pair</span>
               </div>
             </div>
             {poolSharePercentage && (
