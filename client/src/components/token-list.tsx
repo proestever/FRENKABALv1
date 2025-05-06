@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from "@/components/ui/switch";
 import { Token } from '@shared/schema';
-import { Search, ArrowDownUp, Eye, EyeOff, Wallet, History } from 'lucide-react';
+import { Search, ArrowDownUp, Eye, EyeOff, Wallet, History, Droplets } from 'lucide-react';
 import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass } from '@/lib/utils';
 import { TokenLogo } from '@/components/token-logo';
 import { LpTokenDisplay } from '@/components/lp-token-display';
@@ -34,6 +34,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
   const [showHidden, setShowHidden] = useState(false);
   const [hiddenTokens, setHiddenTokens] = useState<string[]>(getHiddenTokens());
   const [showTransactions, setShowTransactions] = useState(false);
+  const [showLiquidity, setShowLiquidity] = useState(false);
   const [txHistoryKey, setTxHistoryKey] = useState(Date.now());
   // NOTE: We don't maintain our own page state, we get it from pagination prop
   // and use onPageChange callback to request page changes from the parent
@@ -52,16 +53,33 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
     setHiddenTokens(getHiddenTokens());
   };
 
-  // Filter tokens
+  // LP tokens only
+  const lpTokens = useMemo(() => {
+    return tokens.filter(token => token.isLp === true);
+  }, [tokens]);
+  
+  // Filter tokens based on view and search
   const filteredTokens = useMemo(() => {
-    return tokens.filter(token => 
+    // First apply the general filters
+    const filtered = tokens.filter(token => 
       // Text filter
       (token.name.toLowerCase().includes(filterText.toLowerCase()) || 
        token.symbol.toLowerCase().includes(filterText.toLowerCase())) &&
       // Hidden filter
       (showHidden || !hiddenTokens.includes(token.address))
     );
-  }, [tokens, filterText, hiddenTokens, showHidden]);
+    
+    // Then apply the view-specific filter
+    if (showLiquidity) {
+      // Only return LP tokens when in liquidity view
+      return filtered.filter(token => token.isLp === true);
+    } else if (!showTransactions) {
+      // In all tokens view, return all tokens
+      return filtered;
+    }
+    
+    return filtered;
+  }, [tokens, filterText, hiddenTokens, showHidden, showLiquidity, showTransactions]);
 
   // Sort tokens
   const sortedTokens = useMemo(() => {
@@ -138,19 +156,39 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => setShowTransactions(false)}
+              onClick={() => {
+                setShowTransactions(false);
+                setShowLiquidity(false);
+              }}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 transition-all duration-200 
-                ${!showTransactions 
+                ${!showTransactions && !showLiquidity 
                   ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
                   : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
-              title="View token holdings"
+              title="View all token holdings"
             >
               <Wallet size={18} />
               <span className="text-sm font-medium">Tokens</span>
             </button>
+            
+            <button 
+              onClick={() => {
+                setShowTransactions(false);
+                setShowLiquidity(true);
+              }}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 transition-all duration-200 
+                ${showLiquidity 
+                  ? 'bg-black/30 text-white border-primary/50 shadow-[0_0_15px_rgba(0,120,255,0.5)] backdrop-blur-lg' 
+                  : 'text-white/80 hover:bg-black/40 hover:border-white/30'}`}
+              title="View liquidity positions"
+            >
+              <Droplets size={18} />
+              <span className="text-sm font-medium">Liquidity{lpTokens.length > 0 ? ` (${lpTokens.length})` : ''}</span>
+            </button>
+            
             <button
               onClick={() => {
                 setShowTransactions(true);
+                setShowLiquidity(false);
                 setTxHistoryKey(Date.now());
               }}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 transition-all duration-200 
@@ -264,11 +302,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                           </div>
                           <div className="flex gap-1 items-center">
                             <div className="text-base text-muted-foreground font-medium" title={token.symbol}>
-                              {token.isLp ? (
-                                <span className="text-primary/80">PulseX LP Token</span>
-                              ) : (
-                                token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol
-                              )}
+                              {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
                             </div>
                             <div className="text-sm text-gray-400">
                               • {formatTokenAmount(token.balanceFormatted || 0)}
@@ -312,6 +346,33 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
               })}
             </div>
           </div>
+          
+          {/* Liquidity View Header - Only shown when Liquidity tab is active */}
+          {showLiquidity && (
+            <div className="p-4 border-b border-white/10">
+              <h3 className="text-xl font-semibold text-white flex items-center">
+                <Droplets size={20} className="mr-2 text-primary" />
+                <span>Liquidity Positions</span>
+                <span className="ml-2 text-md text-white/60">({sortedTokens.length})</span>
+              </h3>
+              <p className="text-sm text-white/70 mt-1">
+                PulseX LP tokens representing your liquidity positions
+              </p>
+            </div>
+          )}
+          
+          {/* Empty state for Liquidity tab */}
+          {showLiquidity && sortedTokens.length === 0 && !isLoading && (
+            <div className="p-8 text-center">
+              <div className="inline-flex p-4 rounded-full bg-primary/10 text-primary mb-4">
+                <Droplets size={32} />
+              </div>
+              <h3 className="text-xl font-bold mb-2">No Liquidity Positions Found</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                This wallet doesn't have any PulseX LP tokens. LP tokens are received when you provide liquidity to token pairs on PulseX.
+              </p>
+            </div>
+          )}
           
           {/* Desktop View - Only shown on medium screens and up */}
           <div className="hidden md:block overflow-x-auto">
@@ -385,11 +446,7 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                             </div>
                             <div className="flex items-center gap-2 overflow-hidden">
                               <div className="text-sm text-muted-foreground" title={token.symbol}>
-                                {token.isLp ? (
-                                  <span className="text-primary/80">PulseX LP Token</span>
-                                ) : (
-                                  token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol
-                                )}
+                                {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
                               </div>
                               {token.exchange && (
                                 <div className="text-xs bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded-md border border-purple-500/30 flex-shrink-0">
