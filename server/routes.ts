@@ -183,6 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/wallet/:address/all", walletDataLimiter, async (req, res) => {
     try {
       const { address } = req.params;
+      const { captchaResponse } = req.query; // Add captchaResponse as query param
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -192,6 +193,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {
         return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      // Get client IP for rate limiting and CAPTCHA verification
+      const clientIp = getClientIp(req);
+      
+      // Check if CAPTCHA is required based on search count
+      const captchaRequired = shouldRequireCaptcha(clientIp);
+      
+      // If CAPTCHA is required but no response provided, return error
+      if (captchaRequired && !captchaResponse) {
+        return res.status(429).json({ 
+          message: "CAPTCHA verification required",
+          captchaRequired: true
+        });
+      }
+      
+      // If CAPTCHA is required and response provided, verify it
+      if (captchaRequired && captchaResponse) {
+        // Record successful CAPTCHA verification
+        recordCaptchaSuccess(clientIp);
       }
       
       // Set loading progress to indicate we're fetching all tokens
@@ -223,6 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/wallet/:address/token/:tokenAddress", walletDataLimiter, async (req, res) => {
     try {
       const { address, tokenAddress } = req.params;
+      const { captchaResponse } = req.query;
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -240,6 +262,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!addressRegex.test(tokenAddress)) {
         return res.status(400).json({ message: "Invalid token address format" });
+      }
+      
+      // Get client IP for rate limiting and CAPTCHA verification
+      const clientIp = getClientIp(req);
+      
+      // Check if CAPTCHA is required based on search count
+      const captchaRequired = shouldRequireCaptcha(clientIp);
+      
+      // If CAPTCHA is required but no response provided, return error
+      if (captchaRequired && !captchaResponse) {
+        return res.status(429).json({ 
+          message: "CAPTCHA verification required",
+          captchaRequired: true
+        });
+      }
+      
+      // If CAPTCHA is required and response provided, verify it
+      if (captchaRequired && captchaResponse) {
+        // Record successful CAPTCHA verification
+        recordCaptchaSuccess(clientIp);
       }
       
       // Get the specific token balance
@@ -263,7 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/wallet/:address/transactions", txHistoryLimiter, async (req, res) => {
     try {
       const { address } = req.params;
-      const { limit = '100', cursor = null } = req.query;
+      const { limit = '100', cursor = null, captchaResponse } = req.query;
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -273,6 +315,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {
         return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      // Get client IP for rate limiting and CAPTCHA verification
+      const clientIp = getClientIp(req);
+      
+      // Check if CAPTCHA is required based on search count
+      const captchaRequired = shouldRequireCaptcha(clientIp);
+      
+      // If CAPTCHA is required but no response provided, return error
+      if (captchaRequired && !captchaResponse) {
+        return res.status(429).json({ 
+          message: "CAPTCHA verification required",
+          captchaRequired: true
+        });
+      }
+      
+      // If CAPTCHA is required and response provided, verify it
+      if (captchaRequired && captchaResponse) {
+        // Record successful CAPTCHA verification
+        recordCaptchaSuccess(clientIp);
       }
       
       // Parse limit to integer with a maximum value to prevent abuse
