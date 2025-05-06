@@ -273,8 +273,8 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
                       </button>
                     </div>
                     
-                    {/* Mobile Value - Absolute Position Center Right */}
-                    <div className="absolute top-1/3 right-3 transform -translate-y-1/2 md:hidden">
+                    {/* Mobile Value - Positioned at bottom of card token information */}
+                    <div className="absolute bottom-3 right-3 md:hidden">
                       <div className="text-base font-bold text-white">
                         {token.value !== undefined 
                           ? formatCurrency(token.value) 
