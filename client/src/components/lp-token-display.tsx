@@ -12,7 +12,8 @@ interface LpTokenDisplayProps {
 }
 
 export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetails = false }: LpTokenDisplayProps) {
-  const [isExpanded, setIsExpanded] = useState(expanded);
+  // Always start expanded if showDetails is true (for liquidity positions)
+  const [isExpanded, setIsExpanded] = useState(expanded || showDetails);
   const logoSize = size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md';
   
   if (!token.isLp) {
@@ -151,7 +152,7 @@ export function LpTokenDisplay({ token, size = 'md', expanded = false, showDetai
               className="text-[10px] md:text-xs text-white/70 hover:text-white/90 transition-colors flex items-center gap-0.5 bg-black/30 px-1.5 md:px-2 py-0.5 rounded"
               title={isExpanded ? "Hide details" : "Show details"}
             >
-              {isExpanded ? "Hide details" : "View details"}
+              {isExpanded ? "Hide details" : "Show details"}
               {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
             </button>
           )}
