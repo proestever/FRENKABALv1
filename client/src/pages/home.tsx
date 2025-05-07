@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { saveRecentAddress, ProcessedToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
-import { useHexStakes, fetchHexStakesSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
+import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
 import { combineWalletData } from '@/lib/utils';
 
@@ -22,6 +22,7 @@ export default function Home() {
   const [searchedAddress, setSearchedAddress] = useState<string | null>(null);
   const [manualTokens, setManualTokens] = useState<ProcessedToken[]>([]);
   const [multiWalletData, setMultiWalletData] = useState<Record<string, Wallet> | null>(null);
+  const [multiWalletHexStakes, setMultiWalletHexStakes] = useState<HexStakeSummary | null>(null);
   const [isMultiWalletLoading, setIsMultiWalletLoading] = useState(false);
   const params = useParams<{ walletAddress?: string }>();
   const [location, setLocation] = useLocation();
@@ -123,11 +124,20 @@ export default function Home() {
           })
       );
       
+      // Fetch combined HEX stakes data in parallel
+      const hexStakesPromise = fetchCombinedHexStakes(addresses).catch(error => {
+        console.error('Error fetching combined HEX stakes:', error);
+        return null;
+      });
+      
       // Wait for all promises to resolve
-      const results = await Promise.all(walletPromises);
+      const [hexStakesData, ...walletResults] = await Promise.all([
+        hexStakesPromise, 
+        ...walletPromises
+      ]);
       
       // Filter out null results and combine into a single object
-      const walletData = results
+      const walletData = walletResults
         .filter(result => result !== null)
         .reduce((acc, result) => ({ ...acc, ...result }), {});
       
@@ -139,6 +149,11 @@ export default function Home() {
           variant: "destructive"
         });
         return;
+      }
+      
+      // Store the HEX stakes data for the combined view
+      if (hexStakesData) {
+        setMultiWalletHexStakes(hexStakesData);
       }
       
       setMultiWalletData(walletData);
@@ -312,6 +327,7 @@ export default function Home() {
                   <WalletOverview 
                     wallet={combinedWallet} 
                     isLoading={false}
+                    hexStakesSummary={multiWalletHexStakes}
                     onRefresh={() => {
                       // Refresh all wallets by re-fetching
                       if (multiWalletData) {

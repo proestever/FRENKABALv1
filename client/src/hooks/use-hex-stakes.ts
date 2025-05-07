@@ -337,6 +337,127 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
   }
 }
 
+/**
+ * Function to fetch and combine HEX stakes data for multiple wallets
+ * @param walletAddresses Array of wallet addresses
+ * @returns Combined HEX stake summary
+ */
+export async function fetchCombinedHexStakes(walletAddresses: string[]): Promise<HexStakeSummary> {
+  try {
+    if (!walletAddresses || walletAddresses.length === 0) {
+      return {
+        totalStakedHex: '0',
+        totalInterestHex: '0',
+        totalCombinedHex: '0',
+        totalStakeValueUsd: 0,
+        totalInterestValueUsd: 0,
+        totalCombinedValueUsd: 0,
+        stakeCount: 0,
+        hexPrice: 0,
+        isLoading: false,
+        error: null
+      };
+    }
+    
+    console.log(`Fetching HEX stakes for ${walletAddresses.length} wallets...`);
+    
+    // Fetch HEX price once to use for all wallets
+    let hexPrice = 0.00004; // Default fallback
+    try {
+      const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
+      const priceData = await response.json();
+      
+      if (priceData && priceData.usdPrice) {
+        hexPrice = priceData.usdPrice;
+      } else if (priceData && priceData.price) {
+        hexPrice = priceData.price;
+      }
+      
+      console.log('HEX price for combined stakes:', hexPrice);
+    } catch (error) {
+      console.error('Error fetching HEX price for combined stakes:', error);
+    }
+    
+    // Fetch data for all wallets in parallel
+    const stakePromises = walletAddresses.map(address => 
+      fetchHexStakesSummary(address)
+        .catch(error => {
+          console.error(`Error fetching HEX stakes for ${address}:`, error);
+          return null;
+        })
+    );
+    
+    // Wait for all requests to finish
+    const stakesResults = await Promise.all(stakePromises);
+    
+    // Filter out null results and combine data
+    const validResults = stakesResults.filter(result => result !== null) as HexStakeSummary[];
+    
+    if (validResults.length === 0) {
+      return {
+        totalStakedHex: '0',
+        totalInterestHex: '0',
+        totalCombinedHex: '0',
+        totalStakeValueUsd: 0,
+        totalInterestValueUsd: 0,
+        totalCombinedValueUsd: 0,
+        stakeCount: 0,
+        hexPrice,
+        isLoading: false,
+        error: 'Failed to fetch HEX stakes for any of the provided wallets'
+      };
+    }
+    
+    // Combine the data
+    let totalStakedHex = 0;
+    let totalInterestHex = 0;
+    let totalStakeCount = 0;
+    
+    validResults.forEach(result => {
+      totalStakedHex += parseFloat(result.totalStakedHex);
+      totalInterestHex += parseFloat(result.totalInterestHex);
+      totalStakeCount += result.stakeCount;
+    });
+    
+    // Calculate total combined
+    const totalCombinedHex = totalStakedHex + totalInterestHex;
+    
+    // Calculate USD values
+    const totalStakeValueUsd = totalStakedHex * hexPrice;
+    const totalInterestValueUsd = totalInterestHex * hexPrice;
+    const totalCombinedValueUsd = totalCombinedHex * hexPrice;
+    
+    console.log(`Combined HEX stakes: ${totalStakedHex.toFixed(2)} HEX, interest: ${totalInterestHex.toFixed(2)} HEX`);
+    
+    return {
+      totalStakedHex: totalStakedHex.toFixed(2),
+      totalInterestHex: totalInterestHex.toFixed(2),
+      totalCombinedHex: totalCombinedHex.toFixed(2),
+      totalStakeValueUsd,
+      totalInterestValueUsd,
+      totalCombinedValueUsd,
+      stakeCount: totalStakeCount,
+      hexPrice,
+      isLoading: false,
+      error: null
+    };
+  } catch (err) {
+    console.error('Error in fetchCombinedHexStakes:', err);
+    return {
+      totalStakedHex: '0',
+      totalInterestHex: '0',
+      totalCombinedHex: '0',
+      totalStakeValueUsd: 0,
+      totalInterestValueUsd: 0,
+      totalCombinedValueUsd: 0,
+      stakeCount: 0,
+      hexPrice: 0,
+      isLoading: false,
+      error: 'Failed to fetch combined HEX stakes data'
+    };
+  }
+}
+
 export function useHexStakes(walletAddress: string | undefined) {
   const [summary, setSummary] = useState<HexStakeSummary>({
     totalStakedHex: '0',

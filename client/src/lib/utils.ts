@@ -160,6 +160,7 @@ export function combineWalletData(wallets: Record<string, any>): any {
   const tokenMap: Record<string, any> = {};
   let totalValue = 0;
   const walletAddresses = Object.keys(wallets);
+  let totalLpTokens = 0;
   
   // Iterate through each wallet
   Object.values(wallets).forEach(wallet => {
@@ -169,6 +170,11 @@ export function combineWalletData(wallets: Record<string, any>): any {
     // Process each token
     wallet.tokens.forEach((token: any) => {
       const tokenAddress = token.address.toLowerCase();
+      
+      // Count LP tokens
+      if (token.isLp) {
+        totalLpTokens++;
+      }
       
       if (tokenMap[tokenAddress]) {
         // If token already exists in our map, combine the values
@@ -188,6 +194,31 @@ export function combineWalletData(wallets: Record<string, any>): any {
           balanceFormatted: newBalanceFormatted,
           value: newValue
         };
+        
+        // For LP tokens, also combine the underlying token values
+        if (token.isLp) {
+          // Combine LP token0 data
+          if (token.lpToken0Balance && token.lpToken0BalanceFormatted) {
+            const newToken0Balance = BigInt(existingToken.lpToken0Balance || '0') + BigInt(token.lpToken0Balance || '0');
+            const newToken0BalanceFormatted = (existingToken.lpToken0BalanceFormatted || 0) + (token.lpToken0BalanceFormatted || 0);
+            const newToken0Value = (existingToken.lpToken0Value || 0) + (token.lpToken0Value || 0);
+            
+            tokenMap[tokenAddress].lpToken0Balance = newToken0Balance.toString();
+            tokenMap[tokenAddress].lpToken0BalanceFormatted = newToken0BalanceFormatted;
+            tokenMap[tokenAddress].lpToken0Value = newToken0Value;
+          }
+          
+          // Combine LP token1 data
+          if (token.lpToken1Balance && token.lpToken1BalanceFormatted) {
+            const newToken1Balance = BigInt(existingToken.lpToken1Balance || '0') + BigInt(token.lpToken1Balance || '0');
+            const newToken1BalanceFormatted = (existingToken.lpToken1BalanceFormatted || 0) + (token.lpToken1BalanceFormatted || 0);
+            const newToken1Value = (existingToken.lpToken1Value || 0) + (token.lpToken1Value || 0);
+            
+            tokenMap[tokenAddress].lpToken1Balance = newToken1Balance.toString();
+            tokenMap[tokenAddress].lpToken1BalanceFormatted = newToken1BalanceFormatted;
+            tokenMap[tokenAddress].lpToken1Value = newToken1Value;
+          }
+        }
       } else {
         // If token doesn't exist yet, add it to the map
         tokenMap[tokenAddress] = { ...token };
@@ -206,7 +237,8 @@ export function combineWalletData(wallets: Record<string, any>): any {
     tokenCount: combinedTokens.length,
     plsBalance: 0, // Will be calculated below
     plsPriceChange: 0, // Use the value from the first wallet that has it
-    networkCount: 1 // Always 1 for PulseChain
+    networkCount: 1, // Always 1 for PulseChain
+    lpTokenCount: totalLpTokens // Add LP token count
   };
   
   // Find the PLS balance from all wallets
