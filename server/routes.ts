@@ -110,6 +110,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // API route to get ALL wallet tokens without pagination
+  // Batch API for fetching multiple wallets at once
+  app.post("/api/wallets/batch", async (req, res) => {
+    try {
+      const { addresses } = req.body;
+      
+      if (!Array.isArray(addresses)) {
+        return res.status(400).json({ message: "addresses must be an array" });
+      }
+      
+      // Limit batch size for performance reasons
+      const MAX_BATCH_SIZE = 10;
+      let addressesToProcess = addresses;
+      
+      if (addresses.length > MAX_BATCH_SIZE) {
+        console.log(`Batch size ${addresses.length} exceeds maximum (${MAX_BATCH_SIZE}). Processing first ${MAX_BATCH_SIZE} addresses.`);
+        addressesToProcess = addresses.slice(0, MAX_BATCH_SIZE);
+      }
+      
+      // Validate addresses
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      const validAddresses = addressesToProcess.filter(addr => 
+        typeof addr === 'string' && addressRegex.test(addr)
+      );
+      
+      if (validAddresses.length === 0) {
+        return res.status(400).json({ message: "No valid wallet addresses provided" });
+      }
+      
+      console.log(`Fetching data for ${validAddresses.length} wallets:`, validAddresses);
+      
+      // Process each wallet in parallel
+      const results: Record<string, any> = {};
+      
+      await Promise.all(validAddresses.map(async (address) => {
+        try {
+          const walletData = await getWalletData(address, 1, 1000);
+          results[address.toLowerCase()] = walletData;
+        } catch (error) {
+          console.error(`Error fetching data for wallet ${address}:`, error);
+          results[address.toLowerCase()] = { error: error instanceof Error ? error.message : "Unknown error" };
+        }
+      }));
+      
+      return res.json(results);
+    } catch (error) {
+      console.error("Error in batch wallet fetch:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch wallet data in batch",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   app.get("/api/wallet/:address/all", async (req, res) => {
     try {
       const { address } = req.params;

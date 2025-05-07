@@ -483,6 +483,44 @@ export async function updateUserProfile(userId: number, profileData: Partial<{
  * @param tokenAddress Token contract address to look up
  * @returns Token data including balance and price if available
  */
+/**
+ * Fetch data for multiple wallet addresses at once
+ * @param addresses - Array of wallet addresses to fetch data for
+ * @returns Object mapping addresses to their wallet data
+ */
+export async function fetchWalletsBatch(addresses: string[]): Promise<Record<string, Wallet>> {
+  try {
+    // Validate addresses
+    const validAddresses = addresses.filter(
+      address => typeof address === 'string' && address.match(/^0x[a-fA-F0-9]{40}$/)
+    );
+    
+    if (validAddresses.length === 0) {
+      throw new Error('No valid wallet addresses provided');
+    }
+    
+    console.log(`Fetching data for ${validAddresses.length} wallets in batch`);
+    
+    const response = await fetch('/api/wallets/batch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ addresses: validAddresses }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch wallet data in batch');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching wallets in batch:', error);
+    throw error;
+  }
+}
+
 export async function fetchSpecificToken(
   walletAddress: string,
   tokenAddress: string

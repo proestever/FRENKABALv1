@@ -4,23 +4,44 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getRecentAddresses } from '@/lib/api';
 import { truncateAddress } from '@/lib/utils';
-import { Search } from 'lucide-react';
+import { Search, Info } from 'lucide-react';
 import { FrenKabalLogo } from '@/components/frenklabal-logo';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SearchSectionProps {
   onSearch: (address: string) => void;
+  onMultiSearch?: (addresses: string[]) => void;
   isLoading: boolean;
   hasSearched?: boolean;
 }
 
-export function SearchSection({ onSearch, isLoading, hasSearched = false }: SearchSectionProps) {
+export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched = false }: SearchSectionProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const recentAddresses = getRecentAddresses();
 
   const handleSearch = () => {
-    const trimmedAddress = searchQuery.trim();
-    if (trimmedAddress) {
-      onSearch(trimmedAddress);
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) return;
+    
+    // Check if the input contains commas, which indicates multiple addresses
+    if (trimmedQuery.includes(',') && onMultiSearch) {
+      // Split by comma, trim each address, and filter out empty strings
+      const addresses = trimmedQuery
+        .split(',')
+        .map(addr => addr.trim())
+        .filter(addr => addr.length > 0);
+      
+      if (addresses.length > 0) {
+        onMultiSearch(addresses);
+      }
+    } else {
+      // Single address search
+      onSearch(trimmedQuery);
     }
   };
 
