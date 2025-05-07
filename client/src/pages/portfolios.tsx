@@ -61,8 +61,11 @@ const PortfoliosPage = () => {
     queryKey: ['portfolios', userId],
     queryFn: async () => {
       if (!userId) return [];
-      const response = await apiRequest(`/api/users/${userId}/portfolios`);
-      return response as Portfolio[];
+      const response = await apiRequest({
+        url: `/api/users/${userId}/portfolios`,
+        method: 'GET'
+      });
+      return await response.json() as Portfolio[];
     },
     enabled: !!userId,
   });
@@ -72,8 +75,11 @@ const PortfoliosPage = () => {
     queryKey: ['portfolioAddresses', selectedPortfolio?.id],
     queryFn: async () => {
       if (!selectedPortfolio?.id) return [];
-      const response = await apiRequest(`/api/portfolios/${selectedPortfolio.id}/addresses`);
-      return response as PortfolioAddress[];
+      const response = await apiRequest({
+        url: `/api/portfolios/${selectedPortfolio.id}/addresses`,
+        method: 'GET'
+      });
+      return await response.json() as PortfolioAddress[];
     },
     enabled: !!selectedPortfolio?.id,
   });
@@ -86,7 +92,11 @@ const PortfoliosPage = () => {
         name: newPortfolioName,
         description: newPortfolioDescription || null,
       };
-      return apiRequest('/api/portfolios', { method: 'POST', data } as any);
+      return apiRequest({ 
+        url: '/api/portfolios', 
+        method: 'POST', 
+        data 
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['portfolios', userId] });
@@ -111,7 +121,10 @@ const PortfoliosPage = () => {
   // Delete portfolio mutation
   const deletePortfolioMutation = useMutation({
     mutationFn: async (portfolioId: number) => {
-      return apiRequest(`/api/portfolios/${portfolioId}`, { method: 'DELETE' } as any);
+      return apiRequest({ 
+        url: `/api/portfolios/${portfolioId}`, 
+        method: 'DELETE' 
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['portfolios', userId] });
@@ -140,10 +153,11 @@ const PortfoliosPage = () => {
         label: newAddressLabel || null,
       };
       
-      return apiRequest(`/api/portfolios/${selectedPortfolio.id}/addresses`, { 
+      return apiRequest({ 
+        url: `/api/portfolios/${selectedPortfolio.id}/addresses`,
         method: 'POST', 
         data 
-      } as any);
+      });
     },
     onSuccess: () => {
       if (!selectedPortfolio) return;
@@ -174,7 +188,10 @@ const PortfoliosPage = () => {
   // Remove address from portfolio mutation
   const removeAddressMutation = useMutation({
     mutationFn: async (addressId: number) => {
-      return apiRequest(`/api/portfolio-addresses/${addressId}`, { method: 'DELETE' } as any);
+      return apiRequest({
+        url: `/api/portfolio-addresses/${addressId}`,
+        method: 'DELETE'
+      });
     },
     onSuccess: () => {
       if (!selectedPortfolio) return;
