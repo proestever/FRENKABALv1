@@ -19,6 +19,8 @@ interface TokenListProps {
   isLoading: boolean;
   hasError: boolean;
   walletAddress?: string; // Optional wallet address
+  otherWalletAddresses?: string[]; // Additional wallet addresses for multi-wallet mode
+  isMultiWallet?: boolean; // Flag to indicate if we're in multi-wallet mode
   pagination?: {
     page: number;
     limit: number;
@@ -30,7 +32,16 @@ interface TokenListProps {
 
 type SortOption = 'value' | 'balance' | 'name' | 'price' | 'change';
 
-export function TokenList({ tokens, isLoading, hasError, walletAddress, pagination, onPageChange }: TokenListProps) {
+export function TokenList({ 
+  tokens, 
+  isLoading, 
+  hasError, 
+  walletAddress, 
+  otherWalletAddresses = [], 
+  isMultiWallet = false,
+  pagination, 
+  onPageChange 
+}: TokenListProps) {
   const [filterText, setFilterText] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('value');
   const [showHidden, setShowHidden] = useState(false);
@@ -310,7 +321,9 @@ export function TokenList({ tokens, isLoading, hasError, walletAddress, paginati
       ) : showHexStakes ? (
         <HexStakes 
           walletAddress={effectiveWalletAddress}
-          key={`hex-stakes-${effectiveWalletAddress}-${hexStakesKey}`} // Force remount on toggle
+          otherWalletAddresses={isMultiWallet ? otherWalletAddresses : []}
+          isMultiWallet={isMultiWallet}
+          key={`hex-stakes-${effectiveWalletAddress}-${hexStakesKey}-${isMultiWallet}`} // Force remount on toggle
         />
       ) : (
         <>

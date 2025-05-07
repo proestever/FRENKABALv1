@@ -436,6 +436,8 @@ export default function Home() {
                     isLoading={false} 
                     hasError={false}
                     walletAddress={combinedWallet.address}
+                    otherWalletAddresses={Object.keys(multiWalletData)}
+                    isMultiWallet={true}
                   />
                 </div>
               </div>
