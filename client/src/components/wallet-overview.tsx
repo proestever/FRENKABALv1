@@ -189,12 +189,15 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
         <div className="flex flex-col mb-6">
           <div className="mb-3">
             <h2 className="text-lg md:text-xl font-bold text-white flex items-center">
-              {wallet.address.startsWith("Combined") ? (
+              {wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:") ? (
                 <>
-                  {portfolioName ? `${portfolioName} Portfolio` : "Combined Wallet Overview"}
+                  {portfolioName ? `${portfolioName} Portfolio` : 
+                   wallet.address.startsWith("Portfolio:") ? wallet.address.replace("Portfolio:", "") + " Portfolio" : 
+                   "Combined Wallet Overview"}
                   <span className="ml-2 flex items-center">
                     <span className="text-green-400 font-bold text-lg md:text-xl ml-2">
-                      {!portfolioName && wallet.address.includes("(") ? wallet.address.split("(")[1].replace(")", "") : ""}
+                      {!portfolioName && !wallet.address.startsWith("Portfolio:") && wallet.address.includes("(") ? 
+                        wallet.address.split("(")[1].replace(")", "") : ""}
                     </span>
                   </span>
                 </>
@@ -268,26 +271,33 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
           {/* Total Value Card - Now first */}
           <div className="glass-card rounded-lg p-4 border-white/15">
             <div className="text-sm text-muted-foreground mb-1">
-              {wallet.address.startsWith("Combined") ? "Combined Total Value" : "Total Value (Including HEX Stakes)"}
+              {wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:") ? 
+                "Combined Total Value" : "Total Value (Including HEX Stakes)"}
             </div>
             <div className="text-xl md:text-2xl font-bold text-white">
               {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
-              {wallet.address.startsWith("Combined") && (
+              {(wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:")) && (
                 <div className="text-sm text-purple-300 font-normal">
-                  Including tokens and HEX stakes from {wallet.address.includes("(") ? wallet.address.split("(")[1].replace(")", "") : "all wallets"}
+                  Including tokens and HEX stakes from {
+                    wallet.address.startsWith("Portfolio:") ? 
+                      "all wallets in portfolio" : 
+                      wallet.address.includes("(") ? 
+                        wallet.address.split("(")[1].replace(")", "") : 
+                        "all wallets"
+                  }
                 </div>
               )}
             </div>
             <div className="text-sm mt-2 flex items-center justify-between">
               <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
               {/* Show HEX stakes value for combined wallet view */}
-              {wallet.address.startsWith("Combined") && hexStakesSummary && hexStakesSummary.totalCombinedValueUsd > 0 && (
+              {(wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:")) && hexStakesSummary && hexStakesSummary.totalCombinedValueUsd > 0 && (
                 <span className="text-xs text-muted-foreground">
                   Includes <span className="text-purple-300 font-medium">{formatCurrency(hexStakesSummary.totalCombinedValueUsd)}</span> in HEX stakes
                 </span>
               )}
               {/* Show HEX stakes value for single wallet view */}
-              {!wallet.address.startsWith("Combined") && hexStakesFromHook && hexStakesFromHook.totalCombinedValueUsd > 0 && (
+              {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && hexStakesFromHook && hexStakesFromHook.totalCombinedValueUsd > 0 && (
                 <span className="text-xs text-muted-foreground">
                   Includes <span className="text-purple-300 font-medium">{formatCurrency(hexStakesFromHook.totalCombinedValueUsd)}</span> in HEX stakes
                 </span>
@@ -310,9 +320,15 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                 `${formatTokenAmount(wallet.plsBalance)} PLS` : 
                 'N/A'
               }
-              {wallet.address.startsWith("Combined") && (
+              {(wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:")) && (
                 <span className="text-sm ml-2 text-purple-300">
-                  (Combined from {wallet.address.includes("(") ? wallet.address.split("(")[1].replace(")", "") : "all wallets"})
+                  (Combined from {
+                    wallet.address.startsWith("Portfolio:") ? 
+                      "all portfolio wallets" : 
+                      wallet.address.includes("(") ? 
+                        wallet.address.split("(")[1].replace(")", "") : 
+                        "all wallets"
+                  })
                 </span>
               )}
             </div>
@@ -338,7 +354,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                   size="sm"
                 />
                 <div className="text-sm text-muted-foreground ml-2">
-                  {wallet.address.startsWith("Combined") ? "Combined HEX Stakes" : "HEX Stakes"}
+                  {wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:") ? "Combined HEX Stakes" : "HEX Stakes"}
                 </div>
                 <div className="flex items-center ml-auto">
                   <Zap size={16} className="text-purple-300 mr-1" />

@@ -392,6 +392,11 @@ export default function Home() {
             // Generate the combined wallet data
             const combinedWallet = combineWalletData(multiWalletData);
             
+            // Override the address property with portfolio name if available
+            if (portfolioName) {
+              combinedWallet.address = `Portfolio:${portfolioName}`;
+            }
+            
             // Add HEX stakes value to total wallet value if available
             if (multiWalletHexStakes && multiWalletHexStakes.totalCombinedValueUsd) {
               combinedWallet.totalValue += multiWalletHexStakes.totalCombinedValueUsd;
@@ -403,6 +408,12 @@ export default function Home() {
               <div className="flex flex-col lg:flex-row gap-6">
                 {/* Left column - Combined Wallet Overview */}
                 <div className="w-full lg:w-1/3 flex flex-col gap-6">
+                  {/* Debug portfolio name - remove in production */}
+                  {portfolioName && (
+                    <div className="mb-2 p-2 bg-purple-500/20 border border-purple-500/40 rounded text-xs">
+                      Debug: Portfolio name = "{portfolioName}"
+                    </div>
+                  )}
                   <WalletOverview 
                     wallet={combinedWallet} 
                     isLoading={false}
