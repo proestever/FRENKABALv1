@@ -173,9 +173,22 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary 
         <div className="flex flex-col mb-6">
           <div className="mb-3">
             <h2 className="text-lg md:text-xl font-bold text-white flex items-center">
-              Wallet Overview
-              {existingBookmark && existingBookmark.label && (
-                <span className="ml-2 flex items-center"><span className="text-green-400 font-bold text-lg md:text-xl ml-2">{existingBookmark.label}</span></span>
+              {wallet.address.startsWith("Combined") ? (
+                <>
+                  Combined Wallet Overview
+                  <span className="ml-2 flex items-center">
+                    <span className="text-green-400 font-bold text-lg md:text-xl ml-2">
+                      {wallet.address.includes("(") ? wallet.address.split("(")[1].replace(")", "") : ""}
+                    </span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  Wallet Overview
+                  {existingBookmark && existingBookmark.label && (
+                    <span className="ml-2 flex items-center"><span className="text-green-400 font-bold text-lg md:text-xl ml-2">{existingBookmark.label}</span></span>
+                  )}
+                </>
               )}
             </h2>
             <div className="flex items-center mt-1 max-w-full overflow-hidden">
@@ -238,9 +251,16 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary 
         <div className="space-y-4">
           {/* Total Value Card - Now first */}
           <div className="glass-card rounded-lg p-4 border-white/15">
-            <div className="text-sm text-muted-foreground mb-1">Total Value (Visible)</div>
+            <div className="text-sm text-muted-foreground mb-1">
+              {wallet.address.startsWith("Combined") ? "Combined Total Value" : "Total Value (Visible)"}
+            </div>
             <div className="text-xl md:text-2xl font-bold text-white">
               {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
+              {wallet.address.startsWith("Combined") && (
+                <div className="text-sm text-purple-300 font-normal">
+                  All tokens from {wallet.address.includes("(") ? wallet.address.split("(")[1].replace(")", "") : "all wallets"}
+                </div>
+              )}
             </div>
             <div className="text-sm mt-2 flex items-center">
               <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
@@ -262,6 +282,11 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary 
                 `${formatTokenAmount(wallet.plsBalance)} PLS` : 
                 'N/A'
               }
+              {wallet.address.startsWith("Combined") && (
+                <span className="text-sm ml-2 text-purple-300">
+                  (Combined from {wallet.address.includes("(") ? wallet.address.split("(")[1].replace(")", "") : "all wallets"})
+                </span>
+              )}
             </div>
             {wallet.plsPriceChange !== null && wallet.plsPriceChange !== undefined && (
               <div className="text-sm mt-2 flex items-center">
@@ -284,7 +309,9 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary 
                   symbol="HEX"
                   size="sm"
                 />
-                <div className="text-sm text-muted-foreground ml-2">HEX Stakes</div>
+                <div className="text-sm text-muted-foreground ml-2">
+                  {wallet.address.startsWith("Combined") ? "Combined HEX Stakes" : "HEX Stakes"}
+                </div>
                 <div className="flex items-center ml-auto">
                   <Zap size={16} className="text-purple-300 mr-1" />
                   <span className="text-xs text-purple-300">PulseChain</span>

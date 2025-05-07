@@ -245,6 +245,7 @@ export function combineWalletData(wallets: Record<string, any>): any {
   const plsToken = combinedTokens.find((t: any) => t.isNative === true || t.symbol === 'PLS');
   if (plsToken) {
     combinedWallet.plsBalance = plsToken.balanceFormatted || 0;
+    console.log('Combined PLS balance:', combinedWallet.plsBalance);
     
     // Get the price change from any PLS token (they should all have the same price change)
     const firstWalletWithPls = Object.values(wallets).find((wallet: any) => 
@@ -258,6 +259,8 @@ export function combineWalletData(wallets: Record<string, any>): any {
       }
     }
   }
+  
+  console.log('Combined wallet total value:', totalValue);
   
   return combinedWallet;
 }
