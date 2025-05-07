@@ -4,14 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getRecentAddresses } from '@/lib/api';
 import { truncateAddress } from '@/lib/utils';
-import { Info } from 'lucide-react';
 import { FrenKabalLogo } from '@/components/frenklabal-logo';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface SearchSectionProps {
   onSearch: (address: string) => void;
@@ -56,26 +49,6 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
     onSearch(address);
   };
 
-  // Multi-search tooltip element
-  const MultiSearchTooltip = () => (
-    <div className="flex items-center mb-2">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground cursor-help">
-              <Info className="h-3 w-3" />
-              <span>Search multiple addresses</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <p>Enter multiple wallet addresses separated by commas to view their tokens at once.</p>
-            <p className="mt-1 text-xs opacity-70">Example: 0x123..., 0x456..., 0x789...</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
-  );
-
   // Different search bar layout based on whether a search has been performed
   if (!hasSearched) {
     // Initial layout with logo centered and narrow search card
@@ -87,7 +60,6 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
         <Card className="shadow-lg glass-card max-w-md w-full mx-auto border border-white/30 card-glitter">
           <CardContent className="pt-8 pb-8 px-6">
             <div>
-              <MultiSearchTooltip />
               <div className="flex gap-3">
                 <Input
                   type="text"
@@ -139,7 +111,6 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
         <Card className="shadow-lg glass-card w-full mx-auto border border-white/20">
           <CardContent className="py-4 px-6">
             <div>
-              <MultiSearchTooltip />
               <div className="flex gap-3">
                 <Input
                   type="text"
