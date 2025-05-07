@@ -83,8 +83,12 @@ interface HexStakesProps {
   onClose?: () => void;
 }
 
+type SortOption = 'newest' | 'oldest' | 'amount-desc' | 'amount-asc' | 'end-date' | 'progress';
+
 export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
   const [stakes, setStakes] = useState<HexStake[]>([]);
+  const [sortedStakes, setSortedStakes] = useState<HexStake[]>([]);
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalHexStaked, setTotalHexStaked] = useState('0');
@@ -305,6 +309,46 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
     });
   };
   
+  // Effect to sort stakes whenever sort criteria or stakes change
+  useEffect(() => {
+    if (!stakes.length) {
+      setSortedStakes([]);
+      return;
+    }
+
+    const sortStakes = () => {
+      const newSortedStakes = [...stakes];
+      
+      switch (sortBy) {
+        case 'newest':
+          newSortedStakes.sort((a, b) => new Date(b.lockDate).getTime() - new Date(a.lockDate).getTime());
+          break;
+        case 'oldest':
+          newSortedStakes.sort((a, b) => new Date(a.lockDate).getTime() - new Date(b.lockDate).getTime());
+          break;
+        case 'amount-desc':
+          newSortedStakes.sort((a, b) => parseFloat(b.hexAmount) - parseFloat(a.hexAmount));
+          break;
+        case 'amount-asc':
+          newSortedStakes.sort((a, b) => parseFloat(a.hexAmount) - parseFloat(b.hexAmount));
+          break;
+        case 'end-date':
+          newSortedStakes.sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+          break;
+        case 'progress':
+          newSortedStakes.sort((a, b) => b.progressPercentage - a.progressPercentage);
+          break;
+        default:
+          // Default to newest stakes first
+          newSortedStakes.sort((a, b) => new Date(b.lockDate).getTime() - new Date(a.lockDate).getTime());
+      }
+      
+      return newSortedStakes;
+    };
+    
+    setSortedStakes(sortStakes());
+  }, [stakes, sortBy]);
+
   // No network switching needed, we're only focusing on PulseChain now
   
   if (isLoading) {
@@ -376,9 +420,68 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         </div>
       </div>
       
+      {/* Sorting Controls */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="text-sm text-white/70">
+          Sort by:
+        </div>
+        <div className="flex flex-wrap gap-2 justify-end">
+          <button 
+            onClick={() => setSortBy('newest')}
+            className={`px-3 py-1 rounded-md text-xs ${
+              sortBy === 'newest' 
+                ? 'bg-pink-600/30 text-orange-300 border border-pink-600/40 font-semibold' 
+                : 'bg-black/20 text-white/70 border border-white/10 hover:border-white/30'
+            }`}
+          >
+            Newest First
+          </button>
+          <button 
+            onClick={() => setSortBy('oldest')}
+            className={`px-3 py-1 rounded-md text-xs ${
+              sortBy === 'oldest' 
+                ? 'bg-pink-600/30 text-orange-300 border border-pink-600/40 font-semibold' 
+                : 'bg-black/20 text-white/70 border border-white/10 hover:border-white/30'
+            }`}
+          >
+            Oldest First
+          </button>
+          <button 
+            onClick={() => setSortBy('amount-desc')}
+            className={`px-3 py-1 rounded-md text-xs ${
+              sortBy === 'amount-desc' 
+                ? 'bg-pink-600/30 text-orange-300 border border-pink-600/40 font-semibold' 
+                : 'bg-black/20 text-white/70 border border-white/10 hover:border-white/30'
+            }`}
+          >
+            Largest Amount
+          </button>
+          <button 
+            onClick={() => setSortBy('end-date')}
+            className={`px-3 py-1 rounded-md text-xs ${
+              sortBy === 'end-date' 
+                ? 'bg-pink-600/30 text-orange-300 border border-pink-600/40 font-semibold' 
+                : 'bg-black/20 text-white/70 border border-white/10 hover:border-white/30'
+            }`}
+          >
+            End Date (Earliest)
+          </button>
+          <button 
+            onClick={() => setSortBy('progress')}
+            className={`px-3 py-1 rounded-md text-xs ${
+              sortBy === 'progress' 
+                ? 'bg-pink-600/30 text-orange-300 border border-pink-600/40 font-semibold' 
+                : 'bg-black/20 text-white/70 border border-white/10 hover:border-white/30'
+            }`}
+          >
+            Progress
+          </button>
+        </div>
+      </div>
+      
       {/* Stakes List */}
       <div className="space-y-4">
-        {stakes.map((stake, index) => (
+        {sortedStakes.map((stake, index) => (
           <Card key={`stake-${stake.stakeId}-${index}`} className="p-4 border-white/10 glass-card stake-item">
             <div className="flex flex-col md:flex-row gap-4">
               {/* Left side - Stake Details */}
