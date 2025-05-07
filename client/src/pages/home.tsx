@@ -353,33 +353,58 @@ export default function Home() {
                     </h3>
                     
                     <div className="space-y-3">
-                      {Object.entries(multiWalletData).map(([address, wallet]) => (
-                        <div key={address} className="border border-white/10 rounded-md p-3">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="text-sm font-medium truncate max-w-[160px]">
-                              {address}
-                            </h4>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-7 px-2 py-0 text-xs" 
-                              onClick={() => handleSearch(address)}
-                            >
-                              Details
-                            </Button>
+                      {Object.entries(multiWalletData).map(([address, wallet]) => {
+                        // Find if we have HEX stakes for this wallet
+                        const walletHexStakes = individualWalletHexStakes[address];
+                        
+                        // Calculate total value including HEX stakes
+                        let totalValue = wallet.totalValue || 0;
+                        let hexStakeValue = 0;
+                        
+                        if (walletHexStakes && walletHexStakes.totalCombinedValueUsd) {
+                          hexStakeValue = walletHexStakes.totalCombinedValueUsd;
+                          totalValue += hexStakeValue;
+                          console.log(`Added ${hexStakeValue} in HEX stakes to wallet ${address}`);
+                        }
+                        
+                        return (
+                          <div key={address} className="border border-white/10 rounded-md p-3">
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="text-sm font-medium truncate max-w-[160px]">
+                                {address}
+                              </h4>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 px-2 py-0 text-xs" 
+                                onClick={() => handleSearch(address)}
+                              >
+                                Details
+                              </Button>
+                            </div>
+                            
+                            <div className="text-xs mb-1">
+                              <span className="opacity-70">Value (with HEX Stakes):</span>{' '}
+                              ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {hexStakeValue > 0 && (
+                                <span className="text-xs text-purple-300 ml-1">
+                                  (includes ${hexStakeValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} in HEX stakes)
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="text-xs">
+                              <span className="opacity-70">Tokens:</span>{' '}
+                              {wallet.tokenCount}
+                              {walletHexStakes && walletHexStakes.stakeCount > 0 && (
+                                <span className="text-purple-300 ml-2">
+                                  + {walletHexStakes.stakeCount} HEX {walletHexStakes.stakeCount === 1 ? 'stake' : 'stakes'}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          
-                          <div className="text-xs mb-1">
-                            <span className="opacity-70">Value:</span>{' '}
-                            ${(wallet.totalValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                          
-                          <div className="text-xs">
-                            <span className="opacity-70">Tokens:</span>{' '}
-                            {wallet.tokenCount}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
