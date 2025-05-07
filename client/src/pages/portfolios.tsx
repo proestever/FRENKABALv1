@@ -286,124 +286,144 @@ const PortfoliosPage = () => {
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
         </div>
       ) : portfolios && portfolios.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="w-full">
           {portfolios.map((portfolio) => (
-            <Card key={portfolio.id} className="flex flex-col">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle>{portfolio.name}</CardTitle>
-                  <div className="flex space-x-2">
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => {
-                        setSelectedPortfolio(portfolio);
-                        setIsAddressDialogOpen(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => {
-                        if (confirm('Are you sure you want to delete this portfolio?')) {
-                          deletePortfolioMutation.mutate(portfolio.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-                {portfolio.description && (
-                  <CardDescription>{portfolio.description}</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent className="flex-grow flex flex-col">
-                <div className="text-sm text-muted-foreground mb-2">
-                  Created {new Date(portfolio.createdAt).toLocaleDateString()}
-                </div>
-                
-                <div className="mt-4 space-y-2">
-                  <Button 
-                    className="w-full"
-                    variant="secondary"
-                    onClick={() => {
-                      if (selectedPortfolio?.id === portfolio.id) {
-                        setSelectedPortfolio(null);
-                      } else {
-                        setSelectedPortfolio(portfolio);
-                        // Also load the addresses
-                        queryClient.prefetchQuery({
-                          queryKey: ['portfolioAddresses', portfolio.id],
-                          queryFn: async () => {
-                            const response = await apiRequest({
-                              url: `/api/portfolios/${portfolio.id}/addresses`,
-                              method: 'GET'
+            <div key={portfolio.id} className="mb-6">
+              <Card className="w-full">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                          if (selectedPortfolio?.id === portfolio.id) {
+                            setSelectedPortfolio(null);
+                          } else {
+                            setSelectedPortfolio(portfolio);
+                            // Also load the addresses
+                            queryClient.prefetchQuery({
+                              queryKey: ['portfolioAddresses', portfolio.id],
+                              queryFn: async () => {
+                                const response = await apiRequest({
+                                  url: `/api/portfolios/${portfolio.id}/addresses`,
+                                  method: 'GET'
+                                });
+                                return await response.json() as PortfolioAddress[];
+                              }
                             });
-                            return await response.json() as PortfolioAddress[];
                           }
-                        });
-                      }
-                    }}
-                  >
-                    {selectedPortfolio?.id === portfolio.id ? 'Hide Addresses' : 'Show Addresses'}
-                  </Button>
-                  
-                  <Button 
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setSelectedPortfolio(portfolio);
-                      handlePortfolioSearch(portfolio.id);
-                    }}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Search Portfolio
-                  </Button>
-                </div>
+                        }}
+                      >
+                        {selectedPortfolio?.id === portfolio.id ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        )}
+                      </Button>
+                      <div>
+                        <CardTitle className="text-lg">{portfolio.name}</CardTitle>
+                        {portfolio.description && (
+                          <CardDescription className="text-xs">{portfolio.description}</CardDescription>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-muted-foreground mr-2">
+                        Created {new Date(portfolio.createdAt).toLocaleDateString()}
+                      </div>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPortfolio(portfolio);
+                          handlePortfolioSearch(portfolio.id);
+                        }}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        Search
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPortfolio(portfolio);
+                          setIsAddressDialogOpen(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this portfolio?')) {
+                            deletePortfolioMutation.mutate(portfolio.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
                 
                 {selectedPortfolio?.id === portfolio.id && (
-                  <div className="mt-4">
-                    <Separator className="my-2" />
-                    <div className="font-medium text-sm mb-2">Portfolio Addresses</div>
-                    
-                    {portfolioAddresses && portfolioAddresses.length > 0 ? (
-                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                        {portfolioAddresses.map((address) => (
-                          <div key={address.id} className="flex items-center justify-between p-2 text-xs border rounded">
-                            <div className="flex flex-col">
-                              <div className="font-medium truncate max-w-[150px]">
-                                {address.walletAddress}
-                              </div>
-                              {address.label && (
-                                <Badge variant="outline" className="mt-1 text-xs">
-                                  {address.label}
-                                </Badge>
-                              )}
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => removeAddressMutation.mutate(address.id)}
-                              disabled={removeAddressMutation.isPending}
-                            >
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground py-2">
-                        No addresses added yet. Click the + button above to add wallet addresses.
-                      </div>
-                    )}
-                  </div>
+                  <CardContent>
+                    <div className="mt-2">
+                      {portfolioAddresses && portfolioAddresses.length > 0 ? (
+                        <div className="w-full border rounded-md overflow-hidden">
+                          <table className="w-full table-auto">
+                            <thead>
+                              <tr className="bg-muted">
+                                <th className="text-left py-2 px-4 text-sm font-medium">Wallet Address</th>
+                                <th className="text-left py-2 px-4 text-sm font-medium">Label</th>
+                                <th className="text-right py-2 px-4 text-sm font-medium">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {portfolioAddresses.map((address) => (
+                                <tr key={address.id} className="border-t hover:bg-muted/50">
+                                  <td className="py-2 px-4 text-sm font-mono">
+                                    {address.walletAddress}
+                                  </td>
+                                  <td className="py-2 px-4 text-sm">
+                                    {address.label ? (
+                                      <Badge variant="outline" className="font-normal">
+                                        {address.label}
+                                      </Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">—</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-4 text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeAddressMutation.mutate(address.id)}
+                                      disabled={removeAddressMutation.isPending}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground py-4 text-center border rounded-md">
+                          No addresses added yet. Click the "Add" button to add wallet addresses.
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
                 )}
-              </CardContent>
-            </Card>
+              </Card>
+            </div>
           ))}
         </div>
       ) : (
