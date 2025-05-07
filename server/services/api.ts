@@ -15,6 +15,61 @@ import { updateLoadingProgress } from '../routes';
 import { processLpTokens } from './lp-token-service';
 import { cacheService } from './cache-service';
 
+// API call counter for monitoring and debugging
+interface ApiCallCounter {
+  total: number;
+  byWallet: Record<string, number>;
+  byEndpoint: Record<string, number>;
+  lastReset: number;
+}
+
+// Initialize the counter
+const apiCallCounter: ApiCallCounter = {
+  total: 0,
+  byWallet: {},
+  byEndpoint: {},
+  lastReset: Date.now()
+};
+
+// Helper function to track API calls
+function trackApiCall(walletAddress: string | null, endpoint: string): void {
+  // Increment total count
+  apiCallCounter.total++;
+  
+  // Track by endpoint
+  if (!apiCallCounter.byEndpoint[endpoint]) {
+    apiCallCounter.byEndpoint[endpoint] = 0;
+  }
+  apiCallCounter.byEndpoint[endpoint]++;
+  
+  // Track by wallet if provided
+  if (walletAddress) {
+    const normalizedAddress = walletAddress.toLowerCase();
+    if (!apiCallCounter.byWallet[normalizedAddress]) {
+      apiCallCounter.byWallet[normalizedAddress] = 0;
+    }
+    apiCallCounter.byWallet[normalizedAddress]++;
+  }
+  
+  // Log the current state
+  console.log(`[API Counter] Total calls: ${apiCallCounter.total}, Endpoint: ${endpoint}, Wallet: ${walletAddress || 'n/a'}`);
+}
+
+// Function to reset counter
+export function resetApiCounter(): ApiCallCounter {
+  const result = { ...apiCallCounter };
+  apiCallCounter.total = 0;
+  apiCallCounter.byWallet = {};
+  apiCallCounter.byEndpoint = {};
+  apiCallCounter.lastReset = Date.now();
+  console.log('[API Counter] Reset completed');
+  return result;
+}
+
+// Function to get current counter state
+export function getApiCounterStats(): ApiCallCounter {
+  return { ...apiCallCounter };
+}
 // Initialize Moralis
 try {
   Moralis.start({
@@ -46,6 +101,8 @@ const IMPORTANT_TOKENS = [
  */
 export async function getNativePlsBalance(walletAddress: string): Promise<{balance: string, balanceFormatted: number} | null> {
   try {
+    // Track API call
+    trackApiCall(walletAddress, 'getNativePlsBalance');
     console.log(`Fetching native PLS balance for ${walletAddress} from Moralis API`);
     
     // Using direct Moralis API call with the correct endpoint
@@ -157,6 +214,8 @@ export async function getNativePlsBalance(walletAddress: string): Promise<{balan
  */
 export async function getTokenBalances(walletAddress: string): Promise<ProcessedToken[]> {
   try {
+    // Track API call
+    trackApiCall(walletAddress, 'getTokenBalances');
     console.log(`Fetching token balances for ${walletAddress} from PulseChain Scan API`);
     const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/token-balances`);
     
@@ -297,6 +356,8 @@ export async function getTokenBalances(walletAddress: string): Promise<Processed
  */
 export async function getSpecificTokenBalance(walletAddress: string, tokenAddress: string): Promise<ProcessedToken | null> {
   try {
+    // Track API call
+    trackApiCall(walletAddress, 'getSpecificTokenBalance');
     console.log(`Fetching specific token balance for ${tokenAddress} in wallet ${walletAddress}`);
     
     // Try using the Moralis SDK to get the token metadata and balance
@@ -358,6 +419,8 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
  */
 export async function getNativePlsPrice(): Promise<{price: number, priceChange24h: number} | null> {
   try {
+    // Track API call
+    trackApiCall(null, 'getNativePlsPrice');
     console.log(`Fetching native PLS price using wPLS contract: ${WPLS_CONTRACT_ADDRESS}`);
     
     // Using Moralis SDK to get wPLS token price with PulseChain's chain ID (369 or 0x171)
@@ -394,11 +457,14 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
   
   const normalizedAddress = tokenAddress.toLowerCase();
   
-  // Check cache first to avoid unnecessary API calls
+  // Check cache first to avoid unnecessary API calls and track API call if needed
   const cachedPrice = cacheService.getTokenPrice(normalizedAddress);
   if (cachedPrice) {
     return cachedPrice;
   }
+  
+  // If we got here, no cache hit, so track the API call
+  trackApiCall(null, 'getTokenPrice');
   
   // Handle special case for native PLS token (0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
   if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
@@ -508,6 +574,8 @@ function getDefaultLogo(symbol: string | null | undefined): string {
  */
 export async function getWalletTokenBalancesFromMoralis(walletAddress: string): Promise<any> {
   try {
+    // Track API call
+    trackApiCall(walletAddress, 'getWalletTokenBalancesFromMoralis');
     console.log(`Fetching wallet balances with price for ${walletAddress} from Moralis`);
     
     const response = await Moralis.EvmApi.wallets.getWalletTokenBalancesPrice({
@@ -578,11 +646,14 @@ export async function getWalletTransactionHistory(
   const normalizedAddress = walletAddress.toLowerCase();
   
   // Check cache first to avoid unnecessary API calls
-  const cachedTxData = cacheService.getTransactionData(normalizedAddress, limit, cursorParam);
-  if (cachedTxData) {
+  const cachedData = cacheService.getTransactionData(normalizedAddress, limit, cursorParam);
+  if (cachedData) {
     console.log(`Using cached transaction data for ${normalizedAddress} with cursor: ${cursorParam || 'null'}`);
-    return cachedTxData;
+    return cachedData;
   }
+  
+  // If we're here, we need to make an API call, so track it
+  trackApiCall(walletAddress, 'getWalletTransactionHistory');
   
   // Add retry logic - maximum 3 attempts with increasing delay
   const MAX_RETRIES = 3;
@@ -759,6 +830,9 @@ export async function getWalletTransactionHistory(
 export async function getWalletData(walletAddress: string, page: number = 1, limit: number = 100): Promise<WalletData> {
   // Normalize wallet address for consistent caching
   const normalizedAddress = walletAddress.toLowerCase();
+  
+  // Track this as the main wallet search API call
+  trackApiCall(walletAddress, 'getWalletData');
   
   // Check cache first to avoid unnecessary API calls
   const cachedWalletData = cacheService.getWalletData(normalizedAddress);
