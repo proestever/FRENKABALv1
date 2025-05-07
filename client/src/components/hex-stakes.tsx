@@ -430,7 +430,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
             onClick={() => setSortBy('newest')}
             className={`px-3 py-1 rounded-md text-xs ${
               sortBy === 'newest' 
-                ? 'bg-purple-600/20 text-orange-400 border border-purple-600/30 font-semibold' 
+                ? 'bg-purple-600/20 text-purple-300 border border-purple-600/30 font-semibold' 
                 : 'bg-black/20 text-white/70 border border-white/10 hover:border-white/30'
             }`}
           >
@@ -440,7 +440,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
             onClick={() => setSortBy('oldest')}
             className={`px-3 py-1 rounded-md text-xs ${
               sortBy === 'oldest' 
-                ? 'bg-purple-600/20 text-orange-400 border border-purple-600/30 font-semibold' 
+                ? 'bg-purple-600/20 text-purple-300 border border-purple-600/30 font-semibold' 
                 : 'bg-black/20 text-white/70 border border-white/10 hover:border-white/30'
             }`}
           >
@@ -450,7 +450,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
             onClick={() => setSortBy('amount-desc')}
             className={`px-3 py-1 rounded-md text-xs ${
               sortBy === 'amount-desc' 
-                ? 'bg-purple-600/20 text-orange-400 border border-purple-600/30 font-semibold' 
+                ? 'bg-purple-600/20 text-purple-300 border border-purple-600/30 font-semibold' 
                 : 'bg-black/20 text-white/70 border border-white/10 hover:border-white/30'
             }`}
           >
@@ -460,7 +460,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
             onClick={() => setSortBy('end-date')}
             className={`px-3 py-1 rounded-md text-xs ${
               sortBy === 'end-date' 
-                ? 'bg-purple-600/20 text-orange-400 border border-purple-600/30 font-semibold' 
+                ? 'bg-purple-600/20 text-purple-300 border border-purple-600/30 font-semibold' 
                 : 'bg-black/20 text-white/70 border border-white/10 hover:border-white/30'
             }`}
           >
@@ -470,7 +470,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
             onClick={() => setSortBy('progress')}
             className={`px-3 py-1 rounded-md text-xs ${
               sortBy === 'progress' 
-                ? 'bg-purple-600/20 text-orange-400 border border-purple-600/30 font-semibold' 
+                ? 'bg-purple-600/20 text-purple-300 border border-purple-600/30 font-semibold' 
                 : 'bg-black/20 text-white/70 border border-white/10 hover:border-white/30'
             }`}
           >
@@ -488,7 +488,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="bg-purple-600/20 text-orange-400 px-2 py-1 rounded-md text-xs font-semibold border border-purple-600/30">
+                    <div className="bg-purple-600/20 text-purple-300 px-2 py-1 rounded-md text-xs font-semibold border border-purple-600/30">
                       Stake ID: {stake.stakeId}
                     </div>
                     <div className={`px-2 py-1 rounded-md text-xs font-semibold ${
