@@ -10,22 +10,31 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 
 // Interfaces for the historical stats data
 interface DailyStats {
+  id: number;
   date: string;
   totalCalls: number;
-  apiCalls: number;
+  walletDataCalls: number;
+  transactionCalls: number;
+  tokenPriceCalls: number;
+  tokenLogoCalls: number;
   cacheHits: number;
-  cacheHitRate: number;
-  uniqueWallets: number;
-  uniqueEndpoints: number;
+  cacheMisses: number;
+  averageResponseTime: number | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface TotalStats {
-  totalCalls: number;
-  apiCalls: number;
-  cacheHits: number;
-  cacheHitRate: number;
-  uniqueWallets: number;
-  uniqueEndpoints: number;
+  totalCalls: number | string;
+  walletDataCalls: number | string;
+  transactionCalls: number | string;
+  tokenPriceCalls: number | string;
+  tokenLogoCalls: number | string;
+  cacheHits: number | string;
+  cacheMisses: number | string;
+  avgResponseTime: number | null;
+  firstDate: string | null;
+  lastDate: string | null;
 }
 
 interface TopStats {
@@ -120,7 +129,7 @@ export default function HistoricalApiStats() {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .map(day => ({
         date: day.date.substring(5), // Remove year for cleaner display
-        'API Calls': day.apiCalls,
+        'API Calls': day.totalCalls - day.cacheHits,
         'Cache Hits': day.cacheHits,
         'Total': day.totalCalls
       }));
@@ -167,11 +176,19 @@ export default function HistoricalApiStats() {
               </div>
               <div className="bg-muted/50 p-4 rounded-md">
                 <div className="text-sm text-muted-foreground">Cache Hit Rate</div>
-                <div className="text-2xl font-bold">{(stats.totals.cacheHitRate * 100).toFixed(1)}%</div>
+                <div className="text-2xl font-bold">
+                  {stats.totals.cacheHits && stats.totals.totalCalls ? 
+                    `${(parseInt(stats.totals.cacheHits.toString()) / parseInt(stats.totals.totalCalls.toString()) * 100).toFixed(1)}%` : 
+                    '0%'}
+                </div>
               </div>
               <div className="bg-muted/50 p-4 rounded-md">
-                <div className="text-sm text-muted-foreground">Unique Wallets</div>
-                <div className="text-2xl font-bold">{stats.totals.uniqueWallets}</div>
+                <div className="text-sm text-muted-foreground">Time Period</div>
+                <div className="text-lg font-medium">
+                  {stats.totals.firstDate ? 
+                    `${stats.totals.firstDate} to ${stats.totals.lastDate}` : 
+                    'No data'}
+                </div>
               </div>
             </div>
 
