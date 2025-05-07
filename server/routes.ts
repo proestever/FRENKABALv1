@@ -35,6 +35,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(loadingProgress);
   });
   
+  // API route for handling batch wallet lookups
+  app.post("/api/wallets/batch", async (req, res) => {
+    try {
+      const { addresses } = req.body;
+      
+      // Validate request data
+      if (!addresses || !Array.isArray(addresses) || addresses.length === 0) {
+        return res.status(400).json({ message: "Invalid addresses array. Please provide at least one wallet address." });
+      }
+      
+      // Limit the number of addresses that can be requested at once
+      if (addresses.length > 10) {
+        return res.status(400).json({ message: "Too many addresses. Please limit batch requests to 10 addresses." });
+      }
+      
+      // Validate ethereum address format for all addresses
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      const invalidAddresses = addresses.filter(addr => !addressRegex.test(addr));
+      if (invalidAddresses.length > 0) {
+        return res.status(400).json({ 
+          message: "Invalid wallet address format",
+          invalidAddresses
+        });
+      }
+      
+      // Track progress
+      updateLoadingProgress({
+        status: 'loading',
+        currentBatch: 0,
+        totalBatches: addresses.length,
+        message: 'Preparing to fetch wallet data...'
+      });
+      
+      // Process all addresses in parallel and build result object
+      const result: Record<string, any> = {};
+      
+      await Promise.all(addresses.map(async (address, index) => {
+        try {
+          updateLoadingProgress({
+            currentBatch: index + 1,
+            message: `Fetching data for wallet ${index + 1} of ${addresses.length}...`
+          });
+          
+          // Get data for this wallet
+          const walletData = await getWalletData(address);
+          
+          // Store in result with lowercase address as key (for consistent lookup)
+          result[address.toLowerCase()] = walletData;
+        } catch (error) {
+          console.error(`Error fetching data for wallet ${address}:`, error);
+          
+          // Store error in result to maintain address order
+          result[address.toLowerCase()] = {
+            address,
+            error: error instanceof Error ? error.message : "Failed to fetch wallet data",
+            tokens: [],
+            totalValue: 0,
+            tokenCount: 0,
+            plsBalance: null,
+            plsPriceChange: null,
+            networkCount: 0
+          };
+        }
+      }));
+      
+      // Mark operation as complete
+      updateLoadingProgress({
+        status: 'complete',
+        message: 'Completed fetching data for all wallets'
+      });
+      
+      return res.json(result);
+    } catch (error) {
+      console.error("Error processing batch wallet request:", error);
+      
+      // Update loading progress to show error
+      updateLoadingProgress({
+        status: 'error',
+        message: 'Error processing batch request'
+      });
+      
+      return res.status(500).json({ 
+        message: "Failed to process batch wallet request",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   // API route to get wallet data
   app.get("/api/wallet/:address", async (req, res) => {
     try {

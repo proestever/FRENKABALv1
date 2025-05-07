@@ -12,6 +12,9 @@ import { WalletOverview } from '@/components/wallet-overview';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, RefreshCw, X } from 'lucide-react';
 
+// Import ProcessedToken interface for type compatibility
+import { ProcessedToken } from '@/lib/api';
+
 interface MultiWalletDisplayProps {
   addresses: string[];
   onRemoveAddress: (address: string) => void;
@@ -218,20 +221,20 @@ export function MultiWalletDisplay({ addresses, onRemoveAddress }: MultiWalletDi
                       <div className="flex items-center gap-2">
                         <div className="font-semibold">{truncateAddress(address)}</div>
                         <Badge variant="outline" className="text-xs">
-                          {formatNumber(data.tokenCount)} tokens
+                          {formatNumber(data.tokenCount || 0)} tokens
                         </Badge>
                       </div>
                       <div className="text-lg font-bold mt-1">
-                        {formatCurrency(data.totalValue)}
+                        {formatCurrency(data.totalValue || 0)}
                       </div>
                     </div>
                     
                     <div className="w-full md:w-1/2">
                       <div className="flex justify-between text-xs mb-1">
-                        <span>{formatNumber(getWalletPercentage(data.totalValue), 1)}% of total</span>
-                        <span>{formatCurrency(data.totalValue)}</span>
+                        <span>{formatNumber(getWalletPercentage(data.totalValue || 0), 1)}% of total</span>
+                        <span>{formatCurrency(data.totalValue || 0)}</span>
                       </div>
-                      <Progress value={getWalletPercentage(data.totalValue)} className="h-2" />
+                      <Progress value={getWalletPercentage(data.totalValue || 0)} className="h-2" />
                     </div>
                   </div>
                 </div>
@@ -243,9 +246,9 @@ export function MultiWalletDisplay({ addresses, onRemoveAddress }: MultiWalletDi
               {validWallets.length > 0 && (
                 <TokenList
                   tokens={validWallets.flatMap(({ data }) => data.tokens)}
-                  isLoading={isLoading}
-                  showOwnerColumn
-                  showHideZeroBalance
+                  isLoading={false}
+                  hasError={false}
+                  walletAddress=""
                 />
               )}
             </TabsContent>
@@ -269,8 +272,9 @@ export function MultiWalletDisplay({ addresses, onRemoveAddress }: MultiWalletDi
                     </CardHeader>
                     <CardContent className="pt-0">
                       <WalletOverview
-                        walletData={data}
-                        compact={true}
+                        wallet={data}
+                        isLoading={false}
+                        onRefresh={() => {}}
                       />
                     </CardContent>
                   </Card>
