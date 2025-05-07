@@ -46,19 +46,15 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
         const currentHexPrice = hexStakesSummary.hexPrice || 0.006;
         console.log('Using exact PulseChain values for wallet overview card (special address)');
         
-        // Split the total amount between principal and interest based on the HEX STAKES tab data
-        // The total is 3,054,409.62 HEX
-        // Using the approximate ratio from previous data: about 40% principal, 60% interest
+        // Use the same values as in the use-hex-stakes.ts for consistency
         const totalHex = 3054409.62;
-        const principalHex = 1211532.80;
-        const interestHex = 1842876.82; 
         
         setManualHexSummary({
-          totalStakedHex: principalHex.toFixed(2),
-          totalInterestHex: interestHex.toFixed(2),
+          totalStakedHex: totalHex.toFixed(2),
+          totalInterestHex: '0.00',
           totalCombinedHex: totalHex.toFixed(2),
-          totalStakeValueUsd: principalHex * currentHexPrice,
-          totalInterestValueUsd: interestHex * currentHexPrice,
+          totalStakeValueUsd: totalHex * currentHexPrice,
+          totalInterestValueUsd: 0,
           totalCombinedValueUsd: totalHex * currentHexPrice,
           stakeCount: 23,
           hexPrice: currentHexPrice,
