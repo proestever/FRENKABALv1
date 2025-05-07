@@ -151,23 +151,8 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         const count = Number(countBN);
         setStakeCount(count);
         
-        // Check if this is the specific wallet we want to handle specially
-        if (walletAddress.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5') {
-          // Use the same values as in the wallet overview card for consistency
-          const totalHex = 3054409.62;
-          
-          setStakes([]);  // We'll still fetch the individual stakes below
-          setTotalHexStaked(totalHex.toFixed(2));
-          setTotalInterest('0.00');
-          setTotalStakePlusInterest(totalHex.toFixed(2));
-          
-          // Also update the USD values based on current HEX price
-          setStakedValueUsd(totalHex * currentHexPrice);
-          setInterestValueUsd(0);
-          setTotalValueUsd(totalHex * currentHexPrice);
-          
-          // Don't return - continue to fetch the individual stakes
-        } else if (count === 0) {
+        // No special wallet handling - rely on actual stake data from the blockchain
+        if (count === 0) {
           setStakes([]);
           setTotalHexStaked('0');
           setTotalInterest('0');
