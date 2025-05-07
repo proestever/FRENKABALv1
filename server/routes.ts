@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance } from "./services/api";
+import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance, getApiCounterStats, resetApiCounter } from "./services/api";
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
 import { getTokenPricesFromDexScreener } from "./services/dexscreener";
 import { getDirectTokenBalances } from "./services/blockchain-service";
@@ -1271,6 +1271,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ 
         message: "Failed to fetch token prices in batch",
         error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // API endpoint to get API call counter statistics
+  app.get("/api/stats/api-calls", (_req, res) => {
+    try {
+      const stats = getApiCounterStats();
+      return res.json(stats);
+    } catch (error) {
+      console.error("Error fetching API call stats:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch API call statistics",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // API endpoint to reset API call counter
+  app.post("/api/stats/reset-counter", (_req, res) => {
+    try {
+      const result = resetApiCounter();
+      return res.json({
+        message: "API call counter reset successfully",
+        previousStats: result
+      });
+    } catch (error) {
+      console.error("Error resetting API call counter:", error);
+      return res.status(500).json({ 
+        message: "Failed to reset API call counter",
+        error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
   });
