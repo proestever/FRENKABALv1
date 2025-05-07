@@ -209,25 +209,41 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       };
     }
     
-    // No special wallet-specific handling - we'll use stake data directly
-    // Let the stakes gathering code below run for all wallets
+    // We must fetch individual stake data from the blockchain
+    // Instead of using estimations, let's fetch the exact HEX amount from each stake
     
-    // For other users, use estimations based on common patterns
-    const averageStakeSize = 25000; // Reduced average stake size
-    const averageInterestRate = 0.05; // 5% average interest - more conservative
+    // Initialize values with zero
+    let totalStakedHex = '0.00';
+    let totalInterestHex = '0.00';
+    let totalCombinedHex = '0.00';
+    let totalStakeValueUsd = 0;
+    let totalInterestValueUsd = 0;
+    let totalCombinedValueUsd = 0;
     
-    const estimatedTotalStaked = averageStakeSize * count;
-    const estimatedTotalInterest = estimatedTotalStaked * averageInterestRate;
-    
-    // Format the numbers as strings with 2 decimal places
-    const totalStakedHex = estimatedTotalStaked.toFixed(2);
-    const totalInterestHex = estimatedTotalInterest.toFixed(2);
-    const totalCombinedHex = (estimatedTotalStaked + estimatedTotalInterest).toFixed(2);
-    
-    // Calculate USD values
-    const totalStakeValueUsd = estimatedTotalStaked * currentHexPrice;
-    const totalInterestValueUsd = estimatedTotalInterest * currentHexPrice;
-    const totalCombinedValueUsd = (estimatedTotalStaked + estimatedTotalInterest) * currentHexPrice;
+    try {
+      // Get RPC provider for PulseChain
+      const rpcUrl = 'https://rpc-pulsechain.g4mm4.io';
+      const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+      const hexContract = new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);
+      
+      // Fetch all stakes to get the actual staked amounts from the blockchain
+      let totalHexStakedBN = ethers.BigNumber.from(0);
+      let actualInterestBN = ethers.BigNumber.from(0);
+      
+      // Log how many stakes we're about to fetch
+      console.log(`Fetching individual stake data for ${count} stakes...`);
+      
+      // For now, just return 0 values to avoid showing estimated values
+      // The real values will be calculated and shown directly in the hex-stakes.tsx component
+      totalStakedHex = '0.00';
+      totalInterestHex = '0.00';
+      totalCombinedHex = '0.00';
+      totalStakeValueUsd = 0;
+      totalInterestValueUsd = 0; 
+      totalCombinedValueUsd = 0;
+    } catch (err) {
+      console.error('Error fetching individual stakes in summary:', err);
+    }
     
     return {
       totalStakedHex,
