@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { storage } from "../storage";
-import { portfolios, insertPortfolioSchema, portfolioAddresses, insertPortfolioAddressSchema } from "@shared/schema";
+import { portfolios, insertPortfolioSchema, portfolioAddresses, insertPortfolioAddressSchema, InsertBookmark } from "@shared/schema";
 import { z } from "zod";
 
 const router = Router();
@@ -159,7 +159,7 @@ router.post("/portfolios/:id/addresses", async (req: Request, res: Response) => 
         
         if (!existingBookmark) {
           // Create bookmark data
-          const bookmarkData = {
+          const bookmarkData: InsertBookmark = {
             userId,
             walletAddress,
             label: validatedData.label || "Portfolio Address", // Default label if none provided
@@ -203,7 +203,7 @@ router.patch("/portfolio-addresses/:id", async (req: Request, res: Response) => 
       try {
         // First, get the portfolio to get the userId
         const portfolio = await storage.getPortfolio(updatedAddress.portfolioId);
-        if (portfolio) {
+        if (portfolio && portfolio.userId !== null) {
           const userId = portfolio.userId;
           const walletAddress = updatedAddress.walletAddress;
           
@@ -212,10 +212,12 @@ router.patch("/portfolio-addresses/:id", async (req: Request, res: Response) => 
           
           if (existingBookmark) {
             // Update the bookmark with the new label
+            // Make sure to handle null by providing a default value
+            const newLabel = validatedData.label || "Portfolio Address";
             await storage.updateBookmark(existingBookmark.id, {
-              label: validatedData.label
+              label: newLabel
             });
-            console.log(`Updated bookmark label for wallet ${walletAddress} to "${validatedData.label}"`);
+            console.log(`Updated bookmark label for wallet ${walletAddress} to "${newLabel}"`);
           }
         }
       } catch (bookmarkError) {
