@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { storage } from "../storage";
-import { portfolios, insertPortfolioSchema, portfolioAddresses, insertPortfolioAddressSchema, InsertBookmark } from "@shared/schema";
+import { portfolios, insertPortfolioSchema, portfolioAddresses, insertPortfolioAddressSchema } from "@shared/schema";
 import { z } from "zod";
 
 const router = Router();
@@ -159,7 +159,7 @@ router.post("/portfolios/:id/addresses", async (req: Request, res: Response) => 
         
         if (!existingBookmark) {
           // Create bookmark data
-          const bookmarkData: InsertBookmark = {
+          const bookmarkData = {
             userId,
             walletAddress,
             label: validatedData.label || "Portfolio Address", // Default label if none provided
