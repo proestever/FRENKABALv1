@@ -47,43 +47,6 @@ export function fetchAllWalletTokens(address: string): Promise<Wallet> {
 }
 
 /**
- * Fetch data for multiple wallet addresses at once
- * @param addresses - Array of wallet addresses to fetch data for
- * @returns - Object mapping addresses to their wallet data
- */
-export function fetchMultipleWallets(addresses: string[]): Promise<Record<string, Wallet>> {
-  // Filter out any potential duplicates with a more compatible approach
-  const uniqueMap: Record<string, boolean> = {};
-  const uniqueAddresses = addresses
-    .map(addr => addr.toLowerCase())
-    .filter(addr => {
-      if (uniqueMap[addr]) {
-        return false;
-      }
-      uniqueMap[addr] = true;
-      return true;
-    });
-  
-  return fetch('/api/wallets/batch', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      addresses: uniqueAddresses,
-    }),
-  })
-    .then(response => {
-      if (!response.ok) {
-        return response.json().then(errorData => {
-          throw new Error(errorData.message || 'Failed to fetch multiple wallet data');
-        });
-      }
-      return response.json();
-    });
-}
-
-/**
  * Get recent addresses from local storage
  */
 export function getRecentAddresses(): string[] {

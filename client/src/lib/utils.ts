@@ -68,18 +68,6 @@ export function formatPercentage(value: number): string {
 }
 
 /**
- * Format a number with commas and optional decimal places
- */
-export function formatNumber(value: number | undefined, decimalPlaces: number = 0): string {
-  if (value === undefined || isNaN(Number(value))) return '0';
-  
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: decimalPlaces,
-    maximumFractionDigits: decimalPlaces
-  }).format(value);
-}
-
-/**
  * Truncate wallet address with optional parameters for start and end characters
  * @param address The address to truncate
  * @param startChars Number of characters to keep at the start (default: 6)

@@ -7,10 +7,9 @@ import { TokenList } from '@/components/token-list';
 import { EmptyState } from '@/components/empty-state';
 import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
-import { MultiWalletDisplay } from '@/components/multi-wallet-display';
 import { saveRecentAddress, ProcessedToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // For loading all tokens
+import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
 import { useHexStakes, fetchHexStakesSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
 
@@ -19,21 +18,15 @@ const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
 
 export default function Home() {
   const [searchedAddress, setSearchedAddress] = useState<string | null>(null);
-  const [multiWalletAddresses, setMultiWalletAddresses] = useState<string[]>([]);
-  const [isMultiWalletMode, setIsMultiWalletMode] = useState(false);
   const [manualTokens, setManualTokens] = useState<ProcessedToken[]>([]);
   const params = useParams<{ walletAddress?: string }>();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Define single-address search function
+  // Define search function
   const handleSearch = (address: string) => {
     if (!address) return;
-    
-    // Exit multi-wallet mode if active
-    setIsMultiWalletMode(false);
-    setMultiWalletAddresses([]);
     
     // Always invalidate cache to ensure fresh data, even when searching for the same address
     console.log('Searching wallet address, clearing cache to ensure fresh data:', address);
@@ -190,88 +183,25 @@ export default function Home() {
       )]
     : manualTokens;
 
-  // Function to handle multiple wallet search
-  const handleMultiSearch = (addresses: string[]) => {
-    if (addresses.length === 0) {
-      // If no addresses, switch back to normal mode
-      setIsMultiWalletMode(false);
-      setMultiWalletAddresses([]);
-      return;
-    }
-    
-    // Update state for multi-wallet mode
-    setIsMultiWalletMode(true);
-    setMultiWalletAddresses(addresses);
-    
-    // Save the first address to recent addresses
-    if (addresses.length > 0) {
-      saveRecentAddress(addresses[0]);
-    }
-    
-    // Clear the single address search
-    setSearchedAddress(null);
-  };
-  
-  // Function to remove an address from multi-wallet mode
-  const handleRemoveAddress = (address: string) => {
-    const newAddresses = multiWalletAddresses.filter(
-      addr => addr.toLowerCase() !== address.toLowerCase()
-    );
-    
-    if (newAddresses.length === 0) {
-      // If removing the last address, switch back to normal mode
-      setIsMultiWalletMode(false);
-      setMultiWalletAddresses([]);
-    } else {
-      // Otherwise update the addresses list
-      setMultiWalletAddresses(newAddresses);
-    }
-  };
-
   return (
     <main className="container mx-auto px-4 py-6">
-      {/* Initial search section - only shown on empty state */}
-      {!searchedAddress && !isMultiWalletMode && (
+      {/* Only show the search section at the top if no wallet has been searched yet */}
+      {!searchedAddress && (
         <SearchSection 
-          onSearch={handleSearch}
-          onMultiSearch={handleMultiSearch}
+          onSearch={handleSearch} 
           isLoading={isLoading} 
-          hasSearched={false}
-          enableMultiSearch={true}
+          hasSearched={false} 
         />
       )}
       
-      {/* Loading Progress Bar - shows during single wallet loading */}
-      {!isMultiWalletMode && (
-        <LoadingProgress 
-          isLoading={isLoading || isFetching} 
-          customProgress={progress}
-        />
-      )}
+      {/* Loading Progress Bar - shows during loading */}
+      <LoadingProgress 
+        isLoading={isLoading || isFetching} 
+        customProgress={progress}
+      />
       
-      {/* Multi-wallet mode display */}
-      {isMultiWalletMode && (
-        <>
-          {/* Search bar for multi-wallet mode */}
-          <SearchSection 
-            onSearch={handleSearch}
-            onMultiSearch={handleMultiSearch}
-            isLoading={false}
-            hasSearched={true}
-            enableMultiSearch={true}
-            selectedAddresses={multiWalletAddresses}
-          />
-          
-          {/* Multi-wallet comparison display */}
-          <MultiWalletDisplay 
-            addresses={multiWalletAddresses} 
-            onRemoveAddress={handleRemoveAddress}
-          />
-        </>
-      )}
-      
-      {/* Single wallet mode display - only show when not in multi-wallet mode */}
-      {!isMultiWalletMode && searchedAddress && !isError && !(isLoading || isFetching) && (
+      {/* Only show wallet data when not loading */}
+      {searchedAddress && !isError && !(isLoading || isFetching) && (
         <>
           <div className="mt-4">
             {/* Two-column layout: Wallet overview (1/3) on left, Token list (2/3) on right */}
@@ -289,11 +219,9 @@ export default function Home() {
                 {/* Search bar placed below the wallet overview */}
                 <div className="w-full">
                   <SearchSection 
-                    onSearch={handleSearch}
-                    onMultiSearch={handleMultiSearch}
+                    onSearch={handleSearch} 
                     isLoading={isLoading} 
-                    hasSearched={true}
-                    enableMultiSearch={true}
+                    hasSearched={true} 
                   />
                 </div>
               </div>
@@ -313,8 +241,7 @@ export default function Home() {
         </>
       )}
       
-      {/* Error state - only for single wallet mode */}
-      {!isMultiWalletMode && searchedAddress && isError && (
+      {searchedAddress && isError && (
         <>
           <div className="mt-4">
             {/* Two-column layout in error state for consistency */}
@@ -335,11 +262,9 @@ export default function Home() {
                 {/* Search bar below error message */}
                 <div className="w-full">
                   <SearchSection 
-                    onSearch={handleSearch}
-                    onMultiSearch={handleMultiSearch}
+                    onSearch={handleSearch} 
                     isLoading={isLoading} 
-                    hasSearched={true}
-                    enableMultiSearch={true}
+                    hasSearched={true} 
                   />
                 </div>
               </div>
@@ -355,9 +280,13 @@ export default function Home() {
                 />
               </div>
             </div>
+            
+            {/* Manual Token Entry removed as requested */}
           </div>
         </>
       )}
+      
+      {/* Empty state card hidden as requested */}
     </main>
   );
 }
