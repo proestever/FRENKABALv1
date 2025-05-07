@@ -176,55 +176,34 @@ export function useWallet(): UseWalletReturn {
     if (!ethereum) return;
     
     const handleAccountsChanged = async (accounts: string[]) => {
+      // For any wallet change or disconnection, sign out the user completely
+      const oldAddress = localStorage.getItem('walletAddress');
+      
       if (accounts.length === 0) {
-        // User disconnected
-        setAccount(null);
-        setChainId(null);
-        setUserId(null);
-        setUser(null);
-        
-        // Clear localStorage
-        localStorage.removeItem('walletConnected');
-        localStorage.removeItem('walletAddress');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('lastLoginTimestamp');
-      } else {
-        const newAddress = accounts[0];
-        console.log(`Wallet changed to: ${newAddress}`);
-        setAccount(newAddress);
-        
-        // Update localStorage
-        localStorage.setItem('walletConnected', 'true');
-        localStorage.setItem('walletAddress', newAddress);
-        localStorage.setItem('lastLoginTimestamp', Date.now().toString());
-        
-        // Get user ID for the new wallet address
-        try {
-          // Reset current user state
-          setUserId(null);
-          setUser(null);
-          
-          // Fetch user for the new wallet address
-          const userId = await getUserFromWallet(newAddress);
-          if (userId) {
-            console.log(`Found user ID ${userId} for wallet ${newAddress}`);
-            setUserId(userId);
-            localStorage.setItem('userId', String(userId));
-            
-            // Load user profile
-            const userProfile = await getUserProfile(userId);
-            if (userProfile) {
-              setUser(userProfile);
-            }
-          } else {
-            console.log(`No user found for wallet ${newAddress}`);
-            localStorage.removeItem('userId');
-          }
-        } catch (error) {
-          console.error('Error fetching user for new wallet address:', error);
-          localStorage.removeItem('userId');
-        }
+        // User disconnected all accounts
+        console.log('All wallet accounts disconnected');
+      } else if (oldAddress && oldAddress.toLowerCase() !== accounts[0].toLowerCase()) {
+        // User switched to a different wallet
+        console.log(`Wallet changed from ${oldAddress} to ${accounts[0]}`);
+        toast({
+          title: "Wallet Changed",
+          description: "You've switched wallets. Please connect again to continue.",
+        });
       }
+      
+      // Always clear all state and localStorage for any account change
+      setAccount(null);
+      setChainId(null);
+      setUserId(null);
+      setUser(null);
+      
+      // Clear localStorage
+      localStorage.removeItem('walletConnected');
+      localStorage.removeItem('walletAddress');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('lastLoginTimestamp');
+      localStorage.removeItem('walletSignature');
+      localStorage.removeItem('signatureTimestamp');
     };
     
     const handleChainChanged = (chainIdHex: string) => {
