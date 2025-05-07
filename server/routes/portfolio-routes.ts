@@ -144,6 +144,39 @@ router.post("/portfolios/:id/addresses", async (req: Request, res: Response) => 
     
     const validatedData = insertPortfolioAddressSchema.parse(addressData);
     const newAddress = await storage.addAddressToPortfolio(validatedData);
+    
+    // Also add this address to bookmarks if it's not already bookmarked
+    try {
+      const userId = portfolio.userId;
+      // Skip if userId is null (shouldn't happen in practice)
+      if (userId === null) {
+        console.log("Cannot add bookmark: Portfolio has no userId");
+      } else {
+        const walletAddress = validatedData.walletAddress;
+        
+        // Check if this wallet is already bookmarked by this user
+        const existingBookmark = await storage.getBookmarkByAddress(userId, walletAddress);
+        
+        if (!existingBookmark) {
+          // Create bookmark data
+          const bookmarkData = {
+            userId,
+            walletAddress,
+            label: validatedData.label || "Portfolio Address", // Default label if none provided
+            notes: null,
+            isFavorite: false,
+          };
+          
+          // Add to bookmarks
+          await storage.createBookmark(bookmarkData);
+          console.log(`Added wallet address ${walletAddress} to bookmarks for user ${userId}`);
+        }
+      }
+    } catch (bookmarkError) {
+      // Just log the error but don't fail the request
+      console.error("Error adding address to bookmarks:", bookmarkError);
+    }
+    
     return res.status(201).json(newAddress);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -164,6 +197,33 @@ router.patch("/portfolio-addresses/:id", async (req: Request, res: Response) => 
     
     const validatedData = insertPortfolioAddressSchema.partial().parse(req.body);
     const updatedAddress = await storage.updatePortfolioAddress(addressId, validatedData);
+    
+    // Also update the bookmark with the same address if it exists
+    if (validatedData.label !== undefined) {
+      try {
+        // First, get the portfolio to get the userId
+        const portfolio = await storage.getPortfolio(updatedAddress.portfolioId);
+        if (portfolio) {
+          const userId = portfolio.userId;
+          const walletAddress = updatedAddress.walletAddress;
+          
+          // Find the bookmark for this address
+          const existingBookmark = await storage.getBookmarkByAddress(userId, walletAddress);
+          
+          if (existingBookmark) {
+            // Update the bookmark with the new label
+            await storage.updateBookmark(existingBookmark.id, {
+              label: validatedData.label
+            });
+            console.log(`Updated bookmark label for wallet ${walletAddress} to "${validatedData.label}"`);
+          }
+        }
+      } catch (bookmarkError) {
+        // Just log the error but don't fail the request
+        console.error("Error updating bookmark:", bookmarkError);
+      }
+    }
+    
     return res.json(updatedAddress);
   } catch (error) {
     if (error instanceof z.ZodError) {
