@@ -153,7 +153,10 @@ export default function Home() {
       
       // Store the HEX stakes data for the combined view
       if (hexStakesData) {
+        console.log('Combined HEX stakes data received:', hexStakesData);
         setMultiWalletHexStakes(hexStakesData);
+      } else {
+        console.log('No combined HEX stakes data received');
       }
       
       setMultiWalletData(walletData);
