@@ -326,9 +326,9 @@ const PortfoliosPage = () => {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Portfolios</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+      <div className="flex justify-between items-center mb-6 p-4 glass-card rounded-lg border border-white/15 shadow-lg">
+        <h1 className="text-2xl font-bold text-white">My Portfolios</h1>
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="glass-card border-white/15 bg-black/20 hover:bg-white/10">
           <Plus className="w-4 h-4 mr-2" />
           Create Portfolio
         </Button>
@@ -342,7 +342,7 @@ const PortfoliosPage = () => {
         <div className="w-full">
           {portfolios.map((portfolio) => (
             <div key={portfolio.id} className="mb-6">
-              <Card className="w-full">
+              <Card className="w-full glass-card border border-white/15 shadow-lg bg-black/10">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
@@ -388,7 +388,7 @@ const PortfoliosPage = () => {
                       </div>
                       <div className="flex gap-1">
                         <Button 
-                          variant="outline"
+                          className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
                           size="sm"
                           onClick={() => {
                             setSelectedPortfolio(portfolio);
@@ -399,7 +399,7 @@ const PortfoliosPage = () => {
                           Search
                         </Button>
                         <Button
-                          variant="outline"
+                          className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
                           size="sm"
                           onClick={() => {
                             // Create the shareable URL with the origin and pathname
@@ -425,7 +425,7 @@ const PortfoliosPage = () => {
                         </Button>
                       </div>
                       <Button 
-                        variant="outline"
+                        className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
                         size="sm"
                         onClick={() => {
                           setSelectedPortfolio(portfolio);
@@ -436,7 +436,7 @@ const PortfoliosPage = () => {
                         Add
                       </Button>
                       <Button 
-                        variant="outline"
+                        className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
                         size="sm"
                         onClick={() => {
                           if (confirm('Are you sure you want to delete this portfolio?')) {
@@ -455,13 +455,13 @@ const PortfoliosPage = () => {
                   <CardContent>
                     <div className="mt-2">
                       {portfolioAddresses && portfolioAddresses.length > 0 ? (
-                        <div className="w-full border rounded-md overflow-hidden">
+                        <div className="w-full glass-card border border-white/15 rounded-md overflow-hidden bg-black/10">
                           <table className="w-full table-auto">
                             <thead>
-                              <tr className="bg-muted">
-                                <th className="text-left py-2 px-4 text-sm font-medium">Wallet Address</th>
-                                <th className="text-left py-2 px-4 text-sm font-medium">Label</th>
-                                <th className="text-right py-2 px-4 text-sm font-medium">Actions</th>
+                              <tr className="glass-card border-b border-white/10">
+                                <th className="text-left py-2 px-4 text-sm font-medium text-white">Wallet Address</th>
+                                <th className="text-left py-2 px-4 text-sm font-medium text-white">Label</th>
+                                <th className="text-right py-2 px-4 text-sm font-medium text-white">Actions</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -507,7 +507,7 @@ const PortfoliosPage = () => {
           ))}
         </div>
       ) : (
-        <Card>
+        <Card className="glass-card border border-white/15 shadow-lg bg-black/10">
           <CardContent className="pt-6">
             <PortfolioEmptyState
               title="No portfolios found"
@@ -552,13 +552,14 @@ const PortfoliosPage = () => {
             <DialogFooter>
               <Button
                 type="button"
-                variant="outline"
+                className="glass-card border-white/15 bg-black/20 hover:bg-white/10"
                 onClick={() => setIsCreateDialogOpen(false)}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit"
+                className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
                 disabled={createPortfolioMutation.isPending}
               >
                 {createPortfolioMutation.isPending ? 'Creating...' : 'Create Portfolio'}
@@ -605,13 +606,14 @@ const PortfoliosPage = () => {
                 <DialogFooter>
                   <Button
                     type="button"
-                    variant="outline"
+                    className="glass-card border-white/15 bg-black/20 hover:bg-white/10"
                     onClick={() => setIsAddressDialogOpen(false)}
                   >
                     Cancel
                   </Button>
                   <Button 
                     type="submit"
+                    className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
                     disabled={addAddressMutation.isPending}
                   >
                     {addAddressMutation.isPending ? 'Adding...' : 'Add Address'}
@@ -625,7 +627,7 @@ const PortfoliosPage = () => {
                   <h3 className="font-medium mb-3">Current Addresses</h3>
                   <div className="space-y-3 max-h-60 overflow-y-auto">
                     {portfolioAddresses.map((address) => (
-                      <div key={address.id} className="flex items-center justify-between p-2 border rounded">
+                      <div key={address.id} className="flex items-center justify-between p-2 glass-card border border-white/15 bg-black/10 shadow-sm rounded-md">
                         <div className="flex flex-col">
                           <div className="text-sm font-medium truncate max-w-[200px]">
                             {address.walletAddress}
