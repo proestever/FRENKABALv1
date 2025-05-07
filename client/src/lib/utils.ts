@@ -44,6 +44,18 @@ export function formatTokenAmount(amount: number | undefined): string {
 }
 
 /**
+ * Format a USD value without the dollar sign
+ */
+export function formatUsd(amount: number | undefined): string {
+  if (amount === undefined || isNaN(amount)) return '0.00';
+  
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+}
+
+/**
  * Format a percentage value
  */
 export function formatPercentage(value: number): string {
