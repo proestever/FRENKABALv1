@@ -153,9 +153,11 @@ router.post("/portfolios/:id/addresses", async (req: Request, res: Response) => 
         console.log("Cannot add bookmark: Portfolio has no userId");
       } else {
         const walletAddress = validatedData.walletAddress;
+        console.log(`Attempting to add ${walletAddress} to bookmarks for user ${userId}`);
         
         // Check if this wallet is already bookmarked by this user
         const existingBookmark = await storage.getBookmarkByAddress(userId, walletAddress);
+        console.log(`Existing bookmark found: ${existingBookmark ? 'Yes' : 'No'}`);
         
         if (!existingBookmark) {
           // Create bookmark data
@@ -167,9 +169,17 @@ router.post("/portfolios/:id/addresses", async (req: Request, res: Response) => 
             isFavorite: false,
           };
           
+          console.log(`Creating bookmark with data:`, bookmarkData);
+          
           // Add to bookmarks
-          await storage.createBookmark(bookmarkData);
-          console.log(`Added wallet address ${walletAddress} to bookmarks for user ${userId}`);
+          try {
+            const newBookmark = await storage.createBookmark(bookmarkData);
+            console.log(`Added wallet address ${walletAddress} to bookmarks for user ${userId}`, newBookmark);
+          } catch (innerError) {
+            console.error(`Failed to create bookmark for ${walletAddress}:`, innerError);
+          }
+        } else {
+          console.log(`Wallet ${walletAddress} already exists in bookmarks with id ${existingBookmark.id}`);
         }
       }
     } catch (bookmarkError) {

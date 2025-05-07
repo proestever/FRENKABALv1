@@ -150,16 +150,24 @@ export class DatabaseStorage implements IStorage {
   async getBookmarkByAddress(userId: number, walletAddress: string): Promise<Bookmark | undefined> {
     const addressLower = walletAddress.toLowerCase();
     
+    console.log(`Looking for bookmark with userId=${userId}, walletAddress=${addressLower}`);
+    
     // Get all bookmarks for this user
     const userBookmarks = await db
       .select()
       .from(bookmarks)
       .where(eq(bookmarks.userId, userId));
+    
+    console.log(`Found ${userBookmarks.length} bookmarks for user ${userId}`);
       
     // Find the bookmark with the matching wallet address (case-insensitive)
-    return userBookmarks.find(bookmark => 
+    const matchingBookmark = userBookmarks.find(bookmark => 
       bookmark.walletAddress.toLowerCase() === addressLower
     );
+    
+    console.log(`Matching bookmark found: ${matchingBookmark ? 'Yes (ID: ' + matchingBookmark.id + ')' : 'No'}`);
+    
+    return matchingBookmark;
   }
   
   async createBookmark(bookmark: InsertBookmark): Promise<Bookmark> {
@@ -169,12 +177,27 @@ export class DatabaseStorage implements IStorage {
       walletAddress: bookmark.walletAddress.toLowerCase()
     };
     
+    console.log(`Creating bookmark for address ${processedBookmark.walletAddress}, user ${processedBookmark.userId}`);
+    
     try {
+      // Check if this bookmark already exists to avoid duplicates
+      const existingBookmark = await this.getBookmarkByAddress(
+        processedBookmark.userId, 
+        processedBookmark.walletAddress
+      );
+      
+      if (existingBookmark) {
+        console.log(`Bookmark already exists with id ${existingBookmark.id}, returning existing one`);
+        return existingBookmark;
+      }
+      
+      console.log(`Inserting new bookmark into database:`, processedBookmark);
       const [newBookmark] = await db
         .insert(bookmarks)
         .values(processedBookmark)
         .returning();
-        
+      
+      console.log(`Successfully created new bookmark with id ${newBookmark.id}`);
       return newBookmark;
     } catch (error) {
       console.error(`Error creating bookmark for address ${processedBookmark.walletAddress}:`, error);
