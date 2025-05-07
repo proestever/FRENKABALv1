@@ -40,10 +40,23 @@ function Header() {
   // Handle logo click to properly reset state when returning to the home page
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    
+    // Clear any session storage portfolio data to ensure complete state reset
+    const sessionKeys = Object.keys(sessionStorage);
+    sessionKeys.forEach(key => {
+      if (key.startsWith('portfolio_')) {
+        sessionStorage.removeItem(key);
+      }
+    });
+    
     // Reset location to home
     setLocation("/");
-    // Do not actively remove queries - let the Home component handle its own state
-    // This is more efficient than invalidating all wallet queries at once
+    
+    // Delay a bit to ensure the Home component reloads with a fresh state
+    setTimeout(() => {
+      // Force a reset of any search-related states in UI components
+      window.dispatchEvent(new CustomEvent('frenklabal:reset-search'));
+    }, 50);
   };
   
   // Handle Connect wallet click

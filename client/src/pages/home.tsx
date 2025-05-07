@@ -329,9 +329,14 @@ export default function Home() {
         // Handle wallet address from URL only if it's different from current
         handleSearch(params.walletAddress);
       }
-    } else if (!params.walletAddress && searchedAddress && !queryParams.addresses) {
-      // Reset state when on the root URL (but not if we have addresses in query params)
+    } else if (!params.walletAddress && !params.portfolioId && location === '/') {
+      // Complete reset of state when on the root URL after logo click
       setSearchedAddress(null);
+      setMultiWalletData(null);
+      setMultiWalletHexStakes(null);
+      setPortfolioName(null);
+      setPortfolioUrlId(null);
+      setIndividualWalletHexStakes({});
     }
   }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
 
