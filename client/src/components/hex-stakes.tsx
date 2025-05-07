@@ -76,16 +76,19 @@ interface HexStake {
   valueUsd?: number;
   interestValueUsd?: number;
   totalValueUsd?: number;
+  walletAddress?: string; // Store which wallet this stake belongs to
 }
 
 interface HexStakesProps {
   walletAddress: string;
+  otherWalletAddresses?: string[]; // Optional additional wallets to include
+  isMultiWallet?: boolean; // Flag to indicate if we're in multi-wallet mode
   onClose?: () => void;
 }
 
 type SortOption = 'newest' | 'oldest' | 'amount-desc' | 'amount-asc' | 'progress';
 
-export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
+export function HexStakes({ walletAddress, otherWalletAddresses = [], isMultiWallet = false, onClose }: HexStakesProps) {
   const [stakes, setStakes] = useState<HexStake[]>([]);
   const [sortedStakes, setSortedStakes] = useState<HexStake[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
@@ -146,12 +149,141 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         const currentDayBN = await hexContract.currentDay();
         const currentDay = Number(currentDayBN);
         
-        // Get stake count for address
-        const countBN = await hexContract.stakeCount(walletAddress);
-        const count = Number(countBN);
-        setStakeCount(count);
+        // Determine which addresses to process
+        const addressesToProcess = isMultiWallet ? 
+          [walletAddress, ...otherWalletAddresses] : 
+          [walletAddress];
+          
+        console.log(`Processing HEX stakes for ${addressesToProcess.length} wallet(s): `, 
+          isMultiWallet ? 'Multiple wallets mode' : 'Single wallet mode');
         
-        if (count === 0) {
+        // Store all stakes from all wallets
+        const allStakesData: HexStake[] = [];
+        let totalHexStakedBN = ethers.BigNumber.from(0);
+        let totalInterestBN = 0;
+        let totalStakeCount = 0;
+        
+        // Process each wallet address
+        for (const address of addressesToProcess) {
+          try {
+            console.log(`Fetching HEX stakes for wallet: ${address}`);
+            
+            // Get stake count for this address
+            const countBN = await hexContract.stakeCount(address);
+            const count = Number(countBN);
+            console.log(`Found ${count} HEX stakes for wallet: ${address}`);
+            
+            totalStakeCount += count;
+            
+            if (count === 0) continue; // Skip to next wallet if no stakes
+            
+            // Fetch all stakes for this wallet
+            for (let i = 0; i < count; i++) {
+              const stake = await hexContract.stakeLists(address, i);
+              
+              // Parse raw stake data
+              const stakeId = stake[0].toString();
+              const stakedHearts = stake[1].toString();
+              const stakeShares = stake[2].toString();
+              const lockedDay = Number(stake[3]);
+              const stakedDays = Number(stake[4]);
+              const unlockedDay = Number(stake[5]);
+              const isAutoStake = stake[6];
+              
+              // Convert locked/unlocked days to dates
+              const lockDate = new Date((LAUNCH_TS + lockedDay * DAY_SECONDS) * 1000);
+              const unlockDate = unlockedDay === 0
+                ? null // Still locked
+                : new Date((LAUNCH_TS + unlockedDay * DAY_SECONDS) * 1000);
+              
+              // Calculate end date (maturity date)
+              const endDate = new Date((LAUNCH_TS + (lockedDay + stakedDays) * DAY_SECONDS) * 1000);
+              
+              // Determine if stake is still active
+              const isActive = unlockedDay === 0;
+              
+              // Calculate progress percentage
+              let progressPercentage = 0;
+              const endDay = lockedDay + stakedDays;
+              
+              if (isActive && currentDay >= lockedDay) {
+                // If stake is active and we're past the lock day
+                const daysPassed = currentDay - lockedDay;
+                progressPercentage = Math.min(100, Math.floor((daysPassed / stakedDays) * 100));
+              } else if (!isActive) {
+                // Stake is ended
+                progressPercentage = 100;
+              }
+              
+              // Calculate days remaining
+              let daysRemaining = null;
+              if (isActive) {
+                daysRemaining = Math.max(0, endDay - currentDay);
+              }
+              
+              // Format HEX amount (8 decimals)
+              const hexAmount = ethers.utils.formatUnits(stakedHearts, 8);
+              
+              // Calculate estimated interest (for display purposes)
+              let interestEarned = "0";
+              if (progressPercentage > 0) {
+                // Simple interest estimation
+                const annualRate = 0.35; // 35% APY (conservative estimate)
+                const yearsStaked = stakedDays / 365;
+                const estimatedInterestRate = annualRate * yearsStaked * (progressPercentage / 100);
+                const principalHex = parseFloat(hexAmount);
+                const interestHex = principalHex * estimatedInterestRate;
+                interestEarned = interestHex.toFixed(2);
+                
+                // Add to total interest
+                totalInterestBN += parseFloat(interestEarned);
+              }
+              
+              // Add to total staked HEX
+              totalHexStakedBN = totalHexStakedBN.add(ethers.BigNumber.from(stakedHearts));
+              
+              // Calculate USD values for this stake
+              const stakeValueUsd = parseFloat(hexAmount) * currentHexPrice;
+              const stakeInterestValueUsd = parseFloat(interestEarned) * currentHexPrice;
+              const stakeTotalValueUsd = stakeValueUsd + stakeInterestValueUsd;
+              
+              // Add the wallet address as a property so we can identify which wallet it belongs to
+              allStakesData.push({
+                stakeId,
+                stakedHearts,
+                stakeShares,
+                lockedDay,
+                stakedDays,
+                unlockedDay,
+                isAutoStake,
+                lockDate: lockDate.toISOString(),
+                unlockDate: unlockDate ? unlockDate.toISOString() : null,
+                endDate: endDate.toISOString(),
+                isActive,
+                progressPercentage,
+                hexAmount,
+                daysRemaining,
+                interestEarned,
+                valueUsd: stakeValueUsd,
+                interestValueUsd: stakeInterestValueUsd,
+                totalValueUsd: stakeTotalValueUsd,
+                walletAddress: address // Add wallet address to identify which wallet it belongs to
+              });
+              
+              if (i % 5 === 0) {
+                // Give UI a chance to update by yielding execution
+                await new Promise(resolve => setTimeout(resolve, 0));
+              }
+            }
+          } catch (err) {
+            console.error(`Error fetching HEX stakes for wallet ${address}:`, err);
+            // Continue with other wallets
+          }
+        }
+        
+        setStakeCount(totalStakeCount);
+        
+        if (totalStakeCount === 0) {
           setStakes([]);
           setTotalHexStaked('0');
           setTotalInterest('0');
@@ -160,104 +292,8 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
           return;
         }
         
-        // Fetch all stakes
-        const stakesData: HexStake[] = [];
-        let totalHexStakedBN = ethers.BigNumber.from(0);
-        let totalInterestBN = 0;
-        
-        for (let i = 0; i < count; i++) {
-          const stake = await hexContract.stakeLists(walletAddress, i);
-          
-          // Parse raw stake data
-          const stakeId = stake[0].toString();
-          const stakedHearts = stake[1].toString();
-          const stakeShares = stake[2].toString();
-          const lockedDay = Number(stake[3]);
-          const stakedDays = Number(stake[4]);
-          const unlockedDay = Number(stake[5]);
-          const isAutoStake = stake[6];
-          
-          // Convert locked/unlocked days to dates
-          const lockDate = new Date((LAUNCH_TS + lockedDay * DAY_SECONDS) * 1000);
-          const unlockDate = unlockedDay === 0
-            ? null // Still locked
-            : new Date((LAUNCH_TS + unlockedDay * DAY_SECONDS) * 1000);
-          
-          // Calculate end date (maturity date)
-          const endDate = new Date((LAUNCH_TS + (lockedDay + stakedDays) * DAY_SECONDS) * 1000);
-          
-          // Determine if stake is still active
-          const isActive = unlockedDay === 0;
-          
-          // Calculate progress percentage
-          let progressPercentage = 0;
-          const endDay = lockedDay + stakedDays;
-          
-          if (isActive && currentDay >= lockedDay) {
-            // If stake is active and we're past the lock day
-            const daysPassed = currentDay - lockedDay;
-            progressPercentage = Math.min(100, Math.floor((daysPassed / stakedDays) * 100));
-          } else if (!isActive) {
-            // Stake is ended
-            progressPercentage = 100;
-          }
-          
-          // Calculate days remaining
-          let daysRemaining = null;
-          if (isActive) {
-            daysRemaining = Math.max(0, endDay - currentDay);
-          }
-          
-          // Format HEX amount (8 decimals)
-          const hexAmount = ethers.utils.formatUnits(stakedHearts, 8);
-          
-          // Calculate estimated interest (for display purposes)
-          let interestEarned = "0";
-          if (progressPercentage > 0) {
-            // Simple interest estimation
-            const annualRate = 0.35; // 35% APY (conservative estimate)
-            const yearsStaked = stakedDays / 365;
-            const estimatedInterestRate = annualRate * yearsStaked * (progressPercentage / 100);
-            const principalHex = parseFloat(hexAmount);
-            const interestHex = principalHex * estimatedInterestRate;
-            interestEarned = interestHex.toFixed(2);
-            
-            // Add to total interest
-            totalInterestBN += parseFloat(interestEarned);
-          }
-          
-          // Add to total staked HEX
-          totalHexStakedBN = totalHexStakedBN.add(ethers.BigNumber.from(stakedHearts));
-          
-          // Calculate USD values for this stake
-          const stakeValueUsd = parseFloat(hexAmount) * currentHexPrice;
-          const stakeInterestValueUsd = parseFloat(interestEarned) * currentHexPrice;
-          const stakeTotalValueUsd = stakeValueUsd + stakeInterestValueUsd;
-          
-          stakesData.push({
-            stakeId,
-            stakedHearts,
-            stakeShares,
-            lockedDay,
-            stakedDays,
-            unlockedDay,
-            isAutoStake,
-            lockDate: lockDate.toISOString(),
-            unlockDate: unlockDate ? unlockDate.toISOString() : null,
-            endDate: endDate.toISOString(),
-            isActive,
-            progressPercentage,
-            hexAmount,
-            daysRemaining,
-            interestEarned,
-            valueUsd: stakeValueUsd,
-            interestValueUsd: stakeInterestValueUsd,
-            totalValueUsd: stakeTotalValueUsd
-          });
-        }
-        
         // Sort stakes by lock date (newest first)
-        stakesData.sort((a, b) => {
+        allStakesData.sort((a, b) => {
           return new Date(b.lockDate).getTime() - new Date(a.lockDate).getTime();
         });
         
@@ -271,7 +307,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         const interestHexUsd = totalInterestBN * currentHexPrice;
         const totalValueUsd = parseFloat(totalStakePlusInterestValue) * currentHexPrice;
         
-        setStakes(stakesData);
+        setStakes(allStakesData);
         setTotalHexStaked(formattedTotalHexStaked);
         setTotalInterest(formattedTotalInterest);
         setTotalStakePlusInterest(totalStakePlusInterestValue);
@@ -288,7 +324,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
     };
     
     fetchHexStakes();
-  }, [walletAddress, chainId]);
+  }, [walletAddress, otherWalletAddresses, isMultiWallet, chainId]);
   
   // Format date in a user-friendly way
   const formatDate = (dateString: string) => {
@@ -384,9 +420,17 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
           <h3 className="text-lg md:text-xl font-semibold text-white">
             <span className="text-white">HEX Stakes</span>
             <span className="ml-2 text-sm text-white/60">({stakeCount})</span>
+            {isMultiWallet && (
+              <span className="ml-2 text-xs bg-purple-600/30 text-purple-100 px-2 py-0.5 rounded-md border border-purple-500/60 inline-block transform-gpu origin-center font-semibold">
+                Combined
+              </span>
+            )}
           </h3>
           <p className="text-xs md:text-sm text-white/70 mt-1">
-            Viewing stakes on PulseChain network
+            {isMultiWallet 
+              ? `Viewing stakes from ${otherWalletAddresses.length + 1} wallets on PulseChain network`
+              : 'Viewing stakes on PulseChain network'
+            }
           </p>
         </div>
         
@@ -476,7 +520,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
               {/* Left side - Stake Details */}
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className="bg-purple-600/20 text-purple-300 px-2 py-1 rounded-md text-xs font-semibold border border-purple-600/30">
                       Stake ID: {stake.stakeId}
                     </div>
@@ -487,6 +531,13 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
                     }`}>
                       {stake.isActive ? 'Active' : 'Ended'}
                     </div>
+                    
+                    {/* Wallet badge (only in multi-wallet mode) */}
+                    {isMultiWallet && stake.walletAddress && (
+                      <div className="px-2 py-1 rounded-md text-xs bg-blue-600/20 text-blue-300 border border-blue-600/30" title={stake.walletAddress}>
+                        {stake.walletAddress.substring(0, 6)}...{stake.walletAddress.substring(stake.walletAddress.length - 4)}
+                      </div>
+                    )}
                   </div>
                   <div className="mt-2 md:mt-0 text-right">
                     <div className="text-white font-bold">
