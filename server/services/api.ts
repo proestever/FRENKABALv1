@@ -13,6 +13,7 @@ import { storage } from '../storage';
 import { InsertTokenLogo } from '@shared/schema';
 import { updateLoadingProgress } from '../routes';
 import { processLpTokens } from './lp-token-service';
+import { cacheService } from './cache-service';
 
 // Initialize Moralis
 try {
@@ -383,11 +384,24 @@ export async function getNativePlsPrice(): Promise<{price: number, priceChange24
 }
 
 /**
- * Get token price from Moralis API
+ * Get token price from Moralis API (with caching)
  */
 export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenPriceResponse | null> {
+  if (!tokenAddress) {
+    console.log('Token address is null or undefined');
+    return null;
+  }
+  
+  const normalizedAddress = tokenAddress.toLowerCase();
+  
+  // Check cache first to avoid unnecessary API calls
+  const cachedPrice = cacheService.getTokenPrice(normalizedAddress);
+  if (cachedPrice) {
+    return cachedPrice;
+  }
+  
   // Handle special case for native PLS token (0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
-  if (tokenAddress && tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+  if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
     console.log('Detected request for native PLS token price, using wPLS contract for accuracy');
     
     // Try to get the current PLS price from wPLS contract
@@ -399,7 +413,7 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
     const plsPriceFormatted = plsPriceUsd.toString();
     
     // Return a structure with the PLS logo and price data
-    return {
+    const result = {
       tokenName: "PulseChain",
       tokenSymbol: "PLS",
       tokenDecimals: "18",
@@ -422,6 +436,11 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
       verifiedContract: true,
       securityScore: 100 // Highest score for native token
     };
+    
+    // Cache the result
+    cacheService.setTokenPrice(normalizedAddress, result);
+    
+    return result;
   }
 
   // Standard ERC20 token price fetching
@@ -443,6 +462,9 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
     } else {
       console.log(`Token ${tokenAddress} does not have a logo URL from Moralis`);
     }
+    
+    // Cache the result before returning
+    cacheService.setTokenPrice(normalizedAddress, response.raw);
     
     return response.raw as MoralisTokenPriceResponse;
   } catch (error: any) {
@@ -545,25 +567,36 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
 
 /**
  * Get wallet transaction history from Moralis API with pagination support
+ * (with caching to reduce API calls)
  */
 export async function getWalletTransactionHistory(
   walletAddress: string, 
   limit: number = 100, // Moralis free plan limits to max 100 transactions per call
   cursorParam: string | null = null
 ): Promise<any> {
+  // Normalize wallet address for consistent caching
+  const normalizedAddress = walletAddress.toLowerCase();
+  
+  // Check cache first to avoid unnecessary API calls
+  const cachedTxData = cacheService.getTransactionData(normalizedAddress, limit, cursorParam);
+  if (cachedTxData) {
+    console.log(`Using cached transaction data for ${normalizedAddress} with cursor: ${cursorParam || 'null'}`);
+    return cachedTxData;
+  }
+  
   // Add retry logic - maximum 3 attempts with increasing delay
   const MAX_RETRIES = 3;
   const INITIAL_RETRY_DELAY = 1000; // 1 second
   
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`Fetching transaction history for ${walletAddress} from Moralis (attempt ${attempt}/${MAX_RETRIES}, limit: ${limit}, cursor: ${cursorParam || 'none'})`);
+      console.log(`Fetching transaction history for ${normalizedAddress} from Moralis (attempt ${attempt}/${MAX_RETRIES}, limit: ${limit}, cursor: ${cursorParam || 'none'})`);
       
       // Direct API call to Moralis as shown in the working example
       const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVkN2E1ZDg1LTBkOWItNGMwYS1hZjgxLTc4MGJhNTdkNzllYSIsIm9yZ0lkIjoiNDI0Nzk3IiwidXNlcklkIjoiNDM2ODk0IiwidHlwZUlkIjoiZjM5MGFlMWYtNGY3OC00MzViLWJiNmItZmVhODMwNTdhMzAzIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzYzOTQ2MzgsImV4cCI6NDg5MjE1NDYzOH0.AmaeD5gXY-0cE-LAGH6TTucbI6AxQ5eufjqXKMc_u98";
       
       // Build URL with parameters
-      let url = `https://deep-index.moralis.io/api/v2.2/wallets/${walletAddress}/history`;
+      let url = `https://deep-index.moralis.io/api/v2.2/wallets/${normalizedAddress}/history`;
       
       // Add query parameters
       const queryParams = new URLSearchParams();
@@ -635,8 +668,8 @@ export async function getWalletTransactionHistory(
         if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
           tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
             // Set direction based on from/to addresses
-            const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-            const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+            const isReceiving = transfer.to_address.toLowerCase() === normalizedAddress;
+            const isSending = transfer.from_address.toLowerCase() === normalizedAddress;
             
             return {
               ...transfer,
@@ -649,8 +682,8 @@ export async function getWalletTransactionHistory(
         if (tx.native_transfers && tx.native_transfers.length > 0) {
           tx.native_transfers = tx.native_transfers.map((transfer: any) => {
             // Set direction based on from/to addresses
-            const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-            const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+            const isReceiving = transfer.to_address.toLowerCase() === normalizedAddress;
+            const isSending = transfer.from_address.toLowerCase() === normalizedAddress;
             
             return {
               ...transfer,
@@ -662,16 +695,22 @@ export async function getWalletTransactionHistory(
         return tx;
       });
       
-      console.log(`Successfully fetched transaction history for ${walletAddress} - ${result.length} transactions`);
+      console.log(`Successfully fetched transaction history for ${normalizedAddress} - ${result.length} transactions`);
       console.log('First transaction sample:', result.length > 0 ? JSON.stringify(result[0]).substring(0, 300) : 'No transactions');
       
-      // Success - return the processed data
-      return {
+      // Prepare the response data
+      const responseObject = {
         result,
         cursor,
         page,
         page_size
       };
+      
+      // Cache the result before returning
+      cacheService.setTransactionData(normalizedAddress, limit, cursorParam, responseObject);
+      
+      // Success - return the processed data
+      return responseObject;
       
     } catch (error: any) {
       // Handle AbortController timeout
@@ -712,11 +751,31 @@ export async function getWalletTransactionHistory(
 
 /**
  * Get full wallet data including token balances and prices
+ * (with caching to reduce API calls)
  * @param walletAddress The wallet address to fetch data for
  * @param page Page number for pagination (1-based)
  * @param limit Number of tokens per page
  */
 export async function getWalletData(walletAddress: string, page: number = 1, limit: number = 100): Promise<WalletData> {
+  // Normalize wallet address for consistent caching
+  const normalizedAddress = walletAddress.toLowerCase();
+  
+  // Check cache first to avoid unnecessary API calls
+  const cachedWalletData = cacheService.getWalletData(normalizedAddress);
+  if (cachedWalletData) {
+    console.log(`Using cached wallet data for ${normalizedAddress}`);
+    
+    // Still update loading progress for UI
+    updateLoadingProgress({
+      status: 'complete',
+      currentBatch: 1,
+      totalBatches: 1,
+      message: 'Using cached wallet data...'
+    });
+    
+    return cachedWalletData;
+  }
+  
   try {
     // Initialize loading progress at the start with a reasonable estimate of total batches
     // Use an initial high count to show progress for the entire process
@@ -728,7 +787,7 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
     });
     
     // Get native PLS balance directly from Moralis API (more reliable and faster)
-    console.log(`Getting native PLS balance for ${walletAddress}`);
+    console.log(`Getting native PLS balance for ${normalizedAddress}`);
     
     // Update progress
     updateLoadingProgress({
@@ -736,7 +795,7 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       message: 'Fetching native PLS balance...'
     });
     
-    let nativePlsBalance = await getNativePlsBalance(walletAddress);
+    let nativePlsBalance = await getNativePlsBalance(normalizedAddress);
     console.log(`Native PLS balance from direct API call: ${nativePlsBalance?.balanceFormatted || 'Not found'}`);
     
     // Try to get token data from Moralis (includes other tokens with prices)
@@ -746,7 +805,7 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       message: 'Fetching token data from Moralis...'
     });
     
-    const moralisData = await getWalletTokenBalancesFromMoralis(walletAddress);
+    const moralisData = await getWalletTokenBalancesFromMoralis(normalizedAddress);
     
     // If we have Moralis data, use it
     // Check if moralisData is an array (direct result) or has a result property
@@ -1394,8 +1453,9 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
     
     console.log(`Pagination: page ${page}, limit ${limit}, showing tokens ${startIndex + 1}-${endIndex} of ${totalTokens}`);
     
-    return {
-      address: walletAddress,
+    // Prepare the wallet data response
+    const result: WalletData = {
+      address: normalizedAddress,
       tokens: paginatedTokens,
       totalValue,
       tokenCount: totalTokens, // Keep the total count, not just the paginated count
@@ -1409,6 +1469,19 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
         totalPages
       }
     };
+    
+    // Store the full data (not just paginated) in the cache before returning
+    // We cache the unpaginated version so we can handle different pagination requests from cache
+    const cacheData: WalletData = {
+      ...result,
+      tokens: tokensWithPrice, // Store all tokens, not just paginated ones
+    };
+    
+    // Cache the wallet data for future requests
+    cacheService.setWalletData(normalizedAddress, cacheData);
+    console.log(`Cached wallet data for ${normalizedAddress} with ${tokensWithPrice.length} tokens`);
+    
+    return result;
   } catch (error) {
     console.error('Error in getWalletData:', error);
     
@@ -1418,6 +1491,16 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       message: error instanceof Error ? error.message : 'An unexpected error occurred'
     });
     
-    throw error;
+    // Return a minimal valid response rather than throwing
+    // This helps prevent UI errors while still indicating the problem
+    return {
+      address: normalizedAddress,
+      tokens: [],
+      totalValue: 0,
+      tokenCount: 0,
+      plsBalance: null,
+      plsPriceChange: null,
+      networkCount: 0
+    };
   }
 }

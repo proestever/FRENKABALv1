@@ -177,28 +177,28 @@ class CacheService {
     let priceExpiredCount = 0;
     
     // Cleanup wallet data cache
-    for (const [key, value] of this.walletDataCache.entries()) {
+    this.walletDataCache.forEach((value, key) => {
       if (now > value.expiry) {
         this.walletDataCache.delete(key);
         walletExpiredCount++;
       }
-    }
+    });
     
     // Cleanup transactions cache
-    for (const [key, value] of this.transactionsCache.entries()) {
+    this.transactionsCache.forEach((value, key) => {
       if (now > value.expiry) {
         this.transactionsCache.delete(key);
         transactionExpiredCount++;
       }
-    }
+    });
     
     // Cleanup token price cache
-    for (const [key, value] of this.tokenPriceCache.entries()) {
+    this.tokenPriceCache.forEach((value, key) => {
       if (now > value.expiry) {
         this.tokenPriceCache.delete(key);
         priceExpiredCount++;
       }
-    }
+    });
     
     console.log(`Cache cleanup completed: removed ${walletExpiredCount} wallet, ${transactionExpiredCount} transaction, and ${priceExpiredCount} price items`);
   }
