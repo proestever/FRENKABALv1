@@ -312,13 +312,7 @@ export default function HistoricalApiStats() {
                         <TableCell className="font-medium">{item.endpoint}</TableCell>
                         <TableCell className="text-right">{item.callCount}</TableCell>
                         <TableCell className="text-right">
-                          {typeof item.callCount === 'number' && typeof stats.totals.totalCalls === 'number' 
-                            ? calculatePercentage(item.callCount, stats.totals.totalCalls)
-                            : calculatePercentage(
-                                parseInt(item.callCount.toString()), 
-                                parseInt(stats.totals.totalCalls.toString())
-                              )
-                          }
+                          {calculatePercentage(item.callCount, stats.totals.totalCalls)}
                         </TableCell>
                       </TableRow>
                     ))}
