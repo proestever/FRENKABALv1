@@ -344,7 +344,7 @@ const PortfoliosPage = () => {
             <div key={portfolio.id} className="mb-6">
               <Card className="w-full glass-card border border-white/15 shadow-lg bg-black/10">
                 <CardHeader className="pb-2 flex items-center">
-                  <div className="flex justify-between items-center w-full">
+                  <div className="flex justify-between items-center w-full pb-2">
                     <div className="flex items-center gap-2">
                       <Button 
                         variant="ghost" 
