@@ -325,17 +325,83 @@ const PortfoliosPage = () => {
                   Created {new Date(portfolio.createdAt).toLocaleDateString()}
                 </div>
                 
-                <Button 
-                  className="mt-4"
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedPortfolio(portfolio);
-                    handlePortfolioSearch(portfolio.id);
-                  }}
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Search Portfolio
-                </Button>
+                <div className="mt-4 space-y-2">
+                  <Button 
+                    className="w-full"
+                    variant="secondary"
+                    onClick={() => {
+                      if (selectedPortfolio?.id === portfolio.id) {
+                        setSelectedPortfolio(null);
+                      } else {
+                        setSelectedPortfolio(portfolio);
+                        // Also load the addresses
+                        queryClient.prefetchQuery({
+                          queryKey: ['portfolioAddresses', portfolio.id],
+                          queryFn: async () => {
+                            const response = await apiRequest({
+                              url: `/api/portfolios/${portfolio.id}/addresses`,
+                              method: 'GET'
+                            });
+                            return await response.json() as PortfolioAddress[];
+                          }
+                        });
+                      }
+                    }}
+                  >
+                    {selectedPortfolio?.id === portfolio.id ? 'Hide Addresses' : 'Show Addresses'}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setSelectedPortfolio(portfolio);
+                      handlePortfolioSearch(portfolio.id);
+                    }}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Search Portfolio
+                  </Button>
+                </div>
+                
+                {selectedPortfolio?.id === portfolio.id && (
+                  <div className="mt-4">
+                    <Separator className="my-2" />
+                    <div className="font-medium text-sm mb-2">Portfolio Addresses</div>
+                    
+                    {portfolioAddresses && portfolioAddresses.length > 0 ? (
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        {portfolioAddresses.map((address) => (
+                          <div key={address.id} className="flex items-center justify-between p-2 text-xs border rounded">
+                            <div className="flex flex-col">
+                              <div className="font-medium truncate max-w-[150px]">
+                                {address.walletAddress}
+                              </div>
+                              {address.label && (
+                                <Badge variant="outline" className="mt-1 text-xs">
+                                  {address.label}
+                                </Badge>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => removeAddressMutation.mutate(address.id)}
+                              disabled={removeAddressMutation.isPending}
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground py-2">
+                        No addresses added yet. Click the + button above to add wallet addresses.
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
