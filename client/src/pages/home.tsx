@@ -468,19 +468,12 @@ export default function Home() {
     <main className="container mx-auto px-4 py-6">
       {/* Only show the search section at the top if no wallet has been searched yet and not in multi-wallet mode */}
       {!searchedAddress && !multiWalletData && (
-        <>
-          <SearchSection 
-            onSearch={handleSearch}
-            onMultiSearch={handleMultiSearch}
-            isLoading={isLoading || isMultiWalletLoading} 
-            hasSearched={false}
-          />
-          
-          {/* API Stats Card - show API usage statistics */}
-          <div className="mt-8">
-            <ApiStats />
-          </div>
-        </>
+        <SearchSection 
+          onSearch={handleSearch}
+          onMultiSearch={handleMultiSearch}
+          isLoading={isLoading || isMultiWalletLoading} 
+          hasSearched={false}
+        />
       )}
       
       {/* Loading Progress Bar - shows during loading */}

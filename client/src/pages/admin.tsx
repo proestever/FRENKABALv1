@@ -3,27 +3,27 @@ import { useLocation } from 'wouter';
 import ApiStats from '@/components/api-stats';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useWallet } from '@/hooks/use-wallet';
+import { useAuth } from '@/providers/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 
 // Admin wallet address (case-insensitive for comparison)
 const ADMIN_WALLET_ADDRESS = '0x592139A3f8cf019f628A152FC1262B8aEf5B7199'.toLowerCase();
 
 export default function AdminPage() {
-  const { wallet } = useWallet();
+  const { account, isConnected } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   // Check if the connected wallet is the admin address
   useEffect(() => {
-    if (wallet && wallet.toLowerCase() === ADMIN_WALLET_ADDRESS) {
+    if (account && account.toLowerCase() === ADMIN_WALLET_ADDRESS) {
       setIsAuthorized(true);
     } else {
       setIsAuthorized(false);
       
       // Show toast if wallet is connected but not authorized
-      if (wallet) {
+      if (account) {
         toast({
           title: "Access Denied",
           description: "You don't have permission to access the admin page.",
@@ -31,10 +31,10 @@ export default function AdminPage() {
         });
       }
     }
-  }, [wallet, toast]);
+  }, [account, toast]);
 
   // If not authorized, show access denied
-  if (!wallet) {
+  if (!account) {
     return (
       <main className="container mx-auto px-4 py-6">
         <Card className="border-white/10 p-6 shadow-lg max-w-2xl mx-auto">

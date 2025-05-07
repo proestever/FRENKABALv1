@@ -14,7 +14,11 @@ interface ApiCallStats {
   lastReset: number;
 }
 
-export default function ApiStats() {
+interface ApiStatsProps {
+  isAdmin?: boolean;
+}
+
+export default function ApiStats({ isAdmin = false }: ApiStatsProps) {
   const [stats, setStats] = useState<ApiCallStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
