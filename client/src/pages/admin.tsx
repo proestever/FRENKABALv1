@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import ApiStats from '@/components/api-stats';
+import HistoricalApiStats from '@/components/historical-api-stats';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/providers/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 
@@ -84,7 +86,20 @@ export default function AdminPage() {
         <div className="space-y-6">
           <section>
             <h2 className="text-xl font-semibold mb-4">API Usage Statistics</h2>
-            <ApiStats isAdmin={true} />
+            <Tabs defaultValue="current">
+              <TabsList className="mb-4">
+                <TabsTrigger value="current">Current Stats</TabsTrigger>
+                <TabsTrigger value="historical">Historical Data</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="current">
+                <ApiStats isAdmin={true} />
+              </TabsContent>
+              
+              <TabsContent value="historical">
+                <HistoricalApiStats />
+              </TabsContent>
+            </Tabs>
           </section>
         </div>
       </Card>

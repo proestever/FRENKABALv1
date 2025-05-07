@@ -206,7 +206,7 @@ export class ApiStatsService {
         })
         .from(apiCallRecords)
         .groupBy(apiCallRecords.endpoint)
-        .orderBy(sql`COUNT(*)`, 'desc')
+        .orderBy(sql`COUNT(*) DESC`)
         .limit(limit);
       
       return result;
