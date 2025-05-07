@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, ExternalLink } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Copy } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useWallet } from '@/hooks/use-wallet';
 import { Button } from '@/components/ui/button';
@@ -386,17 +386,44 @@ const PortfoliosPage = () => {
                       <div className="text-xs text-muted-foreground mr-2">
                         Created {new Date(portfolio.createdAt).toLocaleDateString()}
                       </div>
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPortfolio(portfolio);
-                          handlePortfolioSearch(portfolio.id, portfolio.name);
-                        }}
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        Search
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button 
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPortfolio(portfolio);
+                            handlePortfolioSearch(portfolio.id, portfolio.name);
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Search
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            // Create the shareable URL with the origin and pathname
+                            const portfolioUrl = `${window.location.origin}/portfolio/${portfolio.id}`;
+                            // Copy to clipboard
+                            navigator.clipboard.writeText(portfolioUrl).then(() => {
+                              toast({
+                                title: "URL copied",
+                                description: "Portfolio URL has been copied to clipboard",
+                              });
+                            }).catch(err => {
+                              console.error("Could not copy URL: ", err);
+                              toast({
+                                title: "Copy failed",
+                                description: "Failed to copy URL to clipboard",
+                                variant: "destructive"
+                              });
+                            });
+                          }}
+                        >
+                          <Copy className="h-4 w-4 mr-1" />
+                          Share
+                        </Button>
+                      </div>
                       <Button 
                         variant="outline"
                         size="sm"
