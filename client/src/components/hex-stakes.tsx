@@ -342,33 +342,27 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="text-right">
             <div className="text-sm text-white/70">Total HEX Staked</div>
-            <div className="text-lg font-bold text-white" data-total-staked={walletAddress.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5' ? '3054409.62' : totalHexStaked}>
-              {walletAddress.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5' 
-                ? formatTokenAmount(3054409.62) 
-                : formatTokenAmount(parseFloat(totalHexStaked))}
+            <div className="text-lg font-bold text-white" data-total-staked={totalHexStaked}>
+              {formatTokenAmount(parseFloat(totalHexStaked))}
             </div>
-            <div className="text-xs text-gray-400">${formatUsd(walletAddress.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5' ? 3054409.62 * hexPrice : stakedValueUsd)}</div>
+            <div className="text-xs text-gray-400">${formatUsd(stakedValueUsd)}</div>
           </div>
           
           <div className="text-right">
             <div className="text-sm text-white/70">Total Interest</div>
-            <div className="text-lg font-bold text-teal-400" data-total-interest={walletAddress.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5' ? '0.00' : totalInterest}>
-              +{walletAddress.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5' 
-                ? '0.00' 
-                : formatTokenAmount(parseFloat(totalInterest))}
+            <div className="text-lg font-bold text-teal-400" data-total-interest={totalInterest}>
+              +{formatTokenAmount(parseFloat(totalInterest))}
             </div>
-            <div className="text-xs text-gray-400">+${formatUsd(walletAddress.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5' ? 0 : interestValueUsd)}</div>
+            <div className="text-xs text-gray-400">+${formatUsd(interestValueUsd)}</div>
           </div>
           
           <div className="text-right">
             <div className="text-sm text-white/70">Total Stake + Interest</div>
             <div className="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent"
-                 data-total-combined={walletAddress.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5' ? '3054409.62' : totalStakePlusInterest}>
-              {walletAddress.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5' 
-                ? formatTokenAmount(3054409.62) 
-                : formatTokenAmount(parseFloat(totalStakePlusInterest))}
+                 data-total-combined={totalStakePlusInterest}>
+              {formatTokenAmount(parseFloat(totalStakePlusInterest))}
             </div>
-            <div className="text-xs text-gray-400">${formatUsd(walletAddress.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5' ? 3054409.62 * hexPrice : totalValueUsd)}</div>
+            <div className="text-xs text-gray-400">${formatUsd(totalValueUsd)}</div>
           </div>
         </div>
       </div>
