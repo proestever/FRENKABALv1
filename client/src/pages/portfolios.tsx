@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { apiRequest } from '@/lib/queryClient';
 import { Separator } from '@/components/ui/separator';
-import { EmptyState } from '@/components/empty-state';
+import { PortfolioEmptyState } from '@/components/portfolio-empty-state';
 import { Badge } from '@/components/ui/badge';
 
 // Type definitions
@@ -143,7 +143,7 @@ const PortfoliosPage = () => {
       return apiRequest(`/api/portfolios/${selectedPortfolio.id}/addresses`, { 
         method: 'POST', 
         data 
-      });
+      } as any);
     },
     onSuccess: () => {
       if (!selectedPortfolio) return;
@@ -174,7 +174,7 @@ const PortfoliosPage = () => {
   // Remove address from portfolio mutation
   const removeAddressMutation = useMutation({
     mutationFn: async (addressId: number) => {
-      return apiRequest(`/api/portfolio-addresses/${addressId}`, { method: 'DELETE' });
+      return apiRequest(`/api/portfolio-addresses/${addressId}`, { method: 'DELETE' } as any);
     },
     onSuccess: () => {
       if (!selectedPortfolio) return;
