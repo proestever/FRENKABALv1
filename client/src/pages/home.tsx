@@ -32,6 +32,35 @@ export default function Home() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Listen for the custom reset event from logo click
+  useEffect(() => {
+    const handleResetSearch = () => {
+      console.log("Received custom reset event from logo click");
+      // Complete reset of all state
+      setSearchedAddress(null);
+      setMultiWalletData(null);
+      setMultiWalletHexStakes(null);
+      setPortfolioName(null);
+      setPortfolioUrlId(null);
+      setIndividualWalletHexStakes({});
+      setManualTokens([]);
+      
+      // Show toast to confirm action
+      toast({
+        title: "Reset complete",
+        description: "Search has been reset to the home screen."
+      });
+    };
+    
+    // Add event listener for the custom reset event
+    window.addEventListener('frenklabal:reset-search', handleResetSearch);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('frenklabal:reset-search', handleResetSearch);
+    };
+  }, [toast]);
+  
   // Define search function for a single wallet address
   const handleSearch = (address: string) => {
     if (!address) return;
