@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/empty-state';
 import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
 import { Button } from '@/components/ui/button';
-import { saveRecentAddress, ProcessedToken, fetchWalletsBatch } from '@/lib/api';
+import { saveRecentAddress, ProcessedToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
 import { useHexStakes, fetchHexStakesSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
@@ -105,11 +105,34 @@ export default function Home() {
     setMultiWalletData(null);
     
     try {
-      console.log(`Fetching data for ${addresses.length} wallets in batch`);
-      const result = await fetchWalletsBatch(addresses);
+      console.log(`Fetching data for ${addresses.length} wallets individually`);
+      
+      // Process addresses in parallel by fetching each one directly
+      const walletPromises = addresses.map(address => 
+        fetch(`/api/wallet/${address}/all`)
+          .then(response => {
+            if (!response.ok) {
+              console.warn(`Failed to fetch wallet ${address}`);
+              return null;
+            }
+            return response.json().then(data => ({ [address]: data }));
+          })
+          .catch(error => {
+            console.error(`Error fetching wallet ${address}:`, error);
+            return null;
+          })
+      );
+      
+      // Wait for all promises to resolve
+      const results = await Promise.all(walletPromises);
+      
+      // Filter out null results and combine into a single object
+      const walletData = results
+        .filter(result => result !== null)
+        .reduce((acc, result) => ({ ...acc, ...result }), {});
       
       // Check if we got any data
-      if (Object.keys(result).length === 0) {
+      if (Object.keys(walletData).length === 0) {
         toast({
           title: "No wallet data found",
           description: "Could not find data for any of the provided addresses",
@@ -118,11 +141,11 @@ export default function Home() {
         return;
       }
       
-      setMultiWalletData(result);
+      setMultiWalletData(walletData);
       
       toast({
         title: "Multi-wallet search completed",
-        description: `Loaded data for ${Object.keys(result).length} wallets`,
+        description: `Loaded data for ${Object.keys(walletData).length} wallets`,
         variant: "default"
       });
     } catch (error) {
