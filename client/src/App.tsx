@@ -8,10 +8,11 @@ import Home from "@/pages/home";
 import { Profile } from "@/pages/profile";
 import { Donations } from "@/pages/donations";
 import PortfoliosPage from "@/pages/portfolios";
+import AdminPage from "@/pages/admin";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthProvider } from "@/providers/auth-provider";
-import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch } from "lucide-react";
+import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch, Settings } from "lucide-react";
 import telegramLogo from "@assets/Telegram_2019_Logo.svg.png";
 import xLogo from "@assets/X_logo.jpg";
 import {
@@ -191,6 +192,14 @@ function Header() {
                     <FolderSearch className="mr-2 h-4 w-4" />
                     <span>Portfolios</span>
                   </DropdownMenuItem>
+                  
+                  {/* Admin link - only show for the admin wallet address */}
+                  {account && account.toLowerCase() === '0x592139a3f8cf019f628a152fc1262b8aef5b7199'.toLowerCase() && (
+                    <DropdownMenuItem onClick={() => setLocation("/admin")} className="cursor-pointer dropdown-item-hover">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Admin</span>
+                    </DropdownMenuItem>
+                  )}
                 </>
               )}
             </DropdownMenuContent>
@@ -248,6 +257,14 @@ function Header() {
                       <FolderSearch className="mr-2 h-4 w-4" />
                       <span>Portfolios</span>
                     </DropdownMenuItem>
+                    
+                    {/* Admin link in mobile menu - only show for the admin wallet address */}
+                    {account && account.toLowerCase() === '0x592139a3f8cf019f628a152fc1262b8aef5b7199'.toLowerCase() && (
+                      <DropdownMenuItem onClick={() => setLocation("/admin")} className="cursor-pointer dropdown-item-hover">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Admin</span>
+                      </DropdownMenuItem>
+                    )}
                   </>
                 )}
               </DropdownMenuContent>
@@ -352,6 +369,7 @@ function Router() {
           <Route path="/portfolios" component={PortfoliosPage} />
           <Route path="/portfolio/:portfolioId" component={Home} />
           <Route path="/donations" component={Donations} />
+          <Route path="/admin" component={AdminPage} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
         </Switch>
