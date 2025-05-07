@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance } from "./services/api";
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
 import { getTokenPricesFromDexScreener } from "./services/dexscreener";
+import { getDirectTokenBalances } from "./services/blockchain-service";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
