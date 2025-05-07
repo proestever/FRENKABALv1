@@ -215,14 +215,7 @@ const PortfoliosPage = () => {
     },
   });
 
-  // Generate a unique portfolio URL identifier
-  const generatePortfolioUrlId = (portfolioId: number) => {
-    // Combine portfolio ID with current date to create a unique string
-    const timestamp = new Date().getTime();
-    // Use only the last 6 digits for readability - still unique enough for our purposes
-    const uniqueId = `${portfolioId}-${timestamp % 1000000}`;
-    return uniqueId;
-  };
+  // No longer need to generate a unique URL ID as we'll use direct portfolio ID in the URL
 
   // Handler for portfolio search - load all addresses in portfolio and show combined view
   const handlePortfolioSearch = async (portfolioId: number, portfolioName: string) => {
@@ -246,19 +239,17 @@ const PortfoliosPage = () => {
       };
       
       if (result && result.walletAddresses && result.walletAddresses.length > 0) {
-        // Generate a unique identifier for this portfolio view
-        const portfolioUrlId = generatePortfolioUrlId(portfolioId);
-        
-        // Navigate to the home page with the portfolio addresses as a combined search
-        const addressesStr = result.walletAddresses.join(',');
+        // Store portfolio data in session storage
+        sessionStorage.setItem(`portfolio_${portfolioId}`, JSON.stringify({
+          addresses: result.walletAddresses,
+          name: portfolioName
+        }));
         
         // Log the portfolio search to help debugging
         console.log(`Searching portfolio: ${portfolioName} (ID: ${portfolioId}) with ${result.walletAddresses.length} addresses`);
-        console.log(`Generated URL ID: ${portfolioUrlId}`);
         
-        // Use setLocation to go to the home page with the portfolio addresses
-        // Include portfolio ID, name and unique ID for deeplink capability
-        setLocation(`/?addresses=${encodeURIComponent(addressesStr)}&name=${encodeURIComponent(portfolioName)}&uid=${portfolioUrlId}`);
+        // Use the new clean URL format with the portfolio ID
+        setLocation(`/portfolio/${portfolioId}`);
         
         // Show success toast
         toast({

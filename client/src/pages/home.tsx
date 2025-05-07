@@ -214,15 +214,88 @@ export default function Home() {
       }, {} as Record<string, string>);
   };
 
-  // Check if we have a wallet address in the URL or portfolio addresses in query params
+  // Check if we have a wallet address in the URL, portfolio ID in the path, or addresses in query params
   useEffect(() => {
     const search = window.location.search;
     const queryParams = parseQueryString(search);
     
-    // Check for multiple addresses from portfolio search
+    // First check if we're using the clean portfolio URL format (/portfolio/:portfolioId)
+    if (location.startsWith('/portfolio/')) {
+      const portfolioId = location.split('/')[2]; // Get the ID from the URL
+      console.log(`Loading portfolio with ID: ${portfolioId}`);
+      
+      // Get portfolio data from session storage
+      const portfolioData = sessionStorage.getItem(`portfolio_${portfolioId}`);
+      
+      if (portfolioData) {
+        try {
+          const { addresses, name } = JSON.parse(portfolioData);
+          
+          if (addresses && addresses.length > 0) {
+            // Set portfolio name for display
+            setPortfolioName(name);
+            console.log(`Portfolio name from session storage: ${name}`);
+            
+            // Filter out any invalid addresses
+            const validAddresses = addresses.filter((addr: string) => addr.startsWith('0x'));
+            if (validAddresses.length > 0) {
+              // Use multi-search to load all the wallet data
+              handleMultiSearch(validAddresses);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing portfolio data from session storage:', error);
+        }
+      }
+      
+      // If we can't find portfolio data in session storage, try to fetch it from the API
+      const fetchPortfolioData = async () => {
+        try {
+          const response = await fetch(`/api/portfolios/${portfolioId}/wallet-addresses`);
+          const result = await response.json();
+          
+          if (result && result.walletAddresses && result.walletAddresses.length > 0) {
+            setPortfolioName(result.portfolioName);
+            console.log(`Portfolio name from API: ${result.portfolioName}`);
+            
+            // Filter out any invalid addresses
+            const validAddresses = result.walletAddresses.filter((addr: string) => addr.startsWith('0x'));
+            if (validAddresses.length > 0) {
+              handleMultiSearch(validAddresses);
+            }
+          } else {
+            // Could not find wallet addresses for this portfolio
+            toast({
+              title: "Portfolio not found",
+              description: "Could not find wallet addresses for this portfolio.",
+              variant: "destructive"
+            });
+            
+            // Redirect to homepage
+            setLocation('/');
+          }
+        } catch (error) {
+          console.error('Error fetching portfolio data from API:', error);
+          toast({
+            title: "Error loading portfolio",
+            description: "Failed to load portfolio data.",
+            variant: "destructive"
+          });
+          
+          // Redirect to homepage
+          setLocation('/');
+        }
+      };
+      
+      fetchPortfolioData();
+      return;
+    }
+    
+    // Legacy support for the old query parameter format
     if (queryParams.addresses) {
       const addressList = queryParams.addresses.split(',');
-      console.log(`Loading portfolio with ${addressList.length} addresses`);
+      console.log(`Loading portfolio with ${addressList.length} addresses (legacy URL format)`);
       
       // Extract portfolio information from URL if available
       if (queryParams.name) {
@@ -422,7 +495,7 @@ export default function Home() {
                     wallet={combinedWallet} 
                     isLoading={false}
                     hexStakesSummary={multiWalletHexStakes}
-                    portfolioName={portfolioName}
+                    portfolioName={portfolioName || undefined}
                     onRefresh={() => {
                       // Refresh all wallets by re-fetching
                       if (multiWalletData) {
