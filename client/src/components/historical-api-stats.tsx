@@ -37,16 +37,21 @@ interface TotalStats {
   lastDate: string | null;
 }
 
-interface TopStats {
-  id: string;
-  callCount: number;
+interface TopWalletStats {
+  walletAddress: string;
+  callCount: string | number;
+}
+
+interface TopEndpointStats {
+  endpoint: string;
+  callCount: string | number;
 }
 
 interface HistoricalApiStats {
   daily: DailyStats[];
   totals: TotalStats;
-  topWallets: TopStats[];
-  topEndpoints: TopStats[];
+  topWallets: TopWalletStats[];
+  topEndpoints: TopEndpointStats[];
   period: {
     days: number;
     start: string;
@@ -115,9 +120,12 @@ export default function HistoricalApiStats() {
   };
 
   // Calculate percentage
-  const calculatePercentage = (part: number, total: number) => {
-    if (total === 0) return '0%';
-    return `${((part / total) * 100).toFixed(1)}%`;
+  const calculatePercentage = (part: string | number, total: string | number) => {
+    const partNum = typeof part === 'string' ? parseInt(part) : part;
+    const totalNum = typeof total === 'string' ? parseInt(total) : total;
+    
+    if (totalNum === 0) return '0%';
+    return `${((partNum / totalNum) * 100).toFixed(1)}%`;
   };
 
   // Prepare chart data
@@ -239,9 +247,14 @@ export default function HistoricalApiStats() {
                       .map((day) => (
                         <TableRow key={day.date}>
                           <TableCell className="font-medium">{day.date}</TableCell>
-                          <TableCell className="text-right">{day.apiCalls}</TableCell>
+                          <TableCell className="text-right">{day.totalCalls - day.cacheHits}</TableCell>
                           <TableCell className="text-right">{day.cacheHits}</TableCell>
-                          <TableCell className="text-right">{(day.cacheHitRate * 100).toFixed(1)}%</TableCell>
+                          <TableCell className="text-right">
+                            {day.totalCalls > 0 ? 
+                              `${((day.cacheHits / day.totalCalls) * 100).toFixed(1)}%` : 
+                              '0%'
+                            }
+                          </TableCell>
                           <TableCell className="text-right">{day.totalCalls}</TableCell>
                         </TableRow>
                     ))}
@@ -266,10 +279,12 @@ export default function HistoricalApiStats() {
                   </TableHeader>
                   <TableBody>
                     {stats.topWallets.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{formatAddress(item.id)}</TableCell>
+                      <TableRow key={item.walletAddress}>
+                        <TableCell className="font-medium">{formatAddress(item.walletAddress)}</TableCell>
                         <TableCell className="text-right">{item.callCount}</TableCell>
-                        <TableCell className="text-right">{calculatePercentage(item.callCount, stats.totals.totalCalls)}</TableCell>
+                        <TableCell className="text-right">
+                          {calculatePercentage(item.callCount, stats.totals.totalCalls)}
+                        </TableCell>
                       </TableRow>
                     ))}
                     {stats.topWallets.length === 0 && (
@@ -293,10 +308,18 @@ export default function HistoricalApiStats() {
                   </TableHeader>
                   <TableBody>
                     {stats.topEndpoints.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.id}</TableCell>
+                      <TableRow key={item.endpoint}>
+                        <TableCell className="font-medium">{item.endpoint}</TableCell>
                         <TableCell className="text-right">{item.callCount}</TableCell>
-                        <TableCell className="text-right">{calculatePercentage(item.callCount, stats.totals.totalCalls)}</TableCell>
+                        <TableCell className="text-right">
+                          {typeof item.callCount === 'number' && typeof stats.totals.totalCalls === 'number' 
+                            ? calculatePercentage(item.callCount, stats.totals.totalCalls)
+                            : calculatePercentage(
+                                parseInt(item.callCount.toString()), 
+                                parseInt(stats.totals.totalCalls.toString())
+                              )
+                          }
+                        </TableCell>
                       </TableRow>
                     ))}
                     {stats.topEndpoints.length === 0 && (
