@@ -289,7 +289,7 @@ export async function getTokenBalancesFromList(
   }
 }
 
-// PulseChain's most common tokens (example list - this would ideally be more comprehensive)
+// PulseChain's most common tokens to check first for optimization
 export const PULSECHAIN_COMMON_TOKENS = [
   '0x2b591e99afe9f32eaa6214f7b7629768c40eeb39', // HEX
   '0x9a43aaa7848d5ac97c4446df5bc6f710a4e3e61a', // PLSD
@@ -306,11 +306,104 @@ export const PULSECHAIN_COMMON_TOKENS = [
 ];
 
 /**
+ * Get token transfer events to discover all tokens a wallet has interacted with
+ * This scans the blockchain for historical token transfers to/from this wallet
+ */
+export async function getTokenTransferEvents(walletAddress: string, maxBlocks: number = 100000): Promise<string[]> {
+  try {
+    console.log(`Scanning for token transfer events for ${walletAddress}`);
+    updateLoadingProgress({
+      status: 'loading',
+      message: `Scanning blockchain for token transfers...`,
+      currentBatch: 1,
+      totalBatches: 3
+    });
+
+    // Get current block number
+    const currentBlock = await provider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - maxBlocks); // Limit how far back we scan
+    
+    console.log(`Scanning from block ${fromBlock} to ${currentBlock}`);
+    
+    // Define transfer event topic (keccak256 hash of Transfer(address,address,uint256))
+    const transferEventTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+    
+    // Get transfer events where this wallet is the recipient
+    updateLoadingProgress({
+      status: 'loading',
+      message: `Scanning incoming token transfers...`,
+      currentBatch: 2,
+      totalBatches: 3
+    });
+    
+    const incomingLogs = await provider.getLogs({
+      fromBlock,
+      toBlock: 'latest',
+      topics: [transferEventTopic, null, ethers.utils.hexZeroPad(walletAddress.toLowerCase(), 32)],
+    });
+    
+    // Get transfer events where this wallet is the sender
+    updateLoadingProgress({
+      status: 'loading',
+      message: `Scanning outgoing token transfers...`,
+      currentBatch: 3,
+      totalBatches: 3
+    });
+    
+    const outgoingLogs = await provider.getLogs({
+      fromBlock,
+      toBlock: 'latest',
+      topics: [transferEventTopic, ethers.utils.hexZeroPad(walletAddress.toLowerCase(), 32)],
+    });
+    
+    // Combine logs and extract unique token contract addresses
+    const logs = [...incomingLogs, ...outgoingLogs];
+    const tokenAddresses = new Set<string>();
+    
+    logs.forEach(log => {
+      if (log.address) {
+        tokenAddresses.add(log.address.toLowerCase());
+      }
+    });
+    
+    console.log(`Found ${tokenAddresses.size} unique token contracts from transfer events`);
+    return Array.from(tokenAddresses);
+  } catch (error) {
+    console.error('Error getting token transfer events:', error);
+    return [];
+  }
+}
+
+/**
  * Get all token balances for a wallet by directly querying the blockchain
  * This is faster than waiting for APIs to update after a swap
  */
 export async function getDirectTokenBalances(walletAddress: string): Promise<ProcessedToken[]> {
-  // In a real implementation, this list would be much more comprehensive
-  // or would scan for transfer events to discover tokens
-  return getTokenBalancesFromList(walletAddress, PULSECHAIN_COMMON_TOKENS);
+  try {
+    // First, check balances of common tokens (fast)
+    const commonTokens = await getTokenBalancesFromList(walletAddress, PULSECHAIN_COMMON_TOKENS);
+    
+    console.log(`Found ${commonTokens.length} common tokens with balances`);
+    
+    // Next, scan for transfer events to find all token contracts the wallet has interacted with
+    const tokenAddresses = await getTokenTransferEvents(walletAddress);
+    
+    // Filter out common tokens we already checked to avoid duplicates
+    const commonTokenAddresses = new Set(PULSECHAIN_COMMON_TOKENS.map(addr => addr.toLowerCase()));
+    const additionalTokenAddresses = tokenAddresses.filter(addr => !commonTokenAddresses.has(addr));
+    
+    console.log(`Checking additional ${additionalTokenAddresses.length} tokens found from transfer events`);
+    
+    // Get balances for additional tokens
+    const additionalTokens = await batchGetTokenBalancesFromChain(walletAddress, additionalTokenAddresses);
+    
+    console.log(`Found ${additionalTokens.length} additional tokens with balances`);
+    
+    // Combine results
+    return [...commonTokens, ...additionalTokens];
+  } catch (error) {
+    console.error('Error getting direct token balances:', error);
+    // Fall back to just the common tokens if the event scanning fails
+    return getTokenBalancesFromList(walletAddress, PULSECHAIN_COMMON_TOKENS);
+  }
 }
