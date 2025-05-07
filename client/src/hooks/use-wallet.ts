@@ -175,11 +175,13 @@ export function useWallet(): UseWalletReturn {
     
     if (!ethereum) return;
     
-    const handleAccountsChanged = (accounts: string[]) => {
+    const handleAccountsChanged = async (accounts: string[]) => {
       if (accounts.length === 0) {
         // User disconnected
         setAccount(null);
         setChainId(null);
+        setUserId(null);
+        setUser(null);
         
         // Clear localStorage
         localStorage.removeItem('walletConnected');
@@ -187,12 +189,41 @@ export function useWallet(): UseWalletReturn {
         localStorage.removeItem('userId');
         localStorage.removeItem('lastLoginTimestamp');
       } else {
-        setAccount(accounts[0]);
+        const newAddress = accounts[0];
+        console.log(`Wallet changed to: ${newAddress}`);
+        setAccount(newAddress);
         
         // Update localStorage
         localStorage.setItem('walletConnected', 'true');
-        localStorage.setItem('walletAddress', accounts[0]);
+        localStorage.setItem('walletAddress', newAddress);
         localStorage.setItem('lastLoginTimestamp', Date.now().toString());
+        
+        // Get user ID for the new wallet address
+        try {
+          // Reset current user state
+          setUserId(null);
+          setUser(null);
+          
+          // Fetch user for the new wallet address
+          const userId = await getUserFromWallet(newAddress);
+          if (userId) {
+            console.log(`Found user ID ${userId} for wallet ${newAddress}`);
+            setUserId(userId);
+            localStorage.setItem('userId', String(userId));
+            
+            // Load user profile
+            const userProfile = await getUserProfile(userId);
+            if (userProfile) {
+              setUser(userProfile);
+            }
+          } else {
+            console.log(`No user found for wallet ${newAddress}`);
+            localStorage.removeItem('userId');
+          }
+        } catch (error) {
+          console.error('Error fetching user for new wallet address:', error);
+          localStorage.removeItem('userId');
+        }
       }
     };
     
@@ -218,7 +249,7 @@ export function useWallet(): UseWalletReturn {
         ethereum.removeListener('chainChanged', handleChainChanged);
       }
     };
-  }, [toast, PULSE_CHAIN_ID]);
+  }, [toast, PULSE_CHAIN_ID, getUserFromWallet, getUserProfile]);
 
   // Connect to wallet with signature verification
   const connect = useCallback(async () => {
@@ -283,6 +314,9 @@ export function useWallet(): UseWalletReturn {
         console.log("Wallet connected:", address);
         
         // Initialize ethers provider and signer
+        if (!window.ethereum) {
+          throw new Error("Ethereum provider not found");
+        }
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         const signer = provider.getSigner();
         
