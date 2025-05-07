@@ -118,10 +118,25 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary 
       const visibleTotal = visibleTokens.reduce((sum, token) => {
         return sum + (token.value || 0);
       }, 0);
-      setTotalVisibleValue(visibleTotal);
+      
+      // Add HEX stakes value if available
+      let totalWithHexStakes = visibleTotal;
+      
+      // For single wallet view, use hook data
+      if (hexStakesFromHook && hexStakesFromHook.totalCombinedValueUsd) {
+        totalWithHexStakes += hexStakesFromHook.totalCombinedValueUsd;
+        console.log('Added HEX stakes value (single wallet):', hexStakesFromHook.totalCombinedValueUsd);
+      }
+      // For combined wallet view, use prop data
+      else if (hexStakesSummary && hexStakesSummary.totalCombinedValueUsd) {
+        totalWithHexStakes += hexStakesSummary.totalCombinedValueUsd;
+        console.log('Added HEX stakes value (multi wallet):', hexStakesSummary.totalCombinedValueUsd);
+      }
+      
+      setTotalVisibleValue(totalWithHexStakes);
       setVisibleTokenCount(visibleTokens.length);
     }
-  }, [wallet, hiddenTokens]);
+  }, [wallet, hiddenTokens, hexStakesFromHook, hexStakesSummary]);
 
   if (!wallet) return null;
 
@@ -252,7 +267,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary 
           {/* Total Value Card - Now first */}
           <div className="glass-card rounded-lg p-4 border-white/15">
             <div className="text-sm text-muted-foreground mb-1">
-              {wallet.address.startsWith("Combined") ? "Combined Total Value" : "Total Value (Visible)"}
+              {wallet.address.startsWith("Combined") ? "Combined Total Value" : "Total Value (Including HEX Stakes)"}
             </div>
             <div className="text-xl md:text-2xl font-bold text-white">
               {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
@@ -264,9 +279,16 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary 
             </div>
             <div className="text-sm mt-2 flex items-center justify-between">
               <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
+              {/* Show HEX stakes value for combined wallet view */}
               {wallet.address.startsWith("Combined") && hexStakesSummary && hexStakesSummary.totalCombinedValueUsd > 0 && (
                 <span className="text-xs text-muted-foreground">
                   Includes <span className="text-purple-300 font-medium">{formatCurrency(hexStakesSummary.totalCombinedValueUsd)}</span> in HEX stakes
+                </span>
+              )}
+              {/* Show HEX stakes value for single wallet view */}
+              {!wallet.address.startsWith("Combined") && hexStakesFromHook && hexStakesFromHook.totalCombinedValueUsd > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  Includes <span className="text-purple-300 font-medium">{formatCurrency(hexStakesFromHook.totalCombinedValueUsd)}</span> in HEX stakes
                 </span>
               )}
             </div>
