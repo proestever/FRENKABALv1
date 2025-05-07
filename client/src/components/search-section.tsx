@@ -76,6 +76,26 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
     </div>
   );
 
+  // Search button that ensures icon is centered
+  const SearchButton = () => (
+    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center">
+      <Button 
+        onClick={handleSearch}
+        disabled={isLoading || !searchQuery.trim()}
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9 rounded-full hover:bg-white/10 transition-colors flex items-center justify-center"
+        aria-label="Search"
+      >
+        {isLoading ? (
+          <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        ) : (
+          <Search className="h-5 w-5 text-white" />
+        )}
+      </Button>
+    </div>
+  );
+
   // Different search bar layout based on whether a search has been performed
   if (!hasSearched) {
     // Initial layout with logo centered and narrow search card
@@ -97,22 +117,7 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
                 className="w-full pr-10 glass-card border-white/15 text-foreground bg-black/10"
                 disabled={isLoading}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <Button 
-                  onClick={handleSearch}
-                  disabled={isLoading || !searchQuery.trim()}
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-full hover:bg-white/10 transition-colors"
-                  aria-label="Search"
-                >
-                  {isLoading ? (
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : (
-                    <Search className="h-5 w-5 text-white" />
-                  )}
-                </Button>
-              </div>
+              <SearchButton />
             </div>
             
             {recentAddresses.length > 0 && (
@@ -152,22 +157,7 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
                 className="w-full pr-10 glass-card border-white/15 text-foreground bg-black/10"
                 disabled={isLoading}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <Button 
-                  onClick={handleSearch}
-                  disabled={isLoading || !searchQuery.trim()}
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-full hover:bg-white/10 transition-colors"
-                  aria-label="Search"
-                >
-                  {isLoading ? (
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : (
-                    <Search className="h-5 w-5 text-white" />
-                  )}
-                </Button>
-              </div>
+              <SearchButton />
             </div>
           </CardContent>
         </Card>
