@@ -238,46 +238,55 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       const currentDayBN = await hexContract.currentDay();
       const currentDay = Number(currentDayBN);
       
-      // Check each stake using stakeDataFetch
+      // Use the same exact approach that's working in hex-stakes.tsx
       for (let i = 0; i < Math.min(count, 50); i++) { // Limit to 50 stakes max to prevent overloading
         try {
-          // Use stakeDataFetch to get stake info (0 for stakeIdParam because we're using the index)
-          const stakeData = await hexContract.stakeDataFetch(address, i, 0);
+          // Use stakeLists instead of stakeDataFetch (same approach as hex-stakes.tsx)
+          const stake = await hexContract.stakeLists(address, i);
           
-          if (stakeData && stakeData.length >= 3) {
-            // Get staked Hearts (8 decimals) from position 1 (stakeDataFetch output)
-            const stakedHearts = ethers.BigNumber.from(stakeData[1].toString());
-            const stakedHex = parseFloat(ethers.utils.formatUnits(stakedHearts, 8));
+          if (stake) {
+            // Parse raw stake data
+            const stakeId = stake[0].toString();
+            const stakedHearts = stake[1].toString();
+            const stakeShares = stake[2].toString();
+            const lockedDay = Number(stake[3]);
+            const stakedDays = Number(stake[4]);
+            const unlockedDay = Number(stake[5]);
+            const isAutoStake = stake[6];
+            
+            // Format HEX amount (8 decimals)
+            const hexAmount = ethers.utils.formatUnits(stakedHearts, 8);
+            const stakedHex = parseFloat(hexAmount);
             
             // Add to total
             totalStaked += stakedHex;
             
-            // Calculate simple interest based on progress
-            const lockedDay = Number(stakeData[3]);
-            const stakedDays = Number(stakeData[4]);
-            
-            // Calculate progress
+            // Calculate progress percentage
             let progressPercentage = 0;
-            if (currentDay >= lockedDay) {
+            const endDay = lockedDay + stakedDays;
+            const isActive = unlockedDay === 0;
+            
+            if (isActive && currentDay >= lockedDay) {
+              // If stake is active and we're past the lock day
               const daysPassed = currentDay - lockedDay;
               progressPercentage = Math.min(100, Math.floor((daysPassed / stakedDays) * 100));
+            } else if (!isActive) {
+              // Stake is ended
+              progressPercentage = 100;
             }
             
-            // Use the actual interest calculation from the contract (position 7)
+            // Calculate estimated interest (for display purposes) - exactly like HEX-stakes.tsx
             let interestHex = 0;
-            if (stakeData[7]) {
-              const interestHearts = ethers.BigNumber.from(stakeData[7].toString());
-              interestHex = parseFloat(ethers.utils.formatUnits(interestHearts, 8));
-            } else {
-              // Fallback interest estimation if not available
+            if (progressPercentage > 0) {
+              // Simple interest estimation
               const annualRate = 0.35; // 35% APY (conservative estimate)
               const yearsStaked = stakedDays / 365;
               const estimatedInterestRate = annualRate * yearsStaked * (progressPercentage / 100);
               interestHex = stakedHex * estimatedInterestRate;
+              
+              // Add to total interest
+              totalInterest += interestHex;
             }
-            
-            // Add to total interest
-            totalInterest += interestHex;
             
             console.log(`Found stake ${i} with ${stakedHex.toFixed(2)} HEX, interest: ${interestHex.toFixed(2)} HEX`);
           }
