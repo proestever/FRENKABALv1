@@ -204,6 +204,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // API route to get wallet tokens directly from the blockchain 
+  // This is useful for getting up-to-date balances immediately after a swap
+  app.get("/api/wallet/:address/direct", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format (0x followed by 40 hex chars)
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      // Set loading progress
+      updateLoadingProgress({
+        status: 'loading',
+        message: 'Querying blockchain directly for real-time token balances...',
+        currentBatch: 0,
+        totalBatches: 1
+      });
+      
+      // Get tokens directly from the blockchain
+      const tokens = await getDirectTokenBalances(address);
+      
+      // Calculate total value
+      const totalValue = tokens.reduce((sum, token) => {
+        return sum + (token.value || 0);
+      }, 0);
+      
+      // Format the response in the same way as getWalletData
+      const walletData = {
+        address,
+        tokens,
+        totalValue,
+        tokenCount: tokens.length,
+        plsBalance: tokens.find(t => t.isNative)?.balanceFormatted || null,
+        plsPriceChange: tokens.find(t => t.isNative)?.priceChange24h || null,
+        networkCount: 1, // Always PulseChain in this case
+      };
+      
+      return res.json(walletData);
+    } catch (error) {
+      console.error("Error fetching direct wallet tokens:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch direct wallet tokens",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   // API route to get specific token balance for a wallet
   app.get("/api/wallet/:address/token/:tokenAddress", async (req, res) => {
     try {

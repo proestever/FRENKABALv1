@@ -26,6 +26,29 @@ const PLS_TOKEN_ADDRESS = '0x0000000000000000000000000000000000000000';
 const provider = new ethers.providers.JsonRpcProvider(RPC_ENDPOINT);
 
 /**
+ * Get default token logo for common tokens
+ */
+export function getDefaultLogo(symbol: string | null | undefined): string {
+  if (!symbol) {
+    return 'https://cryptologos.cc/logos/placeholder-logo.png';
+  }
+
+  const symbolLower = symbol.toLowerCase();
+  // Updated with application-specific path for PLS
+  const defaultLogos: Record<string, string> = {
+    pls: '/assets/pls-logo-trimmed.png', // Use our local, trimmed PLS logo
+    hex: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2469.png',
+    phex: 'https://cryptologos.cc/logos/hex-hex-logo.png',
+    peth: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+    pbnb: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',
+    dai: 'https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.png', // DAI logo
+    pdai: 'https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.png', // pDAI logo
+  };
+  
+  return defaultLogos[symbolLower] || 'https://cryptologos.cc/logos/placeholder-logo.png';
+}
+
+/**
  * Call a contract function using ethers.js
  */
 async function callContractFunction<T>(
