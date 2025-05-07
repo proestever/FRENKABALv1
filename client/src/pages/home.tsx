@@ -14,7 +14,6 @@ import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook 
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
 import { combineWalletData } from '@/lib/utils';
-import { useAuth } from '@/providers/auth-provider';
 
 // Example wallet address
 const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
@@ -32,7 +31,6 @@ export default function Home() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { connect, userId } = useAuth();
   
   // Define search function for a single wallet address
   const handleSearch = (address: string) => {
@@ -91,24 +89,21 @@ export default function Home() {
   };
   
   // Handle multi-wallet search
-  const handleMultiSearch = async (addresses: string[], skipUrlUpdate = false) => {
+  const handleMultiSearch = async (addresses: string[]) => {
     if (!addresses.length) return;
     
     // Reset single wallet view
     setSearchedAddress(null);
     
-    // Only update URL if not loading a portfolio (we want to keep the /portfolio/id URL)
-    if (!skipUrlUpdate) {
-      // Update URL to show we're in multi-wallet mode
-      const firstAddress = addresses[0];
-      const currentPath = `/${firstAddress}`;
-      if (location !== currentPath) {
-        setLocation(currentPath);
-      }
-      
-      // Save the first address to recent addresses
-      saveRecentAddress(firstAddress);
+    // Update URL to show we're in multi-wallet mode
+    const firstAddress = addresses[0];
+    const currentPath = `/${firstAddress}`;
+    if (location !== currentPath) {
+      setLocation(currentPath);
     }
+    
+    // Save the first address to recent addresses
+    saveRecentAddress(firstAddress);
     
     setIsMultiWalletLoading(true);
     setMultiWalletData(null);
@@ -230,28 +225,6 @@ export default function Home() {
       const portfolioId = params.portfolioId || location.split('/')[2];
       console.log(`Loading portfolio with ID: ${portfolioId}`);
       
-      // Check if user is authenticated - we need a userId to load portfolios
-      if (!userId) {
-        console.log("User not authenticated - attempting to connect wallet first");
-        
-        // Set a flag in localStorage to indicate we need to retry after auth
-        localStorage.setItem('retry_portfolio_load', portfolioId);
-        
-        // Wait a moment and then attempt to try connecting the wallet if possible
-        setTimeout(() => {
-          // We'll let auth-provider determine if it's possible to connect wallet
-          if (typeof connect === 'function') {
-            connect();
-          } else {
-            toast({
-              title: "Authentication Required",
-              description: "Please connect your wallet to view portfolios",
-              variant: "destructive"
-            });
-          }
-        }, 1000);
-      }
-      
       // Get portfolio data from session storage
       const portfolioData = sessionStorage.getItem(`portfolio_${portfolioId}`);
       
@@ -268,8 +241,7 @@ export default function Home() {
             const validAddresses = addresses.filter((addr: string) => addr.startsWith('0x'));
             if (validAddresses.length > 0) {
               // Use multi-search to load all the wallet data
-              // Pass true to skip URL update when loading from portfolio
-              handleMultiSearch(validAddresses, true);
+              handleMultiSearch(validAddresses);
               return;
             }
           }
@@ -281,62 +253,20 @@ export default function Home() {
       // If we can't find portfolio data in session storage, try to fetch it from the API
       const fetchPortfolioData = async () => {
         try {
-          // Show a loading toast to let the user know something is happening
-          toast({
-            title: "Loading portfolio",
-            description: "Fetching portfolio data...",
-            duration: 3000,
-          });
-          
-          console.log(`Fetching portfolio with ID: ${portfolioId} from API`);
-          
-          // Make sure we wait for authentication before proceeding
-          if (!userId) {
-            console.log("Waiting for authentication before fetching portfolio data...");
-            
-            // Set a small delay to wait for authentication
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // If still not authenticated after waiting, we'll continue and let the error handling take care of it
-            if (!userId) {
-              console.log("Still not authenticated after waiting, proceeding anyway...");
-            } else {
-              console.log("Authentication completed, proceeding with portfolio fetch");
-            }
-          }
-          
           const response = await fetch(`/api/portfolios/${portfolioId}/wallet-addresses`);
-          
-          if (!response.ok) {
-            throw new Error(`API returned ${response.status}: ${response.statusText}`);
-          }
-          
           const result = await response.json();
           
           if (result && result.walletAddresses && result.walletAddresses.length > 0) {
-            console.log("Portfolio data received:", result);
-            
-            // Store the portfolio data in session storage for future use
-            sessionStorage.setItem(`portfolio_${portfolioId}`, JSON.stringify({
-              addresses: result.walletAddresses,
-              name: result.portfolioName
-            }));
-            
             setPortfolioName(result.portfolioName);
             console.log(`Portfolio name from API: ${result.portfolioName}`);
             
             // Filter out any invalid addresses
             const validAddresses = result.walletAddresses.filter((addr: string) => addr.startsWith('0x'));
             if (validAddresses.length > 0) {
-              console.log(`Loaded ${validAddresses.length} valid addresses from portfolio via API`);
-              // Skip URL update when loading from portfolio API
-              handleMultiSearch(validAddresses, true);
-            } else {
-              throw new Error("No valid wallet addresses found in portfolio");
+              handleMultiSearch(validAddresses);
             }
           } else {
             // Could not find wallet addresses for this portfolio
-            console.error("Empty or invalid wallet addresses returned:", result);
             toast({
               title: "Portfolio not found",
               description: "Could not find wallet addresses for this portfolio.",
@@ -348,23 +278,14 @@ export default function Home() {
           }
         } catch (error) {
           console.error('Error fetching portfolio data from API:', error);
-          
-          // Show a detailed error message
-          let errorMessage = "Failed to load portfolio data.";
-          if (error instanceof Error) {
-            errorMessage += ` Error: ${error.message}`;
-          }
-          
           toast({
             title: "Error loading portfolio",
-            description: errorMessage,
+            description: "Failed to load portfolio data.",
             variant: "destructive"
           });
           
-          // Only redirect to homepage after a small delay so the user has time to see the error
-          setTimeout(() => {
-            setLocation('/');
-          }, 1500);
+          // Redirect to homepage
+          setLocation('/');
         }
       };
       
@@ -392,8 +313,7 @@ export default function Home() {
         // Filter out any invalid addresses
         const validAddresses = addressList.filter((addr: string) => addr.startsWith('0x'));
         if (validAddresses.length > 0) {
-          // Skip URL updates for legacy portfolio URLs too
-          handleMultiSearch(validAddresses, true);
+          handleMultiSearch(validAddresses);
           return;
         }
       }
@@ -413,7 +333,7 @@ export default function Home() {
       // Reset state when on the root URL (but not if we have addresses in query params)
       setSearchedAddress(null);
     }
-  }, [params.walletAddress, params.portfolioId, searchedAddress, location, toast, userId, connect]);
+  }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
 
   // Use our new hook for loading all wallet tokens without pagination
   const { 
@@ -443,23 +363,6 @@ export default function Home() {
       });
     }
   }, [isError, error, toast]);
-  
-  // Special effect to handle authentication state changes - retry loading portfolios if needed
-  useEffect(() => {
-    // Check if we need to reload a portfolio after authentication
-    if (userId) {
-      const portfolioIdToRetry = localStorage.getItem('retry_portfolio_load');
-      if (portfolioIdToRetry) {
-        console.log(`Authentication successful, retrying portfolio load for ID: ${portfolioIdToRetry}`);
-        
-        // Clear the retry flag
-        localStorage.removeItem('retry_portfolio_load');
-        
-        // Navigate to the portfolio URL
-        setLocation(`/portfolio/${portfolioIdToRetry}`);
-      }
-    }
-  }, [userId, setLocation]);
 
   const handleRefresh = () => {
     // Force a complete refresh by invalidating the query first
@@ -597,8 +500,7 @@ export default function Home() {
                     onRefresh={() => {
                       // Refresh all wallets by re-fetching
                       if (multiWalletData) {
-                        // Pass true to skip URL update when refreshing portfolio data
-                        handleMultiSearch(Object.keys(multiWalletData), true);
+                        handleMultiSearch(Object.keys(multiWalletData));
                       }
                     }}
                   />
