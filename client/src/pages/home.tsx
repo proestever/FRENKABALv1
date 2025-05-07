@@ -7,6 +7,7 @@ import { TokenList } from '@/components/token-list';
 import { EmptyState } from '@/components/empty-state';
 import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
+import ApiStats from '@/components/api-stats';
 import { Button } from '@/components/ui/button';
 import { saveRecentAddress, ProcessedToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
@@ -467,12 +468,19 @@ export default function Home() {
     <main className="container mx-auto px-4 py-6">
       {/* Only show the search section at the top if no wallet has been searched yet and not in multi-wallet mode */}
       {!searchedAddress && !multiWalletData && (
-        <SearchSection 
-          onSearch={handleSearch}
-          onMultiSearch={handleMultiSearch}
-          isLoading={isLoading || isMultiWalletLoading} 
-          hasSearched={false}
-        />
+        <>
+          <SearchSection 
+            onSearch={handleSearch}
+            onMultiSearch={handleMultiSearch}
+            isLoading={isLoading || isMultiWalletLoading} 
+            hasSearched={false}
+          />
+          
+          {/* API Stats Card - show API usage statistics */}
+          <div className="mt-8">
+            <ApiStats />
+          </div>
+        </>
       )}
       
       {/* Loading Progress Bar - shows during loading */}
