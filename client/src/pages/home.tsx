@@ -228,6 +228,24 @@ export default function Home() {
       const portfolioId = params.portfolioId || location.split('/')[2];
       console.log(`Loading portfolio with ID: ${portfolioId}`);
       
+      // Check if user is authenticated - we need a userId to load portfolios
+      if (!userId) {
+        console.log("User not authenticated - attempting to connect wallet first");
+        // Wait a moment and then attempt to try connecting the wallet if possible
+        setTimeout(() => {
+          // We'll let auth-provider determine if it's possible to connect wallet
+          if (typeof connect === 'function') {
+            connect();
+          } else {
+            toast({
+              title: "Authentication Required",
+              description: "Please connect your wallet to view portfolios",
+              variant: "destructive"
+            });
+          }
+        }, 1000);
+      }
+      
       // Get portfolio data from session storage
       const portfolioData = sessionStorage.getItem(`portfolio_${portfolioId}`);
       
@@ -257,18 +275,39 @@ export default function Home() {
       // If we can't find portfolio data in session storage, try to fetch it from the API
       const fetchPortfolioData = async () => {
         try {
+          // Show a loading toast to let the user know something is happening
+          toast({
+            title: "Loading portfolio",
+            description: "Fetching portfolio data...",
+          });
+          
+          console.log(`Fetching portfolio with ID: ${portfolioId} from API`);
           const response = await fetch(`/api/portfolios/${portfolioId}/wallet-addresses`);
+          
+          if (!response.ok) {
+            throw new Error(`API returned ${response.status}: ${response.statusText}`);
+          }
+          
           const result = await response.json();
           
           if (result && result.walletAddresses && result.walletAddresses.length > 0) {
+            // Store the portfolio data in session storage for future use
+            sessionStorage.setItem(`portfolio_${portfolioId}`, JSON.stringify({
+              addresses: result.walletAddresses,
+              name: result.portfolioName
+            }));
+            
             setPortfolioName(result.portfolioName);
             console.log(`Portfolio name from API: ${result.portfolioName}`);
             
             // Filter out any invalid addresses
             const validAddresses = result.walletAddresses.filter((addr: string) => addr.startsWith('0x'));
             if (validAddresses.length > 0) {
+              console.log(`Loaded ${validAddresses.length} valid addresses from portfolio via API`);
               // Skip URL update when loading from portfolio API
               handleMultiSearch(validAddresses, true);
+            } else {
+              throw new Error("No valid wallet addresses found in portfolio");
             }
           } else {
             // Could not find wallet addresses for this portfolio
@@ -285,7 +324,7 @@ export default function Home() {
           console.error('Error fetching portfolio data from API:', error);
           toast({
             title: "Error loading portfolio",
-            description: "Failed to load portfolio data.",
+            description: "Failed to load portfolio data. Try searching for the portfolio from the Portfolios page.",
             variant: "destructive"
           });
           
