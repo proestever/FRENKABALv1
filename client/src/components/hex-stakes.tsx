@@ -340,7 +340,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg md:text-xl font-semibold text-white">
-            <span className="bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-600 bg-clip-text text-transparent">HEX Stakes</span>
+            <span className="text-white">HEX Stakes</span>
             <span className="ml-2 text-sm text-white/60">({stakeCount})</span>
           </h3>
           <p className="text-xs md:text-sm text-white/70 mt-1">
