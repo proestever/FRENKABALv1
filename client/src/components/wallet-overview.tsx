@@ -16,9 +16,10 @@ interface WalletOverviewProps {
   isLoading: boolean;
   onRefresh: () => void;
   hexStakesSummary?: HexStakeSummary | null;
+  portfolioName?: string; // Optional name of the portfolio for multi-wallet view
 }
 
-export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary }: WalletOverviewProps) {
+export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary, portfolioName }: WalletOverviewProps) {
   const { toast } = useToast();
   const { account: connectedWalletAddress, isConnected, userId } = useAuth();
   const [hiddenTokens, setHiddenTokens] = useState<string[]>([]);
@@ -190,10 +191,10 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary 
             <h2 className="text-lg md:text-xl font-bold text-white flex items-center">
               {wallet.address.startsWith("Combined") ? (
                 <>
-                  Combined Wallet Overview
+                  {portfolioName ? `${portfolioName} Portfolio` : "Combined Wallet Overview"}
                   <span className="ml-2 flex items-center">
                     <span className="text-green-400 font-bold text-lg md:text-xl ml-2">
-                      {wallet.address.includes("(") ? wallet.address.split("(")[1].replace(")", "") : ""}
+                      {!portfolioName && wallet.address.includes("(") ? wallet.address.split("(")[1].replace(")", "") : ""}
                     </span>
                   </span>
                 </>

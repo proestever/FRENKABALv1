@@ -25,6 +25,8 @@ export default function Home() {
   const [multiWalletHexStakes, setMultiWalletHexStakes] = useState<HexStakeSummary | null>(null);
   const [individualWalletHexStakes, setIndividualWalletHexStakes] = useState<Record<string, HexStakeSummary>>({});
   const [isMultiWalletLoading, setIsMultiWalletLoading] = useState(false);
+  const [portfolioName, setPortfolioName] = useState<string | null>(null);
+  const [portfolioUrlId, setPortfolioUrlId] = useState<string | null>(null);
   const params = useParams<{ walletAddress?: string }>();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();

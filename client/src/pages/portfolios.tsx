@@ -215,8 +215,17 @@ const PortfoliosPage = () => {
     },
   });
 
+  // Generate a unique portfolio URL identifier
+  const generatePortfolioUrlId = (portfolioId: number) => {
+    // Combine portfolio ID with current date to create a unique string
+    const timestamp = new Date().getTime();
+    // Use only the last 6 digits for readability - still unique enough for our purposes
+    const uniqueId = `${portfolioId}-${timestamp % 1000000}`;
+    return uniqueId;
+  };
+
   // Handler for portfolio search - load all addresses in portfolio and show combined view
-  const handlePortfolioSearch = async (portfolioId: number) => {
+  const handlePortfolioSearch = async (portfolioId: number, portfolioName: string) => {
     try {
       // Show loading toast
       toast({
@@ -230,19 +239,27 @@ const PortfoliosPage = () => {
         method: 'GET'
       });
       
-      const walletAddresses = await response.json() as { walletAddresses: string[] };
+      const result = await response.json() as { 
+        portfolioId: number;
+        portfolioName: string;
+        walletAddresses: string[] 
+      };
       
-      if (walletAddresses && walletAddresses.walletAddresses.length > 0) {
+      if (result && result.walletAddresses && result.walletAddresses.length > 0) {
+        // Generate a unique identifier for this portfolio view
+        const portfolioUrlId = generatePortfolioUrlId(portfolioId);
+        
         // Navigate to the home page with the portfolio addresses as a combined search
-        const addressesStr = walletAddresses.walletAddresses.join(',');
+        const addressesStr = result.walletAddresses.join(',');
         
         // Use setLocation to go to the home page with the portfolio addresses
-        setLocation(`/?addresses=${encodeURIComponent(addressesStr)}&portfolio=${portfolioId}`);
+        // Include portfolio ID, name and unique ID for deeplink capability
+        setLocation(`/?addresses=${encodeURIComponent(addressesStr)}&portfolio=${portfolioId}&name=${encodeURIComponent(portfolioName)}&uid=${portfolioUrlId}`);
         
         // Show success toast
         toast({
           title: "Portfolio loaded",
-          description: `Combined view of ${walletAddresses.walletAddresses.length} wallet addresses`,
+          description: `Combined view of ${result.walletAddresses.length} wallet addresses`,
         });
       } else {
         toast({
@@ -379,7 +396,7 @@ const PortfoliosPage = () => {
                         size="sm"
                         onClick={() => {
                           setSelectedPortfolio(portfolio);
-                          handlePortfolioSearch(portfolio.id);
+                          handlePortfolioSearch(portfolio.id, portfolio.name);
                         }}
                       >
                         <ExternalLink className="h-4 w-4 mr-1" />
