@@ -284,7 +284,18 @@ export function Profile() {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookmarks.map((bookmark) => (
+                  {[...bookmarks]
+                    .sort((a, b) => {
+                      // First sort by favorite status (favorites first)
+                      if (a.isFavorite && !b.isFavorite) return -1;
+                      if (!a.isFavorite && b.isFavorite) return 1;
+                      
+                      // Then sort alphabetically by label (or address if no label)
+                      const aName = a.label || a.walletAddress;
+                      const bName = b.label || b.walletAddress;
+                      return aName.localeCompare(bName);
+                    })
+                    .map((bookmark) => (
                     <tr 
                       key={bookmark.id} 
                       className={`border-b border-white/5 hover:bg-black/30 transition-colors ${

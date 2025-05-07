@@ -147,10 +147,16 @@ export class DatabaseStorage implements IStorage {
       .orderBy(bookmarks.createdAt);
   }
   
-  async getBookmarkByAddress(userId: number, walletAddress: string): Promise<Bookmark | undefined> {
+  async getBookmarkByAddress(userId: number | null, walletAddress: string): Promise<Bookmark | undefined> {
     const addressLower = walletAddress.toLowerCase();
     
     console.log(`Looking for bookmark with userId=${userId}, walletAddress=${addressLower}`);
+    
+    // Check for null userId
+    if (userId === null) {
+      console.log('Cannot fetch bookmarks: userId is null');
+      return undefined;
+    }
     
     // Get all bookmarks for this user
     const userBookmarks = await db
@@ -181,10 +187,12 @@ export class DatabaseStorage implements IStorage {
     
     try {
       // Check if this bookmark already exists to avoid duplicates
-      const existingBookmark = await this.getBookmarkByAddress(
-        processedBookmark.userId, 
-        processedBookmark.walletAddress
-      );
+      const existingBookmark = processedBookmark.userId 
+        ? await this.getBookmarkByAddress(
+            processedBookmark.userId, 
+            processedBookmark.walletAddress
+          )
+        : undefined;
       
       if (existingBookmark) {
         console.log(`Bookmark already exists with id ${existingBookmark.id}, returning existing one`);
