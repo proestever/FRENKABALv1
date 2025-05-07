@@ -60,27 +60,29 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
         <Card className="shadow-lg glass-card max-w-md w-full mx-auto border border-white/30 card-glitter">
           <CardContent className="pt-8 pb-8 px-6">
             <div>
-              <div className="flex gap-3">
+              <div className="relative w-full">
                 <Input
                   type="text"
                   placeholder="Enter PulseChain Address"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="w-full glass-card border-white/15 text-foreground bg-black/10"
+                  className="w-full glass-card border-white/15 text-foreground bg-black/10 pr-10"
                   disabled={isLoading}
                 />
-                <Button
-                  onClick={handleSearch}
-                  disabled={isLoading || !searchQuery.trim()}
-                  className="glass-card border-white/15 bg-black/20 hover:bg-white/10"
+                <div 
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
+                  onClick={searchQuery.trim() && !isLoading ? handleSearch : undefined}
                 >
                   {isLoading ? (
                     <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : (
-                    'Search'
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-white/70 ${!searchQuery.trim() ? 'opacity-50' : 'hover:text-white'}`}>
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
                   )}
-                </Button>
+                </div>
               </div>
             </div>
             
@@ -111,27 +113,29 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
         <Card className="shadow-lg glass-card w-full mx-auto border border-white/20">
           <CardContent className="py-4 px-6">
             <div>
-              <div className="flex gap-3">
+              <div className="relative w-full">
                 <Input
                   type="text"
                   placeholder="Enter PulseChain Address"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="w-full glass-card border-white/15 text-foreground bg-black/10"
+                  className="w-full glass-card border-white/15 text-foreground bg-black/10 pr-10"
                   disabled={isLoading}
                 />
-                <Button
-                  onClick={handleSearch}
-                  disabled={isLoading || !searchQuery.trim()}
-                  className="glass-card border-white/15 bg-black/20 hover:bg-white/10"
+                <div 
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
+                  onClick={searchQuery.trim() && !isLoading ? handleSearch : undefined}
                 >
                   {isLoading ? (
                     <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : (
-                    'Search'
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-white/70 ${!searchQuery.trim() ? 'opacity-50' : 'hover:text-white'}`}>
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
                   )}
-                </Button>
+                </div>
               </div>
             </div>
           </CardContent>
