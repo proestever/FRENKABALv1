@@ -183,7 +183,7 @@ export class ApiStatsService {
         .from(apiCallRecords)
         .where(sql`${apiCallRecords.walletAddress} IS NOT NULL`)
         .groupBy(apiCallRecords.walletAddress)
-        .orderBy(apiCallRecords.walletAddress, 'desc')
+        .orderBy(sql`COUNT(*) DESC`)
         .limit(limit);
       
       return result;
@@ -206,7 +206,7 @@ export class ApiStatsService {
         })
         .from(apiCallRecords)
         .groupBy(apiCallRecords.endpoint)
-        .orderBy(apiCallRecords.endpoint, 'desc')
+        .orderBy(sql`COUNT(*)`, 'desc')
         .limit(limit);
       
       return result;

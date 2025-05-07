@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance, getApiCounterStats, resetApiCounter } from "./services/api";
+import { apiStatsService } from "./services/api-stats-service";
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
 import { getTokenPricesFromDexScreener } from "./services/dexscreener";
 import { getDirectTokenBalances } from "./services/blockchain-service";
@@ -9,6 +10,7 @@ import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
 import portfolioRoutes from "./routes/portfolio-routes";
+import { format } from "date-fns";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -1285,6 +1287,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ 
         message: "Failed to fetch API call statistics",
         error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // API for retrieving historical API usage statistics
+  app.get("/api/stats/historical", async (req, res) => {
+    try {
+      // Check if user is admin (only admins can access historical stats)
+      const adminAddress = "0x592139A3f8cf019f628A152FC1262B8aEf5B7199";
+      const walletAddress = req.headers['wallet-address'] as string;
+      
+      if (!walletAddress || walletAddress.toLowerCase() !== adminAddress.toLowerCase()) {
+        return res.status(403).json({ 
+          error: 'Access denied',
+          message: 'You do not have permission to access this resource'
+        });
+      }
+      
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      
+      // Get date for the specified number of days ago
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      const startDateStr = format(startDate, 'yyyy-MM-dd');
+      
+      // Get daily stats
+      const dailyStats = await apiStatsService.getDailyStats(startDateStr);
+      
+      // Get all-time totals
+      const totals = await apiStatsService.getTotalStats();
+      
+      // Get top wallets and endpoints
+      const topWallets = await apiStatsService.getTopWalletAddresses(10);
+      const topEndpoints = await apiStatsService.getTopEndpoints(10);
+      
+      res.json({
+        daily: dailyStats,
+        totals,
+        topWallets,
+        topEndpoints,
+        period: {
+          days,
+          start: startDateStr,
+          end: format(new Date(), 'yyyy-MM-dd')
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching historical API stats:', error);
+      res.status(500).json({ 
+        error: 'Failed to retrieve historical API statistics',
+        message: (error as Error).message
       });
     }
   });
