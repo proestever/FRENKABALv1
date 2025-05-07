@@ -258,12 +258,17 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary 
               {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
               {wallet.address.startsWith("Combined") && (
                 <div className="text-sm text-purple-300 font-normal">
-                  All tokens from {wallet.address.includes("(") ? wallet.address.split("(")[1].replace(")", "") : "all wallets"}
+                  Including tokens and HEX stakes from {wallet.address.includes("(") ? wallet.address.split("(")[1].replace(")", "") : "all wallets"}
                 </div>
               )}
             </div>
-            <div className="text-sm mt-2 flex items-center">
+            <div className="text-sm mt-2 flex items-center justify-between">
               <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
+              {wallet.address.startsWith("Combined") && hexStakesSummary && hexStakesSummary.totalCombinedValueUsd > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  Includes <span className="text-purple-300 font-medium">{formatCurrency(hexStakesSummary.totalCombinedValueUsd)}</span> in HEX stakes
+                </span>
+              )}
             </div>
           </div>
           

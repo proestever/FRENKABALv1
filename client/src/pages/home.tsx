@@ -323,6 +323,13 @@ export default function Home() {
             // Generate the combined wallet data
             const combinedWallet = combineWalletData(multiWalletData);
             
+            // Add HEX stakes value to total wallet value if available
+            if (multiWalletHexStakes && multiWalletHexStakes.totalCombinedValueUsd) {
+              combinedWallet.totalValue += multiWalletHexStakes.totalCombinedValueUsd;
+              console.log('Added HEX stakes value of', multiWalletHexStakes.totalCombinedValueUsd, 
+                          'to total. New total:', combinedWallet.totalValue);
+            }
+            
             return (
               <div className="flex flex-col lg:flex-row gap-6">
                 {/* Left column - Combined Wallet Overview */}
