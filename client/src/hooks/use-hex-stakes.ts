@@ -170,28 +170,19 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       console.log(`Detected ${count} HEX stakes for wallet: ${address}`);
     } catch (err) {
       console.error('Error fetching stake count in preload:', err);
-      // For address 0x459AF0b9933eaB4921555a44d3692CaD964408c5, based on the screenshot (PulseChain only)
-      if (address.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5') {
-        count = 23;
-        console.log('Using known stake count for this wallet address (PulseChain only)');
-        
-        // Values correctly showing PulseChain stakes only
-        return {
-          totalStakedHex: '3054409.62',
-          totalInterestHex: '0.00',
-          totalCombinedHex: '3054409.62',
-          totalStakeValueUsd: 3054409.62 * currentHexPrice,
-          totalInterestValueUsd: 0,
-          totalCombinedValueUsd: 3054409.62 * currentHexPrice,
-          stakeCount: count,
-          hexPrice: currentHexPrice,
-          isLoading: false,
-          error: null
-        };
-      } else {
-        // For other addresses, use a conservative estimate
-        count = 5;
-      }
+      // Use real data only - no more hardcoded values
+      return {
+        totalStakedHex: '0',
+        totalInterestHex: '0',
+        totalCombinedHex: '0',
+        totalStakeValueUsd: 0,
+        totalInterestValueUsd: 0,
+        totalCombinedValueUsd: 0,
+        stakeCount: 0,
+        hexPrice: currentHexPrice,
+        isLoading: false,
+        error: 'Failed to fetch stake count'
+      };
     }
     
     if (count === 0) {
@@ -209,54 +200,82 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       };
     }
     
-    // We must fetch individual stake data from the blockchain
-    // Instead of using estimations, let's fetch the exact HEX amount from each stake
-    
-    // Initialize values with zero
-    let totalStakedHex = '0.00';
-    let totalInterestHex = '0.00';
-    let totalCombinedHex = '0.00';
-    let totalStakeValueUsd = 0;
-    let totalInterestValueUsd = 0;
-    let totalCombinedValueUsd = 0;
-    
+    // We will fetch individual stake data directly from the blockchain
     try {
       // Get RPC provider for PulseChain
       const rpcUrl = 'https://rpc-pulsechain.g4mm4.io';
       const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
       const hexContract = new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);
       
+      // Get the current day from contract
+      const currentDayBN = await hexContract.currentDay();
+      const currentDay = Number(currentDayBN);
+      
       // Fetch all stakes to get the actual staked amounts from the blockchain
       let totalHexStakedBN = ethers.BigNumber.from(0);
-      let actualInterestBN = ethers.BigNumber.from(0);
       
       // Log how many stakes we're about to fetch
       console.log(`Fetching individual stake data for ${count} stakes...`);
       
-      // For now, just return 0 values to avoid showing estimated values
-      // The real values will be calculated and shown directly in the hex-stakes.tsx component
-      totalStakedHex = '0.00';
-      totalInterestHex = '0.00';
-      totalCombinedHex = '0.00';
-      totalStakeValueUsd = 0;
-      totalInterestValueUsd = 0; 
-      totalCombinedValueUsd = 0;
+      // Process each stake to get the total amount
+      for (let i = 0; i < count; i++) {
+        try {
+          // Try using the stakeDataFetch method instead of stakeLists if available
+          const stake = await hexContract.stakeDataFetch(address, i, 0);
+          
+          // Parse the stake data - stakedHearts is the second parameter (index 1)
+          const stakedHearts = stake ? stake[1].toString() : '0';
+          
+          // Add to the total staked HEX
+          totalHexStakedBN = totalHexStakedBN.add(ethers.BigNumber.from(stakedHearts));
+        } catch (error) {
+          console.error(`Error fetching stake ${i}:`, error);
+        }
+      }
+      
+      // Format the total staked HEX (convert from Hearts to HEX)
+      const formattedTotalHexStaked = ethers.utils.formatUnits(totalHexStakedBN, 8);
+      
+      // Keep interest at 0 for now as it requires complex calculations
+      const totalInterestHex = '0.00';
+      
+      // Calculate combined total
+      const totalStakePlusInterest = formattedTotalHexStaked;
+      
+      // Calculate USD values
+      const totalStakeValueUsd = parseFloat(formattedTotalHexStaked) * currentHexPrice;
+      const totalInterestValueUsd = 0;
+      const totalCombinedValueUsd = totalStakeValueUsd;
+      
+      return {
+        totalStakedHex: formattedTotalHexStaked,
+        totalInterestHex,
+        totalCombinedHex: totalStakePlusInterest,
+        totalStakeValueUsd,
+        totalInterestValueUsd,
+        totalCombinedValueUsd,
+        stakeCount: count,
+        hexPrice: currentHexPrice,
+        isLoading: false,
+        error: null
+      };
     } catch (err) {
       console.error('Error fetching individual stakes in summary:', err);
+      
+      // Return zeros in case of error
+      return {
+        totalStakedHex: '0.00',
+        totalInterestHex: '0.00',
+        totalCombinedHex: '0.00',
+        totalStakeValueUsd: 0,
+        totalInterestValueUsd: 0,
+        totalCombinedValueUsd: 0,
+        stakeCount: count,
+        hexPrice: currentHexPrice,
+        isLoading: false,
+        error: 'Error fetching stakes'
+      };
     }
-    
-    return {
-      totalStakedHex,
-      totalInterestHex,
-      totalCombinedHex,
-      totalStakeValueUsd,
-      totalInterestValueUsd,
-      totalCombinedValueUsd,
-      stakeCount: count,
-      hexPrice: currentHexPrice,
-      isLoading: false,
-      error: null
-    };
   } catch (err) {
     console.error('Error in fetchHexStakesSummary:', err);
     return {
