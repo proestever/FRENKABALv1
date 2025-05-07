@@ -48,6 +48,10 @@ interface PortfolioAddress {
   createdAt: string;
 }
 
+// Define sort field and direction types
+type SortField = 'name' | 'createdAt' | 'addressCount';
+type SortDirection = 'asc' | 'desc';
+
 const PortfoliosPage = () => {
   const { userId } = useWallet();
   const [, setLocation] = useLocation();
@@ -70,13 +74,8 @@ const PortfoliosPage = () => {
   const [editAddressLabel, setEditAddressLabel] = useState('');
   
   // State for portfolio sorting
-  type SortField = 'name' | 'createdAt' | 'addressCount';
-  type SortDirection = 'asc' | 'desc';
-  
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  
-  // Create a mapping of portfolio IDs to address counts
   const [portfolioAddressCounts, setPortfolioAddressCounts] = useState<Record<number, number>>({});
   
   // Query portfolios
@@ -106,6 +105,71 @@ const PortfoliosPage = () => {
     },
     enabled: !!selectedPortfolio?.id,
   });
+
+  // Effect to fetch address counts for each portfolio
+  useEffect(() => {
+    const fetchAddressCounts = async () => {
+      if (!portfolios || portfolios.length === 0) return;
+      
+      const counts: Record<number, number> = {};
+      
+      // For each portfolio, fetch the addresses count
+      for (const portfolio of portfolios) {
+        try {
+          const response = await apiRequest({
+            url: `/api/portfolios/${portfolio.id}/addresses`,
+            method: 'GET'
+          });
+          const addresses = await response.json() as PortfolioAddress[];
+          counts[portfolio.id] = addresses.length;
+        } catch (error) {
+          console.error(`Error fetching addresses for portfolio ${portfolio.id}:`, error);
+          counts[portfolio.id] = 0;
+        }
+      }
+      
+      setPortfolioAddressCounts(counts);
+    };
+    
+    fetchAddressCounts();
+  }, [portfolios]);
+
+  // Function to toggle sort direction or change sort field
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field with default direction
+      setSortField(field);
+      setSortDirection(field === 'name' ? 'asc' : 'desc'); // Default: name=ASC, others=DESC
+    }
+  };
+  
+  // Function to get sorted portfolios
+  const getSortedPortfolios = () => {
+    if (!portfolios) return [];
+    
+    return [...portfolios].sort((a, b) => {
+      if (sortField === 'name') {
+        const comparison = a.name.localeCompare(b.name);
+        return sortDirection === 'asc' ? comparison : -comparison;
+      } 
+      else if (sortField === 'createdAt') {
+        const aDate = new Date(a.createdAt).getTime();
+        const bDate = new Date(b.createdAt).getTime();
+        const comparison = aDate - bDate;
+        return sortDirection === 'asc' ? comparison : -comparison;
+      } 
+      else if (sortField === 'addressCount') {
+        const aCount = portfolioAddressCounts[a.id] || 0;
+        const bCount = portfolioAddressCounts[b.id] || 0;
+        const comparison = aCount - bCount;
+        return sortDirection === 'asc' ? comparison : -comparison;
+      }
+      return 0;
+    });
+  };
 
   // Create portfolio mutation
   const createPortfolioMutation = useMutation({
@@ -279,8 +343,6 @@ const PortfoliosPage = () => {
     },
   });
 
-  // No longer need to generate a unique URL ID as we'll use direct portfolio ID in the URL
-
   // Handler for portfolio search - load all addresses in portfolio and show combined view
   const handlePortfolioSearch = async (portfolioId: number, portfolioName: string) => {
     try {
@@ -400,71 +462,6 @@ const PortfoliosPage = () => {
       </div>
     );
   }
-
-  // Effect to fetch address counts for each portfolio
-  useEffect(() => {
-    const fetchAddressCounts = async () => {
-      if (!portfolios || portfolios.length === 0) return;
-      
-      const counts: Record<number, number> = {};
-      
-      // For each portfolio, fetch the addresses count
-      for (const portfolio of portfolios) {
-        try {
-          const response = await apiRequest({
-            url: `/api/portfolios/${portfolio.id}/addresses`,
-            method: 'GET'
-          });
-          const addresses = await response.json() as PortfolioAddress[];
-          counts[portfolio.id] = addresses.length;
-        } catch (error) {
-          console.error(`Error fetching addresses for portfolio ${portfolio.id}:`, error);
-          counts[portfolio.id] = 0;
-        }
-      }
-      
-      setPortfolioAddressCounts(counts);
-    };
-    
-    fetchAddressCounts();
-  }, [portfolios]);
-  
-  // Function to toggle sort direction or change sort field
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      // Toggle direction if same field
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // Set new field with default direction
-      setSortField(field);
-      setSortDirection(field === 'name' ? 'asc' : 'desc'); // Default: name=ASC, others=DESC
-    }
-  };
-  
-  // Function to get sorted portfolios
-  const getSortedPortfolios = () => {
-    if (!portfolios) return [];
-    
-    return [...portfolios].sort((a, b) => {
-      if (sortField === 'name') {
-        const comparison = a.name.localeCompare(b.name);
-        return sortDirection === 'asc' ? comparison : -comparison;
-      } 
-      else if (sortField === 'createdAt') {
-        const aDate = new Date(a.createdAt).getTime();
-        const bDate = new Date(b.createdAt).getTime();
-        const comparison = aDate - bDate;
-        return sortDirection === 'asc' ? comparison : -comparison;
-      } 
-      else if (sortField === 'addressCount') {
-        const aCount = portfolioAddressCounts[a.id] || 0;
-        const bCount = portfolioAddressCounts[b.id] || 0;
-        const comparison = aCount - bCount;
-        return sortDirection === 'asc' ? comparison : -comparison;
-      }
-      return 0;
-    });
-  };
 
   return (
     <div className="container mx-auto py-8">
