@@ -215,9 +215,50 @@ const PortfoliosPage = () => {
     },
   });
 
-  // Handler for portfolio search
-  const handlePortfolioSearch = (portfolioId: number) => {
-    setLocation(`/search?portfolioId=${portfolioId}`);
+  // Handler for portfolio search - load all addresses in portfolio and show combined view
+  const handlePortfolioSearch = async (portfolioId: number) => {
+    try {
+      // Show loading toast
+      toast({
+        title: "Loading portfolio data",
+        description: "Fetching data for all wallet addresses in this portfolio...",
+      });
+      
+      // Get all wallet addresses in the portfolio
+      const response = await apiRequest({
+        url: `/api/portfolios/${portfolioId}/wallet-addresses`,
+        method: 'GET'
+      });
+      
+      const walletAddresses = await response.json() as { walletAddresses: string[] };
+      
+      if (walletAddresses && walletAddresses.walletAddresses.length > 0) {
+        // Navigate to the home page with the portfolio addresses as a combined search
+        const addressesStr = walletAddresses.walletAddresses.join(',');
+        
+        // Use setLocation to go to the home page with the portfolio addresses
+        setLocation(`/?addresses=${encodeURIComponent(addressesStr)}&portfolio=${portfolioId}`);
+        
+        // Show success toast
+        toast({
+          title: "Portfolio loaded",
+          description: `Combined view of ${walletAddresses.walletAddresses.length} wallet addresses`,
+        });
+      } else {
+        toast({
+          title: "No addresses found",
+          description: "This portfolio doesn't have any wallet addresses to search.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error searching portfolio:", error);
+      toast({
+        title: "Error searching portfolio",
+        description: "Unable to search wallet addresses in this portfolio.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Handle create portfolio form submission
