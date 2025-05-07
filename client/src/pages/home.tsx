@@ -14,6 +14,7 @@ import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook 
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
 import { combineWalletData } from '@/lib/utils';
+import { useAuth } from '@/providers/auth-provider';
 
 // Example wallet address
 const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
@@ -31,6 +32,7 @@ export default function Home() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { connect, userId } = useAuth();
   
   // Define search function for a single wallet address
   const handleSearch = (address: string) => {
@@ -378,7 +380,7 @@ export default function Home() {
       // Reset state when on the root URL (but not if we have addresses in query params)
       setSearchedAddress(null);
     }
-  }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
+  }, [params.walletAddress, params.portfolioId, searchedAddress, location, toast, userId, connect]);
 
   // Use our new hook for loading all wallet tokens without pagination
   const { 
