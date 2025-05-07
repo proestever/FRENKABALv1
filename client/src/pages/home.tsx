@@ -233,6 +233,10 @@ export default function Home() {
       // Check if user is authenticated - we need a userId to load portfolios
       if (!userId) {
         console.log("User not authenticated - attempting to connect wallet first");
+        
+        // Set a flag in localStorage to indicate we need to retry after auth
+        localStorage.setItem('retry_portfolio_load', portfolioId);
+        
         // Wait a moment and then attempt to try connecting the wallet if possible
         setTimeout(() => {
           // We'll let auth-provider determine if it's possible to connect wallet
@@ -281,9 +285,26 @@ export default function Home() {
           toast({
             title: "Loading portfolio",
             description: "Fetching portfolio data...",
+            duration: 3000,
           });
           
           console.log(`Fetching portfolio with ID: ${portfolioId} from API`);
+          
+          // Make sure we wait for authentication before proceeding
+          if (!userId) {
+            console.log("Waiting for authentication before fetching portfolio data...");
+            
+            // Set a small delay to wait for authentication
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // If still not authenticated after waiting, we'll continue and let the error handling take care of it
+            if (!userId) {
+              console.log("Still not authenticated after waiting, proceeding anyway...");
+            } else {
+              console.log("Authentication completed, proceeding with portfolio fetch");
+            }
+          }
+          
           const response = await fetch(`/api/portfolios/${portfolioId}/wallet-addresses`);
           
           if (!response.ok) {
@@ -293,6 +314,8 @@ export default function Home() {
           const result = await response.json();
           
           if (result && result.walletAddresses && result.walletAddresses.length > 0) {
+            console.log("Portfolio data received:", result);
+            
             // Store the portfolio data in session storage for future use
             sessionStorage.setItem(`portfolio_${portfolioId}`, JSON.stringify({
               addresses: result.walletAddresses,
@@ -313,6 +336,7 @@ export default function Home() {
             }
           } else {
             // Could not find wallet addresses for this portfolio
+            console.error("Empty or invalid wallet addresses returned:", result);
             toast({
               title: "Portfolio not found",
               description: "Could not find wallet addresses for this portfolio.",
@@ -324,14 +348,23 @@ export default function Home() {
           }
         } catch (error) {
           console.error('Error fetching portfolio data from API:', error);
+          
+          // Show a detailed error message
+          let errorMessage = "Failed to load portfolio data.";
+          if (error instanceof Error) {
+            errorMessage += ` Error: ${error.message}`;
+          }
+          
           toast({
             title: "Error loading portfolio",
-            description: "Failed to load portfolio data. Try searching for the portfolio from the Portfolios page.",
+            description: errorMessage,
             variant: "destructive"
           });
           
-          // Redirect to homepage
-          setLocation('/');
+          // Only redirect to homepage after a small delay so the user has time to see the error
+          setTimeout(() => {
+            setLocation('/');
+          }, 1500);
         }
       };
       
@@ -410,6 +443,23 @@ export default function Home() {
       });
     }
   }, [isError, error, toast]);
+  
+  // Special effect to handle authentication state changes - retry loading portfolios if needed
+  useEffect(() => {
+    // Check if we need to reload a portfolio after authentication
+    if (userId) {
+      const portfolioIdToRetry = localStorage.getItem('retry_portfolio_load');
+      if (portfolioIdToRetry) {
+        console.log(`Authentication successful, retrying portfolio load for ID: ${portfolioIdToRetry}`);
+        
+        // Clear the retry flag
+        localStorage.removeItem('retry_portfolio_load');
+        
+        // Navigate to the portfolio URL
+        setLocation(`/portfolio/${portfolioIdToRetry}`);
+      }
+    }
+  }, [userId, setLocation]);
 
   const handleRefresh = () => {
     // Force a complete refresh by invalidating the query first
