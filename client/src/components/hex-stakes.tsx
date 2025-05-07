@@ -83,7 +83,7 @@ interface HexStakesProps {
   onClose?: () => void;
 }
 
-type SortOption = 'newest' | 'oldest' | 'amount-desc' | 'amount-asc' | 'end-date' | 'progress';
+type SortOption = 'newest' | 'oldest' | 'amount-desc' | 'amount-asc' | 'progress';
 
 export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
   const [stakes, setStakes] = useState<HexStake[]>([]);
@@ -332,9 +332,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         case 'amount-asc':
           newSortedStakes.sort((a, b) => parseFloat(a.hexAmount) - parseFloat(b.hexAmount));
           break;
-        case 'end-date':
-          newSortedStakes.sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
-          break;
+
         case 'progress':
           newSortedStakes.sort((a, b) => b.progressPercentage - a.progressPercentage);
           break;
@@ -456,16 +454,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
           >
             Largest Amount
           </button>
-          <button 
-            onClick={() => setSortBy('end-date')}
-            className={`px-3 py-1 rounded-md text-xs ${
-              sortBy === 'end-date' 
-                ? 'bg-purple-600/20 text-purple-300 border border-purple-600/30 font-semibold' 
-                : 'bg-black/20 text-white/70 border border-white/10 hover:border-white/30'
-            }`}
-          >
-            End Date (Earliest)
-          </button>
+
           <button 
             onClick={() => setSortBy('progress')}
             className={`px-3 py-1 rounded-md text-xs ${
