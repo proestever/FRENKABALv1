@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
 import { useHexStakes, fetchHexStakesSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
+import { combineWalletData } from '@/lib/utils';
 
 // Example wallet address
 const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
@@ -276,64 +277,76 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">
-              Multi-Wallet View ({Object.keys(multiWalletData).length} wallets)
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(multiWalletData).map(([address, wallet]) => (
-              <div key={address} className="glass-card p-4 border border-white/20 rounded-md">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-md font-semibold truncate max-w-[200px]">
-                    {wallet.address}
-                  </h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="ml-2 h-7 px-2" 
-                    onClick={() => handleSearch(address)}
-                  >
-                    View Details
-                  </Button>
-                </div>
-                
-                <div className="text-sm mb-2">
-                  <span className="font-medium">Total Value:</span>{' '}
-                  ${(wallet.totalValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-                
-                <div className="text-sm mb-2">
-                  <span className="font-medium">Token Count:</span>{' '}
-                  {wallet.tokenCount}
-                </div>
-                
-                {/* Show top 3 tokens by value */}
-                {wallet.tokens.length > 0 && (
-                  <div className="mt-3">
-                    <h4 className="text-xs font-medium mb-1">Top Tokens</h4>
-                    <div className="space-y-1 max-h-[120px] overflow-y-auto">
-                      {wallet.tokens
-                        .sort((a, b) => (b.value || 0) - (a.value || 0))
-                        .slice(0, 3)
-                        .map(token => (
-                          <div key={token.address} className="flex justify-between text-xs">
-                            <div className="font-medium">{token.symbol}</div>
-                            <div>
-                              ${(token.value || 0).toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
-                              })}
-                            </div>
+          {/* Create a combined wallet view from all wallets */}
+          {(() => {
+            // Generate the combined wallet data
+            const combinedWallet = combineWalletData(multiWalletData);
+            
+            return (
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Left column - Combined Wallet Overview */}
+                <div className="w-full lg:w-1/3 flex flex-col gap-6">
+                  <WalletOverview 
+                    wallet={combinedWallet} 
+                    isLoading={false}
+                    onRefresh={() => {
+                      // Refresh all wallets by re-fetching
+                      if (multiWalletData) {
+                        handleMultiSearch(Object.keys(multiWalletData));
+                      }
+                    }}
+                  />
+                  
+                  {/* Show individual wallet cards below the main overview */}
+                  <div className="glass-card p-4 border border-white/20 rounded-md">
+                    <h3 className="text-lg font-semibold mb-3">
+                      Individual Wallets ({Object.keys(multiWalletData).length})
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      {Object.entries(multiWalletData).map(([address, wallet]) => (
+                        <div key={address} className="border border-white/10 rounded-md p-3">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="text-sm font-medium truncate max-w-[160px]">
+                              {address}
+                            </h4>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 px-2 py-0 text-xs" 
+                              onClick={() => handleSearch(address)}
+                            >
+                              Details
+                            </Button>
                           </div>
-                        ))}
+                          
+                          <div className="text-xs mb-1">
+                            <span className="opacity-70">Value:</span>{' '}
+                            ${(wallet.totalValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                          
+                          <div className="text-xs">
+                            <span className="opacity-70">Tokens:</span>{' '}
+                            {wallet.tokenCount}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )}
+                </div>
+                
+                {/* Right column - Combined Token List */}
+                <div className="w-full lg:w-2/3">
+                  <TokenList 
+                    tokens={combinedWallet.tokens} 
+                    isLoading={false} 
+                    hasError={false}
+                    walletAddress={combinedWallet.address}
+                  />
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </>
       )}
       

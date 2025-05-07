@@ -150,3 +150,82 @@ export function getTokenExternalLink(tokenAddress: string, platform: 'dexscreene
       return '';
   }
 }
+
+/**
+ * Combine multiple wallet data objects into a single consolidated wallet
+ * This merges tokens, balances, and values to create a unified view
+ */
+export function combineWalletData(wallets: Record<string, any>): any {
+  // Create a map to track combined tokens by address
+  const tokenMap: Record<string, any> = {};
+  let totalValue = 0;
+  const walletAddresses = Object.keys(wallets);
+  
+  // Iterate through each wallet
+  Object.values(wallets).forEach(wallet => {
+    // Add to the total value
+    totalValue += wallet.totalValue || 0;
+    
+    // Process each token
+    wallet.tokens.forEach((token: any) => {
+      const tokenAddress = token.address.toLowerCase();
+      
+      if (tokenMap[tokenAddress]) {
+        // If token already exists in our map, combine the values
+        const existingToken = tokenMap[tokenAddress];
+        
+        // Add the balances (raw and formatted)
+        const newBalance = BigInt(existingToken.balance || '0') + BigInt(token.balance || '0');
+        const newBalanceFormatted = (existingToken.balanceFormatted || 0) + (token.balanceFormatted || 0);
+        
+        // Calculate combined value
+        const newValue = (existingToken.value || 0) + (token.value || 0);
+        
+        // Update the token in our map
+        tokenMap[tokenAddress] = {
+          ...existingToken,
+          balance: newBalance.toString(),
+          balanceFormatted: newBalanceFormatted,
+          value: newValue
+        };
+      } else {
+        // If token doesn't exist yet, add it to the map
+        tokenMap[tokenAddress] = { ...token };
+      }
+    });
+  });
+  
+  // Convert the token map back to an array
+  const combinedTokens = Object.values(tokenMap);
+  
+  // Create the combined wallet object
+  const combinedWallet = {
+    address: `Combined (${walletAddresses.length} wallets)`,
+    tokens: combinedTokens,
+    totalValue: totalValue,
+    tokenCount: combinedTokens.length,
+    plsBalance: 0, // Will be calculated below
+    plsPriceChange: 0, // Use the value from the first wallet that has it
+    networkCount: 1 // Always 1 for PulseChain
+  };
+  
+  // Find the PLS balance from all wallets
+  const plsToken = combinedTokens.find((t: any) => t.isNative === true || t.symbol === 'PLS');
+  if (plsToken) {
+    combinedWallet.plsBalance = plsToken.balanceFormatted || 0;
+    
+    // Get the price change from any PLS token (they should all have the same price change)
+    const firstWalletWithPls = Object.values(wallets).find((wallet: any) => 
+      wallet.tokens.some((t: any) => t.isNative === true || t.symbol === 'PLS')
+    );
+    
+    if (firstWalletWithPls) {
+      const firstPlsToken = firstWalletWithPls.tokens.find((t: any) => t.isNative === true || t.symbol === 'PLS');
+      if (firstPlsToken) {
+        combinedWallet.plsPriceChange = firstPlsToken.priceChange24h || 0;
+      }
+    }
+  }
+  
+  return combinedWallet;
+}
