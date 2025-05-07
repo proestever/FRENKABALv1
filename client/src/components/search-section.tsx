@@ -78,20 +78,28 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
 
   // Search button that ensures icon is centered
   const SearchButton = () => (
-    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center">
+    <div className="absolute right-3 top-1/2 -translate-y-1/2">
       <Button 
         onClick={handleSearch}
         disabled={isLoading || !searchQuery.trim()}
         variant="ghost"
         size="icon"
-        className="h-9 w-9 rounded-full hover:bg-white/10 transition-colors flex items-center justify-center"
+        style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 0
+        }}
+        className="h-9 w-9 rounded-full hover:bg-white/10 transition-colors"
         aria-label="Search"
       >
-        {isLoading ? (
-          <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        ) : (
-          <Search className="h-5 w-5 text-white" />
-        )}
+        <div className="flex items-center justify-center w-full h-full">
+          {isLoading ? (
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : (
+            <Search className="h-5 w-5 text-white" />
+          )}
+        </div>
       </Button>
     </div>
   );
