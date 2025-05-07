@@ -89,21 +89,24 @@ export default function Home() {
   };
   
   // Handle multi-wallet search
-  const handleMultiSearch = async (addresses: string[]) => {
+  const handleMultiSearch = async (addresses: string[], skipUrlUpdate = false) => {
     if (!addresses.length) return;
     
     // Reset single wallet view
     setSearchedAddress(null);
     
-    // Update URL to show we're in multi-wallet mode
-    const firstAddress = addresses[0];
-    const currentPath = `/${firstAddress}`;
-    if (location !== currentPath) {
-      setLocation(currentPath);
+    // Only update URL if not loading a portfolio (we want to keep the /portfolio/id URL)
+    if (!skipUrlUpdate) {
+      // Update URL to show we're in multi-wallet mode
+      const firstAddress = addresses[0];
+      const currentPath = `/${firstAddress}`;
+      if (location !== currentPath) {
+        setLocation(currentPath);
+      }
+      
+      // Save the first address to recent addresses
+      saveRecentAddress(firstAddress);
     }
-    
-    // Save the first address to recent addresses
-    saveRecentAddress(firstAddress);
     
     setIsMultiWalletLoading(true);
     setMultiWalletData(null);
@@ -241,7 +244,8 @@ export default function Home() {
             const validAddresses = addresses.filter((addr: string) => addr.startsWith('0x'));
             if (validAddresses.length > 0) {
               // Use multi-search to load all the wallet data
-              handleMultiSearch(validAddresses);
+              // Pass true to skip URL update when loading from portfolio
+              handleMultiSearch(validAddresses, true);
               return;
             }
           }
@@ -263,7 +267,8 @@ export default function Home() {
             // Filter out any invalid addresses
             const validAddresses = result.walletAddresses.filter((addr: string) => addr.startsWith('0x'));
             if (validAddresses.length > 0) {
-              handleMultiSearch(validAddresses);
+              // Skip URL update when loading from portfolio API
+              handleMultiSearch(validAddresses, true);
             }
           } else {
             // Could not find wallet addresses for this portfolio
@@ -313,7 +318,8 @@ export default function Home() {
         // Filter out any invalid addresses
         const validAddresses = addressList.filter((addr: string) => addr.startsWith('0x'));
         if (validAddresses.length > 0) {
-          handleMultiSearch(validAddresses);
+          // Skip URL updates for legacy portfolio URLs too
+          handleMultiSearch(validAddresses, true);
           return;
         }
       }
@@ -500,7 +506,8 @@ export default function Home() {
                     onRefresh={() => {
                       // Refresh all wallets by re-fetching
                       if (multiWalletData) {
-                        handleMultiSearch(Object.keys(multiWalletData));
+                        // Pass true to skip URL update when refreshing portfolio data
+                        handleMultiSearch(Object.keys(multiWalletData), true);
                       }
                     }}
                   />
