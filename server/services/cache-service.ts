@@ -1,4 +1,5 @@
 import { WalletData } from '../types';
+import { apiStatsService } from './api-stats-service';
 
 // Cache interface
 interface CacheItem<T> {
@@ -58,6 +59,17 @@ class CacheService {
     
     if (cached && Date.now() < cached.expiry) {
       console.log(`Cache hit for wallet data: ${normalizedAddress}`);
+      
+      // Record cache hit in API stats
+      apiStatsService.recordApiCall(
+        'getWalletData', 
+        normalizedAddress,
+        null,
+        true, // Cache hit
+        true,
+        null
+      ).catch(err => console.error('Error recording cache hit stats:', err));
+      
       return cached.data;
     }
     
@@ -92,6 +104,17 @@ class CacheService {
     
     if (cached && Date.now() < cached.expiry) {
       console.log(`Cache hit for transaction data: ${cacheKey}`);
+      
+      // Record cache hit in API stats
+      apiStatsService.recordApiCall(
+        'getTransactionData', 
+        walletAddress,
+        null,
+        true, // Cache hit
+        true,
+        null
+      ).catch(err => console.error('Error recording cache hit stats:', err));
+      
       return cached.data;
     }
     
@@ -126,6 +149,17 @@ class CacheService {
     
     if (cached && Date.now() < cached.expiry) {
       console.log(`Cache hit for token price: ${normalizedAddress}`);
+      
+      // Record cache hit in API stats
+      apiStatsService.recordApiCall(
+        'getTokenPrice', 
+        null,  // No wallet address for token prices
+        null,
+        true, // Cache hit
+        true,
+        null
+      ).catch(err => console.error('Error recording cache hit stats:', err));
+      
       return cached.data;
     }
     

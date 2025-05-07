@@ -33,8 +33,11 @@ const apiCallCounter: ApiCallCounter = {
 };
 
 // Helper function to track API calls
-function trackApiCall(walletAddress: string | null, endpoint: string): void {
-  // Increment total count
+function trackApiCall(walletAddress: string | null, endpoint: string, startTime?: number): void {
+  // Calculate response time if startTime is provided
+  const responseTime = startTime ? Date.now() - startTime : null;
+  
+  // Track in memory counter
   apiCallCounter.total++;
   
   // Track by endpoint
@@ -54,6 +57,23 @@ function trackApiCall(walletAddress: string | null, endpoint: string): void {
   
   // Log the current state
   console.log(`[API Counter] Total calls: ${apiCallCounter.total}, Endpoint: ${endpoint}, Wallet: ${walletAddress || 'n/a'}`);
+  
+  // Persist to database
+  try {
+    apiStatsService.recordApiCall(
+      endpoint,
+      walletAddress, 
+      responseTime,
+      false, // Not from cache - if it's from cache we wouldn't be making an API call
+      true,  // Successful by default, error handlers will record failures separately
+      null   // No error message
+    ).catch(err => {
+      console.error('[API Counter] Failed to record API call to database:', err);
+    });
+  } catch (error) {
+    console.error('[API Counter] Error persisting API call stats:', error);
+    // Non-critical functionality, don't throw or stop execution
+  }
 }
 
 // Function to reset counter
