@@ -10,6 +10,7 @@ import { getHiddenTokens, isTokenHidden, isAddressBookmarked } from '@/lib/api';
 import { useAuth } from '@/providers/auth-provider';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useHexStakes, fetchHexStakesSummary, HexStakeSummary } from '@/hooks/use-hex-stakes';
+import { RealTimeBalanceButton } from '@/components/real-time-balance-button';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -263,6 +264,14 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
             >
               <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
+            
+            {/* Only show for single wallet, not for portfolio or combined views */}
+            {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
+              <RealTimeBalanceButton
+                walletAddress={wallet.address}
+                onBalancesUpdated={onRefresh}
+              />
+            )}
           </div>
         </div>
         

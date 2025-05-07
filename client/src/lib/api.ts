@@ -553,3 +553,22 @@ export async function fetchSpecificToken(
     return null;
   }
 }
+
+/**
+ * Fetch wallet token balances directly from the blockchain
+ * This is useful for getting the most up-to-date balances immediately after a swap
+ * without waiting for APIs to update their caches
+ * @param address - Wallet address to fetch data for
+ */
+export function fetchDirectWalletBalances(address: string): Promise<Wallet> {
+  console.log('Fetching direct blockchain balances for wallet:', address);
+  return fetch(`/api/wallet/${address}/direct`)
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(errorData => {
+          throw new Error(errorData.message || 'Failed to fetch direct wallet balances');
+        });
+      }
+      return response.json();
+    });
+}
