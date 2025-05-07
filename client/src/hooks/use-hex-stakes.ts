@@ -259,21 +259,62 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       // Format the total staked HEX (convert from Hearts to HEX)
       const formattedTotalHexStaked = ethers.utils.formatUnits(totalHexStakedBN, 8);
       
-      // Keep interest at 0 for now as it requires complex calculations
-      const totalInterestHex = '0.00';
+      // Let's try to calculate interest by fetching the current share rate and comparing 
+      // the original stake data with what they would be worth now
+      let totalInterestBN = ethers.BigNumber.from(0);
+      
+      try {
+        // Get the latest share rate
+        const shareRateResult = await provider.call({
+          to: HEX_CONTRACT_ADDRESS,
+          data: '0x95c1f78f' // shareRate() function selector
+        });
+        
+        if (shareRateResult) {
+          const shareRate = ethers.BigNumber.from(shareRateResult);
+          
+          // For each stake, calculate its current value based on shares * shareRate
+          for (let i = 0; i < count; i++) {
+            try {
+              const stake = await hexContract.stakeLists(address, i);
+              const stakeShares = stake[2]; // stakeShares from contract
+              
+              // Calculate what the stake is worth now based on shares
+              const expectedValue = stakeShares.mul(shareRate).div(ethers.BigNumber.from(10).pow(12));
+              
+              // Original stake amount
+              const stakedAmount = stake[1];
+              
+              // If expected value > original staked amount, the difference is interest
+              if (expectedValue.gt(stakedAmount)) {
+                const interestEarned = expectedValue.sub(stakedAmount);
+                totalInterestBN = totalInterestBN.add(interestEarned);
+              }
+            } catch (error) {
+              console.error(`Error calculating interest for stake ${i}:`, error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error calculating interest:', error);
+      }
+      
+      // Format interest
+      const formattedTotalInterestHex = ethers.utils.formatUnits(totalInterestBN, 8);
       
       // Calculate combined total
-      const totalStakePlusInterest = formattedTotalHexStaked;
+      const combineValueBN = totalHexStakedBN.add(totalInterestBN);
+      const formattedTotalCombinedHex = ethers.utils.formatUnits(combineValueBN, 8);
       
       // Calculate USD values
       const totalStakeValueUsd = parseFloat(formattedTotalHexStaked) * currentHexPrice;
-      const totalInterestValueUsd = 0;
-      const totalCombinedValueUsd = totalStakeValueUsd;
+      const totalInterestValueUsd = parseFloat(formattedTotalInterestHex) * currentHexPrice;
+      const totalCombinedValueUsd = totalStakeValueUsd + totalInterestValueUsd;
       
       return {
         totalStakedHex: formattedTotalHexStaked,
-        totalInterestHex,
-        totalCombinedHex: totalStakePlusInterest,
+        totalInterestHex: formattedTotalInterestHex,
+        totalCombinedHex: formattedTotalCombinedHex,
         totalStakeValueUsd,
         totalInterestValueUsd,
         totalCombinedValueUsd,
