@@ -1221,6 +1221,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Register portfolio routes
+  app.use("/api", portfolioRoutes);
+
   const httpServer = createServer(app);
 
   return httpServer;

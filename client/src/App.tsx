@@ -7,10 +7,11 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import { Profile } from "@/pages/profile";
 import { Donations } from "@/pages/donations";
+import PortfoliosPage from "@/pages/portfolios";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthProvider } from "@/providers/auth-provider";
-import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake } from "lucide-react";
+import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch } from "lucide-react";
 import telegramLogo from "@assets/Telegram_2019_Logo.svg.png";
 import xLogo from "@assets/X_logo.jpg";
 import {
@@ -167,10 +168,17 @@ function Header() {
               </DropdownMenuItem>
               
               {isConnected && (
-                <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer dropdown-item-hover">
-                  <Bookmark className="mr-2 h-4 w-4" />
-                  <span>Saved Addresses</span>
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer dropdown-item-hover">
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    <span>Saved Addresses</span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem onClick={() => setLocation("/portfolios")} className="cursor-pointer dropdown-item-hover">
+                    <FolderSearch className="mr-2 h-4 w-4" />
+                    <span>Portfolios</span>
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -217,10 +225,17 @@ function Header() {
                 </DropdownMenuItem>
                 
                 {isConnected && (
-                  <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer dropdown-item-hover">
-                    <Bookmark className="mr-2 h-4 w-4" />
-                    <span>Saved Addresses</span>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer dropdown-item-hover">
+                      <Bookmark className="mr-2 h-4 w-4" />
+                      <span>Saved Addresses</span>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuItem onClick={() => setLocation("/portfolios")} className="cursor-pointer dropdown-item-hover">
+                      <FolderSearch className="mr-2 h-4 w-4" />
+                      <span>Portfolios</span>
+                    </DropdownMenuItem>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -321,6 +336,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/profile" component={Profile} />
           <Route path="/saved" component={Profile} />
+          <Route path="/portfolios" component={PortfoliosPage} />
           <Route path="/donations" component={Donations} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
