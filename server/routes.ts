@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance } from "./services/api";
@@ -397,6 +397,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ 
         message: "Failed to fetch token logos in batch",
         error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // API endpoint to get multiple wallet data at once
+  app.post("/api/wallets/batch", async (req, res) => {
+    try {
+      const { addresses } = req.body;
+      
+      if (!Array.isArray(addresses)) {
+        return res.status(400).json({ message: "addresses must be an array" });
+      }
+      
+      // Limit batch size
+      const MAX_BATCH_SIZE = 10;
+      let addressesToProcess = addresses;
+      
+      if (addresses.length > MAX_BATCH_SIZE) {
+        console.log(`Batch size ${addresses.length} exceeds maximum (${MAX_BATCH_SIZE}). Processing first ${MAX_BATCH_SIZE} addresses.`);
+        addressesToProcess = addresses.slice(0, MAX_BATCH_SIZE);
+      }
+      
+      // Validate all addresses
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      const validAddresses = addressesToProcess.filter(addr => 
+        typeof addr === 'string' && addressRegex.test(addr));
+      
+      if (validAddresses.length === 0) {
+        return res.status(400).json({ message: "No valid wallet addresses provided" });
+      }
+      
+      // Set loading progress
+      updateLoadingProgress({
+        status: 'loading',
+        message: `Loading data for ${validAddresses.length} wallets...`,
+        currentBatch: 0,
+        totalBatches: validAddresses.length
+      });
+      
+      // Process wallets in parallel with controlled concurrency
+      const CONCURRENT_LIMIT = 3;
+      const chunks = [];
+      for (let i = 0; i < validAddresses.length; i += CONCURRENT_LIMIT) {
+        chunks.push(validAddresses.slice(i, i + CONCURRENT_LIMIT));
+      }
+      
+      let results: Record<string, any> = {};
+      let currentBatch = 0;
+      
+      for (const chunk of chunks) {
+        const chunkResults = await Promise.all(
+          chunk.map(async (address, index) => {
+            try {
+              currentBatch++;
+              updateLoadingProgress({
+                currentBatch,
+                message: `Loading wallet ${currentBatch} of ${validAddresses.length}...`
+              });
+              
+              // Get wallet data with a reasonable token limit
+              return {
+                address,
+                data: await getWalletData(address, 1, 50)
+              };
+            } catch (error) {
+              console.error(`Error fetching data for wallet ${address}:`, error);
+              return {
+                address,
+                error: error instanceof Error ? error.message : "Unknown error"
+              };
+            }
+          })
+        );
+        
+        // Add chunk results to overall results
+        chunkResults.forEach(result => {
+          results[result.address] = result.data || { error: result.error };
+        });
+      }
+      
+      // Update loading progress to complete
+      updateLoadingProgress({
+        status: 'complete',
+        message: `Loaded data for ${validAddresses.length} wallets.`,
+        currentBatch: validAddresses.length,
+        totalBatches: validAddresses.length
+      });
+      
+      return res.json(results);
+      
+    } catch (error) {
+      console.error("Error fetching batch wallet data:", error);
+      // Update loading progress to error state
+      updateLoadingProgress({
+        status: 'error',
+        message: 'Error fetching batch wallet data',
+      });
+      
+      return res.status(500).json({ 
+        message: "Failed to fetch batch wallet data",
+        error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
   });
