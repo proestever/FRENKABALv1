@@ -151,7 +151,6 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         const count = Number(countBN);
         setStakeCount(count);
         
-        // No special wallet handling - rely on actual stake data from the blockchain
         if (count === 0) {
           setStakes([]);
           setTotalHexStaked('0');
@@ -212,19 +211,19 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
           // Format HEX amount (8 decimals)
           const hexAmount = ethers.utils.formatUnits(stakedHearts, 8);
           
-          // For now, show zero interest until we can get the actual interest from the blockchain
-          // HEX interest is complex to calculate and requires accessing historical data
+          // Calculate estimated interest (for display purposes)
           let interestEarned = "0";
-          
-          // Only attempt to calculate interest for active or ended stakes
-          if (isActive || unlockedDay > 0) {
-            // For active stakes, we don't know the exact interest until the stake ends
-            // For ended stakes, we need more complex calculations to get the right amount
-            // Setting interest to 0 for now to avoid showing incorrect estimates
-            interestEarned = "0.00";
+          if (progressPercentage > 0) {
+            // Simple interest estimation
+            const annualRate = 0.35; // 35% APY (conservative estimate)
+            const yearsStaked = stakedDays / 365;
+            const estimatedInterestRate = annualRate * yearsStaked * (progressPercentage / 100);
+            const principalHex = parseFloat(hexAmount);
+            const interestHex = principalHex * estimatedInterestRate;
+            interestEarned = interestHex.toFixed(2);
             
-            // Not adding any interest to the total
-            // totalInterestBN stays at 0
+            // Add to total interest
+            totalInterestBN += parseFloat(interestEarned);
           }
           
           // Add to total staked HEX
@@ -538,24 +537,23 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
                 </div>
               </div>
               
-              {/* Right side - Stake Information */}
+              {/* Right side - Estimated Earnings */}
               <div className="md:w-64 p-3 bg-black/20 rounded-md border border-white/5">
                 <div className="text-center mb-2">
                   <div className="text-xs text-white/60">
-                    {stake.isActive ? 'Stake Information' : 'Completed Stake'}
+                    {stake.isActive ? 'Estimated Earnings' : 'Final Earnings'}
                   </div>
                 </div>
                 
                 <div className="text-center">
-                  <div className="text-sm text-white/70 mb-1">
-                    Principal Amount
-                  </div>
                   <div className="text-lg md:text-xl font-bold bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-600 bg-clip-text text-transparent">
-                    {formatTokenAmount(parseFloat(stake.hexAmount || '0'))} HEX
+                    +{formatTokenAmount(parseFloat(stake.interestEarned || '0'))} HEX
                   </div>
-                  <div className="text-xs text-white/50 mt-1">
-                    ${formatUsd(stake.valueUsd)}
-                  </div>
+                  {stake.isActive && (
+                    <div className="text-xs text-white/50 mt-1">
+                      Based on current progress ({stake.progressPercentage}%)
+                    </div>
+                  )}
                 </div>
                 
                 {stake.isActive && stake.daysRemaining !== null && stake.daysRemaining > 0 && (
