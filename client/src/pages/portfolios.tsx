@@ -243,7 +243,7 @@ const PortfoliosPage = () => {
         <h1 className="text-2xl font-bold mb-6">My Portfolios</h1>
         <Card>
           <CardContent className="pt-6">
-            <EmptyState
+            <PortfolioEmptyState
               title="Connect your wallet"
               description="You need to connect your wallet to view and manage your portfolios."
               icon="wallet"
@@ -326,7 +326,7 @@ const PortfoliosPage = () => {
       ) : (
         <Card>
           <CardContent className="pt-6">
-            <EmptyState
+            <PortfolioEmptyState
               title="No portfolios found"
               description="Create a portfolio to save and organize wallet addresses for tracking."
               icon="folder"
