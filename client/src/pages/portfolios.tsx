@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, ExternalLink, Copy } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Copy, Pencil } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useWallet } from '@/hooks/use-wallet';
 import { Button } from '@/components/ui/button';
@@ -55,6 +55,11 @@ const PortfoliosPage = () => {
   const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | null>(null);
   const [newAddress, setNewAddress] = useState('');
   const [newAddressLabel, setNewAddressLabel] = useState('');
+  
+  // State for edit address dialog
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<PortfolioAddress | null>(null);
+  const [editAddressLabel, setEditAddressLabel] = useState('');
   
   // Query portfolios
   const { data: portfolios, isLoading } = useQuery({
@@ -214,6 +219,47 @@ const PortfoliosPage = () => {
       });
     },
   });
+  
+  // Update address label mutation
+  const updateAddressMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingAddress) return null;
+      
+      const data = {
+        label: editAddressLabel || null,
+      };
+      
+      return apiRequest({ 
+        url: `/api/portfolio-addresses/${editingAddress.id}`,
+        method: 'PATCH', 
+        data 
+      });
+    },
+    onSuccess: () => {
+      if (!selectedPortfolio) return;
+      
+      queryClient.invalidateQueries({ 
+        queryKey: ['portfolioAddresses', selectedPortfolio.id] 
+      });
+      
+      setIsEditDialogOpen(false);
+      setEditingAddress(null);
+      setEditAddressLabel('');
+      
+      toast({
+        title: 'Address updated',
+        description: 'The wallet address label has been updated.',
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating address:', error);
+      toast({
+        title: 'Failed to update address',
+        description: 'There was an error updating the address label. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
 
   // No longer need to generate a unique URL ID as we'll use direct portfolio ID in the URL
 
@@ -304,6 +350,19 @@ const PortfoliosPage = () => {
     }
     
     addAddressMutation.mutate();
+  };
+  
+  // Handle edit address button click
+  const handleEditAddress = (address: PortfolioAddress) => {
+    setEditingAddress(address);
+    setEditAddressLabel(address.label || '');
+    setIsEditDialogOpen(true);
+  };
+  
+  // Handle edit address form submission
+  const handleUpdateAddress = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateAddressMutation.mutate();
   };
 
   // If user is not logged in, show message to connect wallet
@@ -480,14 +539,24 @@ const PortfoliosPage = () => {
                                     )}
                                   </td>
                                   <td className="py-2 px-4 text-right">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => removeAddressMutation.mutate(address.id)}
-                                      disabled={removeAddressMutation.isPending}
-                                    >
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
+                                    <div className="flex justify-end space-x-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleEditAddress(address)}
+                                        disabled={removeAddressMutation.isPending}
+                                      >
+                                        <Pencil className="h-4 w-4 text-primary" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeAddressMutation.mutate(address.id)}
+                                        disabled={removeAddressMutation.isPending}
+                                      >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
@@ -652,6 +721,59 @@ const PortfoliosPage = () => {
                 </div>
               )}
             </>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Address Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Wallet Address</DialogTitle>
+            <DialogDescription>
+              Update the label for this wallet address.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingAddress && (
+            <form onSubmit={handleUpdateAddress}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="walletAddress">Wallet Address</Label>
+                  <Input
+                    id="walletAddress"
+                    value={editingAddress.walletAddress}
+                    disabled
+                    className="font-mono text-sm opacity-70"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="editLabel">Label (Optional)</Label>
+                  <Input
+                    id="editLabel"
+                    value={editAddressLabel}
+                    onChange={(e) => setEditAddressLabel(e.target.value)}
+                    placeholder="Main Wallet"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  className="glass-card border-white/15 bg-black/20 hover:bg-white/10"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
+                  disabled={updateAddressMutation.isPending}
+                >
+                  {updateAddressMutation.isPending ? 'Updating...' : 'Update Address'}
+                </Button>
+              </DialogFooter>
+            </form>
           )}
         </DialogContent>
       </Dialog>
