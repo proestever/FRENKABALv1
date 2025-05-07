@@ -224,6 +224,17 @@ export default function Home() {
       const addressList = queryParams.addresses.split(',');
       console.log(`Loading portfolio with ${addressList.length} addresses`);
       
+      // Extract portfolio information from URL if available
+      if (queryParams.name) {
+        setPortfolioName(queryParams.name);
+        console.log(`Portfolio name: ${queryParams.name}`);
+      }
+      
+      if (queryParams.uid) {
+        setPortfolioUrlId(queryParams.uid);
+        console.log(`Portfolio URL ID: ${queryParams.uid}`);
+      }
+      
       if (addressList.length > 0) {
         // Filter out any invalid addresses
         const validAddresses = addressList.filter(addr => addr.startsWith('0x'));
@@ -232,6 +243,10 @@ export default function Home() {
           return;
         }
       }
+    } else {
+      // If we don't have portfolio addresses, reset portfolio name and URL ID
+      setPortfolioName(null);
+      setPortfolioUrlId(null);
     }
     
     // Handle single wallet address from URL path
@@ -392,6 +407,7 @@ export default function Home() {
                     wallet={combinedWallet} 
                     isLoading={false}
                     hexStakesSummary={multiWalletHexStakes}
+                    portfolioName={portfolioName}
                     onRefresh={() => {
                       // Refresh all wallets by re-fetching
                       if (multiWalletData) {
