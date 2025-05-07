@@ -27,7 +27,7 @@ export default function Home() {
   const [isMultiWalletLoading, setIsMultiWalletLoading] = useState(false);
   const [portfolioName, setPortfolioName] = useState<string | null>(null);
   const [portfolioUrlId, setPortfolioUrlId] = useState<string | null>(null);
-  const params = useParams<{ walletAddress?: string }>();
+  const params = useParams<{ walletAddress?: string; portfolioId?: string }>();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -220,8 +220,9 @@ export default function Home() {
     const queryParams = parseQueryString(search);
     
     // First check if we're using the clean portfolio URL format (/portfolio/:portfolioId)
-    if (location.startsWith('/portfolio/')) {
-      const portfolioId = location.split('/')[2]; // Get the ID from the URL
+    if (params.portfolioId || location.startsWith('/portfolio/')) {
+      // Get the portfolio ID either from params or from the URL
+      const portfolioId = params.portfolioId || location.split('/')[2];
       console.log(`Loading portfolio with ID: ${portfolioId}`);
       
       // Get portfolio data from session storage
@@ -310,7 +311,7 @@ export default function Home() {
       
       if (addressList.length > 0) {
         // Filter out any invalid addresses
-        const validAddresses = addressList.filter(addr => addr.startsWith('0x'));
+        const validAddresses = addressList.filter((addr: string) => addr.startsWith('0x'));
         if (validAddresses.length > 0) {
           handleMultiSearch(validAddresses);
           return;
@@ -332,7 +333,7 @@ export default function Home() {
       // Reset state when on the root URL (but not if we have addresses in query params)
       setSearchedAddress(null);
     }
-  }, [params.walletAddress, searchedAddress, location]);
+  }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
 
   // Use our new hook for loading all wallet tokens without pagination
   const { 
