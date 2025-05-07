@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { ethers } from 'ethers';
 import { Progress } from '@/components/ui/progress';
 import { Loader2 } from 'lucide-react';
-import { formatCurrency, formatTokenAmount } from '@/lib/utils';
+import { formatCurrency, formatTokenAmount, formatUsd } from '@/lib/utils';
 
 // HEX Contract on PulseChain & ETH - same address on both chains
 const HEX_CONTRACT_ADDRESS = '0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39';
@@ -114,18 +114,26 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
         const hexContract = new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);
         
         // Fetch HEX price
-        let currentHexPrice = 0;
+        let currentHexPrice = 0.006; // Default fallback price for PulseChain
         try {
           // Use API to fetch price
           const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
           const priceData = await response.json();
+          console.log('HEX price data from API:', priceData);
+          
           if (priceData && priceData.price) {
             currentHexPrice = priceData.price;
+            console.log('Using HEX price from API:', currentHexPrice);
+          } else if (priceData && priceData.usdPrice) {
+            // Try alternate field if available
+            currentHexPrice = priceData.usdPrice;
+            console.log('Using HEX usdPrice from API:', currentHexPrice);
+          } else {
+            console.log('Using fallback HEX price:', currentHexPrice);
           }
         } catch (error) {
           console.error('Error fetching HEX price:', error);
-          // Default price if API fails (PulseChain-only now)
-          currentHexPrice = 0.005; // Fallback price for PulseChain
+          console.log('Using fallback HEX price after error:', currentHexPrice);
         }
         
         setHexPrice(currentHexPrice);
@@ -289,7 +297,8 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
   };
   
   // Format USD value with 2 decimal places
-  const formatUsd = (value: number) => {
+  const formatUsd = (value: number | undefined) => {
+    if (value === undefined || isNaN(value)) return '0.00';
     return value.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
