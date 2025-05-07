@@ -23,6 +23,7 @@ export default function Home() {
   const [manualTokens, setManualTokens] = useState<ProcessedToken[]>([]);
   const [multiWalletData, setMultiWalletData] = useState<Record<string, Wallet> | null>(null);
   const [multiWalletHexStakes, setMultiWalletHexStakes] = useState<HexStakeSummary | null>(null);
+  const [individualWalletHexStakes, setIndividualWalletHexStakes] = useState<Record<string, HexStakeSummary>>({});
   const [isMultiWalletLoading, setIsMultiWalletLoading] = useState(false);
   const params = useParams<{ walletAddress?: string }>();
   const [location, setLocation] = useLocation();
@@ -130,11 +131,30 @@ export default function Home() {
         return null;
       });
       
+      // Fetch individual HEX stakes data for each wallet
+      const individualHexStakesPromises = addresses.map(address => 
+        fetchHexStakesSummary(address)
+          .then(data => ({ [address]: data }))
+          .catch(error => {
+            console.error(`Error fetching HEX stakes for ${address}:`, error);
+            return null;
+          })
+      );
+      
       // Wait for all promises to resolve
       const [hexStakesData, ...walletResults] = await Promise.all([
         hexStakesPromise, 
         ...walletPromises
       ]);
+      
+      // Process individual HEX stakes data
+      const individualHexResults = await Promise.all(individualHexStakesPromises);
+      const individualHexData = individualHexResults
+        .filter(result => result !== null)
+        .reduce((acc, result) => ({ ...acc, ...result }), {});
+      
+      // Store individual wallet HEX stakes data
+      setIndividualWalletHexStakes(individualHexData);
       
       // Filter out null results and combine into a single object
       const walletData = walletResults
