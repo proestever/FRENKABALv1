@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getRecentAddresses } from '@/lib/api';
 import { truncateAddress } from '@/lib/utils';
-import { Search, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { FrenKabalLogo } from '@/components/frenklabal-logo';
 import {
   Tooltip,
@@ -76,36 +76,6 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
     </div>
   );
 
-  // Search button that ensures icon is centered
-  const SearchButton = () => (
-    <div className="absolute right-3 top-0 h-full flex items-center">
-      <Button 
-        onClick={handleSearch}
-        disabled={isLoading || !searchQuery.trim()}
-        variant="ghost"
-        size="icon"
-        style={{ 
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '36px',
-          width: '36px',
-          padding: 0
-        }}
-        className="rounded-full hover:bg-white/10 transition-colors"
-        aria-label="Search"
-      >
-        <div className="flex items-center justify-center">
-          {isLoading ? (
-            <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          ) : (
-            <Search className="h-5 w-5 text-white" />
-          )}
-        </div>
-      </Button>
-    </div>
-  );
-
   // Different search bar layout based on whether a search has been performed
   if (!hasSearched) {
     // Initial layout with logo centered and narrow search card
@@ -116,18 +86,30 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
         </div>
         <Card className="shadow-lg glass-card max-w-md w-full mx-auto border border-white/30 card-glitter">
           <CardContent className="pt-8 pb-8 px-6">
-            <div className="relative">
+            <div>
               <MultiSearchTooltip />
-              <Input
-                type="text"
-                placeholder="Enter PulseChain wallet address(es) (comma-separated)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full pr-10 glass-card border-white/15 text-foreground bg-black/10"
-                disabled={isLoading}
-              />
-              <SearchButton />
+              <div className="flex gap-3">
+                <Input
+                  type="text"
+                  placeholder="Enter PulseChain wallet address(es) (comma-separated)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-full glass-card border-white/15 text-foreground bg-black/10"
+                  disabled={isLoading}
+                />
+                <Button
+                  onClick={handleSearch}
+                  disabled={isLoading || !searchQuery.trim()}
+                  className="glass-card border-white/15 bg-black/20 hover:bg-white/10"
+                >
+                  {isLoading ? (
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    'Search'
+                  )}
+                </Button>
+              </div>
             </div>
             
             {recentAddresses.length > 0 && (
@@ -156,18 +138,30 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
       <section className="mb-6">
         <Card className="shadow-lg glass-card w-full mx-auto border border-white/20">
           <CardContent className="py-4 px-6">
-            <div className="relative">
+            <div>
               <MultiSearchTooltip />
-              <Input
-                type="text"
-                placeholder="Enter PulseChain wallet address(es) (comma-separated)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full pr-10 glass-card border-white/15 text-foreground bg-black/10"
-                disabled={isLoading}
-              />
-              <SearchButton />
+              <div className="flex gap-3">
+                <Input
+                  type="text"
+                  placeholder="Enter PulseChain wallet address(es) (comma-separated)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-full glass-card border-white/15 text-foreground bg-black/10"
+                  disabled={isLoading}
+                />
+                <Button
+                  onClick={handleSearch}
+                  disabled={isLoading || !searchQuery.trim()}
+                  className="glass-card border-white/15 bg-black/20 hover:bg-white/10"
+                >
+                  {isLoading ? (
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    'Search'
+                  )}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
