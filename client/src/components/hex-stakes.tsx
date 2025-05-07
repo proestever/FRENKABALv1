@@ -359,7 +359,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
           
           <div className="text-right">
             <div className="text-sm text-white/70">Total Interest</div>
-            <div className="text-lg font-bold text-teal-400" data-total-interest={totalInterest}>
+            <div className="text-lg font-bold text-white" data-total-interest={totalInterest}>
               +{formatTokenAmount(parseFloat(totalInterest))}
             </div>
             <div className="text-xs text-gray-400">+${formatUsd(interestValueUsd)}</div>
