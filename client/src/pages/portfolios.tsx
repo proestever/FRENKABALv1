@@ -252,9 +252,13 @@ const PortfoliosPage = () => {
         // Navigate to the home page with the portfolio addresses as a combined search
         const addressesStr = result.walletAddresses.join(',');
         
+        // Log the portfolio search to help debugging
+        console.log(`Searching portfolio: ${portfolioName} (ID: ${portfolioId}) with ${result.walletAddresses.length} addresses`);
+        console.log(`Generated URL ID: ${portfolioUrlId}`);
+        
         // Use setLocation to go to the home page with the portfolio addresses
         // Include portfolio ID, name and unique ID for deeplink capability
-        setLocation(`/?addresses=${encodeURIComponent(addressesStr)}&portfolio=${portfolioId}&name=${encodeURIComponent(portfolioName)}&uid=${portfolioUrlId}`);
+        setLocation(`/?addresses=${encodeURIComponent(addressesStr)}&name=${encodeURIComponent(portfolioName)}&uid=${portfolioUrlId}`);
         
         // Show success toast
         toast({

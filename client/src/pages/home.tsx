@@ -394,7 +394,11 @@ export default function Home() {
             
             // Override the address property with portfolio name if available
             if (portfolioName) {
+              console.log(`Setting combined wallet address to Portfolio:${portfolioName}`);
               combinedWallet.address = `Portfolio:${portfolioName}`;
+            } else {
+              console.log(`No portfolio name available, using default Combined address`);
+              combinedWallet.address = `Combined (${Object.keys(multiWalletData).length} wallets)`;
             }
             
             // Add HEX stakes value to total wallet value if available
