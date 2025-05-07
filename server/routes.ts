@@ -7,6 +7,7 @@ import { getTokenPricesFromDexScreener } from "./services/dexscreener";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
+import portfolioRoutes from "./routes/portfolio-routes";
 
 // Loading progress tracking
 export interface LoadingProgress {

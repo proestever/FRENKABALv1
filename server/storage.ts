@@ -215,6 +215,139 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // Portfolio methods implementation
+  async getPortfolios(userId: number): Promise<Portfolio[]> {
+    return db
+      .select()
+      .from(portfolios)
+      .where(eq(portfolios.userId, userId))
+      .orderBy(portfolios.createdAt);
+  }
+  
+  async getPortfolio(id: number): Promise<Portfolio | undefined> {
+    const [portfolio] = await db
+      .select()
+      .from(portfolios)
+      .where(eq(portfolios.id, id));
+      
+    return portfolio || undefined;
+  }
+  
+  async createPortfolio(portfolio: InsertPortfolio): Promise<Portfolio> {
+    try {
+      const [newPortfolio] = await db
+        .insert(portfolios)
+        .values(portfolio)
+        .returning();
+        
+      return newPortfolio;
+    } catch (error) {
+      console.error(`Error creating portfolio:`, error);
+      throw error;
+    }
+  }
+  
+  async updatePortfolio(id: number, data: Partial<InsertPortfolio>): Promise<Portfolio> {
+    try {
+      const [updatedPortfolio] = await db
+        .update(portfolios)
+        .set({
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(eq(portfolios.id, id))
+        .returning();
+        
+      return updatedPortfolio;
+    } catch (error) {
+      console.error(`Error updating portfolio with id ${id}:`, error);
+      throw error;
+    }
+  }
+  
+  async deletePortfolio(id: number): Promise<boolean> {
+    try {
+      // First delete all associated addresses
+      await db
+        .delete(portfolioAddresses)
+        .where(eq(portfolioAddresses.portfolioId, id));
+        
+      // Then delete the portfolio
+      const result = await db
+        .delete(portfolios)
+        .where(eq(portfolios.id, id))
+        .returning({ id: portfolios.id });
+        
+      return result.length > 0;
+    } catch (error) {
+      console.error(`Error deleting portfolio with id ${id}:`, error);
+      throw error;
+    }
+  }
+  
+  // Portfolio address methods implementation
+  async getPortfolioAddresses(portfolioId: number): Promise<PortfolioAddress[]> {
+    return db
+      .select()
+      .from(portfolioAddresses)
+      .where(eq(portfolioAddresses.portfolioId, portfolioId))
+      .orderBy(portfolioAddresses.createdAt);
+  }
+  
+  async addAddressToPortfolio(address: InsertPortfolioAddress): Promise<PortfolioAddress> {
+    // Ensure wallet address is lowercase for consistent storage
+    const processedAddress = {
+      ...address,
+      walletAddress: address.walletAddress.toLowerCase()
+    };
+    
+    try {
+      const [newAddress] = await db
+        .insert(portfolioAddresses)
+        .values(processedAddress)
+        .returning();
+        
+      return newAddress;
+    } catch (error) {
+      console.error(`Error adding address to portfolio:`, error);
+      throw error;
+    }
+  }
+  
+  async removeAddressFromPortfolio(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(portfolioAddresses)
+        .where(eq(portfolioAddresses.id, id))
+        .returning({ id: portfolioAddresses.id });
+        
+      return result.length > 0;
+    } catch (error) {
+      console.error(`Error removing address from portfolio:`, error);
+      throw error;
+    }
+  }
+  
+  async updatePortfolioAddress(id: number, data: Partial<InsertPortfolioAddress>): Promise<PortfolioAddress> {
+    // If wallet address is provided, ensure it's lowercase
+    const processedData = data.walletAddress
+      ? { ...data, walletAddress: data.walletAddress.toLowerCase() }
+      : data;
+      
+    try {
+      const [updatedAddress] = await db
+        .update(portfolioAddresses)
+        .set(processedData)
+        .where(eq(portfolioAddresses.id, id))
+        .returning();
+        
+      return updatedAddress;
+    } catch (error) {
+      console.error(`Error updating portfolio address:`, error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
