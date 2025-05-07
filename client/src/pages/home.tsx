@@ -198,19 +198,51 @@ export default function Home() {
     }
   };
 
-  // Check if we have a wallet address in the URL or if we need to reset
+  // Parse URL query parameters
+  const parseQueryString = (search: string): Record<string, string> => {
+    if (!search || search === '?') return {};
+    
+    return search
+      .substring(1)
+      .split('&')
+      .reduce((params, param) => {
+        const [key, value] = param.split('=');
+        if (key && value) params[key] = decodeURIComponent(value);
+        return params;
+      }, {} as Record<string, string>);
+  };
+
+  // Check if we have a wallet address in the URL or portfolio addresses in query params
   useEffect(() => {
-    // Only process URL params on initial render or when URL actually changes
+    const search = window.location.search;
+    const queryParams = parseQueryString(search);
+    
+    // Check for multiple addresses from portfolio search
+    if (queryParams.addresses) {
+      const addressList = queryParams.addresses.split(',');
+      console.log(`Loading portfolio with ${addressList.length} addresses`);
+      
+      if (addressList.length > 0) {
+        // Filter out any invalid addresses
+        const validAddresses = addressList.filter(addr => addr.startsWith('0x'));
+        if (validAddresses.length > 0) {
+          handleMultiSearch(validAddresses);
+          return;
+        }
+      }
+    }
+    
+    // Handle single wallet address from URL path
     if (params.walletAddress && params.walletAddress.startsWith('0x')) {
       if (searchedAddress !== params.walletAddress) {
         // Handle wallet address from URL only if it's different from current
         handleSearch(params.walletAddress);
       }
-    } else if (!params.walletAddress && searchedAddress) {
-      // Reset state when on the root URL
+    } else if (!params.walletAddress && searchedAddress && !queryParams.addresses) {
+      // Reset state when on the root URL (but not if we have addresses in query params)
       setSearchedAddress(null);
     }
-  }, [params.walletAddress, searchedAddress]);
+  }, [params.walletAddress, searchedAddress, location]);
 
   // Use our new hook for loading all wallet tokens without pagination
   const { 
