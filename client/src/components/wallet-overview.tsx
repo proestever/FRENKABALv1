@@ -40,33 +40,8 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
       // First immediately use any data from the hook
       setManualHexSummary(hexStakesSummary);
       
-      // Check if this is the specific wallet address we want to handle specially
-      if (wallet.address.toLowerCase() === '0x459af0b9933eab4921555a44d3692cad964408c5') {
-        // For this specific wallet, use the exact values from PulseChain stakes
-        const currentHexPrice = hexStakesSummary.hexPrice || 0.006;
-        console.log('Using exact PulseChain values for wallet overview card (special address)');
-        
-        // Split the total amount between principal and interest based on the HEX STAKES tab data
-        // The total is 3,054,409.62 HEX
-        // Using the approximate ratio from previous data: about 40% principal, 60% interest
-        const totalHex = 3054409.62;
-        const principalHex = 1211532.80;
-        const interestHex = 1842876.82; 
-        
-        setManualHexSummary({
-          totalStakedHex: principalHex.toFixed(2),
-          totalInterestHex: interestHex.toFixed(2),
-          totalCombinedHex: totalHex.toFixed(2),
-          totalStakeValueUsd: principalHex * currentHexPrice,
-          totalInterestValueUsd: interestHex * currentHexPrice,
-          totalCombinedValueUsd: totalHex * currentHexPrice,
-          stakeCount: 23,
-          hexPrice: currentHexPrice,
-          isLoading: false,
-          error: null
-        });
-        return;
-      }
+      // We don't need special handling anymore - use actual blockchain data for all addresses
+      // No hardcoded examples or special cases
       
       // For other wallets, fetch fresh data normally
       console.log('Manually fetching HEX stakes for wallet overview card:', wallet.address);

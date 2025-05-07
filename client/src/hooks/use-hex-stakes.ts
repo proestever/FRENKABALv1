@@ -51,6 +51,26 @@ const HEX_ABI = [
     "payable": false,
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {"internalType": "address", "name": "", "type": "address"},
+      {"internalType": "uint256", "name": "", "type": "uint256"}
+    ],
+    "name": "stakeLists",
+    "outputs": [
+      {"internalType": "uint40", "name": "stakeId", "type": "uint40"},
+      {"internalType": "uint72", "name": "stakedHearts", "type": "uint72"},
+      {"internalType": "uint72", "name": "stakeShares", "type": "uint72"},
+      {"internalType": "uint16", "name": "lockedDay", "type": "uint16"},
+      {"internalType": "uint16", "name": "stakedDays", "type": "uint16"},
+      {"internalType": "uint16", "name": "unlockedDay", "type": "uint16"},
+      {"internalType": "bool", "name": "isAutoStake", "type": "bool"}
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
   }
 ];
 
@@ -209,23 +229,75 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       };
     }
     
-    // Use estimations based on common patterns
-    // For most users, the average stake is around 50,000 HEX
-    const averageStakeSize = 50000;
-    const averageInterestRate = 0.20; // 20% average interest
+    // Fetch actual data for all stakes
+    let totalStaked = 0;
+    let totalInterest = 0;
     
-    const estimatedTotalStaked = averageStakeSize * count;
-    const estimatedTotalInterest = estimatedTotalStaked * averageInterestRate;
+    try {
+      // Get the current day from contract
+      const currentDayBN = await hexContract.currentDay();
+      const currentDay = Number(currentDayBN);
+      
+      // Check each stake using stakeDataFetch
+      for (let i = 0; i < Math.min(count, 50); i++) { // Limit to 50 stakes max to prevent overloading
+        try {
+          // Use stakeDataFetch to get stake info (0 for stakeIdParam because we're using the index)
+          const stakeData = await hexContract.stakeDataFetch(address, i, 0);
+          
+          if (stakeData && stakeData.length >= 3) {
+            // Get staked Hearts (8 decimals) from position 1 (stakeDataFetch output)
+            const stakedHearts = ethers.BigNumber.from(stakeData[1].toString());
+            const stakedHex = parseFloat(ethers.utils.formatUnits(stakedHearts, 8));
+            
+            // Add to total
+            totalStaked += stakedHex;
+            
+            // Calculate simple interest based on progress
+            const lockedDay = Number(stakeData[3]);
+            const stakedDays = Number(stakeData[4]);
+            
+            // Calculate progress
+            let progressPercentage = 0;
+            if (currentDay >= lockedDay) {
+              const daysPassed = currentDay - lockedDay;
+              progressPercentage = Math.min(100, Math.floor((daysPassed / stakedDays) * 100));
+            }
+            
+            // Use the actual interest calculation from the contract (position 7)
+            let interestHex = 0;
+            if (stakeData[7]) {
+              const interestHearts = ethers.BigNumber.from(stakeData[7].toString());
+              interestHex = parseFloat(ethers.utils.formatUnits(interestHearts, 8));
+            } else {
+              // Fallback interest estimation if not available
+              const annualRate = 0.35; // 35% APY (conservative estimate)
+              const yearsStaked = stakedDays / 365;
+              const estimatedInterestRate = annualRate * yearsStaked * (progressPercentage / 100);
+              interestHex = stakedHex * estimatedInterestRate;
+            }
+            
+            // Add to total interest
+            totalInterest += interestHex;
+            
+            console.log(`Found stake ${i} with ${stakedHex.toFixed(2)} HEX, interest: ${interestHex.toFixed(2)} HEX`);
+          }
+        } catch (stakeErr) {
+          console.error(`Error fetching stake ${i}:`, stakeErr);
+        }
+      }
+    } catch (fetchErr) {
+      console.error('Error fetching stake details:', fetchErr);
+    }
     
     // Format the numbers as strings with 2 decimal places
-    const totalStakedHex = estimatedTotalStaked.toFixed(2);
-    const totalInterestHex = estimatedTotalInterest.toFixed(2);
-    const totalCombinedHex = (estimatedTotalStaked + estimatedTotalInterest).toFixed(2);
+    const totalStakedHex = totalStaked.toFixed(2);
+    const totalInterestHex = totalInterest.toFixed(2);
+    const totalCombinedHex = (totalStaked + totalInterest).toFixed(2);
     
     // Calculate USD values
-    const totalStakeValueUsd = estimatedTotalStaked * currentHexPrice;
-    const totalInterestValueUsd = estimatedTotalInterest * currentHexPrice;
-    const totalCombinedValueUsd = (estimatedTotalStaked + estimatedTotalInterest) * currentHexPrice;
+    const totalStakeValueUsd = totalStaked * currentHexPrice;
+    const totalInterestValueUsd = totalInterest * currentHexPrice;
+    const totalCombinedValueUsd = (totalStaked + totalInterest) * currentHexPrice;
     
     return {
       totalStakedHex,
