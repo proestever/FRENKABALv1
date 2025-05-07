@@ -63,7 +63,7 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
               <div className="flex gap-3">
                 <Input
                   type="text"
-                  placeholder="Enter PulseChain wallet address(es) (comma-separated)"
+                  placeholder="Enter PulseChain Address"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -114,7 +114,7 @@ export function SearchSection({ onSearch, onMultiSearch, isLoading, hasSearched 
               <div className="flex gap-3">
                 <Input
                   type="text"
-                  placeholder="Enter PulseChain wallet address(es) (comma-separated)"
+                  placeholder="Enter PulseChain Address"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
