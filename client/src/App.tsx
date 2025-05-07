@@ -337,6 +337,7 @@ function Router() {
           <Route path="/profile" component={Profile} />
           <Route path="/saved" component={Profile} />
           <Route path="/portfolios" component={PortfoliosPage} />
+          <Route path="/portfolio/:portfolioId" component={Home} />
           <Route path="/donations" component={Donations} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
