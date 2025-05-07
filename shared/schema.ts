@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, jsonb, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -188,3 +188,67 @@ export const insertPortfolioAddressSchema = createInsertSchema(portfolioAddresse
 
 export type InsertPortfolioAddress = z.infer<typeof insertPortfolioAddressSchema>;
 export type PortfolioAddress = typeof portfolioAddresses.$inferSelect;
+
+// API Usage Statistics - Daily aggregated statistics
+export const apiUsageStats = pgTable("api_usage_stats", {
+  id: serial("id").primaryKey(),
+  date: date("date").notNull().unique(), // Date of the statistics (YYYY-MM-DD)
+  totalCalls: integer("total_calls").notNull().default(0),
+  walletDataCalls: integer("wallet_data_calls").notNull().default(0),
+  transactionCalls: integer("transaction_calls").notNull().default(0),
+  tokenPriceCalls: integer("token_price_calls").notNull().default(0),
+  tokenLogoCalls: integer("token_logo_calls").notNull().default(0),
+  cacheHits: integer("cache_hits").notNull().default(0),
+  cacheMisses: integer("cache_misses").notNull().default(0),
+  averageResponseTime: integer("average_response_time"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertApiUsageStatsSchema = createInsertSchema(apiUsageStats).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertApiUsageStats = z.infer<typeof insertApiUsageStatsSchema>;
+export type ApiUsageStats = typeof apiUsageStats.$inferSelect;
+
+// Detailed API Call Records - For more granular analysis
+export const apiCallRecords = pgTable("api_call_records", {
+  id: serial("id").primaryKey(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  endpoint: text("endpoint").notNull(),
+  walletAddress: text("wallet_address"),
+  responseTime: integer("response_time"), // in milliseconds
+  cacheHit: boolean("cache_hit").default(false),
+  successful: boolean("successful").default(true),
+  errorMessage: text("error_message"),
+});
+
+export const insertApiCallRecordSchema = createInsertSchema(apiCallRecords).omit({
+  id: true,
+});
+
+export type InsertApiCallRecord = z.infer<typeof insertApiCallRecordSchema>;
+export type ApiCallRecord = typeof apiCallRecords.$inferSelect;
+
+// API Rate Limits - To track and enforce rate limits if needed in the future
+export const apiRateLimits = pgTable("api_rate_limits", {
+  id: serial("id").primaryKey(),
+  walletAddress: text("wallet_address").notNull().unique(),
+  dailyLimit: integer("daily_limit").notNull().default(1000),
+  dailyUsage: integer("daily_usage").notNull().default(0),
+  lastReset: timestamp("last_reset").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertApiRateLimitSchema = createInsertSchema(apiRateLimits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertApiRateLimit = z.infer<typeof insertApiRateLimitSchema>;
+export type ApiRateLimit = typeof apiRateLimits.$inferSelect;
