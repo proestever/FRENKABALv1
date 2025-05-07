@@ -106,10 +106,40 @@ export async function getTokenBalanceFromChain(walletAddress: string, tokenAddre
   try {
     console.log(`Fetching token balance for ${tokenAddress} in wallet ${walletAddress} directly from blockchain`);
     
+    // Get token balance first - if it's zero, we can skip the rest
+    const balance = await callContractFunction<ethers.BigNumber>(
+      tokenAddress, 
+      ERC20_ABI, 
+      'balanceOf',
+      [walletAddress]
+    );
+    
+    if (balance === null) {
+      console.log(`Could not get balance for token ${tokenAddress}`);
+      return null;
+    }
+    
+    // Skip token if balance is zero
+    if (balance.isZero()) {
+      console.log(`Zero balance for token ${tokenAddress}`);
+      return null;
+    }
+    
     // Get token decimals
     const decimals = await callContractFunction<number>(tokenAddress, ERC20_ABI, 'decimals');
     if (decimals === null) {
       console.log(`Could not get decimals for token ${tokenAddress}`);
+      return null;
+    }
+    
+    // Calculate formatted balance
+    const balanceString = balance.toString();
+    const balanceFormatted = parseFloat(ethers.utils.formatUnits(balance, decimals));
+    
+    // If balance after formatting is too small (dust), skip it
+    const DUST_THRESHOLD = 0.000001; // Adjust as needed
+    if (balanceFormatted < DUST_THRESHOLD) {
+      console.log(`Dust balance (${balanceFormatted}) for token ${tokenAddress}, skipping`);
       return null;
     }
     
@@ -127,46 +157,44 @@ export async function getTokenBalanceFromChain(walletAddress: string, tokenAddre
       return null;
     }
     
-    // Get token balance
-    const balance = await callContractFunction<ethers.BigNumber>(
-      tokenAddress, 
-      ERC20_ABI, 
-      'balanceOf',
-      [walletAddress]
-    );
-    
-    if (balance === null) {
-      console.log(`Could not get balance for token ${tokenAddress}`);
-      return null;
-    }
-    
-    const balanceString = balance.toString();
-    const balanceFormatted = parseFloat(ethers.utils.formatUnits(balance, decimals));
-    
-    // If balance is 0, return null
-    if (balanceFormatted === 0) {
-      console.log(`Zero balance for token ${tokenAddress}`);
-      return null;
-    }
-    
     console.log(`Got balance for ${symbol}: ${balanceFormatted}`);
     
-    // Try to get price data
+    // Try to get price data using multiple methods
     let price: number | undefined = undefined;
     let value: number | undefined = undefined;
     let priceChange24h: number | undefined = undefined;
+    let exchange: string | undefined = undefined;
     
     try {
+      // First try getting price from Moralis
       const priceData = await getTokenPrice(tokenAddress);
-      if (priceData) {
-        price = priceData.usdPrice || 0;
+      if (priceData && priceData.usdPrice && priceData.usdPrice > 0) {
+        price = priceData.usdPrice;
         value = price * balanceFormatted;
         priceChange24h = priceData.usdPrice24hrPercentChange || 0;
+        exchange = priceData.exchangeName || 'Unknown';
+        console.log(`Got price for ${symbol} from Moralis: $${price}`);
+      } else {
+        // If Moralis doesn't have a price, try to get from DexScreener
+        try {
+          const dexScreenerData: any = await fetch(`/api/token-price-dexscreener/${tokenAddress}`).then(r => r.json());
+          if (dexScreenerData && dexScreenerData.usdPrice && dexScreenerData.usdPrice > 0) {
+            const dexPrice = dexScreenerData.usdPrice;
+            price = dexPrice;
+            value = dexPrice * balanceFormatted;
+            priceChange24h = dexScreenerData.usdPrice24hrPercentChange || 0;
+            exchange = dexScreenerData.exchangeName || 'DexScreener';
+            console.log(`Got price for ${symbol} from DexScreener: $${dexPrice}`);
+          }
+        } catch (dexError) {
+          console.log(`Could not get price from DexScreener for ${tokenAddress}`);
+        }
       }
     } catch (priceError: any) {
       console.log(`Could not get price for token ${tokenAddress}: ${priceError.message || "Unknown error"}`);
     }
     
+    // Even if we couldn't get a price, still return the token with the balance
     return {
       address: tokenAddress,
       symbol,
@@ -175,9 +203,10 @@ export async function getTokenBalanceFromChain(walletAddress: string, tokenAddre
       balance: balanceString,
       balanceFormatted,
       price,
-      value,
+      value: price && price > 0 ? price * balanceFormatted : 0,
       priceChange24h,
       logo: getDefaultLogo(symbol),
+      exchange,
       verified: false // We don't have verification status when querying directly
     };
   } catch (error) {
@@ -309,7 +338,7 @@ export const PULSECHAIN_COMMON_TOKENS = [
  * Get token transfer events to discover all tokens a wallet has interacted with
  * This scans the blockchain for historical token transfers to/from this wallet
  */
-export async function getTokenTransferEvents(walletAddress: string, maxBlocks: number = 100000): Promise<string[]> {
+export async function getTokenTransferEvents(walletAddress: string, maxBlocks: number = 20000): Promise<string[]> {
   try {
     console.log(`Scanning for token transfer events for ${walletAddress}`);
     updateLoadingProgress({
@@ -321,7 +350,10 @@ export async function getTokenTransferEvents(walletAddress: string, maxBlocks: n
 
     // Get current block number
     const currentBlock = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, currentBlock - maxBlocks); // Limit how far back we scan
+    
+    // Limit how far back we scan to be more efficient and focus on recent tokens
+    // For a real-time update after a swap, recent blocks are most important
+    const fromBlock = Math.max(0, currentBlock - maxBlocks); 
     
     console.log(`Scanning from block ${fromBlock} to ${currentBlock}`);
     
@@ -358,16 +390,28 @@ export async function getTokenTransferEvents(walletAddress: string, maxBlocks: n
     
     // Combine logs and extract unique token contract addresses
     const logs = [...incomingLogs, ...outgoingLogs];
-    const tokenAddresses = new Set<string>();
+    
+    // Count the frequency of each token address to prioritize the most used tokens
+    const tokenFrequency: Record<string, number> = {};
     
     logs.forEach(log => {
       if (log.address) {
-        tokenAddresses.add(log.address.toLowerCase());
+        const addr = log.address.toLowerCase();
+        tokenFrequency[addr] = (tokenFrequency[addr] || 0) + 1;
       }
     });
     
-    console.log(`Found ${tokenAddresses.size} unique token contracts from transfer events`);
-    return Array.from(tokenAddresses);
+    // Convert to array of [address, frequency] pairs and sort by frequency
+    const sortedTokens = Object.entries(tokenFrequency)
+      .sort((a, b) => b[1] - a[1]) // Sort by frequency, most frequent first
+      .map(([address]) => address);
+    
+    // Limit to the most active tokens (max 30) to keep the response time fast
+    const MAX_TOKENS = 30;
+    const prioritizedTokens = sortedTokens.slice(0, MAX_TOKENS);
+    
+    console.log(`Found ${sortedTokens.length} unique token contracts from transfer events, using top ${prioritizedTokens.length}`);
+    return prioritizedTokens;
   } catch (error) {
     console.error('Error getting token transfer events:', error);
     return [];
