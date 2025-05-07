@@ -8,7 +8,7 @@ const HEX_CONTRACT_ADDRESS = '0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39';
 const LAUNCH_TS = 1575331200;
 const DAY_SECONDS = 86400;
 
-// Extended ABI with all the functions we need
+// Extended ABI with all the functions we need for PulseChain HEX
 const HEX_ABI = [
   {
     "constant": true,
@@ -49,6 +49,24 @@ const HEX_ABI = [
       {"internalType": "uint72", "name": "", "type": "uint72"}
     ],
     "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "stakerAddr", "type": "address"},
+      {"name": "i", "type": "uint256"}
+    ],
+    "name": "stakeLists",
+    "outputs": [
+      {"name": "stakeId", "type": "uint40"},
+      {"name": "stakedHearts", "type": "uint72"},
+      {"name": "stakeShares", "type": "uint72"},
+      {"name": "lockedDay", "type": "uint16"},
+      {"name": "stakedDays", "type": "uint16"},
+      {"name": "unlockedDay", "type": "uint16"},
+      {"name": "isAutoStake", "type": "bool"}
+    ],
     "stateMutability": "view",
     "type": "function"
   }
@@ -220,14 +238,19 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       // Process each stake to get the total amount
       for (let i = 0; i < count; i++) {
         try {
-          // Try using the stakeDataFetch method instead of stakeLists if available
-          const stake = await hexContract.stakeDataFetch(address, i, 0);
+          // Use the same method that works in hex-stakes.tsx
+          const stake = await hexContract.stakeLists(address, i);
           
-          // Parse the stake data - stakedHearts is the second parameter (index 1)
-          const stakedHearts = stake ? stake[1].toString() : '0';
-          
-          // Add to the total staked HEX
-          totalHexStakedBN = totalHexStakedBN.add(ethers.BigNumber.from(stakedHearts));
+          if (stake && stake.length >= 2) {
+            // Parse the stake data - stakedHearts is the second parameter (index 1)
+            const stakedHearts = stake[1].toString();
+            console.log(`Found stake ${i} with ${ethers.utils.formatUnits(stakedHearts, 8)} HEX`);
+            
+            // Add to the total staked HEX
+            totalHexStakedBN = totalHexStakedBN.add(ethers.BigNumber.from(stakedHearts));
+          } else {
+            console.warn(`Stake ${i} data format unexpected:`, stake);
+          }
         } catch (error) {
           console.error(`Error fetching stake ${i}:`, error);
         }
