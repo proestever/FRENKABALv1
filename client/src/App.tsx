@@ -124,7 +124,7 @@ function Header() {
       {/* Desktop header */}
       <div className="container mx-auto px-4 py-3 hidden md:flex items-center justify-between">
         <a 
-          href="/" 
+          href="#" 
           onClick={handleLogoClick} 
           className="flex items-center group cursor-pointer"
         >
@@ -192,7 +192,7 @@ function Header() {
           {/* Left area: logo */}
           <div className="col-span-1 flex items-center">
             <a 
-              href="/" 
+              href="#" 
               onClick={handleLogoClick} 
               className="flex items-center group cursor-pointer"
             >
