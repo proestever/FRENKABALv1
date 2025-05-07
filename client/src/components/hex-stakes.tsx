@@ -340,7 +340,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg md:text-xl font-semibold text-white">
-            <span className="bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">HEX Stakes</span>
+            <span className="bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-600 bg-clip-text text-transparent">HEX Stakes</span>
             <span className="ml-2 text-sm text-white/60">({stakeCount})</span>
           </h3>
           <p className="text-xs md:text-sm text-white/70 mt-1">
@@ -367,7 +367,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
           
           <div className="text-right">
             <div className="text-sm text-white/70">Total Stake + Interest</div>
-            <div className="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent"
+            <div className="text-lg font-bold bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-600 bg-clip-text text-transparent"
                  data-total-combined={totalStakePlusInterest}>
               {formatTokenAmount(parseFloat(totalStakePlusInterest))}
             </div>
@@ -385,7 +385,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="bg-purple-600/20 text-purple-400 px-2 py-1 rounded-md text-xs font-semibold border border-purple-600/30">
+                    <div className="bg-pink-600/20 text-orange-400 px-2 py-1 rounded-md text-xs font-semibold border border-pink-600/30">
                       Stake ID: {stake.stakeId}
                     </div>
                     <div className={`px-2 py-1 rounded-md text-xs font-semibold ${
@@ -441,8 +441,8 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
                     style={{
                       background: 'rgba(255,255,255,0.1)',
                       '--progress-background': stake.isActive 
-                        ? 'linear-gradient(90deg, rgba(106,0,185,0.5) 0%, rgba(192,0,255,0.7) 100%)' 
-                        : 'linear-gradient(90deg, rgba(20,184,166,0.5) 0%, rgba(56,189,248,0.7) 100%)'
+                        ? 'linear-gradient(90deg, rgba(255,210,0,0.7) 0%, rgba(255,120,50,0.8) 50%, rgba(255,40,130,0.9) 100%)' 
+                        : 'linear-gradient(90deg, rgba(255,210,0,0.6) 0%, rgba(255,120,50,0.7) 50%, rgba(255,40,130,0.8) 100%)'
                     } as React.CSSProperties}
                   />
                 </div>
@@ -457,7 +457,7 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
                 </div>
                 
                 <div className="text-center">
-                  <div className="text-lg md:text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+                  <div className="text-lg md:text-xl font-bold bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-600 bg-clip-text text-transparent">
                     +{formatTokenAmount(parseFloat(stake.interestEarned || '0'))} HEX
                   </div>
                   {stake.isActive && (
