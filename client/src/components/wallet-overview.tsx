@@ -9,15 +9,16 @@ import { useState, useEffect } from 'react';
 import { getHiddenTokens, isTokenHidden, isAddressBookmarked } from '@/lib/api';
 import { useAuth } from '@/providers/auth-provider';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
-import { useHexStakes, fetchHexStakesSummary } from '@/hooks/use-hex-stakes';
+import { useHexStakes, fetchHexStakesSummary, HexStakeSummary } from '@/hooks/use-hex-stakes';
 
 interface WalletOverviewProps {
   wallet: Wallet;
   isLoading: boolean;
   onRefresh: () => void;
+  hexStakesSummary?: HexStakeSummary | null;
 }
 
-export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewProps) {
+export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary }: WalletOverviewProps) {
   const { toast } = useToast();
   const { account: connectedWalletAddress, isConnected, userId } = useAuth();
   const [hiddenTokens, setHiddenTokens] = useState<string[]>([]);
@@ -28,27 +29,41 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isCheckingBookmark, setIsCheckingBookmark] = useState(false);
   
-  // Get HEX stakes data
-  const hexStakesSummary = useHexStakes(wallet?.address);
+  // Get HEX stakes data from hook for single wallet view
+  const hexStakesFromHook = useHexStakes(wallet?.address);
   
-  // Manually fetch HEX stakes when wallet changes to ensure data is available for the card
-  const [manualHexSummary, setManualHexSummary] = useState(hexStakesSummary);
+  // Initialize with empty stakes summary
+  const [manualHexSummary, setManualHexSummary] = useState<HexStakeSummary>({
+    totalStakedHex: '0',
+    totalInterestHex: '0',
+    totalCombinedHex: '0',
+    totalStakeValueUsd: 0,
+    totalInterestValueUsd: 0,
+    totalCombinedValueUsd: 0,
+    stakeCount: 0,
+    hexPrice: 0,
+    isLoading: false,
+    error: null
+  });
   
+  // Update the manual summary when either the prop or hook data changes
   useEffect(() => {
-    // Only run this if we have a wallet address
-    if (wallet?.address) {
-      // First immediately use any data from the hook
+    // If we have provided summary data from prop (multi-wallet mode), use that
+    if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
       setManualHexSummary(hexStakesSummary);
-      
-      // We don't need special handling anymore - use actual blockchain data for all addresses
-      // No hardcoded examples or special cases
-      
-      // For other wallets, fetch fresh data normally
+    } 
+    // Otherwise, if we have hook data (single wallet mode), use that
+    else if (hexStakesFromHook && hexStakesFromHook.stakeCount > 0) {
+      setManualHexSummary(hexStakesFromHook);
+    }
+    // In all other cases, fetch directly
+    else if (wallet?.address) {
+      // For all wallets, fetch fresh data normally
       console.log('Manually fetching HEX stakes for wallet overview card:', wallet.address);
       fetchHexStakesSummary(wallet.address)
         .then(summary => {
           console.log('Manually fetched HEX summary data:', summary);
-          // Only update if we got stake data and it's different from what we have
+          // Only update if we got stake data
           if (summary.stakeCount > 0) {
             setManualHexSummary(summary);
           }
@@ -57,7 +72,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
           console.error('Error manually fetching HEX stakes for overview card:', err);
         });
     }
-  }, [wallet?.address]);
+  }, [wallet?.address, hexStakesSummary, hexStakesFromHook]);
 
   // Check if the current wallet is bookmarked
   useEffect(() => {
@@ -261,7 +276,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
           </div>
           
           {/* HEX Stakes Card - Using manualHexSummary for more consistent display */}
-          {(manualHexSummary.stakeCount > 0 || hexStakesSummary.stakeCount > 0) && (
+          {(manualHexSummary.stakeCount > 0 || (hexStakesSummary && hexStakesSummary.stakeCount > 0)) && (
             <div className="glass-card rounded-lg p-4 border-white/15">
               <div className="flex items-center mb-2">
                 <TokenLogo 
@@ -309,12 +324,12 @@ export function WalletOverview({ wallet, isLoading, onRefresh }: WalletOverviewP
               
               <div className="text-sm mt-2 flex items-center justify-between">
                 <span className="text-purple-400 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">
-                  {manualHexSummary.stakeCount || hexStakesSummary.stakeCount} 
-                  {(manualHexSummary.stakeCount || hexStakesSummary.stakeCount) === 1 ? ' stake' : ' stakes'}
+                  {manualHexSummary.stakeCount || (hexStakesSummary && hexStakesSummary.stakeCount) || 0} 
+                  {(manualHexSummary.stakeCount || (hexStakesSummary && hexStakesSummary.stakeCount) || 0) === 1 ? ' stake' : ' stakes'}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {(manualHexSummary.hexPrice || hexStakesSummary.hexPrice) > 0 ? 
-                    `1 HEX = ${formatCurrency(manualHexSummary.hexPrice || hexStakesSummary.hexPrice)}` : ''}
+                  {(manualHexSummary.hexPrice || (hexStakesSummary && hexStakesSummary.hexPrice) || 0) > 0 ? 
+                    `1 HEX = ${formatCurrency(manualHexSummary.hexPrice || (hexStakesSummary && hexStakesSummary.hexPrice) || 0)}` : ''}
                 </span>
               </div>
             </div>

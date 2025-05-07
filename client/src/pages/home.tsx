@@ -401,7 +401,7 @@ export default function Home() {
                   <WalletOverview 
                     wallet={walletData} 
                     isLoading={false} 
-                    onRefresh={handleRefresh} 
+                    onRefresh={handleRefresh}
                   />
                 )}
                 
