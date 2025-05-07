@@ -14,6 +14,7 @@ import { InsertTokenLogo } from '@shared/schema';
 import { updateLoadingProgress } from '../routes';
 import { processLpTokens } from './lp-token-service';
 import { cacheService } from './cache-service';
+import { apiStatsService } from './api-stats-service';
 
 // API call counter for monitoring and debugging
 interface ApiCallCounter {
