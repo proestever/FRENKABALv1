@@ -437,13 +437,10 @@ export function HexStakes({ walletAddress, onClose }: HexStakesProps) {
                     <div className="text-xs text-white/60">Progress</div>
                     <div className="text-xs font-medium text-white/80">{stake.progressPercentage}%</div>
                   </div>
-                  <Progress value={stake.progressPercentage} className="h-2" 
-                    style={{
-                      background: 'rgba(255,255,255,0.1)',
-                      '--progress-background': stake.isActive 
-                        ? 'linear-gradient(90deg, rgba(255,210,0,0.7) 0%, rgba(255,120,50,0.8) 50%, rgba(255,40,130,0.9) 100%)' 
-                        : 'linear-gradient(90deg, rgba(255,210,0,0.6) 0%, rgba(255,120,50,0.7) 50%, rgba(255,40,130,0.8) 100%)'
-                    } as React.CSSProperties}
+                  <Progress 
+                    value={stake.progressPercentage} 
+                    className="h-2" 
+                    style={{ background: 'rgba(255,255,255,0.1)' }}
                   />
                 </div>
               </div>
