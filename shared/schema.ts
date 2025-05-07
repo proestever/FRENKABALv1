@@ -151,3 +151,40 @@ export const insertBookmarkSchema = createInsertSchema(bookmarks).omit({
 
 export type InsertBookmark = z.infer<typeof insertBookmarkSchema>;
 export type Bookmark = typeof bookmarks.$inferSelect;
+
+// Portfolio model for organizing collections of wallet addresses
+export const portfolios = pgTable("portfolios", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  isPublic: boolean("is_public").default(false).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertPortfolioSchema = createInsertSchema(portfolios).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPortfolio = z.infer<typeof insertPortfolioSchema>;
+export type Portfolio = typeof portfolios.$inferSelect;
+
+// Portfolio addresses to connect wallets to portfolios
+export const portfolioAddresses = pgTable("portfolio_addresses", {
+  id: serial("id").primaryKey(),
+  portfolioId: integer("portfolio_id").references(() => portfolios.id).notNull(),
+  walletAddress: text("wallet_address").notNull(),
+  label: text("label"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPortfolioAddressSchema = createInsertSchema(portfolioAddresses).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPortfolioAddress = z.infer<typeof insertPortfolioAddressSchema>;
+export type PortfolioAddress = typeof portfolioAddresses.$inferSelect;

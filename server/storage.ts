@@ -1,8 +1,14 @@
-import { users, type User, type InsertUser, type UpdateUserProfile, tokenLogos, type InsertTokenLogo, type TokenLogo, bookmarks, type InsertBookmark, type Bookmark } from "@shared/schema";
+import { 
+  users, type User, type InsertUser, type UpdateUserProfile, 
+  tokenLogos, type InsertTokenLogo, type TokenLogo, 
+  bookmarks, type InsertBookmark, type Bookmark,
+  portfolios, type Portfolio, type InsertPortfolio,
+  portfolioAddresses, type PortfolioAddress, type InsertPortfolioAddress
+} from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
-// Extend the interface with token logo methods
+// Storage interface for database access
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -20,6 +26,19 @@ export interface IStorage {
   createBookmark(bookmark: InsertBookmark): Promise<Bookmark>;
   updateBookmark(id: number, data: Partial<InsertBookmark>): Promise<Bookmark>;
   deleteBookmark(id: number): Promise<boolean>;
+  
+  // Portfolio methods
+  getPortfolios(userId: number): Promise<Portfolio[]>;
+  getPortfolio(id: number): Promise<Portfolio | undefined>;
+  createPortfolio(portfolio: InsertPortfolio): Promise<Portfolio>;
+  updatePortfolio(id: number, data: Partial<InsertPortfolio>): Promise<Portfolio>;
+  deletePortfolio(id: number): Promise<boolean>;
+  
+  // Portfolio address methods
+  getPortfolioAddresses(portfolioId: number): Promise<PortfolioAddress[]>;
+  addAddressToPortfolio(address: InsertPortfolioAddress): Promise<PortfolioAddress>;
+  removeAddressFromPortfolio(id: number): Promise<boolean>;
+  updatePortfolioAddress(id: number, data: Partial<InsertPortfolioAddress>): Promise<PortfolioAddress>;
 }
 
 export class DatabaseStorage implements IStorage {
