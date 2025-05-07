@@ -7,7 +7,8 @@ import { TokenList } from '@/components/token-list';
 import { EmptyState } from '@/components/empty-state';
 import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
-import { saveRecentAddress, ProcessedToken } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { saveRecentAddress, ProcessedToken, fetchWalletsBatch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
 import { useHexStakes, fetchHexStakesSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
@@ -19,14 +20,21 @@ const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
 export default function Home() {
   const [searchedAddress, setSearchedAddress] = useState<string | null>(null);
   const [manualTokens, setManualTokens] = useState<ProcessedToken[]>([]);
+  const [multiWalletData, setMultiWalletData] = useState<Record<string, Wallet> | null>(null);
+  const [isMultiWalletLoading, setIsMultiWalletLoading] = useState(false);
   const params = useParams<{ walletAddress?: string }>();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Define search function
+  // Define search function for a single wallet address
   const handleSearch = (address: string) => {
     if (!address) return;
+    
+    // Clear multi-wallet data if we're switching to single wallet view
+    if (multiWalletData) {
+      setMultiWalletData(null);
+    }
     
     // Always invalidate cache to ensure fresh data, even when searching for the same address
     console.log('Searching wallet address, clearing cache to ensure fresh data:', address);
@@ -73,6 +81,59 @@ export default function Home() {
       console.warn('Preloading HEX stakes failed:', err.message);
       // We can safely ignore errors here since it will be retried when the tab is opened
     });
+  };
+  
+  // Handle multi-wallet search
+  const handleMultiSearch = async (addresses: string[]) => {
+    if (!addresses.length) return;
+    
+    // Reset single wallet view
+    setSearchedAddress(null);
+    
+    // Update URL to show we're in multi-wallet mode
+    const firstAddress = addresses[0];
+    const currentPath = `/${firstAddress}`;
+    if (location !== currentPath) {
+      setLocation(currentPath);
+    }
+    
+    // Save the first address to recent addresses
+    saveRecentAddress(firstAddress);
+    
+    setIsMultiWalletLoading(true);
+    setMultiWalletData(null);
+    
+    try {
+      console.log(`Fetching data for ${addresses.length} wallets in batch`);
+      const result = await fetchWalletsBatch(addresses);
+      
+      // Check if we got any data
+      if (Object.keys(result).length === 0) {
+        toast({
+          title: "No wallet data found",
+          description: "Could not find data for any of the provided addresses",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      setMultiWalletData(result);
+      
+      toast({
+        title: "Multi-wallet search completed",
+        description: `Loaded data for ${Object.keys(result).length} wallets`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error fetching multiple wallets:', error);
+      toast({
+        title: "Error fetching wallet data",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsMultiWalletLoading(false);
+    }
   };
 
   // Check if we have a wallet address in the URL or if we need to reset
@@ -185,23 +246,99 @@ export default function Home() {
 
   return (
     <main className="container mx-auto px-4 py-6">
-      {/* Only show the search section at the top if no wallet has been searched yet */}
-      {!searchedAddress && (
+      {/* Only show the search section at the top if no wallet has been searched yet and not in multi-wallet mode */}
+      {!searchedAddress && !multiWalletData && (
         <SearchSection 
-          onSearch={handleSearch} 
-          isLoading={isLoading} 
-          hasSearched={false} 
+          onSearch={handleSearch}
+          onMultiSearch={handleMultiSearch}
+          isLoading={isLoading || isMultiWalletLoading} 
+          hasSearched={false}
         />
       )}
       
       {/* Loading Progress Bar - shows during loading */}
       <LoadingProgress 
-        isLoading={isLoading || isFetching} 
+        isLoading={isLoading || isFetching || isMultiWalletLoading} 
         customProgress={progress}
       />
       
-      {/* Only show wallet data when not loading */}
-      {searchedAddress && !isError && !(isLoading || isFetching) && (
+      {/* Multi-wallet results section */}
+      {multiWalletData && !isMultiWalletLoading && (
+        <>
+          <div className="mt-4 mb-6">
+            <div className="w-full">
+              <SearchSection 
+                onSearch={handleSearch}
+                onMultiSearch={handleMultiSearch}
+                isLoading={isMultiWalletLoading} 
+                hasSearched={true} 
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">
+              Multi-Wallet View ({Object.keys(multiWalletData).length} wallets)
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.entries(multiWalletData).map(([address, wallet]) => (
+              <div key={address} className="glass-card p-4 border border-white/20 rounded-md">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-md font-semibold truncate max-w-[200px]">
+                    {wallet.address}
+                  </h3>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="ml-2 h-7 px-2" 
+                    onClick={() => handleSearch(address)}
+                  >
+                    View Details
+                  </Button>
+                </div>
+                
+                <div className="text-sm mb-2">
+                  <span className="font-medium">Total Value:</span>{' '}
+                  ${(wallet.totalValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                
+                <div className="text-sm mb-2">
+                  <span className="font-medium">Token Count:</span>{' '}
+                  {wallet.tokenCount}
+                </div>
+                
+                {/* Show top 3 tokens by value */}
+                {wallet.tokens.length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="text-xs font-medium mb-1">Top Tokens</h4>
+                    <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                      {wallet.tokens
+                        .sort((a, b) => (b.value || 0) - (a.value || 0))
+                        .slice(0, 3)
+                        .map(token => (
+                          <div key={token.address} className="flex justify-between text-xs">
+                            <div className="font-medium">{token.symbol}</div>
+                            <div>
+                              ${(token.value || 0).toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      
+      {/* Single wallet view - only show wallet data when not loading */}
+      {searchedAddress && !isError && !(isLoading || isFetching) && !multiWalletData && (
         <>
           <div className="mt-4">
             {/* Two-column layout: Wallet overview (1/3) on left, Token list (2/3) on right */}
@@ -219,7 +356,8 @@ export default function Home() {
                 {/* Search bar placed below the wallet overview */}
                 <div className="w-full">
                   <SearchSection 
-                    onSearch={handleSearch} 
+                    onSearch={handleSearch}
+                    onMultiSearch={handleMultiSearch}
                     isLoading={isLoading} 
                     hasSearched={true} 
                   />
@@ -262,7 +400,8 @@ export default function Home() {
                 {/* Search bar below error message */}
                 <div className="w-full">
                   <SearchSection 
-                    onSearch={handleSearch} 
+                    onSearch={handleSearch}
+                    onMultiSearch={handleMultiSearch}
                     isLoading={isLoading} 
                     hasSearched={true} 
                   />
