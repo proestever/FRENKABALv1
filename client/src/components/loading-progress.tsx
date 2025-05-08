@@ -85,7 +85,7 @@ export function LoadingProgress({ isLoading, customProgress }: LoadingProgressPr
               </h3>
             </div>
             <span className="text-xs text-muted-foreground font-mono">
-              Batch {progress.currentBatch}/{progress.totalBatches}
+              {progress.currentBatch > 0 ? `Wallet ${progress.currentBatch}/${progress.totalBatches}` : 'Initializing...'}
             </span>
           </div>
           
