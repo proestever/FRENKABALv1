@@ -72,7 +72,7 @@ export function LoadingProgress({ isLoading, customProgress }: LoadingProgressPr
   };
   
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
+    <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/40">
       <Card className="p-4 glass-card border-white/15 backdrop-blur-md shadow-lg w-4/5 max-w-2xl">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
