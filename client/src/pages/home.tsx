@@ -28,6 +28,17 @@ export default function Home() {
   const [isMultiWalletLoading, setIsMultiWalletLoading] = useState(false);
   const [portfolioName, setPortfolioName] = useState<string | null>(null);
   const [portfolioUrlId, setPortfolioUrlId] = useState<string | null>(null);
+  const [multiWalletProgress, setMultiWalletProgress] = useState<{
+    currentBatch: number;
+    totalBatches: number;
+    status: 'idle' | 'loading' | 'complete' | 'error';
+    message: string;
+  }>({
+    currentBatch: 0,
+    totalBatches: 0,
+    status: 'idle',
+    message: ''
+  });
   const params = useParams<{ walletAddress?: string; portfolioId?: string }>();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
@@ -138,29 +149,73 @@ export default function Home() {
     setIsMultiWalletLoading(true);
     setMultiWalletData(null);
     
+    // Create and set our custom progress state for multi-wallet loading
+    const customProgressState = {
+      currentBatch: 0,
+      totalBatches: addresses.length,
+      status: 'loading' as const,
+      message: `Preparing to load ${addresses.length} wallets...`
+    };
+    
+    // Set initial progress
+    setMultiWalletProgress(customProgressState);
+    
     try {
       console.log(`Fetching data for ${addresses.length} wallets individually`);
       
-      // Process addresses in parallel by fetching each one directly
-      const walletPromises = addresses.map(address => 
-        fetch(`/api/wallet/${address}/all`)
-          .then(response => {
-            if (!response.ok) {
-              console.warn(`Failed to fetch wallet ${address}`);
-              return null;
-            }
-            return response.json().then(data => ({ [address]: data }));
-          })
-          .catch(error => {
-            console.error(`Error fetching wallet ${address}:`, error);
-            return null;
-          })
-      );
+      // Instead of loading all wallets in parallel, process them sequentially
+      // to provide better progress indication
+      const walletResults = [];
       
-      // Fetch combined HEX stakes data in parallel
+      // Start with fetching combined HEX stakes data
+      setMultiWalletProgress({
+        ...customProgressState,
+        message: 'Fetching combined HEX stakes data...'
+      });
+      
       const hexStakesPromise = fetchCombinedHexStakes(addresses).catch(error => {
         console.error('Error fetching combined HEX stakes:', error);
         return null;
+      });
+      
+      // Process each wallet address sequentially for better progress tracking
+      for (let i = 0; i < addresses.length; i++) {
+        const address = addresses[i];
+        
+        // Update progress for this wallet
+        setMultiWalletProgress({
+          currentBatch: i + 1,
+          totalBatches: addresses.length,
+          status: 'loading',
+          message: `Loading wallet ${i + 1}/${addresses.length}: ${address.substring(0, 6)}...${address.substring(address.length - 4)}`
+        });
+        
+        try {
+          // Fetch wallet data
+          const response = await fetch(`/api/wallet/${address}/all`);
+          
+          if (!response.ok) {
+            console.warn(`Failed to fetch wallet ${address}`);
+            walletResults.push(null);
+          } else {
+            const data = await response.json();
+            walletResults.push({ [address]: data });
+          }
+        } catch (error) {
+          console.error(`Error fetching wallet ${address}:`, error);
+          walletResults.push(null);
+        }
+      }
+      
+      // Wait for the hex stakes data to complete
+      const hexStakesData = await hexStakesPromise;
+      
+      // Update progress for HEX stakes data
+      setMultiWalletProgress({
+        currentBatch: addresses.length,
+        totalBatches: addresses.length,
+        status: 'loading',
+        message: 'Fetching individual HEX stakes data...'
       });
       
       // Fetch individual HEX stakes data for each wallet
@@ -172,12 +227,6 @@ export default function Home() {
             return null;
           })
       );
-      
-      // Wait for all promises to resolve
-      const [hexStakesData, ...walletResults] = await Promise.all([
-        hexStakesPromise, 
-        ...walletPromises
-      ]);
       
       // Process individual HEX stakes data
       const individualHexResults = await Promise.all(individualHexStakesPromises);
@@ -211,6 +260,14 @@ export default function Home() {
         console.log('No combined HEX stakes data received');
       }
       
+      // Update progress to show we're in the final steps
+      setMultiWalletProgress({
+        currentBatch: addresses.length,
+        totalBatches: addresses.length,
+        status: 'complete',
+        message: `Successfully loaded ${Object.keys(walletData).length} wallets with ${individualHexResults.filter(r => r !== null).length} HEX stake summaries`
+      });
+      
       setMultiWalletData(walletData);
       
       toast({
@@ -220,13 +277,25 @@ export default function Home() {
       });
     } catch (error) {
       console.error('Error fetching multiple wallets:', error);
+      
+      // Update progress to show error
+      setMultiWalletProgress({
+        currentBatch: 0,
+        totalBatches: addresses.length,
+        status: 'error',
+        message: error instanceof Error ? error.message : "An unknown error occurred when loading wallets"
+      });
+      
       toast({
         title: "Error fetching wallet data",
         description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive"
       });
     } finally {
-      setIsMultiWalletLoading(false);
+      // Add a slight delay before setting loading to false to ensure progress is visible
+      setTimeout(() => {
+        setIsMultiWalletLoading(false);
+      }, 1000);
     }
   };
 
@@ -479,7 +548,7 @@ export default function Home() {
       {/* Loading Progress Bar - shows during loading */}
       <LoadingProgress 
         isLoading={isLoading || isFetching || isMultiWalletLoading} 
-        customProgress={progress}
+        customProgress={isMultiWalletLoading ? multiWalletProgress : progress}
       />
       
       {/* Multi-wallet results section */}
