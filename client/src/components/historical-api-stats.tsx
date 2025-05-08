@@ -149,8 +149,11 @@ export default function HistoricalApiStats() {
         <CardTitle className="flex justify-between items-center">
           <span>Historical API Usage</span>
           <div className="flex gap-2">
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-32">
+            <Select value={period} onValueChange={(value) => {
+              setPeriod(value);
+              fetchHistoricalStats();
+            }}>
+              <SelectTrigger className="w-36">
                 <SelectValue placeholder="Time Period" />
               </SelectTrigger>
               <SelectContent>
@@ -160,14 +163,6 @@ export default function HistoricalApiStats() {
                 <SelectItem value="90">Last 90 days</SelectItem>
               </SelectContent>
             </Select>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={fetchHistoricalStats} 
-              disabled={loading}
-            >
-              {loading ? 'Loading...' : 'Refresh'}
-            </Button>
           </div>
         </CardTitle>
         <CardDescription>
