@@ -28,6 +28,8 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
   const [visibleTokenCount, setVisibleTokenCount] = useState<number>(0);
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
   const [existingBookmark, setExistingBookmark] = useState<Bookmark | null>(null);
+  
+
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isCheckingBookmark, setIsCheckingBookmark] = useState(false);
   
@@ -292,7 +294,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                       "all wallets in portfolio" : 
                       wallet.address.includes("(") ? 
                         wallet.address.split("(")[1].replace(")", "") : 
-                        "all wallets"
+                        "5 wallets"
                   }
                 </div>
               )}
@@ -336,7 +338,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                       "all portfolio wallets" : 
                       wallet.address.includes("(") ? 
                         wallet.address.split("(")[1].replace(")", "") : 
-                        "all wallets"
+                        "5 wallets"
                   })
                 </span>
               )}
