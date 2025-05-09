@@ -1454,6 +1454,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // Image proxy route to avoid CORS issues with external images
+  app.get("/api/proxy-image", async (req, res) => {
+    const { url } = req.query;
+    
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ error: "URL parameter is required" });
+    }
+    
+    try {
+      // Validate URL format to prevent security issues
+      const urlObj = new URL(url);
+      
+      // Only allow specific domains that we trust
+      const allowedDomains = [
+        'logo.moralis.io',
+        'cryptologos.cc',
+        'assets.coingecko.com',
+        'cdn.moralis.io',
+        'raw.githubusercontent.com',
+        'tokens.1inch.io',
+        'logos.covalenthq.com',
+        'etherscan.io',
+        'cloudflare-ipfs.com'
+      ];
+      
+      if (!allowedDomains.some(domain => urlObj.hostname.includes(domain))) {
+        return res.status(403).json({ 
+          error: "Domain not allowed for security reasons",
+          allowedDomains
+        });
+      }
+      
+      // Set long cache - these are static images
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+      
+      // Fetch the image
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        return res.status(response.status).json({ 
+          error: `Failed to fetch image: ${response.statusText}`
+        });
+      }
+      
+      // Get the image content type
+      const contentType = response.headers.get('content-type');
+      if (contentType) {
+        res.setHeader('Content-Type', contentType);
+      }
+      
+      // Stream the image directly to the response
+      response.body.pipe(res);
+      
+    } catch (error) {
+      console.error("Error proxying image:", error);
+      return res.status(500).json({ error: "Failed to proxy image" });
+    }
+  });
 
   const httpServer = createServer(app);
 

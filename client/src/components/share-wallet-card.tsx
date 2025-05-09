@@ -39,11 +39,71 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
   // Helper function to load an image from a URL
   const loadImage = (src: string): Promise<HTMLImageElement> => {
     return new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = document.createElement("img");
-      img.crossOrigin = "anonymous";
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
-      img.src = src;
+      // For external URLs that might have CORS issues, let's use proxy approach
+      let imageSrc = src;
+      
+      // If it's an external URL and not from our own assets directory
+      if (src.startsWith('http') && !src.includes('/assets/')) {
+        try {
+          // Create a canvas as a proxy to handle external images
+          const img = document.createElement("img");
+          img.crossOrigin = "anonymous";
+          
+          img.onload = () => {
+            try {
+              // Create a canvas to draw the image
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              
+              // Draw the image to the canvas
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                
+                // Convert canvas to an image element
+                const proxyImg = document.createElement('img');
+                proxyImg.src = canvas.toDataURL('image/png');
+                proxyImg.onload = () => resolve(proxyImg);
+                proxyImg.onerror = () => {
+                  // Fall back to original method if this fails
+                  console.warn(`Proxy image loading failed for ${src}, trying direct load`);
+                  const directImg = document.createElement('img');
+                  directImg.src = src;
+                  directImg.onload = () => resolve(directImg);
+                  directImg.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+                };
+              } else {
+                // Fall back if no canvas context
+                reject(new Error(`Could not get canvas context for ${src}`));
+              }
+            } catch (e) {
+              console.warn(`Canvas proxy method failed for ${src}:`, e);
+              reject(e);
+            }
+          };
+          
+          img.onerror = () => {
+            // Try without CORS as a fallback
+            console.warn(`CORS load failed for ${src}, trying without crossOrigin`);
+            const directImg = document.createElement('img');
+            directImg.src = src;
+            directImg.onload = () => resolve(directImg);
+            directImg.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+          };
+          
+          img.src = imageSrc;
+        } catch (e) {
+          console.warn(`Proxy method failed completely for ${src}:`, e);
+          reject(e);
+        }
+      } else {
+        // For local assets, use the standard approach
+        const img = document.createElement("img");
+        img.src = imageSrc;
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+      }
     });
   };
 
