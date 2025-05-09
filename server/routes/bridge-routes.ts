@@ -152,6 +152,27 @@ router.post('/create-exchange', async (req: Request, res: Response) => {
       contactEmail
     } = CreateExchangeRequestSchema.parse(req.body);
     
+    // Validate minimum amount first
+    const minAmountResponse = await fetch(`${CHANGE_NOW_API_BASE}/min-amount/${fromCurrency}_${toCurrency}?api_key=${process.env.CHANGE_NOW_API_KEY || ''}`);
+    
+    if (!minAmountResponse.ok) {
+      const errorText = await minAmountResponse.text();
+      console.error('Error fetching minimum amount:', errorText);
+      return res.status(minAmountResponse.status).json({ 
+        error: 'Failed to validate minimum exchange amount',
+        details: errorText
+      });
+    }
+    
+    const minAmountData = await minAmountResponse.json() as any;
+    
+    if (parseFloat(fromAmount) < minAmountData.minAmount) {
+      return res.status(400).json({
+        error: 'Amount too low',
+        details: `Minimum required amount is ${minAmountData.minAmount} ${fromCurrency.toUpperCase()}`
+      });
+    }
+    
     // Prepare request body
     const requestBody: any = {
       from: fromCurrency,
@@ -168,6 +189,8 @@ router.post('/create-exchange', async (req: Request, res: Response) => {
     if (payload) requestBody.payload = payload;
     if (contactEmail) requestBody.contactEmail = contactEmail;
     
+    console.log('Creating exchange with payload:', requestBody);
+    
     // Use API key in the header
     const response = await fetch(`${CHANGE_NOW_API_BASE}/transactions`, {
       method: 'POST',
@@ -179,7 +202,13 @@ router.post('/create-exchange', async (req: Request, res: Response) => {
     });
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null) || await response.text();
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = await response.text();
+      }
+      
       console.error('Error creating exchange transaction:', errorData);
       return res.status(response.status).json({ 
         error: 'Failed to create exchange transaction',
@@ -188,6 +217,7 @@ router.post('/create-exchange', async (req: Request, res: Response) => {
     }
     
     const data = await response.json();
+    console.log('Exchange created successfully:', data);
     return res.json(data);
   } catch (error) {
     console.error('Error creating exchange:', error);
@@ -200,23 +230,43 @@ router.get('/transaction-status/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    const response = await fetch(`${CHANGE_NOW_API_BASE}/transactions/${id}`, {
-      headers: {
-        'x-api-key': process.env.CHANGE_NOW_API_KEY || ''
-      }
-    });
+    const response = await fetch(`${CHANGE_NOW_API_BASE}/transactions/${id}?api_key=${process.env.CHANGE_NOW_API_KEY || ''}`);
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error fetching transaction status:', errorText);
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = await response.text();
+      }
+      
+      console.error('Error fetching transaction status:', errorData);
       return res.status(response.status).json({ 
         error: 'Failed to fetch transaction status',
-        details: errorText
+        details: errorData
       });
     }
     
-    const data = await response.json();
-    return res.json(data);
+    const data = await response.json() as any;
+    console.log('Transaction status response:', data);
+    
+    // Format the response according to our needs
+    const formattedResponse = {
+      id: data.id || id,
+      status: data.status || 'unknown',
+      fromCurrency: data.fromCurrency || data.from || '',
+      toCurrency: data.toCurrency || data.to || '',
+      fromAmount: data.fromAmount || data.amount || '0',
+      toAmount: data.toAmount || data.expectedReceiveAmount || '0',
+      fromAddress: data.fromAddress || data.payinAddress || '',
+      toAddress: data.toAddress || data.payoutAddress || '',
+      payinAddress: data.payinAddress || '',
+      payoutAddress: data.payoutAddress || '',
+      createdAt: data.createdAt || new Date().toISOString(),
+      updatedAt: data.updatedAt || new Date().toISOString()
+    };
+    
+    return res.json(formattedResponse);
   } catch (error) {
     console.error('Error fetching transaction status:', error);
     return res.status(500).json({ error: 'Failed to fetch transaction status' });

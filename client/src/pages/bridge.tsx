@@ -110,6 +110,34 @@ const Bridge = () => {
       setDestinationAddress(account);
     }
   }, [isConnected, account]);
+
+  // Auto-refresh transaction status every 30 seconds
+  useEffect(() => {
+    if (!transactionId || activeStep !== 2) return;
+    
+    const fetchStatus = async () => {
+      try {
+        const response = await fetch(`/api/bridge/transaction-status/${transactionId}`);
+        
+        if (!response.ok) {
+          console.error('Failed to fetch transaction status');
+          return;
+        }
+        
+        const data = await response.json();
+        setTransactionStatus(data.status);
+      } catch (error) {
+        console.error('Error fetching transaction status:', error);
+      }
+    };
+    
+    // Fetch immediately and then set interval
+    fetchStatus();
+    
+    const intervalId = setInterval(fetchStatus, 30000); // 30 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [transactionId, activeStep]);
   
   // Estimate exchange
   const handleEstimateExchange = async () => {
@@ -125,6 +153,36 @@ const Bridge = () => {
     try {
       setHasEstimated(false);
       
+      // First, let's check if we meet the minimum amount requirements
+      const minResponse = await fetch('/api/bridge/min-amount', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fromCurrency,
+          toCurrency
+        })
+      });
+      
+      if (!minResponse.ok) {
+        const error = await minResponse.json();
+        throw new Error(error.error || 'Failed to get minimum amount');
+      }
+      
+      const minData = await minResponse.json();
+      const minAmount = minData.minAmount || 0;
+      
+      if (parseFloat(fromAmount) < minAmount) {
+        toast({
+          title: "Amount too low",
+          description: `Minimum required amount is ${minAmount} ${fromCurrency.toUpperCase()}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Now get the exchange estimate
       const response = await fetch('/api/bridge/exchange-range', {
         method: 'POST',
         headers: {
@@ -143,8 +201,23 @@ const Bridge = () => {
       }
       
       const data: ExchangeEstimate = await response.json();
+      
+      if (data.toAmount === "0") {
+        toast({
+          title: "Invalid exchange",
+          description: "Could not calculate exchange amount. Please try different currencies or amounts.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       setEstimatedAmount(data.toAmount);
       setHasEstimated(true);
+      
+      toast({
+        title: "Estimate updated",
+        description: `You will receive approximately ${Number(data.toAmount).toFixed(6)} ${toCurrency.toUpperCase()}`,
+      });
       
     } catch (error) {
       console.error('Error estimating exchange:', error);
@@ -468,7 +541,13 @@ const Bridge = () => {
                   
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Status:</span>
-                    <span className="text-green-500">{transactionStatus || 'Pending'}</span>
+                    <span className={
+                      transactionStatus === 'finished' ? 'text-green-500' : 
+                      transactionStatus === 'failed' ? 'text-red-500' : 
+                      'text-yellow-500'
+                    }>
+                      {transactionStatus ? transactionStatus.charAt(0).toUpperCase() + transactionStatus.slice(1) : 'Pending'}
+                    </span>
                   </div>
                   
                   <div className="flex justify-between items-center">
@@ -485,16 +564,65 @@ const Bridge = () => {
                     You can check the status of your transaction on their website.
                   </p>
                   
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      window.open(`https://changenow.io/exchange/transactions/${transactionId}`, '_blank');
-                    }}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View on ChangeNOW
-                  </Button>
+                  <div className="flex flex-col space-y-3">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        window.open(`https://changenow.io/exchange/transactions/${transactionId}`, '_blank');
+                      }}
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      View on ChangeNOW
+                    </Button>
+                    
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`/api/bridge/transaction-status/${transactionId}`);
+                          
+                          if (!response.ok) {
+                            throw new Error('Failed to fetch transaction status');
+                          }
+                          
+                          const data = await response.json();
+                          setTransactionStatus(data.status);
+                          
+                          toast({
+                            title: "Status updated",
+                            description: `Transaction status: ${data.status}`
+                          });
+                        } catch (error) {
+                          console.error('Error fetching transaction status:', error);
+                          toast({
+                            title: "Failed to update status",
+                            description: "Could not fetch the latest transaction status",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Refresh Status
+                    </Button>
+                    
+                    <Button
+                      variant="link"
+                      className="w-full"
+                      onClick={() => {
+                        setActiveStep(1);
+                        setFromAmount('');
+                        setEstimatedAmount('');
+                        setHasEstimated(false);
+                        setTransactionId(null);
+                        setTransactionStatus(null);
+                      }}
+                    >
+                      Start New Exchange
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
