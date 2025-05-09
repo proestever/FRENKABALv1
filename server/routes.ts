@@ -1506,7 +1506,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Stream the image directly to the response
-      response.body.pipe(res);
+      if (response.body) {
+        // Get the response data as a buffer and send it
+        const buffer = await response.arrayBuffer();
+        res.end(Buffer.from(buffer));
+      } else {
+        return res.status(500).json({ error: "No response body available" });
+      }
       
     } catch (error) {
       console.error("Error proxying image:", error);
