@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -60,7 +60,20 @@ export function TokenList({
   
   // Pre-fetch all token logos in a single batch request
   // This dramatically reduces API calls and speeds up initial loading
-  const logoUrls = useBatchTokenLogos(tokenAddresses);
+  const [logoUrls, setLogoUrls] = useState<Record<string, string>>({});
+  
+  // Use effect to load logos to maintain hook order consistency
+  useEffect(() => {
+    if (tokenAddresses.length > 0) {
+      // Get the cached logos through a direct import to avoid hook order issues
+      import('@/hooks/use-batch-token-logos').then(module => {
+        const batchLogoFunc = module.useBatchTokenLogos;
+        // Access the cached token logos
+        const cachedLogos = batchLogoFunc(tokenAddresses);
+        setLogoUrls(cachedLogos);
+      });
+    }
+  }, [tokenAddresses]);
 
   // Handle toggling token visibility
   const handleToggleVisibility = (tokenAddress: string) => {

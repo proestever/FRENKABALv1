@@ -47,8 +47,8 @@ export function useAllWalletTokens(walletAddress: string | null) {
     enabled: !!walletAddress,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    staleTime: 0, // Consider data always stale to force refetch
-    gcTime: 0, // Don't cache between wallet loads (this is TanStack Query v5's replacement for cacheTime)
+    staleTime: 5 * 60 * 1000, // Data considered fresh for 5 minutes (reducing API calls)
+    gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
     queryFn: () => walletAddress ? fetchAllWalletTokens(walletAddress) : Promise.reject('No wallet address'),
   });
   

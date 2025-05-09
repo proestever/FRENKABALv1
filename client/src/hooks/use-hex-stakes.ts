@@ -101,6 +101,51 @@ export interface HexStakeSummary {
   error: string | null;
 }
 
+// Cache HEX price to avoid excessive API calls
+let cachedHexPrice: { price: number; timestamp: number } | null = null;
+const HEX_PRICE_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
+// Function to get HEX price with caching
+async function getHexPriceWithCache(): Promise<number> {
+  // Check if we have a valid cached price
+  if (cachedHexPrice && (Date.now() - cachedHexPrice.timestamp < HEX_PRICE_CACHE_TTL)) {
+    console.log('Using cached HEX price:', cachedHexPrice.price);
+    return cachedHexPrice.price;
+  }
+  
+  // Default fallback price
+  let hexPrice = 0.00004;
+  
+  try {
+    // No valid cache, fetch from API
+    const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
+    const priceData = await response.json();
+    
+    if (priceData && priceData.usdPrice) {
+      hexPrice = priceData.usdPrice;
+    } else if (priceData && priceData.price) {
+      hexPrice = priceData.price;
+    }
+    
+    // Update cache
+    cachedHexPrice = {
+      price: hexPrice,
+      timestamp: Date.now()
+    };
+    
+    console.log('Fetched fresh HEX price:', hexPrice);
+  } catch (error) {
+    console.error('Error fetching HEX price:', error);
+    // If we have any cached price (even expired), use it as backup
+    if (cachedHexPrice) {
+      console.log('Using expired cached HEX price after fetch error:', cachedHexPrice.price);
+      return cachedHexPrice.price;
+    }
+  }
+  
+  return hexPrice;
+}
+
 // Function to fetch HEX stakes summary using direct API call
 // This is a more robust approach that doesn't rely on the stakeDataFetch method
 export async function fetchHexStakesSummary(address: string): Promise<HexStakeSummary> {
@@ -120,20 +165,8 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       };
     }
     
-    // Fetch HEX price
-    let currentHexPrice = 0.00004; // Default fallback
-    try {
-      const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
-      const priceData = await response.json();
-      
-      if (priceData && priceData.usdPrice) {
-        currentHexPrice = priceData.usdPrice;
-      } else if (priceData && priceData.price) {
-        currentHexPrice = priceData.price;
-      }
-    } catch (error) {
-      console.error('Error fetching HEX price for preload:', error);
-    }
+    // Get HEX price using the cached function - this reduces duplicate API calls
+    const currentHexPrice = await getHexPriceWithCache();
     
     // Try to fetch data from the HEX Stakes component directly
     // We'll do this by examining the DOM to see if the data is already visible
@@ -361,22 +394,8 @@ export async function fetchCombinedHexStakes(walletAddresses: string[]): Promise
     
     console.log(`Fetching HEX stakes for ${walletAddresses.length} wallets...`);
     
-    // Fetch HEX price once to use for all wallets
-    let hexPrice = 0.00004; // Default fallback
-    try {
-      const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
-      const priceData = await response.json();
-      
-      if (priceData && priceData.usdPrice) {
-        hexPrice = priceData.usdPrice;
-      } else if (priceData && priceData.price) {
-        hexPrice = priceData.price;
-      }
-      
-      console.log('HEX price for combined stakes:', hexPrice);
-    } catch (error) {
-      console.error('Error fetching HEX price for combined stakes:', error);
-    }
+    // Get HEX price using cache to avoid redundant API calls
+    const hexPrice = await getHexPriceWithCache();
     
     // Fetch data for all wallets in parallel
     const stakePromises = walletAddresses.map(address => 
