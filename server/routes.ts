@@ -15,6 +15,7 @@ import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
 import portfolioRoutes from "./routes/portfolio-routes";
+import bridgeRoutes from "./routes/bridge-routes";
 import { format } from "date-fns";
 
 // Loading progress tracking
