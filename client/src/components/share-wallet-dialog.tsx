@@ -1,14 +1,13 @@
-import React from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
-import { ShareWalletCard } from '@/components/share-wallet-card';
-import { Wallet } from '@shared/schema';
-import { ProcessedToken } from 'server/types';
+} from "@/components/ui/dialog";
+import { Wallet } from "@shared/schema";
+import { ProcessedToken } from "server/types";
+import { ShareWalletCard } from "./share-wallet-card";
 
 interface ShareWalletDialogProps {
   isOpen: boolean;
@@ -23,25 +22,25 @@ export function ShareWalletDialog({
   onClose,
   wallet,
   portfolioName,
-  tokens
+  tokens,
 }: ShareWalletDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
-      <DialogContent className="max-w-3xl bg-black/90 border-white/15">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl bg-background">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-white">
-            Share your portfolio
-          </DialogTitle>
-          <DialogDescription className="text-gray-400">
-            Download or share this snapshot of your portfolio to social media.
+          <DialogTitle>Share Portfolio</DialogTitle>
+          <DialogDescription>
+            Download or share your portfolio to social media
           </DialogDescription>
         </DialogHeader>
         
-        <ShareWalletCard 
-          wallet={wallet} 
-          portfolioName={portfolioName}
-          tokens={tokens}
-        />
+        <div>
+          <ShareWalletCard 
+            wallet={wallet} 
+            portfolioName={portfolioName}
+            tokens={tokens}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );

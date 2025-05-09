@@ -8,8 +8,8 @@ import { Share2, Download, Twitter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toPng } from 'html-to-image';
 import { saveAs } from 'file-saver';
-import plsLogo from '@assets/pls-logo-optimized.png';
-import frenkabalLogo from '@assets/frenklabal_logo.png';
+import plsLogo from '../assets/pls-logo-optimized.png';
+import frenkabalLogo from '../assets/frenklabal_logo.png';
 
 interface ShareWalletCardProps {
   wallet: Wallet;
@@ -62,7 +62,7 @@ export function ShareWalletCard({ wallet, portfolioName, tokens }: ShareWalletCa
       const file = new File([blob], 'portfolio.png', { type: 'image/png' });
       
       // Create a text for the tweet
-      const text = `Check out my ${portfolioName ? portfolioName + ' ' : ''}PulseChain portfolio worth ${formatCurrency(wallet.totalValue)} via @FrenKabal! `;
+      const text = `Check out my ${portfolioName ? portfolioName + ' ' : ''}PulseChain portfolio worth ${formatCurrency(wallet.totalValue || 0)} via @FrenKabal! `;
       
       // Create the Twitter intent URL
       const twitterIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://frenkabal.replit.app/')}`;
@@ -99,7 +99,7 @@ export function ShareWalletCard({ wallet, portfolioName, tokens }: ShareWalletCa
         <div className="mb-6">
           <div className="text-sm text-gray-400 mb-1">Total Portfolio Value</div>
           <div className="text-3xl font-bold text-white">
-            {formatCurrency(wallet.totalValue)}
+            {formatCurrency(wallet.totalValue || 0)}
           </div>
         </div>
         
