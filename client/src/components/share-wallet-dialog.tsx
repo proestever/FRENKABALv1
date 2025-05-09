@@ -8,6 +8,8 @@ import {
 import { Wallet } from "@shared/schema";
 import { ProcessedToken } from "server/types";
 import { ShareWalletCard } from "./share-wallet-card";
+import { useState, useEffect } from "react";
+import { getHiddenTokens } from "@/lib/api";
 
 // Helper function to ensure tokens conform to ProcessedToken interface
 function ensureProcessedTokens(tokens: any[]): ProcessedToken[] {
@@ -64,6 +66,42 @@ export function ShareWalletDialog({
   portfolioName,
   tokens,
 }: ShareWalletDialogProps) {
+  const [hiddenTokens, setHiddenTokens] = useState<string[]>([]);
+  const [visibleTokens, setVisibleTokens] = useState<ProcessedToken[]>([]);
+  
+  // Get hidden tokens on component mount
+  useEffect(() => {
+    setHiddenTokens(getHiddenTokens());
+    
+    // Listen for token visibility changes
+    const handleTokenVisibilityChange = () => {
+      setHiddenTokens(getHiddenTokens());
+    };
+    
+    window.addEventListener('tokenVisibilityChanged', handleTokenVisibilityChange);
+    
+    // Clean up event listener
+    return () => {
+      window.removeEventListener('tokenVisibilityChanged', handleTokenVisibilityChange);
+    };
+  }, []);
+  
+  // Filter out hidden tokens when tokens or hiddenTokens change
+  useEffect(() => {
+    const filteredTokens = tokens.filter(token => 
+      !hiddenTokens.includes(token.address)
+    );
+    
+    setVisibleTokens(ensureProcessedTokens(filteredTokens));
+  }, [tokens, hiddenTokens]);
+  
+  // Calculate visible wallet total
+  const visibleTotal = visibleTokens.reduce((sum, token) => sum + (token.value || 0), 0);
+  const visibleWallet = {
+    ...wallet,
+    totalValue: visibleTotal
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl bg-background">
@@ -76,9 +114,9 @@ export function ShareWalletDialog({
         
         <div>
           <ShareWalletCard 
-            wallet={wallet} 
+            wallet={visibleWallet} 
             portfolioName={portfolioName}
-            tokens={ensureProcessedTokens(tokens)}
+            tokens={visibleTokens}
           />
         </div>
       </DialogContent>
