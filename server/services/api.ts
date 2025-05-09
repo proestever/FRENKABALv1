@@ -533,7 +533,72 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
     return result;
   }
 
-  // Standard ERC20 token price fetching
+  // Check if this token should use DexScreener instead of Moralis
+  const useDexScreener = await shouldUseDexScreenerForToken(normalizedAddress);
+  
+  if (useDexScreener) {
+    console.log(`Token ${normalizedAddress} is configured to use DexScreener for pricing`);
+    
+    try {
+      // Get price from DexScreener
+      const dexScreenerPrice = await getTokenPriceFromDexScreener(normalizedAddress);
+      
+      if (dexScreenerPrice !== null) {
+        console.log(`Successfully fetched price from DexScreener for ${normalizedAddress}: ${dexScreenerPrice} USD`);
+        
+        // Get token metadata if available
+        let symbol = '';
+        let name = '';
+        let logoUrl = null;
+        
+        try {
+          const storedLogo = await storage.getTokenLogo(normalizedAddress);
+          if (storedLogo) {
+            symbol = storedLogo.symbol || '';
+            name = storedLogo.name || '';
+            logoUrl = storedLogo.logoUrl;
+          }
+        } catch (logoErr) {
+          console.error('Error fetching token logo:', logoErr);
+        }
+        
+        // Create a Moralis-like response structure with the DexScreener price
+        const result = {
+          tokenName: name || 'Unknown Token',
+          tokenSymbol: symbol || 'UNKNOWN',
+          tokenDecimals: "18",
+          tokenLogo: logoUrl || getDefaultLogo(symbol),
+          nativePrice: {
+            value: "1000000000000000000",
+            decimals: 18,
+            name: "PLS",
+            symbol: "PLS",
+            address: PLS_TOKEN_ADDRESS
+          },
+          usdPrice: dexScreenerPrice,
+          usdPriceFormatted: dexScreenerPrice.toString(),
+          exchangeName: "DexScreener",
+          exchangeAddress: "",
+          tokenAddress: normalizedAddress,
+          blockTimestamp: new Date().toISOString(),
+          verifiedContract: false, // We don't have this info from DexScreener
+          securityScore: 50 // Neutral score
+        };
+        
+        // Cache the result
+        cacheService.setTokenPrice(normalizedAddress, result);
+        
+        return result;
+      } else {
+        console.log(`DexScreener didn't return price for ${normalizedAddress}, falling back to Moralis`);
+      }
+    } catch (dexScreenerError) {
+      console.error(`Error fetching price from DexScreener for ${normalizedAddress}:`, dexScreenerError);
+      console.log('Falling back to Moralis API');
+    }
+  }
+
+  // Standard ERC20 token price fetching with Moralis (default or fallback)
   try {
     console.log(`Fetching price for token ${tokenAddress} from Moralis using chain 0x171 (PulseChain)`);
     
@@ -565,6 +630,65 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
       console.error(`Error fetching price for token ${tokenAddress}:`, 
         error.message || 'Unknown error');
     }
+    
+    // Try DexScreener as last resort if we didn't already
+    if (!useDexScreener) {
+      try {
+        console.log(`Trying DexScreener as fallback for ${normalizedAddress}`);
+        const dexScreenerPrice = await getTokenPriceFromDexScreener(normalizedAddress);
+        
+        if (dexScreenerPrice !== null) {
+          console.log(`Successfully fetched fallback price from DexScreener for ${normalizedAddress}: ${dexScreenerPrice} USD`);
+          
+          // Get token metadata if available
+          let symbol = '';
+          let name = '';
+          let logoUrl = null;
+          
+          try {
+            const storedLogo = await storage.getTokenLogo(normalizedAddress);
+            if (storedLogo) {
+              symbol = storedLogo.symbol || '';
+              name = storedLogo.name || '';
+              logoUrl = storedLogo.logoUrl;
+            }
+          } catch (logoErr) {
+            console.error('Error fetching token logo:', logoErr);
+          }
+          
+          // Create a Moralis-like response structure with the DexScreener price
+          const result = {
+            tokenName: name || 'Unknown Token',
+            tokenSymbol: symbol || 'UNKNOWN',
+            tokenDecimals: "18",
+            tokenLogo: logoUrl || getDefaultLogo(symbol),
+            nativePrice: {
+              value: "1000000000000000000",
+              decimals: 18,
+              name: "PLS",
+              symbol: "PLS",
+              address: PLS_TOKEN_ADDRESS
+            },
+            usdPrice: dexScreenerPrice,
+            usdPriceFormatted: dexScreenerPrice.toString(),
+            exchangeName: "DexScreener (Fallback)",
+            exchangeAddress: "",
+            tokenAddress: normalizedAddress,
+            blockTimestamp: new Date().toISOString(),
+            verifiedContract: false,
+            securityScore: 50
+          };
+          
+          // Cache the result
+          cacheService.setTokenPrice(normalizedAddress, result);
+          
+          return result;
+        }
+      } catch (fallbackError) {
+        console.error(`Error fetching fallback price from DexScreener for ${normalizedAddress}:`, fallbackError);
+      }
+    }
+    
     return null;
   }
 }

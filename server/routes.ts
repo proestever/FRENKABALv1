@@ -2,6 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance, getApiCounterStats, resetApiCounter } from "./services/api";
+import { 
+  addDexScreenerPreferredToken, 
+  removeDexScreenerPreferredToken, 
+  getAllDexScreenerPreferredTokens 
+} from "./services/price-source-service";
 import { apiStatsService } from "./services/api-stats-service";
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
 import { getTokenPricesFromDexScreener } from "./services/dexscreener";

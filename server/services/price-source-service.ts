@@ -72,7 +72,7 @@ export async function addDexScreenerPreferredToken(tokenData: InsertDexScreenerP
           reason: tokenData.reason,
           symbol: tokenData.symbol,
           name: tokenData.name,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date()
         })
         .where(eq(dexScreenerPreferredTokens.tokenAddress, normalizedAddress));
       

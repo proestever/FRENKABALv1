@@ -255,6 +255,17 @@ class CacheService {
       config: this.config
     };
   }
+  
+  /**
+   * Invalidate specific token price cache entry
+   */
+  invalidateTokenPrice(tokenAddress: string): void {
+    const normalizedAddress = tokenAddress.toLowerCase();
+    if (this.tokenPriceCache.has(normalizedAddress)) {
+      this.tokenPriceCache.delete(normalizedAddress);
+      console.log(`Invalidated token price cache for ${normalizedAddress}`);
+    }
+  }
 }
 
 // Export a singleton instance
