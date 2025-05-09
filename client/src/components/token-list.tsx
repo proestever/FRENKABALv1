@@ -588,15 +588,6 @@ export function TokenList({
                                   {token.exchange === "PancakeSwap v3" ? "9mm v3" : token.exchange}
                                 </div>
                               )}
-                              {token.securityScore && (
-                                <div className={`text-xs px-1.5 py-0.5 rounded-md border flex-shrink-0 ${
-                                  token.securityScore > 80 ? 'border-green-500/30 bg-green-500/10 text-green-400' :
-                                  token.securityScore > 50 ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400' :
-                                  'border-red-500/30 bg-red-500/10 text-red-400'
-                                }`}>
-                                  Score: {token.securityScore}
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>
