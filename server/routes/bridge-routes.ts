@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { fetch } from 'node-fetch';
+import fetch from 'node-fetch';
 import { z } from 'zod';
 
 const router = Router();

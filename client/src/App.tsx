@@ -9,10 +9,11 @@ import { Profile } from "@/pages/profile";
 import { Donations } from "@/pages/donations";
 import PortfoliosPage from "@/pages/portfolios";
 import AdminPage from "@/pages/admin";
+import Bridge from "@/pages/bridge";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthProvider } from "@/providers/auth-provider";
-import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch, Settings } from "lucide-react";
+import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch, Settings, ArrowRightLeft } from "lucide-react";
 import telegramLogo from "@assets/Telegram_2019_Logo.svg.png";
 import xLogo from "@assets/X_logo.jpg";
 import {
@@ -181,6 +182,11 @@ function Header() {
                 <span>Donations</span>
               </DropdownMenuItem>
               
+              <DropdownMenuItem onClick={() => setLocation("/bridge")} className="cursor-pointer dropdown-item-hover">
+                <ArrowRightLeft className="mr-2 h-4 w-4" />
+                <span>Bridge</span>
+              </DropdownMenuItem>
+              
               {isConnected && (
                 <>
                   <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer dropdown-item-hover">
@@ -244,6 +250,11 @@ function Header() {
                 <DropdownMenuItem onClick={() => setLocation("/donations")} className="cursor-pointer dropdown-item-hover">
                   <HeartHandshake className="mr-2 h-4 w-4" />
                   <span>Donations</span>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem onClick={() => setLocation("/bridge")} className="cursor-pointer dropdown-item-hover">
+                  <ArrowRightLeft className="mr-2 h-4 w-4" />
+                  <span>Bridge</span>
                 </DropdownMenuItem>
                 
                 {isConnected && (
@@ -369,6 +380,7 @@ function Router() {
           <Route path="/portfolios" component={PortfoliosPage} />
           <Route path="/portfolio/:portfolioId" component={Home} />
           <Route path="/donations" component={Donations} />
+          <Route path="/bridge" component={Bridge} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />

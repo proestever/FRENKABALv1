@@ -1368,6 +1368,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register portfolio routes
   app.use("/api", portfolioRoutes);
   
+  // Register bridge routes
+  app.use("/api/bridge", bridgeRoutes);
+  
   // API Routes for DexScreener preferred tokens management
   
   // Get all DexScreener preferred tokens
