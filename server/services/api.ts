@@ -384,6 +384,8 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
     trackApiCall(walletAddress, 'getSpecificTokenBalance');
     console.log(`Fetching specific token balance for ${tokenAddress} in wallet ${walletAddress}`);
     
+    const normalizedTokenAddress = tokenAddress.toLowerCase();
+    
     // Try using the Moralis SDK to get the token metadata and balance
     const response = await Moralis.EvmApi.token.getWalletTokenBalances({
       address: walletAddress,
@@ -398,20 +400,76 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
       const balance = tokenData.balance;
       const balanceFormatted = parseFloat(balance) / Math.pow(10, decimals);
       
-      // Try to get price data
+      // Try to get price data - first check if the token should use DexScreener
       let price: number | undefined = undefined;
       let value: number | undefined = undefined;
       let priceChange24h: number | undefined = undefined;
+      let logoUrl: string | undefined = tokenData.logo;
       
+      // Try to get logo from database first
       try {
-        const priceData = await getTokenPrice(tokenAddress);
-        if (priceData) {
-          price = priceData.usdPrice || 0;
-          value = price * balanceFormatted;
-          priceChange24h = priceData.usdPrice24hrPercentChange || 0;
+        const storedLogo = await storage.getTokenLogo(normalizedTokenAddress);
+        if (storedLogo) {
+          logoUrl = storedLogo.logoUrl;
         }
-      } catch (priceError: any) {
-        console.log(`Could not get price for token ${tokenAddress}: ${priceError.message || "Unknown error"}`);
+      } catch (logoError) {
+        console.log(`Error getting logo from database for ${tokenAddress}:`, logoError);
+      }
+      
+      // Price fetching strategy
+      const useDexScreener = await shouldUseDexScreenerForToken(normalizedTokenAddress);
+      
+      if (useDexScreener) {
+        console.log(`Using DexScreener for price of token ${tokenAddress}`);
+        try {
+          const dexScreenerPrice = await getTokenPriceFromDexScreener(normalizedTokenAddress);
+          if (dexScreenerPrice !== null) {
+            price = dexScreenerPrice;
+            value = price * balanceFormatted;
+            // DexScreener doesn't provide 24h change data in the same way
+            priceChange24h = 0;
+          }
+        } catch (dexError) {
+          console.log(`Error getting price from DexScreener for ${tokenAddress}:`, dexError);
+        }
+      } else {
+        // Use Moralis batch price API via our getMultipleTokenPrices function
+        try {
+          const priceDataMap = await getMultipleTokenPrices([tokenAddress]);
+          const priceData = priceDataMap[normalizedTokenAddress];
+          if (priceData) {
+            price = priceData.usdPrice || 0;
+            value = price * balanceFormatted;
+            priceChange24h = priceData.usdPrice24hrPercentChange || 0;
+            
+            // If we don't have a logo yet and Moralis has one, use it
+            if (!logoUrl && priceData.tokenLogo) {
+              logoUrl = priceData.tokenLogo;
+              
+              // Store the logo for future use
+              try {
+                const newLogo: InsertTokenLogo = {
+                  tokenAddress: tokenAddress,
+                  logoUrl: priceData.tokenLogo,
+                  symbol: priceData.tokenSymbol || tokenData.symbol || 'UNKNOWN',
+                  name: priceData.tokenName || tokenData.name || 'Unknown Token',
+                  lastUpdated: new Date().toISOString()
+                };
+                
+                await storage.saveTokenLogo(newLogo);
+              } catch (storageError) {
+                console.error(`Error storing logo for token ${tokenAddress}:`, storageError);
+              }
+            }
+          }
+        } catch (priceError: any) {
+          console.log(`Could not get price for token ${tokenAddress}: ${priceError.message || "Unknown error"}`);
+        }
+      }
+      
+      // If still no logo, use default
+      if (!logoUrl) {
+        logoUrl = getDefaultLogo(tokenData.symbol);
       }
       
       return {
@@ -424,7 +482,7 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
         price,
         value,
         priceChange24h,
-        logo: tokenData.logo || getDefaultLogo(tokenData.symbol),
+        logo: logoUrl,
         verified: tokenData.verified_contract || false
       };
     }
@@ -1820,25 +1878,41 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       message: 'Checking for important tokens...'
     });
     
-    // Fetch any important tokens that aren't already in the list
-    for (const tokenAddress of IMPORTANT_TOKENS) {
-      if (!existingTokenAddresses.includes(tokenAddress.toLowerCase())) {
-        console.log(`Adding important token: ${tokenAddress} that wasn't in standard results`);
-        try {
-          const tokenData = await getSpecificTokenBalance(walletAddress, tokenAddress);
-          if (tokenData) {
-            tokensWithPrice.push(tokenData);
-            // Update total value if the token has a price
-            if (tokenData.value) {
-              totalValue += tokenData.value;
+    // Fetch any important tokens that aren't already in the list - batch process them
+    const missingImportantTokens = IMPORTANT_TOKENS.filter(
+      tokenAddress => !existingTokenAddresses.includes(tokenAddress.toLowerCase())
+    );
+    
+    if (missingImportantTokens.length > 0) {
+      console.log(`Adding ${missingImportantTokens.length} important tokens that weren't in standard results`);
+      
+      try {
+        // Get token balances in parallel
+        const tokenDataPromises = missingImportantTokens.map(
+          tokenAddress => getSpecificTokenBalance(walletAddress, tokenAddress)
+        );
+        const tokenDataResults = await Promise.all(tokenDataPromises);
+        
+        // Filter out any null results and add to the token list
+        const validTokenData = tokenDataResults.filter(data => data !== null) as ProcessedToken[];
+        
+        if (validTokenData.length > 0) {
+          tokensWithPrice.push(...validTokenData);
+          
+          // Update total value
+          validTokenData.forEach(token => {
+            if (token.value) {
+              totalValue += token.value;
             }
-          }
-        } catch (error) {
-          console.error(`Error fetching important token ${tokenAddress}:`, error);
+          });
+          
+          console.log(`Successfully added ${validTokenData.length} important tokens`);
         }
-      } else {
-        console.log(`Important token ${tokenAddress} already exists in results`);
+      } catch (error) {
+        console.error(`Error fetching important tokens in batch:`, error);
       }
+    } else {
+      console.log('All important tokens already exist in results');
     }
     
     // Process LP tokens to get detailed information about the underlying token pairs

@@ -25,8 +25,8 @@ interface TokenDataCache {
   lastUpdated: number;
 }
 
-// Cache timeout: 5 minutes
-const CACHE_TIMEOUT_MS = 5 * 60 * 1000;
+// Cache timeout: 30 minutes (matching server-side cache TTL)
+const CACHE_TIMEOUT_MS = 30 * 60 * 1000;
 
 // In-memory cache
 const globalCache: Record<string, TokenDataCache> = {};
