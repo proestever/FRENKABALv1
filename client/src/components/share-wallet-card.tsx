@@ -33,7 +33,7 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
   const { toast } = useToast();
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   
-  // Generate share image and save using a canvas-based approach
+  // Generate share image and save using a simpler approach without loading external images
   const handleDownloadImage = async () => {
     if (!cardRef.current) return;
     
@@ -55,8 +55,8 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       
       // Create a gradient background
       const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      gradient.addColorStop(0, 'rgba(10, 10, 10, 0.95)');
-      gradient.addColorStop(1, 'rgba(20, 20, 20, 0.85)');
+      gradient.addColorStop(0, 'rgba(15, 15, 20, 0.95)');
+      gradient.addColorStop(1, 'rgba(30, 30, 45, 0.85)');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
@@ -65,52 +65,32 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       ctx.lineWidth = 1;
       ctx.strokeRect(0, 0, canvas.width, canvas.height);
       
-      // Load and draw the FrenKabal logo
-      const drawLogo = () => {
-        return new Promise((resolve) => {
-          const logo = new Image();
-          logo.crossOrigin = 'anonymous';
-          logo.onload = () => {
-            ctx.drawImage(logo, 20, 20, 40, 40);
-            resolve(null);
-          };
-          logo.onerror = () => {
-            console.error('Failed to load FrenKabal logo');
-            resolve(null);
-          };
-          logo.src = frenkabalLogo;
-        });
-      };
+      // Draw circle for logo placeholder
+      ctx.beginPath();
+      ctx.arc(30, 30, 15, 0, Math.PI * 2, false);
+      ctx.fillStyle = '#6752f9';
+      ctx.fill();
       
-      // Load and draw the PulseChain logo
-      const drawPulseLogo = () => {
-        return new Promise((resolve) => {
-          const logo = new Image();
-          logo.crossOrigin = 'anonymous';
-          logo.onload = () => {
-            ctx.drawImage(logo, canvas.width - 80, canvas.height - 40, 20, 20);
-            resolve(null);
-          };
-          logo.onerror = () => {
-            console.error('Failed to load PulseChain logo');
-            resolve(null);
-          };
-          logo.src = plsLogo;
-        });
-      };
-      
-      // Wait for the logos to load
-      await Promise.all([drawLogo(), drawPulseLogo()]);
+      // Draw "FK" text as logo placeholder
+      ctx.font = 'bold 12px Arial';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('FK', 30, 30);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
       
       // Draw the portfolio name
-      ctx.font = 'bold 24px Arial';
+      ctx.font = 'bold 22px Arial';
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(portfolioName ? `${portfolioName} Portfolio` : 'Wallet Portfolio', 70, 40);
+      ctx.fillText(portfolioName ? `${portfolioName} Portfolio` : 'Wallet Portfolio', 60, 35);
       
       // Draw date
       ctx.font = '14px Arial';
       ctx.fillStyle = '#888888';
-      ctx.fillText(new Date().toLocaleDateString(), canvas.width - 120, 40);
+      ctx.textAlign = 'right';
+      ctx.fillText(new Date().toLocaleDateString(), canvas.width - 20, 35);
+      ctx.textAlign = 'left';
       
       // Draw the total value label
       ctx.font = '16px Arial';
@@ -130,19 +110,35 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       ctx.stroke();
       
       // Draw HEX stakes if available
-      let startY = 160;
+      let startY = 170;
       if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
+        // Draw circle for HEX logo placeholder
+        ctx.beginPath();
+        ctx.arc(30, startY - 5, 12, 0, Math.PI * 2, false);
+        ctx.fillStyle = '#9d4cff';
+        ctx.fill();
+        
+        ctx.font = 'bold 10px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('HEX', 30, startY - 5);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        
         ctx.font = 'bold 18px Arial';
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('HEX Stakes', 20, startY);
+        ctx.fillText('HEX Stakes', 55, startY);
         
         ctx.font = '14px Arial';
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0), canvas.width - 120, startY);
+        ctx.textAlign = 'right';
+        ctx.fillText(formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0), canvas.width - 20, startY);
+        ctx.textAlign = 'left';
         
         ctx.font = '12px Arial';
         ctx.fillStyle = '#888888';
-        ctx.fillText(`${formatTokenAmount(parseFloat(hexStakesSummary.totalCombinedHex || '0'))} HEX | ${hexStakesSummary.stakeCount} active stake${hexStakesSummary.stakeCount !== 1 ? 's' : ''}`, 20, startY + 20);
+        ctx.fillText(`${formatTokenAmount(parseFloat(hexStakesSummary.totalCombinedHex || '0'))} HEX | ${hexStakesSummary.stakeCount} active stake${hexStakesSummary.stakeCount !== 1 ? 's' : ''}`, 55, startY + 20);
         
         startY += 50;
       }
@@ -151,21 +147,37 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       ctx.font = '16px Arial';
       ctx.fillStyle = '#888888';
       ctx.fillText('Top 5 Holdings', 20, startY);
-      startY += 25;
+      startY += 30;
       
       // Draw tokens (simplified)
       top5Tokens.forEach((token, i) => {
+        // Draw circle for token logo placeholder
+        ctx.beginPath();
+        ctx.arc(30, startY - 5, 12, 0, Math.PI * 2, false);
+        ctx.fillStyle = getColorFromString(token.symbol);
+        ctx.fill();
+        
+        ctx.font = 'bold 10px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(token.symbol.slice(0, 3), 30, startY - 5);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        
         ctx.font = 'bold 16px Arial';
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(token.symbol, 20, startY);
+        ctx.fillText(token.symbol, 55, startY);
         
         ctx.font = '14px Arial';
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(formatCurrency(token.value || 0), canvas.width - 120, startY);
+        ctx.textAlign = 'right';
+        ctx.fillText(formatCurrency(token.value || 0), canvas.width - 20, startY);
+        ctx.textAlign = 'left';
         
         ctx.font = '12px Arial';
         ctx.fillStyle = '#888888';
-        ctx.fillText(formatTokenAmount(token.balanceFormatted || 0), 20, startY + 20);
+        ctx.fillText(formatTokenAmount(token.balanceFormatted || 0), 55, startY + 20);
         
         startY += 40;
       });
@@ -181,7 +193,19 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       ctx.font = '14px Arial';
       ctx.fillStyle = '#888888';
       ctx.fillText('Generated by FrenKabal', 20, footerY);
-      ctx.fillText('PulseChain', canvas.width - 100, footerY);
+      
+      ctx.beginPath();
+      ctx.arc(canvas.width - 30, footerY - 5, 10, 0, Math.PI * 2, false);
+      ctx.fillStyle = '#e93578';
+      ctx.fill();
+      
+      ctx.font = 'bold 8px Arial';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('PLS', canvas.width - 30, footerY - 5);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
       
       // Convert to blob and download
       canvas.toBlob((blob) => {
@@ -206,6 +230,17 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
     } finally {
       setIsGeneratingImage(false);
     }
+  };
+  
+  // Helper function to generate a consistent color from a string
+  const getColorFromString = (str: string): string => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    const hue = hash % 360;
+    return `hsl(${hue}, 70%, 60%)`;
   };
 
   // Share on Twitter
