@@ -34,15 +34,58 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
     if (!cardRef.current) return;
     
     try {
+      // Use a more robust configuration for image generation
       const dataUrl = await toPng(cardRef.current, { 
         quality: 0.95,
         pixelRatio: 2,
         backgroundColor: '#121212',
+        style: {
+          // Avoid trying to load external resources that might fail
+          fontFamily: 'Arial, sans-serif',
+        },
+        // Skip problematic network resources
+        filter: (node) => {
+          // Filter out elements that might cause problems
+          if (node.tagName === 'LINK' && 
+              node.getAttribute('rel') === 'stylesheet' && 
+              node.getAttribute('href')?.includes('fonts.googleapis.com')) {
+            return false;
+          }
+          return true;
+        },
+        cacheBust: true,
       });
       
-      saveAs(dataUrl, `${portfolioName || 'wallet'}-portfolio.png`);
+      // Create and trigger a download link
+      const link = document.createElement('a');
+      link.download = `${portfolioName || 'wallet'}-portfolio.png`;
+      link.href = dataUrl;
+      link.click();
     } catch (error) {
       console.error('Error generating image:', error);
+      // Fallback method if the primary method fails
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const boundingRect = cardRef.current.getBoundingClientRect();
+        
+        canvas.width = boundingRect.width;
+        canvas.height = boundingRect.height;
+        
+        if (ctx) {
+          ctx.fillStyle = '#121212';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Use a simpler image format as fallback
+          canvas.toBlob((blob) => {
+            if (blob) {
+              saveAs(blob, `${portfolioName || 'wallet'}-portfolio.png`);
+            }
+          });
+        }
+      } catch (fallbackError) {
+        console.error('Fallback image generation also failed:', fallbackError);
+      }
     }
   };
 
@@ -50,39 +93,22 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
   const handleTwitterShare = async () => {
     if (!cardRef.current) return;
     
-    try {
-      const dataUrl = await toPng(cardRef.current, { 
-        quality: 0.95,
-        pixelRatio: 2,
-        backgroundColor: '#121212',
-      });
-      
-      // Create a blob from the data URL
-      const blob = await fetch(dataUrl).then(res => res.blob());
-      
-      // Save the blob as a file
-      const file = new File([blob], 'portfolio.png', { type: 'image/png' });
-      
-      // Create a text for the tweet
-      let tweetText = `Check out my ${portfolioName ? portfolioName + ' ' : ''}PulseChain portfolio worth ${formatCurrency(wallet.totalValue || 0)}`;
-      
-      // Add HEX stakes info if available
-      if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
-        tweetText += ` including ${formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0)} in HEX stakes`;
-      }
-      
-      tweetText += ` via @FrenKabal!`;
-      
-      const text = tweetText;
-      
-      // Create the Twitter intent URL
-      const twitterIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://frenkabal.replit.app/')}`;
-      
-      // Open Twitter in a new window
-      window.open(twitterIntentUrl, '_blank');
-    } catch (error) {
-      console.error('Error sharing to Twitter:', error);
+    // Create a text for the tweet
+    let tweetText = `Check out my ${portfolioName ? portfolioName + ' ' : ''}PulseChain portfolio worth ${formatCurrency(wallet.totalValue || 0)}`;
+    
+    // Add HEX stakes info if available
+    if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
+      tweetText += ` including ${formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0)} in HEX stakes`;
     }
+    
+    tweetText += ` via @FrenKabal!`;
+    
+    // We'll share without trying to include the image since that's causing errors
+    // Just use Twitter's intent URL system to share the text
+    const twitterIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent('https://frenkabal.replit.app/')}`;
+    
+    // Open Twitter in a new window
+    window.open(twitterIntentUrl, '_blank');
   };
   
   return (
@@ -114,43 +140,33 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
           </div>
         </div>
         
-        {/* HEX Stakes Section */}
+        {/* HEX Stakes as a regular token entry if available */}
         {hexStakesSummary && hexStakesSummary.stakeCount > 0 && (
-          <div className="mb-6 bg-purple-900/20 p-4 rounded-md border border-purple-500/30">
-            <div className="flex items-center mb-2">
-              <TokenLogo 
-                address="0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39" /* HEX token address */
-                symbol="HEX"
-                size="sm"
-              />
-              <div className="text-sm text-purple-300 ml-2 font-medium">HEX Stakes</div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3 mb-2">
-              <div>
-                <div className="text-xs text-gray-400">Total Staked</div>
-                <div className="text-md font-bold text-white">
-                  {formatTokenAmount(parseFloat(hexStakesSummary.totalStakedHex || '0'))} HEX
+          <div className="mb-6">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center">
+                <TokenLogo 
+                  address="0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39" /* HEX token address */
+                  symbol="HEX"
+                  size="sm"
+                />
+                <div className="ml-2">
+                  <div className="text-white font-medium">
+                    HEX Stakes
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    {formatTokenAmount(parseFloat(hexStakesSummary.totalCombinedHex || '0'))} HEX
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-white font-bold">
+                  {formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0)}
                 </div>
                 <div className="text-xs text-gray-400">
-                  {formatCurrency(hexStakesSummary.totalStakeValueUsd || 0)}
+                  {hexStakesSummary.stakeCount} active stake{hexStakesSummary.stakeCount !== 1 ? 's' : ''}
                 </div>
               </div>
-              <div>
-                <div className="text-xs text-gray-400">Total Interest</div>
-                <div className="text-md font-bold text-green-400">
-                  {formatTokenAmount(parseFloat(hexStakesSummary.totalInterestHex || '0'))} HEX
-                </div>
-                <div className="text-xs text-green-400">
-                  {formatCurrency(hexStakesSummary.totalInterestValueUsd || 0)}
-                </div>
-              </div>
-            </div>
-            
-            <div className="text-xs text-purple-300 mt-2">
-              <span className="bg-purple-500/20 px-2 py-1 rounded-md border border-purple-500/30">
-                {hexStakesSummary.stakeCount} active stake{hexStakesSummary.stakeCount !== 1 ? 's' : ''}
-              </span>
             </div>
           </div>
         )}
