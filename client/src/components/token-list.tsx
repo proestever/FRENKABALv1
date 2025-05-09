@@ -58,10 +58,18 @@ export function TokenList({
   const tokenAddresses = useMemo(() => tokens.map(t => t.address), [tokens]);
   const tokenSymbols = useMemo(() => tokens.map(t => t.symbol), [tokens]);
   
-  // Use the static function to get logo URLs directly from the cache
-  // This approach avoids hook ordering issues and unnecessary API calls
-  const { getBatchTokenLogos } = require('@/hooks/use-batch-token-logos');
-  const logoUrls = getBatchTokenLogos(tokenAddresses);
+  // Use a useState to store the logo URLs
+  const [logoUrls, setLogoUrls] = useState<Record<string, string>>({});
+  
+  // Use a single effect to load the logos using direct import
+  useEffect(() => {
+    // Dynamically import to avoid hook order issues
+    import('@/hooks/use-batch-token-logos').then(module => {
+      // Use the static helper function instead of the hook
+      const batchLogos = module.getBatchTokenLogos(tokenAddresses);
+      setLogoUrls(batchLogos);
+    });
+  }, [tokenAddresses]);
 
   // Handle toggling token visibility
   const handleToggleVisibility = (tokenAddress: string) => {
