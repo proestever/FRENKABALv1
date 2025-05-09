@@ -11,6 +11,7 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 import { 
+  AlertTriangle,
   ArrowDown, 
   Loader2, 
   RefreshCw, Wallet, 
@@ -114,7 +115,11 @@ const Bridge = () => {
 
   // Auto-refresh transaction status every 30 seconds
   useEffect(() => {
-    if (!transactionId || activeStep !== 2) return;
+    // Don't poll if no transaction ID or not on transaction page or already in final state
+    if (!transactionId || 
+        activeStep !== 2 || 
+        ['finished', 'failed', 'refunded', 'expired'].includes(transactionStatus || '')) 
+      return;
     
     const fetchStatus = async () => {
       try {
@@ -138,7 +143,7 @@ const Bridge = () => {
     const intervalId = setInterval(fetchStatus, 30000); // 30 seconds
     
     return () => clearInterval(intervalId);
-  }, [transactionId, activeStep]);
+  }, [transactionId, activeStep, transactionStatus]);
   
   // Estimate exchange
   const handleEstimateExchange = async () => {
@@ -310,6 +315,38 @@ const Bridge = () => {
   const fromCurrencyDetails = getCurrencyDetails(fromCurrency);
   const toCurrencyDetails = getCurrencyDetails(toCurrency);
   
+  // Handle error state for currency loading
+  if (currenciesError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto">
+          <h1 className="text-3xl font-bold mb-6 text-white">Bridge</h1>
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Error Loading Exchange Data</CardTitle>
+              <CardDescription>We encountered an issue while loading available currencies</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center p-6 space-y-4">
+                <AlertTriangle className="w-10 h-10 text-red-500" />
+                <p className="text-center text-red-500">
+                  Failed to load currencies: {currenciesError instanceof Error ? currenciesError.message : "Unknown error"}
+                </p>
+                <Button 
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto">
@@ -490,10 +527,15 @@ const Bridge = () => {
                   <Button
                     variant="outline"
                     onClick={handleEstimateExchange}
-                    disabled={isLoadingCurrencies || !fromCurrency || !toCurrency || !fromAmount || parseFloat(fromAmount) <= 0}
+                    disabled={isLoadingCurrencies || isEstimating || !fromCurrency || !toCurrency || !fromAmount || parseFloat(fromAmount) <= 0}
                     className="flex-1"
                   >
-                    {hasEstimated ? (
+                    {isEstimating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Estimating...
+                      </>
+                    ) : hasEstimated ? (
                       <>
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh Estimate
