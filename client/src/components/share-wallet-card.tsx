@@ -36,21 +36,21 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
   const [fkLogoImg, setFkLogoImg] = useState<HTMLImageElement | null>(null);
   const [plsLogoImg, setPlsLogoImg] = useState<HTMLImageElement | null>(null);
   
-  // Load token images for better looking share cards
+  // Helper function to load an image from a URL
+  const loadImage = (src: string): Promise<HTMLImageElement> => {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = document.createElement("img");
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+      img.src = src;
+    });
+  };
+
+  // Load the app and PLS logos for the header and footer
   useEffect(() => {
-    const loadTokenLogos = async () => {
+    const loadAppLogos = async () => {
       try {
-        // Load the FrenKabal logo
-        const loadImage = (src: string): Promise<HTMLImageElement> => {
-          return new Promise<HTMLImageElement>((resolve, reject) => {
-            const img = document.createElement("img");
-            img.crossOrigin = "anonymous";
-            img.onload = () => resolve(img);
-            img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
-            img.src = src;
-          });
-        };
-        
         // Load FrenKabal logo
         try {
           const fkImg = await loadImage(frenkabalLogo);
@@ -66,52 +66,79 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
         } catch (e) {
           console.warn("Could not load PLS logo:", e);
         }
-        
-        // Create a list of tokens to load logos for
-        const tokensToLoad = [...top5Tokens];
-        
-        // Add HEX if needed
-        if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
-          const hexTokenAddress = "0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39";
-          const hexTokenPresent = tokensToLoad.some(t => t.address.toLowerCase() === hexTokenAddress.toLowerCase());
-          
-          if (!hexTokenPresent) {
-            // Attempt to find HEX in the full token list
-            const hexToken = tokens.find(t => t.symbol === 'HEX' || t.address.toLowerCase() === hexTokenAddress.toLowerCase());
-            if (hexToken) {
-              tokensToLoad.push(hexToken);
-            }
-          }
-        }
-        
+      } catch (error) {
+        console.error("Error loading app logos:", error);
+      }
+    };
+    
+    loadAppLogos();
+  }, []);
+  
+  // Create a list of token addresses to fetch logos for
+  const tokenAddresses = React.useMemo(() => {
+    const addresses: string[] = top5Tokens.map(token => token.address);
+    
+    // Add HEX token address if needed
+    if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
+      const hexTokenAddress = "0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39";
+      if (!addresses.some(addr => addr.toLowerCase() === hexTokenAddress.toLowerCase())) {
+        addresses.push(hexTokenAddress);
+      }
+    }
+    
+    return addresses;
+  }, [top5Tokens, hexStakesSummary]);
+  
+  // Load token logos using batch API
+  useEffect(() => {
+    const loadTokenImages = async () => {
+      try {
         // Create a record to store token images
         const loadedImages: Record<string, HTMLImageElement> = {};
         
-        // Try to load token logos
-        const logoPromises = tokensToLoad.map(async (token) => {
-          if (!token.logo) return;
-          
-          try {
-            // First check if we can get the logo from the server cache
-            const logoResponse = await axios.get(`/api/token-logo/${token.address}`);
-            if (logoResponse.data && logoResponse.data.logo_url) {
-              const img = await loadImage(logoResponse.data.logo_url);
+        // First try to use token.logo directly for each token if available
+        const directLogoPromises = top5Tokens
+          .filter(token => token.logo)
+          .map(async (token) => {
+            try {
+              const img = await loadImage(token.logo!);
               loadedImages[token.address.toLowerCase()] = img;
-              return;
+            } catch (e) {
+              // Will try to get from server in the batch request below
+              console.warn(`Could not load direct logo for ${token.symbol}:`, e);
             }
-            
-            // If that fails, try to use the token's logo URL directly
-            if (token.logo) {
-              const img = await loadImage(token.logo);
-              loadedImages[token.address.toLowerCase()] = img;
-            }
-          } catch (e) {
-            console.warn(`Could not load logo for ${token.symbol}:`, e);
-          }
-        });
+          });
         
-        // Wait for all logo loads to complete (or fail)
-        await Promise.allSettled(logoPromises);
+        // Wait for direct logos to load
+        await Promise.allSettled(directLogoPromises);
+        
+        // For any missing logos, use batch API to get them
+        const missingAddresses = tokenAddresses.filter(
+          addr => !loadedImages[addr.toLowerCase()]
+        );
+        
+        if (missingAddresses.length > 0) {
+          const response = await axios.post('/api/token-logos/batch', {
+            addresses: missingAddresses
+          });
+          
+          if (response.data) {
+            // For each returned logo, load the image
+            const logoPromises = Object.entries(response.data).map(async ([address, data]) => {
+              if (data && (data as any).logoUrl) {
+                try {
+                  const img = await loadImage((data as any).logoUrl);
+                  loadedImages[address.toLowerCase()] = img;
+                } catch (e) {
+                  console.warn(`Could not load batch logo for ${address}:`, e);
+                }
+              }
+            });
+            
+            // Wait for all batch logo loads to complete
+            await Promise.allSettled(logoPromises);
+          }
+        }
         
         setTokenImages(loadedImages);
       } catch (error) {
@@ -119,8 +146,8 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       }
     };
     
-    loadTokenLogos();
-  }, [tokens, top5Tokens, hexStakesSummary]);
+    loadTokenImages();
+  }, [tokenAddresses, top5Tokens]);
   
   // Generate share image and save using a large format canvas with actual logos
   const handleDownloadImage = async () => {
