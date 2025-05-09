@@ -619,26 +619,8 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
         </div>
       </Card>
       
-      {/* Buttons for downloading and sharing */}
+      {/* Just keep the Twitter share button */}
       <div className="flex gap-2 mt-4">
-        <Button
-          onClick={handleDownloadImage}
-          disabled={isGeneratingImage}
-          className="flex items-center gap-2 glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
-        >
-          {isGeneratingImage ? (
-            <>
-              <span className="animate-spin h-4 w-4 border-2 border-white/50 border-t-white rounded-full mr-2"></span>
-              Generating...
-            </>
-          ) : (
-            <>
-              <Download size={16} />
-              Download Image
-            </>
-          )}
-        </Button>
-        
         <Button
           onClick={handleTwitterShare}
           className="flex items-center gap-2 glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
