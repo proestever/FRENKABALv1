@@ -116,20 +116,27 @@ export function LoadingProgress({ isLoading, customProgress }: LoadingProgressPr
             // Add bright HEX gradient indicator
             indicator={
               <div 
-                className="h-full w-full absolute progress-shimmer"
+                className="h-full w-full absolute progress-shimmer animate-pulse-subtle"
                 style={{
                   background: 'linear-gradient(90deg, #FFEA00 0%, #FF9800 15%, #FF5722 30%, #F50057 50%, #D500F9 70%, #651FFF 85%, #3D5AFE 100%)',
                   transform: `translateX(-${100 - animatedProgress}%)`,
-                  transition: 'transform 120ms cubic-bezier(0.65, 0, 0.35, 1)',
-                  boxShadow: '0 0 10px rgba(255,80,120,0.7)'
+                  transition: 'transform 200ms cubic-bezier(0.65, 0, 0.35, 1)',
+                  boxShadow: '0 0 10px rgba(255,80,120,0.7), 0 0 15px rgba(255,80,120,0.3)',
+                  backgroundSize: '200% 100%'
                 }}
               />
             }
           />
           
-          <p className="text-xs text-muted-foreground mt-1">
-            {progress.message}
-          </p>
+          <div className="relative h-6 overflow-hidden">
+            <p 
+              className={`text-xs text-muted-foreground mt-1 transition-all duration-300 ${
+                stageTransition ? 'opacity-0 transform -translate-y-2' : 'opacity-100'
+              }`}
+            >
+              {progress.message}
+            </p>
+          </div>
         </div>
       </Card>
     </div>

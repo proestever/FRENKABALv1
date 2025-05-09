@@ -320,3 +320,31 @@
 .bg-token1-color {
   background-color: hsl(var(--token1-color));
 }
+
+/* Animations for the loading progress bar */
+@keyframes shimmer {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.progress-shimmer {
+  animation: shimmer 2s infinite linear;
+  background-size: 200% 100%;
+}
