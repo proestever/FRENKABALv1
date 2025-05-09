@@ -1323,6 +1323,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // API endpoint to get top wallets by API usage
+  app.get("/api/stats/top-wallets", async (_req, res) => {
+    try {
+      const topWallets = await apiStatsService.getTopWalletAddresses(10);
+      return res.json(topWallets);
+    } catch (error) {
+      console.error("Error getting top wallets:", error);
+      return res.status(500).json({ 
+        message: "Failed to retrieve top wallets by API usage",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   app.get("/api/stats/historical", async (req, res) => {
     try {
       // Check if user is admin (only admins can access historical stats)

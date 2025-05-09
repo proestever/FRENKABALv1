@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, AlertCircle, Clock, Server, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Clock, Server, CheckCircle, XCircle, Users } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+
+interface TopWallet {
+  walletAddress: string;
+  callCount: number;
+}
 
 interface WalletApiUsage {
   walletAddress: string;
@@ -35,6 +40,29 @@ export function ApiUsageViewer() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<WalletApiUsage | null>(null);
+  const [topWallets, setTopWallets] = useState<TopWallet[]>([]);
+  const [loadingTopWallets, setLoadingTopWallets] = useState<boolean>(false);
+  
+  // Fetch top wallets on component mount
+  useEffect(() => {
+    const fetchTopWallets = async () => {
+      setLoadingTopWallets(true);
+      try {
+        const response = await fetch('/api/stats/top-wallets');
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setTopWallets(data);
+      } catch (err) {
+        console.error('Error fetching top wallets:', err);
+      } finally {
+        setLoadingTopWallets(false);
+      }
+    };
+    
+    fetchTopWallets();
+  }, []);
   
   const handleFetchStats = async () => {
     if (!walletAddress) {
