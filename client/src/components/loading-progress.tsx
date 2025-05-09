@@ -19,28 +19,44 @@ export function LoadingProgress({ isLoading, customProgress }: LoadingProgressPr
   const serverProgress = useLoadingProgress(isLoading && !customProgress);
   const progress = customProgress || serverProgress;
   const [animatedProgress, setAnimatedProgress] = useState(0);
+  const [prevMessage, setPrevMessage] = useState('');
+  const [stageTransition, setStageTransition] = useState(false);
   
-  // Calculate the progress percentage
+  // Calculate the progress percentage based on batches or artificial progress
   const progressPercent = progress.status === 'complete' 
     ? 100 
     : progress.totalBatches > 0 
-      ? Math.min(Math.round((progress.currentBatch / progress.totalBatches) * 100), 100)
+      ? Math.min(Math.round((progress.currentBatch / progress.totalBatches) * 100), 99) // Cap at 99% until complete
       : 0;
   
-  // Smooth animation for progress updates
+  // Handle message transitions with animation
+  useEffect(() => {
+    if (progress.message !== prevMessage) {
+      setStageTransition(true);
+      const timer = setTimeout(() => {
+        setPrevMessage(progress.message);
+        setStageTransition(false);
+      }, 300); // Match transition duration
+      return () => clearTimeout(timer);
+    }
+  }, [progress.message, prevMessage]);
+  
+  // Improved smooth animation for progress updates
   useEffect(() => {
     // If the actual progress is ahead of our animated progress, gradually catch up
     if (progressPercent > animatedProgress) {
+      // Use a more refined approach for smoother animation
+      const step = Math.max(1, Math.floor((progressPercent - animatedProgress) / 10));
       const interval = setInterval(() => {
         setAnimatedProgress(prev => {
-          const next = prev + 1;
+          const next = Math.min(prev + step, progressPercent);
           if (next >= progressPercent) {
             clearInterval(interval);
             return progressPercent;
           }
           return next;
         });
-      }, 20); // Update every 20ms for smooth animation
+      }, 40); // Slightly slower for more visible progress
       
       return () => clearInterval(interval);
     } else if (progressPercent < animatedProgress) {
