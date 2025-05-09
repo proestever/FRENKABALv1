@@ -35,75 +35,10 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
   const [fkLogoImg, setFkLogoImg] = useState<HTMLImageElement | null>(null);
   const [plsLogoImg, setPlsLogoImg] = useState<HTMLImageElement | null>(null);
   
-  // Load all token images in advance
+  // No need to load images, we'll use colored circles with token symbols
   useEffect(() => {
-    const loadImage = (src: string): Promise<HTMLImageElement> => {
-      return new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image() as HTMLImageElement;
-        img.crossOrigin = 'anonymous';
-        
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
-        
-        // Handle relative URLs
-        if (src.startsWith('/') && !src.startsWith('//')) {
-          img.src = window.location.origin + src;
-        } else {
-          img.src = src;
-        }
-      });
-    };
-    
-    // Load FK logo
-    loadImage(window.location.origin + '/assets/frenklabal_logo.png')
-      .then(setFkLogoImg)
-      .catch(err => console.error('Failed to load FK logo:', err));
-      
-    // Load PLS logo
-    loadImage(window.location.origin + '/assets/pls-logo-optimized.png')
-      .then(setPlsLogoImg)
-      .catch(err => console.error('Failed to load PLS logo:', err));
-    
-    // Load token logos
-    const tokenImagesRecord: Record<string, HTMLImageElement> = {};
-    
-    const tokenLogoPromises = top5Tokens
-      .filter(token => token.logo)
-      .map(token => {
-        return loadImage(token.logo!)
-          .then(img => {
-            tokenImagesRecord[token.address.toLowerCase()] = img;
-          })
-          .catch(err => {
-            console.warn(`Failed to load logo for token ${token.symbol}:`, err);
-          });
-      });
-      
-    // Add HEX logo if applicable
-    if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
-      // Try to find HEX token to get its logo
-      const hexToken = tokens.find(t => t.symbol === 'HEX');
-      if (hexToken && hexToken.logo) {
-        tokenLogoPromises.push(
-          loadImage(hexToken.logo)
-            .then(img => {
-              tokenImagesRecord['0x2b591e99afe9f32eaa6214f7b7629768c40eeb39'] = img;
-            })
-            .catch(err => {
-              console.warn('Failed to load HEX logo:', err);
-            })
-        );
-      }
-    }
-    
-    Promise.all(tokenLogoPromises)
-      .then(() => {
-        setTokenImages(tokenImagesRecord);
-      })
-      .catch(err => {
-        console.error('Error loading token images:', err);
-      });
-  }, [top5Tokens, hexStakesSummary, tokens]);
+    setIsGeneratingImage(false);
+  }, [tokens]);
   
   // Generate share image and save using a large format canvas with actual logos
   const handleDownloadImage = async () => {
@@ -135,24 +70,19 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       ctx.lineWidth = 2;
       ctx.strokeRect(0, 0, canvas.width, canvas.height);
       
-      // Draw the FrenKabal logo if loaded
-      if (fkLogoImg) {
-        ctx.drawImage(fkLogoImg, 40, 40, 60, 60);
-      } else {
-        // Fallback logo
-        ctx.beginPath();
-        ctx.arc(70, 70, 30, 0, Math.PI * 2, false);
-        ctx.fillStyle = '#6752f9';
-        ctx.fill();
-        
-        ctx.font = 'bold 24px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('FK', 70, 70);
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
-      }
+      // Draw FK logo with circle
+      ctx.beginPath();
+      ctx.arc(70, 70, 30, 0, Math.PI * 2, false);
+      ctx.fillStyle = '#6752f9';
+      ctx.fill();
+      
+      ctx.font = 'bold 24px Arial';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('FK', 70, 70);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
       
       // Draw the portfolio name - larger and bolder
       ctx.font = 'bold 38px Arial';
@@ -187,25 +117,19 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       // Draw HEX stakes if available
       let startY = 320;
       if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
-        // Draw HEX logo if available
-        const hexLogoImg = tokenImages['0x2b591e99afe9f32eaa6214f7b7629768c40eeb39'];
-        if (hexLogoImg) {
-          ctx.drawImage(hexLogoImg, 40, startY - 25, 50, 50);
-        } else {
-          // Draw circle for HEX logo placeholder
-          ctx.beginPath();
-          ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
-          ctx.fillStyle = '#9d4cff';
-          ctx.fill();
-          
-          ctx.font = 'bold 16px Arial';
-          ctx.fillStyle = '#FFFFFF';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('HEX', 65, startY);
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'alphabetic';
-        }
+        // Draw circle for HEX logo
+        ctx.beginPath();
+        ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
+        ctx.fillStyle = '#9d4cff';
+        ctx.fill();
+        
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('HEX', 65, startY);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
         
         // Draw HEX stakes text - larger
         ctx.font = 'bold 32px Arial';
@@ -237,27 +161,21 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       ctx.fillText('Top 5 Holdings', 40, startY);
       startY += 60; // More spacing
       
-      // Draw tokens with larger text and actual logos
+      // Draw tokens with larger text and consistent circle logos
       top5Tokens.forEach((token, i) => {
-        // Draw token logo if available
-        const tokenLogoImg = tokenImages[token.address.toLowerCase()];
-        if (tokenLogoImg) {
-          ctx.drawImage(tokenLogoImg, 40, startY - 25, 50, 50);
-        } else {
-          // Draw circle for token logo placeholder
-          ctx.beginPath();
-          ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
-          ctx.fillStyle = getColorFromString(token.symbol);
-          ctx.fill();
-          
-          ctx.font = 'bold 16px Arial';
-          ctx.fillStyle = '#FFFFFF';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(token.symbol.slice(0, 3), 65, startY);
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'alphabetic';
-        }
+        // Draw circle for token logo
+        ctx.beginPath();
+        ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
+        ctx.fillStyle = getColorFromString(token.symbol);
+        ctx.fill();
+        
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(token.symbol.slice(0, 3), 65, startY);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
         
         // Draw token symbol - larger
         ctx.font = 'bold 30px Arial';
@@ -305,24 +223,19 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       ctx.fillStyle = '#888888';
       ctx.fillText('Generated by FrenKabal', 40, footerY);
       
-      // Draw PLS logo if loaded
-      if (plsLogoImg) {
-        ctx.drawImage(plsLogoImg, canvas.width - 140, footerY - 20, 40, 40);
-      } else {
-        // Draw circle for PLS logo placeholder
-        ctx.beginPath();
-        ctx.arc(canvas.width - 120, footerY, 20, 0, Math.PI * 2, false);
-        ctx.fillStyle = '#e93578';
-        ctx.fill();
-        
-        ctx.font = 'bold 16px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('PLS', canvas.width - 120, footerY);
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
-      }
+      // Draw circle for PLS logo
+      ctx.beginPath();
+      ctx.arc(canvas.width - 120, footerY, 20, 0, Math.PI * 2, false);
+      ctx.fillStyle = '#e93578';
+      ctx.fill();
+      
+      ctx.font = 'bold 16px Arial';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('PLS', canvas.width - 120, footerY);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
       
       // Draw PulseChain text
       ctx.font = 'bold 22px Arial';
@@ -367,26 +280,32 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
     return `hsl(${hue}, 70%, 60%)`;
   };
 
-  // Share on Twitter
-  const handleTwitterShare = async () => {
-    if (!cardRef.current) return;
-    
-    // Create a text for the tweet
-    let tweetText = `Check out my ${portfolioName ? portfolioName + ' ' : ''}PulseChain portfolio worth ${formatCurrency(wallet.totalValue || 0)}`;
-    
-    // Add HEX stakes info if available
-    if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
-      tweetText += ` including ${formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0)} in HEX stakes`;
+  // Share on Twitter - text only, no image upload
+  const handleTwitterShare = () => {
+    try {
+      // Create a text for the tweet
+      let tweetText = `Check out my ${portfolioName ? portfolioName + ' ' : ''}PulseChain portfolio worth ${formatCurrency(wallet.totalValue || 0)}`;
+      
+      // Add HEX stakes info if available
+      if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
+        tweetText += ` including ${formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0)} in HEX stakes`;
+      }
+      
+      tweetText += ` via @FrenKabal!`;
+      
+      // Use Twitter's intent URL system for text-only sharing
+      const twitterIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent('https://frenkabal.replit.app/')}`;
+      
+      // Open Twitter in a new window
+      window.open(twitterIntentUrl, '_blank');
+    } catch (error) {
+      console.error('Error sharing to Twitter:', error);
+      toast({
+        title: "Twitter share failed",
+        description: "Could not open Twitter share dialog. Please try again.",
+        variant: "destructive"
+      });
     }
-    
-    tweetText += ` via @FrenKabal!`;
-    
-    // We'll share without trying to include the image since that's causing errors
-    // Just use Twitter's intent URL system to share the text
-    const twitterIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent('https://frenkabal.replit.app/')}`;
-    
-    // Open Twitter in a new window
-    window.open(twitterIntentUrl, '_blank');
   };
   
   return (
