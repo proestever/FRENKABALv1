@@ -275,6 +275,63 @@ export function ApiUsageViewer() {
           </div>
         )}
       </Card>
+
+      {/* Top Wallets Section */}
+      <Card className="p-4 space-y-4 shadow-md backdrop-blur-sm bg-card/80 border-muted mt-6">
+        <div className="flex items-center mb-4">
+          <Users className="h-6 w-6 text-blue-500 mr-2" />
+          <h2 className="text-xl font-semibold">Top Wallet Activity</h2>
+        </div>
+        
+        {loadingTopWallets ? (
+          <div className="py-8 flex justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : topWallets.length === 0 ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <p>No wallet activity data available</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-muted">
+                  <th className="text-left py-2">Wallet Address</th>
+                  <th className="text-right py-2">API Calls</th>
+                  <th className="text-right py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topWallets.map((wallet, i) => (
+                  <tr key={i} className="border-b border-muted/40 hover:bg-muted/20">
+                    <td className="py-2 font-mono">
+                      {wallet.walletAddress.substring(0, 6)}...{wallet.walletAddress.substring(wallet.walletAddress.length - 4)}
+                    </td>
+                    <td className="text-right py-2">{wallet.callCount}</td>
+                    <td className="text-right py-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setWalletAddress(wallet.walletAddress);
+                          handleFetchStats();
+                        }}
+                        className="text-blue-500 hover:text-blue-700"
+                      >
+                        View Details
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        
+        <div className="text-sm text-muted-foreground mt-4">
+          <p>This table shows the wallets making the most API calls to FrenKabal. Click "View Details" to analyze a specific wallet's usage patterns.</p>
+        </div>
+      </Card>
     </div>
   );
 }
