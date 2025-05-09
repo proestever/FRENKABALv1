@@ -28,7 +28,7 @@ class CacheService {
     this.config = {
       walletDataTTL: 3 * 60 * 1000, // 3 minutes for wallet data
       transactionsTTL: 10 * 60 * 1000, // 10 minutes for transaction data
-      tokenPriceTTL: 5 * 60 * 1000 // 5 minutes for token prices
+      tokenPriceTTL: 30 * 60 * 1000 // 30 minutes for token prices (increased from 5 minutes to reduce API calls)
     };
 
     // Log cache initialization

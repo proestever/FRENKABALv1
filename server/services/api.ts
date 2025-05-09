@@ -694,6 +694,223 @@ export async function getTokenPrice(tokenAddress: string): Promise<MoralisTokenP
 }
 
 /**
+ * Get multiple token prices at once from Moralis API (with caching)
+ * This function dramatically reduces API calls by batching requests
+ */
+export async function getMultipleTokenPrices(tokenAddresses: string[]): Promise<Record<string, MoralisTokenPriceResponse>> {
+  if (!tokenAddresses || tokenAddresses.length === 0) {
+    console.log('No token addresses provided for batch price fetch');
+    return {};
+  }
+  
+  // Normalize all addresses
+  const normalizedAddresses = tokenAddresses.map(addr => addr.toLowerCase());
+  
+  // Track API call - only track once for the batch
+  trackApiCall(null, 'getMultipleTokenPrices');
+  
+  console.log(`Fetching prices for ${normalizedAddresses.length} tokens in batch`);
+  
+  // Check cache first and collect addresses that need fetching
+  const results: Record<string, MoralisTokenPriceResponse> = {};
+  const addressesToFetch: string[] = [];
+  
+  // First pass: check cache and collect uncached addresses
+  for (const address of normalizedAddresses) {
+    const cachedPrice = cacheService.getTokenPrice(address);
+    if (cachedPrice) {
+      results[address] = cachedPrice;
+    } else {
+      // Special case for native PLS token
+      if (address === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+        // We'll handle this separately
+        continue;
+      }
+      addressesToFetch.push(address);
+    }
+  }
+  
+  // If all prices were in cache, return early
+  if (addressesToFetch.length === 0) {
+    console.log('All token prices found in cache, no need for API calls');
+    
+    // Check if we need to handle PLS token
+    if (normalizedAddresses.includes('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')) {
+      const plsPrice = await getTokenPrice('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+      if (plsPrice) {
+        results['0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'] = plsPrice;
+      }
+    }
+    
+    return results;
+  }
+  
+  console.log(`Found ${normalizedAddresses.length - addressesToFetch.length} prices in cache, fetching ${addressesToFetch.length} from API`);
+  
+  // Handle native PLS token if needed
+  if (normalizedAddresses.includes('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')) {
+    const plsPrice = await getTokenPrice('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+    if (plsPrice) {
+      results['0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'] = plsPrice;
+    }
+  }
+  
+  // If we have no addresses left after handling special cases, return early
+  if (addressesToFetch.length === 0) {
+    return results;
+  }
+  
+  try {
+    // Create an array of token objects required by the Moralis API
+    const tokenObjects = addressesToFetch.map(address => ({
+      tokenAddress: address
+    }));
+    
+    console.log(`Fetching ${tokenObjects.length} token prices from Moralis in a single batch request`);
+    
+    // Use the batch price API from Moralis
+    const response = await Moralis.EvmApi.token.getMultipleTokenPrices({
+      chain: "0x171", // PulseChain's chain ID in hex
+      include: "percent_change"
+    }, {
+      tokens: tokenObjects
+    });
+    
+    console.log(`Successfully fetched ${response.raw.length} token prices in batch`);
+    
+    // Process each token price and add to results
+    for (const priceData of response.raw) {
+      if (priceData && typeof priceData.tokenAddress === 'string') {
+        const tokenAddress = priceData.tokenAddress.toLowerCase();
+        
+        // Create a complete response with all required fields
+        const completeData: MoralisTokenPriceResponse = {
+          tokenName: priceData.tokenName || 'Unknown Token',
+          tokenSymbol: priceData.tokenSymbol || 'UNKNOWN',
+          tokenDecimals: priceData.tokenDecimals || '18',
+          tokenLogo: priceData.tokenLogo || getDefaultLogo(priceData.tokenSymbol),
+          nativePrice: priceData.nativePrice || {
+            value: "1000000000000000000",
+            decimals: 18,
+            name: "PLS",
+            symbol: "PLS",
+            address: PLS_TOKEN_ADDRESS
+          },
+          usdPrice: priceData.usdPrice || 0,
+          usdPriceFormatted: priceData.usdPriceFormatted || '0',
+          exchangeName: priceData.exchangeName || 'Unknown Exchange',
+          exchangeAddress: priceData.exchangeAddress || '',
+          tokenAddress: tokenAddress,
+          blockTimestamp: priceData.blockTimestamp || new Date().toISOString(),
+          verifiedContract: priceData.verifiedContract || false,
+          securityScore: priceData.securityScore || 50
+        };
+        
+        // Cache the result
+        cacheService.setTokenPrice(tokenAddress, completeData);
+        
+        // Add to results
+        results[tokenAddress] = completeData;
+      }
+    }
+    
+    // Check if we need to use DexScreener for any tokens that weren't found
+    const missingAddresses = addressesToFetch.filter(addr => !results[addr]);
+    if (missingAddresses.length > 0) {
+      console.log(`Using DexScreener for ${missingAddresses.length} tokens not found in Moralis batch`);
+      
+      // Get DexScreener prices for missing tokens - process one at a time
+      for (const address of missingAddresses) {
+        try {
+          // Individual DexScreener requests
+          const dexScreenerPrice = await getTokenPriceFromDexScreener(address);
+          
+          if (dexScreenerPrice !== null && typeof dexScreenerPrice === 'number') {
+            // Get token metadata if available
+            let symbol = '';
+            let name = '';
+            let logoUrl = null;
+            
+            try {
+              const storedLogo = await storage.getTokenLogo(address);
+              if (storedLogo) {
+                symbol = storedLogo.symbol || '';
+                name = storedLogo.name || '';
+                logoUrl = storedLogo.logoUrl;
+              }
+            } catch (logoErr) {
+              // Silently handle errors
+            }
+            
+            // Create a Moralis-like response
+            const result: MoralisTokenPriceResponse = {
+              tokenName: name || 'Unknown Token',
+              tokenSymbol: symbol || 'UNKNOWN',
+              tokenDecimals: "18",
+              tokenLogo: logoUrl || getDefaultLogo(symbol),
+              nativePrice: {
+                value: "1000000000000000000",
+                decimals: 18,
+                name: "PLS",
+                symbol: "PLS",
+                address: PLS_TOKEN_ADDRESS
+              },
+              usdPrice: dexScreenerPrice,
+              usdPriceFormatted: dexScreenerPrice.toString(),
+              exchangeName: "DexScreener (Individual)",
+              exchangeAddress: "",
+              tokenAddress: address,
+              blockTimestamp: new Date().toISOString(),
+              verifiedContract: false,
+              securityScore: 50
+            };
+            
+            // Cache and add to results
+            cacheService.setTokenPrice(address, result);
+            results[address] = result;
+          }
+        } catch (dexScreenerError) {
+          console.error(`Error fetching price from DexScreener for ${address}:`, dexScreenerError);
+        }
+          
+      }
+    }
+    
+    return results;
+  } catch (error) {
+    console.error('Error fetching multiple token prices from Moralis:', error);
+    
+    // Fall back to individual requests for tokens that weren't found in cache
+    console.log(`Falling back to individual price requests for ${addressesToFetch.length} tokens`);
+    
+    // Process in smaller batches to avoid rate limiting
+    const FALLBACK_BATCH_SIZE = 5;
+    
+    for (let i = 0; i < addressesToFetch.length; i += FALLBACK_BATCH_SIZE) {
+      const batchAddresses = addressesToFetch.slice(i, i + FALLBACK_BATCH_SIZE);
+      
+      await Promise.all(batchAddresses.map(async (address: string) => {
+        try {
+          const priceData = await getTokenPrice(address);
+          if (priceData) {
+            results[address] = priceData;
+          }
+        } catch (err) {
+          console.error(`Error in fallback individual price fetch for ${address}:`, err);
+        }
+      }));
+      
+      // Add delay between batches
+      if (i + FALLBACK_BATCH_SIZE < addressesToFetch.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    return results;
+  }
+}
+
+/**
  * Get default logo URL for common tokens
  */
 function getDefaultLogo(symbol: string | null | undefined): string {
