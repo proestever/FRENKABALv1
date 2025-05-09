@@ -195,11 +195,6 @@ function Header() {
                   </DropdownMenuItem>
                   
                   {/* Admin link - only show for the admin wallet address */}
-                  <DropdownMenuItem onClick={() => setLocation("/api-usage")} className="cursor-pointer dropdown-item-hover">
-                    <BarChart className="mr-2 h-4 w-4" />
-                    <span>API Usage</span>
-                  </DropdownMenuItem>
-                  
                   {account && account.toLowerCase() === '0x592139a3f8cf019f628a152fc1262b8aef5b7199'.toLowerCase() && (
                     <DropdownMenuItem onClick={() => setLocation("/admin")} className="cursor-pointer dropdown-item-hover">
                       <Settings className="mr-2 h-4 w-4" />
@@ -381,7 +376,7 @@ function Router() {
           <Route path="/portfolio/:portfolioId" component={Home} />
           <Route path="/donations" component={Donations} />
           <Route path="/admin" component={AdminPage} />
-          <Route path="/api-usage" component={ApiUsagePage} />
+          <Route path="/admin/api-usage" component={ApiUsagePage} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
         </Switch>
