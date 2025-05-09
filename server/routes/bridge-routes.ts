@@ -62,7 +62,7 @@ router.post('/min-amount', async (req: Request, res: Response) => {
   try {
     const { fromCurrency, toCurrency } = MinAmountRequestSchema.parse(req.body);
     
-    const response = await fetch(`${CHANGE_NOW_API_BASE}/min-amount/${fromCurrency}_${toCurrency}`);
+    const response = await fetch(`${CHANGE_NOW_API_BASE}/min-amount/${fromCurrency}_${toCurrency}?api_key=${process.env.CHANGE_NOW_API_KEY || ''}`);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -116,13 +116,15 @@ router.post('/exchange-range', async (req: Request, res: Response) => {
         });
       }
       
-      const data = await response.json();
+      const data = await response.json() as any;
+      console.log('Exchange amount response:', data);
+      
       // Format the response to match what our frontend expects
       return res.json({
         fromAmount: fromAmount,
-        toAmount: data.estimatedAmount.toString(),
+        toAmount: data.estimatedAmount ? data.estimatedAmount.toString() : "0",
         flow: "standard",
-        rate: data.rate.toString(),
+        rate: data.rate ? data.rate.toString() : "0",
         validUntil: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes from now
         transactionSpeedForecast: "10 minutes"
       });
