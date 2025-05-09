@@ -1366,6 +1366,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register portfolio routes
   app.use("/api", portfolioRoutes);
+  
+  // API Routes for DexScreener preferred tokens management
+  
+  // Get all DexScreener preferred tokens
+  app.get("/api/dexscreener-preferred-tokens", async (_req, res) => {
+    try {
+      const tokens = await getAllDexScreenerPreferredTokens();
+      return res.json(tokens);
+    } catch (error) {
+      console.error("Error fetching DexScreener preferred tokens:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch DexScreener preferred tokens",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Add a token to DexScreener preferred list
+  app.post("/api/dexscreener-preferred-tokens", async (req, res) => {
+    try {
+      const { tokenAddress, reason, symbol, name } = req.body;
+      
+      if (!tokenAddress || typeof tokenAddress !== 'string') {
+        return res.status(400).json({ message: "Invalid token address" });
+      }
+      
+      // Validate token address format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(tokenAddress)) {
+        return res.status(400).json({ message: "Invalid token address format" });
+      }
+      
+      await addDexScreenerPreferredToken({
+        tokenAddress,
+        reason: reason || null,
+        symbol: symbol || null,
+        name: name || null
+      });
+      
+      return res.json({ 
+        message: "Token added to DexScreener preferred list",
+        tokenAddress
+      });
+    } catch (error) {
+      console.error("Error adding token to DexScreener preferred list:", error);
+      return res.status(500).json({ 
+        message: "Failed to add token to DexScreener preferred list",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Remove a token from DexScreener preferred list
+  app.delete("/api/dexscreener-preferred-tokens/:tokenAddress", async (req, res) => {
+    try {
+      const { tokenAddress } = req.params;
+      
+      if (!tokenAddress || typeof tokenAddress !== 'string') {
+        return res.status(400).json({ message: "Invalid token address" });
+      }
+      
+      // Validate token address format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(tokenAddress)) {
+        return res.status(400).json({ message: "Invalid token address format" });
+      }
+      
+      const success = await removeDexScreenerPreferredToken(tokenAddress);
+      
+      if (success) {
+        return res.json({ 
+          message: "Token removed from DexScreener preferred list",
+          tokenAddress
+        });
+      } else {
+        return res.status(404).json({ 
+          message: "Token not found in DexScreener preferred list",
+          tokenAddress
+        });
+      }
+    } catch (error) {
+      console.error("Error removing token from DexScreener preferred list:", error);
+      return res.status(500).json({ 
+        message: "Failed to remove token from DexScreener preferred list",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
 
   const httpServer = createServer(app);
 

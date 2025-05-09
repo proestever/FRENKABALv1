@@ -67,12 +67,13 @@ export async function addDexScreenerPreferredToken(tokenData: InsertDexScreenerP
     
     if (existing.length > 0) {
       // Update existing record
+      const now = new Date();
       await db.update(dexScreenerPreferredTokens)
         .set({
           reason: tokenData.reason,
           symbol: tokenData.symbol,
           name: tokenData.name,
-          updatedAt: new Date()
+          updatedAt: now
         })
         .where(eq(dexScreenerPreferredTokens.tokenAddress, normalizedAddress));
       
