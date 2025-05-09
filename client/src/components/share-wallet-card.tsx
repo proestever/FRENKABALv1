@@ -11,6 +11,7 @@ import plsLogo from '../assets/pls-logo-optimized.png';
 import frenkabalLogo from '../assets/frenklabal_logo.png';
 import { HexStakeSummary } from '@/hooks/use-hex-stakes';
 import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
 
 interface ShareWalletCardProps {
   wallet: Wallet;
@@ -35,10 +36,91 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
   const [fkLogoImg, setFkLogoImg] = useState<HTMLImageElement | null>(null);
   const [plsLogoImg, setPlsLogoImg] = useState<HTMLImageElement | null>(null);
   
-  // No need to load images, we'll use colored circles with token symbols
+  // Load token images for better looking share cards
   useEffect(() => {
-    setIsGeneratingImage(false);
-  }, [tokens]);
+    const loadTokenLogos = async () => {
+      try {
+        // Load the FrenKabal logo
+        const loadImage = (src: string): Promise<HTMLImageElement> => {
+          return new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = document.createElement("img");
+            img.crossOrigin = "anonymous";
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+            img.src = src;
+          });
+        };
+        
+        // Load FrenKabal logo
+        try {
+          const fkImg = await loadImage(frenkabalLogo);
+          setFkLogoImg(fkImg);
+        } catch (e) {
+          console.warn("Could not load FK logo:", e);
+        }
+        
+        // Load PLS logo
+        try {
+          const plsImg = await loadImage(plsLogo);
+          setPlsLogoImg(plsImg);
+        } catch (e) {
+          console.warn("Could not load PLS logo:", e);
+        }
+        
+        // Create a list of tokens to load logos for
+        const tokensToLoad = [...top5Tokens];
+        
+        // Add HEX if needed
+        if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
+          const hexTokenAddress = "0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39";
+          const hexTokenPresent = tokensToLoad.some(t => t.address.toLowerCase() === hexTokenAddress.toLowerCase());
+          
+          if (!hexTokenPresent) {
+            // Attempt to find HEX in the full token list
+            const hexToken = tokens.find(t => t.symbol === 'HEX' || t.address.toLowerCase() === hexTokenAddress.toLowerCase());
+            if (hexToken) {
+              tokensToLoad.push(hexToken);
+            }
+          }
+        }
+        
+        // Create a record to store token images
+        const loadedImages: Record<string, HTMLImageElement> = {};
+        
+        // Try to load token logos
+        const logoPromises = tokensToLoad.map(async (token) => {
+          if (!token.logo) return;
+          
+          try {
+            // First check if we can get the logo from the server cache
+            const logoResponse = await axios.get(`/api/token-logo/${token.address}`);
+            if (logoResponse.data && logoResponse.data.logo_url) {
+              const img = await loadImage(logoResponse.data.logo_url);
+              loadedImages[token.address.toLowerCase()] = img;
+              return;
+            }
+            
+            // If that fails, try to use the token's logo URL directly
+            if (token.logo) {
+              const img = await loadImage(token.logo);
+              loadedImages[token.address.toLowerCase()] = img;
+            }
+          } catch (e) {
+            console.warn(`Could not load logo for ${token.symbol}:`, e);
+          }
+        });
+        
+        // Wait for all logo loads to complete (or fail)
+        await Promise.allSettled(logoPromises);
+        
+        setTokenImages(loadedImages);
+      } catch (error) {
+        console.error("Error loading token logos:", error);
+      }
+    };
+    
+    loadTokenLogos();
+  }, [tokens, top5Tokens, hexStakesSummary]);
   
   // Generate share image and save using a large format canvas with actual logos
   const handleDownloadImage = async () => {
@@ -70,19 +152,41 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       ctx.lineWidth = 2;
       ctx.strokeRect(0, 0, canvas.width, canvas.height);
       
-      // Draw FK logo with circle
-      ctx.beginPath();
-      ctx.arc(70, 70, 30, 0, Math.PI * 2, false);
-      ctx.fillStyle = '#6752f9';
-      ctx.fill();
-      
-      ctx.font = 'bold 24px Arial';
-      ctx.fillStyle = '#FFFFFF';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('FK', 70, 70);
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'alphabetic';
+      // Draw FK logo from image if available
+      if (fkLogoImg) {
+        try {
+          ctx.drawImage(fkLogoImg, 40, 40, 60, 60);
+        } catch (e) {
+          console.warn("Error drawing FK logo:", e);
+          // Fallback to circle
+          ctx.beginPath();
+          ctx.arc(70, 70, 30, 0, Math.PI * 2, false);
+          ctx.fillStyle = '#6752f9';
+          ctx.fill();
+          
+          ctx.font = 'bold 24px Arial';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('FK', 70, 70);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+        }
+      } else {
+        // Fallback to circle if logo not loaded
+        ctx.beginPath();
+        ctx.arc(70, 70, 30, 0, Math.PI * 2, false);
+        ctx.fillStyle = '#6752f9';
+        ctx.fill();
+        
+        ctx.font = 'bold 24px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('FK', 70, 70);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+      }
       
       // Draw the portfolio name - larger and bolder
       ctx.font = 'bold 38px Arial';
@@ -117,19 +221,44 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       // Draw HEX stakes if available
       let startY = 320;
       if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
-        // Draw circle for HEX logo
-        ctx.beginPath();
-        ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
-        ctx.fillStyle = '#9d4cff';
-        ctx.fill();
+        const hexTokenAddress = "0x2b591e99afe9f32eaa6214f7b7629768c40eeb39";
+        const hexLogoImg = tokenImages[hexTokenAddress.toLowerCase()];
         
-        ctx.font = 'bold 16px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('HEX', 65, startY);
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
+        if (hexLogoImg) {
+          // Draw the actual HEX logo if available
+          try {
+            ctx.drawImage(hexLogoImg, 40, startY - 25, 50, 50);
+          } catch (e) {
+            console.warn("Error drawing HEX logo:", e);
+            // Fallback to circle
+            ctx.beginPath();
+            ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
+            ctx.fillStyle = '#9d4cff';
+            ctx.fill();
+            
+            ctx.font = 'bold 16px Arial';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('HEX', 65, startY);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'alphabetic';
+          }
+        } else {
+          // Draw circle for HEX logo if image not loaded
+          ctx.beginPath();
+          ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
+          ctx.fillStyle = '#9d4cff';
+          ctx.fill();
+          
+          ctx.font = 'bold 16px Arial';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('HEX', 65, startY);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+        }
         
         // Draw HEX stakes text - larger
         ctx.font = 'bold 32px Arial';
@@ -161,21 +290,45 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       ctx.fillText('Top 5 Holdings', 40, startY);
       startY += 60; // More spacing
       
-      // Draw tokens with larger text and consistent circle logos
+      // Draw tokens with larger text and use actual logos when available
       top5Tokens.forEach((token, i) => {
-        // Draw circle for token logo
-        ctx.beginPath();
-        ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
-        ctx.fillStyle = getColorFromString(token.symbol);
-        ctx.fill();
+        const tokenLogoImg = tokenImages[token.address.toLowerCase()];
         
-        ctx.font = 'bold 16px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(token.symbol.slice(0, 3), 65, startY);
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
+        if (tokenLogoImg) {
+          // Draw the actual token logo if available
+          try {
+            ctx.drawImage(tokenLogoImg, 40, startY - 25, 50, 50);
+          } catch (e) {
+            console.warn(`Error drawing ${token.symbol} logo:`, e);
+            // Fallback to circle with token symbol
+            ctx.beginPath();
+            ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
+            ctx.fillStyle = getColorFromString(token.symbol);
+            ctx.fill();
+            
+            ctx.font = 'bold 16px Arial';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(token.symbol.slice(0, 3), 65, startY);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'alphabetic';
+          }
+        } else {
+          // Fallback to circle with token symbol
+          ctx.beginPath();
+          ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
+          ctx.fillStyle = getColorFromString(token.symbol);
+          ctx.fill();
+          
+          ctx.font = 'bold 16px Arial';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(token.symbol.slice(0, 3), 65, startY);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+        }
         
         // Draw token symbol - larger
         ctx.font = 'bold 30px Arial';
@@ -223,19 +376,41 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       ctx.fillStyle = '#888888';
       ctx.fillText('Generated by FrenKabal', 40, footerY);
       
-      // Draw circle for PLS logo
-      ctx.beginPath();
-      ctx.arc(canvas.width - 120, footerY, 20, 0, Math.PI * 2, false);
-      ctx.fillStyle = '#e93578';
-      ctx.fill();
-      
-      ctx.font = 'bold 16px Arial';
-      ctx.fillStyle = '#FFFFFF';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('PLS', canvas.width - 120, footerY);
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'alphabetic';
+      // Try to draw PLS logo from image if available
+      if (plsLogoImg) {
+        try {
+          ctx.drawImage(plsLogoImg, canvas.width - 150, footerY - 25, 40, 40);
+        } catch (e) {
+          console.warn("Error drawing PLS logo:", e);
+          // Fallback to circle
+          ctx.beginPath();
+          ctx.arc(canvas.width - 120, footerY, 20, 0, Math.PI * 2, false);
+          ctx.fillStyle = '#e93578';
+          ctx.fill();
+          
+          ctx.font = 'bold 16px Arial';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('PLS', canvas.width - 120, footerY);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+        }
+      } else {
+        // Fallback to circle if no logo loaded
+        ctx.beginPath();
+        ctx.arc(canvas.width - 120, footerY, 20, 0, Math.PI * 2, false);
+        ctx.fillStyle = '#e93578';
+        ctx.fill();
+        
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('PLS', canvas.width - 120, footerY);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+      }
       
       // Draw PulseChain text
       ctx.font = 'bold 22px Arial';
