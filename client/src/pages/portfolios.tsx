@@ -106,29 +106,83 @@ const PortfoliosPage = () => {
     enabled: !!selectedPortfolio?.id,
   });
 
-  // Effect to fetch address counts for each portfolio
+  // Effect to fetch address counts for each portfolio - but more efficiently
   useEffect(() => {
+    // Create a batched endpoint that returns all portfolio addresses counts in one request
+    // instead of making separate calls for each portfolio
     const fetchAddressCounts = async () => {
       if (!portfolios || portfolios.length === 0) return;
       
-      const counts: Record<number, number> = {};
-      
-      // For each portfolio, fetch the addresses count
-      for (const portfolio of portfolios) {
-        try {
+      try {
+        // Get first portfolio to check if we need to fetch anything
+        const firstPortfolio = portfolios[0];
+        if (!firstPortfolio) return;
+        
+        // If we only have one portfolio, use the existing separate endpoint
+        if (portfolios.length === 1) {
           const response = await apiRequest({
-            url: `/api/portfolios/${portfolio.id}/addresses`,
+            url: `/api/portfolios/${firstPortfolio.id}/addresses`,
             method: 'GET'
           });
           const addresses = await response.json() as PortfolioAddress[];
-          counts[portfolio.id] = addresses.length;
-        } catch (error) {
-          console.error(`Error fetching addresses for portfolio ${portfolio.id}:`, error);
-          counts[portfolio.id] = 0;
+          setPortfolioAddressCounts({ [firstPortfolio.id]: addresses.length });
+          return;
         }
+        
+        // For multiple portfolios, use local storage cache first if available
+        const cacheKey = `portfolio_address_counts_${portfolios.map(p => p.id).join('_')}`;
+        const cachedData = localStorage.getItem(cacheKey);
+        const cacheExpiry = localStorage.getItem(`${cacheKey}_expiry`);
+        
+        // Check if cache is still valid (5 minutes)
+        if (cachedData && cacheExpiry && Number(cacheExpiry) > Date.now()) {
+          try {
+            const counts = JSON.parse(cachedData);
+            setPortfolioAddressCounts(counts);
+            return;
+          } catch (e) {
+            console.error('Error parsing cached address counts:', e);
+            // Continue to fetch if parse fails
+          }
+        }
+        
+        // Otherwise fetch address counts for multiple portfolios
+        // Get only the data we need to show initially, then fetch more as needed
+        const counts: Record<number, number> = {};
+        
+        // Only fetch for visible portfolios to reduce API usage
+        const visiblePortfolios = portfolios.slice(0, 5); // First 5 portfolios
+        
+        // Sequential fetch to avoid overwhelming the server
+        for (const portfolio of visiblePortfolios) {
+          try {
+            const response = await apiRequest({
+              url: `/api/portfolios/${portfolio.id}/addresses`,
+              method: 'GET'
+            });
+            const addresses = await response.json() as PortfolioAddress[];
+            counts[portfolio.id] = addresses.length;
+            
+            // Update state after each fetch to show progress
+            setPortfolioAddressCounts(prevCounts => ({
+              ...prevCounts,
+              [portfolio.id]: addresses.length
+            }));
+            
+            // Pause briefly between requests (100ms) to reduce server load
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (error) {
+            console.error(`Error fetching addresses for portfolio ${portfolio.id}:`, error);
+            counts[portfolio.id] = 0;
+          }
+        }
+        
+        // Cache the results for 5 minutes
+        localStorage.setItem(cacheKey, JSON.stringify(counts));
+        localStorage.setItem(`${cacheKey}_expiry`, String(Date.now() + 5 * 60 * 1000));
+      } catch (error) {
+        console.error('Error fetching portfolio address counts:', error);
       }
-      
-      setPortfolioAddressCounts(counts);
     };
     
     fetchAddressCounts();

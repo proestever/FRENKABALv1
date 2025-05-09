@@ -52,38 +52,37 @@ export function useAllWalletTokens(walletAddress: string | null) {
     queryFn: () => walletAddress ? fetchAllWalletTokens(walletAddress) : Promise.reject('No wallet address'),
   });
   
-  // Poll loading progress during fetching
+  // Set loading progress status without polling
   useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null;
-    
-    // Only poll when we're actively fetching
+    // When fetching starts, update the progress status
     if (isFetching) {
-      // Poll loading progress every 500ms
-      intervalId = setInterval(async () => {
-        try {
-          const response = await fetch('/api/loading-progress');
-          if (response.ok) {
-            const progressData = await response.json();
-            setProgress(progressData);
+      setProgress({
+        currentBatch: 1,
+        totalBatches: 5, // Simplified estimate
+        status: 'loading',
+        message: 'Fetching wallet data...'
+      });
+      
+      // Make a single request to get the current server-side progress
+      // This will give us initial information, but we won't keep polling
+      fetch('/api/loading-progress')
+        .then(response => response.ok ? response.json() : null)
+        .then(data => {
+          if (data) {
+            setProgress(data);
           }
-        } catch (error) {
+        })
+        .catch(error => {
           console.error('Error fetching loading progress:', error);
-        }
-      }, 500);
+        });
     } else {
       // When not fetching, set status to complete or error
       setProgress(prev => ({
         ...prev,
-        status: isError ? 'error' : (walletData ? 'complete' : prev.status)
+        status: isError ? 'error' : (walletData ? 'complete' : prev.status),
+        message: isError ? 'Error loading wallet data' : (walletData ? 'Wallet data loaded successfully' : prev.message)
       }));
     }
-    
-    // Clean up interval on unmount or when fetching status changes
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
   }, [isFetching, isError, walletData]);
   
   return {
