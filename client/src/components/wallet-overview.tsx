@@ -236,6 +236,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
         wallet={wallet}
         portfolioName={portfolioName}
         tokens={wallet.tokens ? ensureProcessedTokens(wallet.tokens) : []}
+        hexStakesSummary={manualHexSummary.stakeCount > 0 ? manualHexSummary : null}
       />
       
       <Card className="p-6 glass-card shadow-lg border-white/15 h-full">

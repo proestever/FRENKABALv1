@@ -10,6 +10,7 @@ import { ProcessedToken } from "server/types";
 import { ShareWalletCard } from "./share-wallet-card";
 import { useState, useEffect } from "react";
 import { getHiddenTokens } from "@/lib/api";
+import { HexStakeSummary } from "@/hooks/use-hex-stakes";
 
 // Helper function to ensure tokens conform to ProcessedToken interface
 function ensureProcessedTokens(tokens: any[]): ProcessedToken[] {
@@ -57,6 +58,7 @@ interface ShareWalletDialogProps {
   wallet: Wallet;
   portfolioName?: string;
   tokens: ProcessedToken[];
+  hexStakesSummary?: HexStakeSummary | null;
 }
 
 export function ShareWalletDialog({
@@ -65,6 +67,7 @@ export function ShareWalletDialog({
   wallet,
   portfolioName,
   tokens,
+  hexStakesSummary
 }: ShareWalletDialogProps) {
   const [hiddenTokens, setHiddenTokens] = useState<string[]>([]);
   const [visibleTokens, setVisibleTokens] = useState<ProcessedToken[]>([]);
@@ -96,7 +99,13 @@ export function ShareWalletDialog({
   }, [tokens, hiddenTokens]);
   
   // Calculate visible wallet total
-  const visibleTotal = visibleTokens.reduce((sum, token) => sum + (token.value || 0), 0);
+  let visibleTotal = visibleTokens.reduce((sum, token) => sum + (token.value || 0), 0);
+  
+  // Add HEX stakes value if available
+  if (hexStakesSummary && hexStakesSummary.totalCombinedValueUsd > 0) {
+    visibleTotal += hexStakesSummary.totalCombinedValueUsd;
+  }
+  
   const visibleWallet = {
     ...wallet,
     totalValue: visibleTotal
@@ -117,6 +126,7 @@ export function ShareWalletDialog({
             wallet={visibleWallet} 
             portfolioName={portfolioName}
             tokens={visibleTokens}
+            hexStakesSummary={hexStakesSummary}
           />
         </div>
       </DialogContent>

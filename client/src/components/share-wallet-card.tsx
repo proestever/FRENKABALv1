@@ -10,14 +10,16 @@ import { toPng } from 'html-to-image';
 import { saveAs } from 'file-saver';
 import plsLogo from '../assets/pls-logo-optimized.png';
 import frenkabalLogo from '../assets/frenklabal_logo.png';
+import { HexStakeSummary } from '@/hooks/use-hex-stakes';
 
 interface ShareWalletCardProps {
   wallet: Wallet;
   portfolioName?: string;
   tokens: ProcessedToken[];
+  hexStakesSummary?: HexStakeSummary | null;
 }
 
-export function ShareWalletCard({ wallet, portfolioName, tokens }: ShareWalletCardProps) {
+export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummary }: ShareWalletCardProps) {
   // Reference to the card element we want to capture
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +64,16 @@ export function ShareWalletCard({ wallet, portfolioName, tokens }: ShareWalletCa
       const file = new File([blob], 'portfolio.png', { type: 'image/png' });
       
       // Create a text for the tweet
-      const text = `Check out my ${portfolioName ? portfolioName + ' ' : ''}PulseChain portfolio worth ${formatCurrency(wallet.totalValue || 0)} via @FrenKabal! `;
+      let tweetText = `Check out my ${portfolioName ? portfolioName + ' ' : ''}PulseChain portfolio worth ${formatCurrency(wallet.totalValue || 0)}`;
+      
+      // Add HEX stakes info if available
+      if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
+        tweetText += ` including ${formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0)} in HEX stakes`;
+      }
+      
+      tweetText += ` via @FrenKabal!`;
+      
+      const text = tweetText;
       
       // Create the Twitter intent URL
       const twitterIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://frenkabal.replit.app/')}`;
@@ -102,6 +113,47 @@ export function ShareWalletCard({ wallet, portfolioName, tokens }: ShareWalletCa
             {formatCurrency(wallet.totalValue || 0)}
           </div>
         </div>
+        
+        {/* HEX Stakes Section */}
+        {hexStakesSummary && hexStakesSummary.stakeCount > 0 && (
+          <div className="mb-6 bg-purple-900/20 p-4 rounded-md border border-purple-500/30">
+            <div className="flex items-center mb-2">
+              <TokenLogo 
+                address="0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39" /* HEX token address */
+                symbol="HEX"
+                size="sm"
+              />
+              <div className="text-sm text-purple-300 ml-2 font-medium">HEX Stakes</div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 mb-2">
+              <div>
+                <div className="text-xs text-gray-400">Total Staked</div>
+                <div className="text-md font-bold text-white">
+                  {formatTokenAmount(parseFloat(hexStakesSummary.totalStakedHex || '0'))} HEX
+                </div>
+                <div className="text-xs text-gray-400">
+                  {formatCurrency(hexStakesSummary.totalStakeValueUsd || 0)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Total Interest</div>
+                <div className="text-md font-bold text-green-400">
+                  {formatTokenAmount(parseFloat(hexStakesSummary.totalInterestHex || '0'))} HEX
+                </div>
+                <div className="text-xs text-green-400">
+                  {formatCurrency(hexStakesSummary.totalInterestValueUsd || 0)}
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-xs text-purple-300 mt-2">
+              <span className="bg-purple-500/20 px-2 py-1 rounded-md border border-purple-500/30">
+                {hexStakesSummary.stakeCount} active stake{hexStakesSummary.stakeCount !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+        )}
         
         {/* Top 5 Holdings */}
         <div>
