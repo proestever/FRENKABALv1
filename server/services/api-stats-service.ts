@@ -192,6 +192,125 @@ export class ApiStatsService {
       return [];
     }
   }
+  
+  /**
+   * Get detailed API usage statistics for a specific wallet address
+   * Includes total calls, endpoints used, cache hits/misses and estimated CUs
+   */
+  async getWalletApiUsage(walletAddress: string) {
+    try {
+      // Get total calls for this wallet
+      const [totalResult] = await db
+        .select({
+          totalCalls: sql`COUNT(*)`,
+          cacheHits: sql`SUM(CASE WHEN ${apiCallRecords.cacheHit} = TRUE THEN 1 ELSE 0 END)`,
+          cacheMisses: sql`SUM(CASE WHEN ${apiCallRecords.cacheHit} = FALSE THEN 1 ELSE 0 END)`,
+          firstCall: sql`MIN(${apiCallRecords.timestamp})`,
+          lastCall: sql`MAX(${apiCallRecords.timestamp})`,
+        })
+        .from(apiCallRecords)
+        .where(eq(apiCallRecords.walletAddress, walletAddress));
+      
+      // Get endpoint breakdown
+      const endpointBreakdown = await db
+        .select({
+          endpoint: apiCallRecords.endpoint,
+          callCount: sql`COUNT(*)`,
+          cacheHits: sql`SUM(CASE WHEN ${apiCallRecords.cacheHit} = TRUE THEN 1 ELSE 0 END)`,
+          cacheMisses: sql`SUM(CASE WHEN ${apiCallRecords.cacheHit} = FALSE THEN 1 ELSE 0 END)`,
+        })
+        .from(apiCallRecords)
+        .where(eq(apiCallRecords.walletAddress, walletAddress))
+        .groupBy(apiCallRecords.endpoint)
+        .orderBy(sql`COUNT(*) DESC`);
+        
+      // Type definition for endpoint breakdown item
+      type EndpointBreakdownItem = {
+        endpoint: string;
+        callCount: number;
+        cacheHits: number;
+        cacheMisses: number;
+      };
+      
+      // Calculate daily usage over the last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const dailyUsage = await db
+        .select({
+          date: sql`DATE(${apiCallRecords.timestamp})`,
+          callCount: sql`COUNT(*)`,
+          cacheHits: sql`SUM(CASE WHEN ${apiCallRecords.cacheHit} = TRUE THEN 1 ELSE 0 END)`,
+          cacheMisses: sql`SUM(CASE WHEN ${apiCallRecords.cacheHit} = FALSE THEN 1 ELSE 0 END)`,
+        })
+        .from(apiCallRecords)
+        .where(
+          sql`${apiCallRecords.walletAddress} = ${walletAddress} AND ${apiCallRecords.timestamp} >= ${thirtyDaysAgo.toISOString()}`
+        )
+        .groupBy(sql`DATE(${apiCallRecords.timestamp})`)
+        .orderBy(sql`DATE(${apiCallRecords.timestamp})`);
+      
+      // Calculate estimated consumption units (CUs)
+      // Weight different operations appropriately based on their cost
+      const cuWeights = {
+        'getWalletData': 5,    // Heavier operation that calls multiple endpoints
+        'getTokenPrice': 2,    // Medium weight operation
+        'getTransactionHistory': 5, // Heavy operation
+        'getTokenLogo': 1,     // Light operation
+        'getHexStakes': 3,     // Medium operation
+        'default': 1,          // Default weight
+      };
+      
+      // Calculate total CUs
+      let totalCUs = 0;
+      (endpointBreakdown as EndpointBreakdownItem[]).forEach(item => {
+        // Get the weight based on the endpoint
+        let weight = cuWeights.default;
+        Object.entries(cuWeights).forEach(([key, value]) => {
+          if (item.endpoint.includes(key)) {
+            weight = value;
+          }
+        });
+        
+        // Cache hits cost less than cache misses
+        const cacheHitCUs = Number(item.cacheHits || 0) * (weight * 0.2); // 80% reduction for cache hits
+        const cacheMissCUs = Number(item.cacheMisses || 0) * weight;
+        
+        totalCUs += cacheHitCUs + cacheMissCUs;
+      });
+      
+      return {
+        walletAddress,
+        totalCalls: totalResult?.totalCalls || 0,
+        cacheHits: totalResult?.cacheHits || 0,
+        cacheMisses: totalResult?.cacheMisses || 0,
+        cacheHitRate: totalResult?.totalCalls ? 
+          (totalResult.cacheHits / totalResult.totalCalls) * 100 : 0,
+        firstCall: totalResult?.firstCall,
+        lastCall: totalResult?.lastCall,
+        endpointBreakdown,
+        dailyUsage,
+        estimatedCUs: Math.round(totalCUs),
+        dailyCUsAverage: dailyUsage.length > 0 ? 
+          Math.round(totalCUs / dailyUsage.length) : 0
+      };
+    } catch (error) {
+      console.error('[API Stats] Error getting wallet API usage:', error);
+      return {
+        walletAddress,
+        totalCalls: 0,
+        cacheHits: 0,
+        cacheMisses: 0,
+        cacheHitRate: 0,
+        firstCall: null,
+        lastCall: null,
+        endpointBreakdown: [],
+        dailyUsage: [],
+        estimatedCUs: 0,
+        dailyCUsAverage: 0
+      };
+    }
+  }
 
   /**
    * Get the top N endpoints by number of calls

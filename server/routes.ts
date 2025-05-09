@@ -1297,6 +1297,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // API for retrieving historical API usage statistics
+  // API endpoint to get detailed API usage statistics for a specific wallet
+  app.get("/api/stats/wallet/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      
+      if (!walletAddress || typeof walletAddress !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format (0x followed by 40 hex chars)
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(walletAddress)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      const stats = await apiStatsService.getWalletApiUsage(walletAddress);
+      return res.json(stats);
+    } catch (error) {
+      console.error(`Error getting wallet API stats for ${req.params.walletAddress}:`, error);
+      return res.status(500).json({ 
+        message: "Failed to retrieve wallet API usage statistics",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   app.get("/api/stats/historical", async (req, res) => {
     try {
       // Check if user is admin (only admins can access historical stats)
