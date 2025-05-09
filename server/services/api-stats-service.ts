@@ -281,11 +281,11 @@ export class ApiStatsService {
       
       return {
         walletAddress,
-        totalCalls: totalResult?.totalCalls || 0,
-        cacheHits: totalResult?.cacheHits || 0,
-        cacheMisses: totalResult?.cacheMisses || 0,
-        cacheHitRate: totalResult?.totalCalls ? 
-          (totalResult.cacheHits / totalResult.totalCalls) * 100 : 0,
+        totalCalls: Number(totalResult?.totalCalls || 0),
+        cacheHits: Number(totalResult?.cacheHits || 0),
+        cacheMisses: Number(totalResult?.cacheMisses || 0),
+        cacheHitRate: Number(totalResult?.totalCalls || 0) > 0 ? 
+          (Number(totalResult?.cacheHits || 0) / Number(totalResult?.totalCalls || 1)) * 100 : 0,
         firstCall: totalResult?.firstCall,
         lastCall: totalResult?.lastCall,
         endpointBreakdown,
