@@ -10,7 +10,7 @@ import {
   WalletData 
 } from '../types';
 import { storage } from '../storage';
-import { InsertTokenLogo } from '@shared/schema';
+import { InsertTokenLogo, TokenLogo } from '@shared/schema';
 import { updateLoadingProgress } from '../routes';
 import { processLpTokens } from './lp-token-service';
 import { cacheService } from './cache-service';
@@ -1497,17 +1497,47 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       });
       
       const batch = tokens.slice(i, i + BATCH_SIZE);
+      // First, preload all logos from the database
+      const tokenAddresses = batch.map(token => token.address);
+      const storedLogos: Record<string, TokenLogo> = {};
+      
+      try {
+        // Get all stored logos in one batch
+        const allLogos = await Promise.all(
+          tokenAddresses.map(address => storage.getTokenLogo(address))
+        );
+        
+        // Create a lookup map for logos
+        allLogos.forEach((logo, index) => {
+          if (logo) {
+            storedLogos[tokenAddresses[index].toLowerCase()] = logo;
+          }
+        });
+        
+        console.log(`Retrieved ${Object.keys(storedLogos).length} token logos from database`);
+      } catch (error) {
+        console.error('Error retrieving stored logos:', error);
+      }
+      
+      // Then get all token prices in one batch API call
+      console.log(`Fetching prices for ${tokenAddresses.length} tokens in batch...`);
+      const priceDataMap = await getMultipleTokenPrices(tokenAddresses);
+      console.log(`Retrieved prices for ${Object.keys(priceDataMap).length} tokens in batch`);
+      
+      // Process each token with the retrieved data
       const batchResults = await Promise.all(batch.map(async (token) => {
         try {
           // First, try to get logo from our database
           let logoUrl = token.logo;
-          const storedLogo = await storage.getTokenLogo(token.address);
+          const normalizedAddress = token.address.toLowerCase();
+          const storedLogo = storedLogos[normalizedAddress];
           
           if (storedLogo) {
             logoUrl = storedLogo.logoUrl;
           }
           
-          const priceData = await getTokenPrice(token.address);
+          // Get price data from our batch results
+          const priceData = priceDataMap[normalizedAddress];
           
           if (priceData) {
             // If we don't have a logo yet and Moralis has one, use it and store it
@@ -1631,13 +1661,46 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
           const existingTokenAddresses = tokensWithPrice.map(t => t.address.toLowerCase());
           const missingTokens: ProcessedToken[] = [];
           
-          // Process tokens from Moralis API call
-          for (const token of moralisTokens) {
+          // First, filter out tokens that we need to process (new tokens)
+          const newTokens = moralisTokens.filter(token => 
+            token && token.token_address && 
+            !existingTokenAddresses.includes(token.token_address.toLowerCase())
+          );
+          
+          if (newTokens.length > 0) {
+            console.log(`Found ${newTokens.length} new tokens from Moralis API that aren't in the balance list`);
+            
+            // Step 1: Gather all token addresses to fetch prices in a batch
+            const newTokenAddresses = newTokens.map(token => token.token_address);
+            
+            // Step 2: Get all logos from database in a batch
+            const logoLookup: Record<string, TokenLogo> = {};
             try {
-              if (token && token.token_address && 
-                  !existingTokenAddresses.includes(token.token_address.toLowerCase())) {
-                
-                console.log(`Found token ${token.symbol || 'Unknown'} (${token.token_address}) in Moralis API that's not in balance list`);
+              const storedLogos = await Promise.all(
+                newTokenAddresses.map(address => storage.getTokenLogo(address))
+              );
+              
+              // Create lookup map
+              storedLogos.forEach((logo, index) => {
+                if (logo) {
+                  logoLookup[newTokenAddresses[index].toLowerCase()] = logo;
+                }
+              });
+              
+              console.log(`Retrieved ${Object.keys(logoLookup).length} stored logos for new tokens`);
+            } catch (error) {
+              console.error('Error fetching stored logos for new tokens:', error);
+            }
+            
+            // Step 3: Get all token prices in one batch request
+            console.log(`Fetching prices for ${newTokenAddresses.length} new tokens in a batch...`);
+            const priceDataMap = await getMultipleTokenPrices(newTokenAddresses);
+            console.log(`Retrieved prices for ${Object.keys(priceDataMap).length} new tokens`);
+            
+            // Step 4: Process each token with the data we've gathered
+            for (const token of newTokens) {
+              try {
+                console.log(`Processing new token ${token.symbol || 'Unknown'} (${token.token_address})`);
                 
                 // Process token data
                 const decimals = parseInt(String(token.decimals) || '18') || 18;
@@ -1647,9 +1710,9 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
                 // Get logo and other details
                 let price: number | undefined = undefined;
                 let priceChange: number | undefined = undefined;
+                const normalizedAddress = token.token_address.toLowerCase();
                 
                 // Attempt to get price info if available in Moralis response
-                // These fields might be available in future Moralis API updates
                 if ('usd_price' in token && typeof token.usd_price === 'number') {
                   price = token.usd_price;
                 }
@@ -1657,42 +1720,29 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
                 if ('usd_price_24hr_percent_change' in token && typeof token.usd_price_24hr_percent_change === 'number') {
                   priceChange = token.usd_price_24hr_percent_change;
                 }
+                
                 let logoUrl = token.logo || token.thumbnail || null;
                 
-                // If we don't have price from Moralis, try to get it from our price API
-                if (!price) {
-                  try {
-                    const priceData = await getTokenPrice(token.token_address);
-                    if (priceData) {
-                      price = priceData.usdPrice;
-                      priceChange = priceData.usdPrice24hrPercentChange;
-                      
-                      // If no logo yet, use from price data
-                      if (!logoUrl && priceData.tokenLogo) {
-                        logoUrl = priceData.tokenLogo;
-                      }
-                    }
-                  } catch (priceError) {
-                    console.log(`Could not get price for token ${token.token_address}: ${priceError}`);
-                    // Continue without price data
+                // If no price from Moralis response, get it from our batch price data
+                if (!price && priceDataMap[normalizedAddress]) {
+                  const priceData = priceDataMap[normalizedAddress];
+                  price = priceData.usdPrice;
+                  priceChange = priceData.usdPrice24hrPercentChange;
+                  
+                  // If no logo yet, use from price data
+                  if (!logoUrl && priceData.tokenLogo) {
+                    logoUrl = priceData.tokenLogo;
                   }
                 }
                 
-                // If no logo yet, try from our database
+                // If still no logo, try from our database lookup
+                if (!logoUrl && logoLookup[normalizedAddress]) {
+                  logoUrl = logoLookup[normalizedAddress].logoUrl;
+                }
+                
+                // If still no logo, use default
                 if (!logoUrl) {
-                  try {
-                    const storedLogo = await storage.getTokenLogo(token.token_address);
-                    if (storedLogo) {
-                      logoUrl = storedLogo.logoUrl;
-                    } else {
-                      // Use default logo as last resort
-                      logoUrl = getDefaultLogo(token.symbol);
-                    }
-                  } catch (logoError) {
-                    console.log(`Error getting logo for token ${token.token_address}: ${logoError}`);
-                    // Use default logo as last resort
-                    logoUrl = getDefaultLogo(token.symbol);
-                  }
+                  logoUrl = getDefaultLogo(token.symbol);
                 }
                 
                 // Create processed token object
@@ -1712,8 +1762,8 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
                   isNative: false
                 });
                 
-                // Store logo in our database if we have one
-                if (logoUrl && !logoUrl.startsWith('/assets/')) {
+                // Store logo in our database if we have one and it's not a default asset
+                if (logoUrl && !logoUrl.startsWith('/assets/') && !logoLookup[normalizedAddress]) {
                   try {
                     const newLogo: InsertTokenLogo = {
                       tokenAddress: token.token_address,
@@ -1730,10 +1780,10 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
                 }
                 
                 // Add to existing addresses to avoid duplicates
-                existingTokenAddresses.push(token.token_address.toLowerCase());
+                existingTokenAddresses.push(normalizedAddress);
+              } catch (tokenError) {
+                console.error('Error processing token from Moralis API:', tokenError);
               }
-            } catch (tokenError) {
-              console.error('Error processing token from Moralis API:', tokenError);
             }
           }
           
