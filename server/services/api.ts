@@ -15,6 +15,8 @@ import { updateLoadingProgress } from '../routes';
 import { processLpTokens } from './lp-token-service';
 import { cacheService } from './cache-service';
 import { apiStatsService } from './api-stats-service';
+import { getTokenPriceFromDexScreener } from './dexscreener';
+import { shouldUseDexScreenerForToken } from './price-source-service';
 
 // API call counter for monitoring and debugging
 interface ApiCallCounter {

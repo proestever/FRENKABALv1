@@ -252,3 +252,23 @@ export const insertApiRateLimitSchema = createInsertSchema(apiRateLimits).omit({
 
 export type InsertApiRateLimit = z.infer<typeof insertApiRateLimitSchema>;
 export type ApiRateLimit = typeof apiRateLimits.$inferSelect;
+
+// Special tokens that should use DexScreener API for pricing instead of Moralis
+export const dexScreenerPreferredTokens = pgTable("dexscreener_preferred_tokens", {
+  id: serial("id").primaryKey(),
+  tokenAddress: text("token_address").notNull().unique(),
+  reason: text("reason"), // Optional reason for preferring DexScreener
+  symbol: text("symbol"), // Optional symbol for display purposes
+  name: text("name"), // Optional name for display purposes
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertDexScreenerPreferredTokenSchema = createInsertSchema(dexScreenerPreferredTokens).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDexScreenerPreferredToken = z.infer<typeof insertDexScreenerPreferredTokenSchema>;
+export type DexScreenerPreferredToken = typeof dexScreenerPreferredTokens.$inferSelect;
