@@ -111,9 +111,9 @@ export function ShareWalletCard({ wallet, portfolioName, tokens }: ShareWalletCa
               <div key={`share-${token.address}-${index}`} className="flex justify-between items-center">
                 <div className="flex items-center">
                   <TokenLogo 
-                    tokenAddress={token.address} 
-                    logoUrl={token.logo}
-                    isNativeToken={token.isNative}
+                    address={token.address} 
+                    symbol={token.symbol}
+                    fallbackLogo={token.logo}
                     size="sm"
                   />
                   <div className="ml-2">

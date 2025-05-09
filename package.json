@@ -43,6 +43,7 @@
     "@radix-ui/react-tooltip": "^1.2.0",
     "@tailwindcss/vite": "^4.1.3",
     "@tanstack/react-query": "^5.60.5",
+    "@types/file-saver": "^2.0.7",
     "caniuse-lite": "^1.0.30001717",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
