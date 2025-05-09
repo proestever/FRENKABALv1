@@ -90,6 +90,7 @@ export default function AdminPage() {
               <TabsList className="mb-4">
                 <TabsTrigger value="current">Current Stats</TabsTrigger>
                 <TabsTrigger value="historical">Historical Data</TabsTrigger>
+                <TabsTrigger value="detailed" onClick={() => setLocation("/admin/api-usage")}>Detailed API Usage</TabsTrigger>
               </TabsList>
               
               <TabsContent value="current">
@@ -98,6 +99,14 @@ export default function AdminPage() {
               
               <TabsContent value="historical">
                 <HistoricalApiStats />
+              </TabsContent>
+              
+              <TabsContent value="detailed">
+                <div className="p-4 bg-black/40 rounded-md">
+                  <p className="text-center text-muted-foreground">
+                    Redirecting to detailed API usage page...
+                  </p>
+                </div>
               </TabsContent>
             </Tabs>
           </section>

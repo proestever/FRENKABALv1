@@ -259,11 +259,6 @@ function Header() {
                       <span>Portfolios</span>
                     </DropdownMenuItem>
                     
-                    <DropdownMenuItem onClick={() => setLocation("/api-usage")} className="cursor-pointer dropdown-item-hover">
-                      <BarChart className="mr-2 h-4 w-4" />
-                      <span>API Usage</span>
-                    </DropdownMenuItem>
-                    
                     {/* Admin link in mobile menu - only show for the admin wallet address */}
                     {account && account.toLowerCase() === '0x592139a3f8cf019f628a152fc1262b8aef5b7199'.toLowerCase() && (
                       <DropdownMenuItem onClick={() => setLocation("/admin")} className="cursor-pointer dropdown-item-hover">

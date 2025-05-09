@@ -1,8 +1,48 @@
 import { ApiUsageViewer } from '@/components/api-usage-viewer';
+import { Button } from '@/components/ui/button';
+import { useLocation } from 'wouter';
+import { ChevronLeft, Settings } from 'lucide-react';
+import { useAuth } from '@/providers/auth-provider';
+import { useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ApiUsagePage() {
+  const [, setLocation] = useLocation();
+  const { account } = useAuth();
+  const { toast } = useToast();
+  const adminAddress = '0x592139A3f8cf019f628A152FC1262B8aEf5B7199'.toLowerCase();
+
+  // Check if user is admin
+  useEffect(() => {
+    if (account && account.toLowerCase() !== adminAddress) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access this page.",
+        variant: "destructive"
+      });
+      setLocation('/');
+    }
+  }, [account, toast, setLocation]);
+
+  if (!account || account.toLowerCase() !== adminAddress) {
+    return null;
+  }
+  
   return (
     <div className="container mx-auto py-8 px-4">
+      <div className="flex items-center justify-between mb-6">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => setLocation('/admin')}
+          className="flex items-center text-muted-foreground hover:text-white"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          <Settings className="h-4 w-4 mr-1" />
+          Back to Admin
+        </Button>
+      </div>
+      
       <h1 className="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
         API Usage Monitor
       </h1>
