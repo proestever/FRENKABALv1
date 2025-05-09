@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Wallet, Bookmark } from '@shared/schema';
-import { ExternalLink, Copy, RotateCw, Bookmark as BookmarkIcon, CheckCircle, GitCompareArrows, Zap, Share2 } from 'lucide-react';
+import { ExternalLink, Copy, RotateCw, Bookmark as BookmarkIcon, CheckCircle, GitCompareArrows, Zap } from 'lucide-react';
 import { formatCurrency, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass, truncateAddress } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
@@ -9,50 +9,8 @@ import { useState, useEffect } from 'react';
 import { getHiddenTokens, isTokenHidden, isAddressBookmarked } from '@/lib/api';
 import { useAuth } from '@/providers/auth-provider';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
-import { ShareWalletDialog } from '@/components/share-wallet-dialog';
 import { useHexStakes, fetchHexStakesSummary, HexStakeSummary } from '@/hooks/use-hex-stakes';
 import { LastUpdatedInfo } from '@/components/last-updated-info';
-import { ProcessedToken } from 'server/types';
-
-// Helper function to ensure tokens conform to ProcessedToken interface
-function ensureProcessedTokens(tokens: any[]): ProcessedToken[] {
-  return tokens.map(token => ({
-    address: token.address || '',
-    symbol: token.symbol || '',
-    name: token.name || '',
-    decimals: token.decimals || 0,
-    balance: token.balance || '0',
-    balanceFormatted: token.balanceFormatted || 0,
-    value: token.value || 0,
-    price: token.price,
-    priceChange24h: token.priceChange24h,
-    logo: token.logo,
-    exchange: token.exchange,
-    verified: token.verified,
-    securityScore: token.securityScore,
-    isNative: token.isNative,
-    isLp: token.isLp,
-    lpToken0Symbol: token.lpToken0Symbol,
-    lpToken1Symbol: token.lpToken1Symbol,
-    lpToken0Name: token.lpToken0Name,
-    lpToken1Name: token.lpToken1Name,
-    lpToken0Address: token.lpToken0Address,
-    lpToken1Address: token.lpToken1Address,
-    lpToken0Decimals: token.lpToken0Decimals,
-    lpToken1Decimals: token.lpToken1Decimals,
-    lpToken0Balance: token.lpToken0Balance,
-    lpToken1Balance: token.lpToken1Balance,
-    lpToken0BalanceFormatted: token.lpToken0BalanceFormatted,
-    lpToken1BalanceFormatted: token.lpToken1BalanceFormatted,
-    lpToken0Price: token.lpToken0Price,
-    lpToken1Price: token.lpToken1Price,
-    lpToken0Value: token.lpToken0Value,
-    lpToken1Value: token.lpToken1Value,
-    lpTotalSupply: token.lpTotalSupply,
-    lpReserve0: token.lpReserve0,
-    lpReserve1: token.lpReserve1
-  }));
-}
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -69,9 +27,9 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
   const [totalVisibleValue, setTotalVisibleValue] = useState<number>(0);
   const [visibleTokenCount, setVisibleTokenCount] = useState<number>(0);
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [existingBookmark, setExistingBookmark] = useState<Bookmark | null>(null);
   
+
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isCheckingBookmark, setIsCheckingBookmark] = useState(false);
   
@@ -229,16 +187,6 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
         />
       )}
       
-      {/* Share Dialog */}
-      <ShareWalletDialog
-        isOpen={shareDialogOpen}
-        onClose={() => setShareDialogOpen(false)}
-        wallet={wallet}
-        portfolioName={portfolioName}
-        tokens={wallet.tokens ? ensureProcessedTokens(wallet.tokens) : []}
-        hexStakesSummary={manualHexSummary.stakeCount > 0 ? manualHexSummary : null}
-      />
-      
       <Card className="p-6 glass-card shadow-lg border-white/15 h-full">
         {/* Header - Title, Address and Action Buttons */}
         <div className="flex flex-col mb-6">
@@ -309,17 +257,6 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                 )}
               </Button>
             )}
-            
-            {/* Share Button */}
-            <Button
-              variant="outline"
-              onClick={() => setShareDialogOpen(true)}
-              className="glass-card border-white/15 text-sm h-8 hover:bg-black/20 hover:text-white flex items-center"
-            >
-              <Share2 className="h-4 w-4 mr-1" />
-              Share
-            </Button>
-            
             <Button 
               variant="outline" 
               size="icon" 

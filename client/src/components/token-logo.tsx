@@ -178,31 +178,17 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
 
   // If we have a logo URL
   if (logoUrl) {
-    // Use the proxy for external URLs to avoid CORS issues
-    const imageSrc = logoUrl.startsWith('http') && !logoUrl.includes('/assets/') 
-      ? `/api/proxy-image?url=${encodeURIComponent(logoUrl)}` 
-      : logoUrl;
-    
     return (
       <img 
-        src={imageSrc} 
+        src={logoUrl} 
         alt={symbol || 'Token logo'} 
         className={`${sizeClass} rounded-full object-cover border border-white/10`}
         onError={(e) => {
           // Prevent infinite error loops
           e.currentTarget.onerror = null;
-          
-          // If using proxy failed, try direct URL as a fallback
-          if (imageSrc !== logoUrl) {
-            if (DEBUG_LOGGING) {
-              console.warn(`Proxy failed for ${logoUrl}, trying direct URL`);
-            }
-            e.currentTarget.src = logoUrl;
-          } else {
-            // Quietly handle the error - no console warnings
-            setError(true);
-            setLogoUrl(null);
-          }
+          // Quietly handle the error - no console warnings
+          setError(true);
+          setLogoUrl(null);
         }}
       />
     );

@@ -1,71 +1,79 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-type TokenLogoResponse = {
-  id: number;
-  tokenAddress: string;
-  logoUrl: string;
-  symbol: string | null;
-  name: string | null;
-  lastUpdated: string;
-};
 
 /**
- * A hook that fetches multiple token logos at once using the batch API
- * @param addresses Array of token addresses to fetch logos for
- * @returns Record mapping token addresses (lowercase) to logo URLs
+ * Hook that fetches multiple token logos in a single batch request
+ * This is much more efficient than individual requests for each token
  */
-export const useBatchTokenLogos = (addresses: string[]): {
-  logos: Record<string, string>;
-  loading: boolean;
-  error: Error | null;
-} => {
-  const [logos, setLogos] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
+export function useBatchTokenLogos(addresses: string[], symbols?: string[]): Record<string, string> {
+  console.log('Processing logo batch 1/1, size:', addresses.length);
+  const [logoUrls, setLogoUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const fetchLogos = async () => {
-      if (!addresses || addresses.length === 0) {
-        setLoading(false);
-        return;
-      }
-
+    // Filter out empty/invalid addresses to avoid sending unnecessary requests
+    const validAddresses = addresses.filter(address => !!address);
+    
+    if (validAddresses.length === 0) return;
+    
+    // Create a batch request to fetch all logos at once
+    const fetchBatchLogos = async () => {
       try {
-        setLoading(true);
-        
-        // Normalize addresses to lowercase
-        const normalizedAddresses = addresses.map(addr => addr.toLowerCase());
-        
-        // Use the batch API to fetch multiple logos at once
-        const response = await axios.post('/api/token-logos/batch', {
-          addresses: normalizedAddresses
+        const response = await fetch('/api/token-logos/batch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            addresses: validAddresses,
+          }),
         });
         
-        if (response.data) {
-          // Convert the response to a Record mapping addresses to logo URLs
-          const logoMap: Record<string, string> = {};
-          
-          // For each address in the response, extract the logo URL
-          Object.entries(response.data).forEach(([address, data]) => {
-            const logoData = data as TokenLogoResponse;
-            if (logoData && logoData.logoUrl) {
-              logoMap[address.toLowerCase()] = logoData.logoUrl;
-            }
-          });
-          
-          setLogos(logoMap);
+        if (!response.ok) {
+          throw new Error('Failed to fetch batch token logos');
         }
-      } catch (err) {
-        console.error('Error fetching batch token logos:', err);
-        setError(err instanceof Error ? err : new Error('Unknown error fetching logos'));
-      } finally {
-        setLoading(false);
+        
+        const data = await response.json();
+        
+        // Extract logo URLs from the response
+        const result: Record<string, string> = {};
+        
+        // Process the response data
+        Object.entries(data).forEach(([address, value]: [string, any]) => {
+          if (value && value.logoUrl) {
+            // Normalize address to lowercase for consistent lookups
+            result[address.toLowerCase()] = value.logoUrl;
+          }
+        });
+        
+        setLogoUrls(result);
+      } catch (error) {
+        console.error('Error fetching batch token logos:', error);
+        
+        // Create fallback logos for the addresses
+        const fallbackUrls: Record<string, string> = {};
+        validAddresses.forEach((address, index) => {
+          // If we have a symbol for this address, use it
+          const symbol = symbols && symbols[index] ? symbols[index] : null;
+          
+          // Special case for native token
+          if (address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' || symbol === 'PLS') {
+            fallbackUrls[address.toLowerCase()] = '/assets/pls-logo.png';
+            console.log('Using PLS logo for address in batch:', address, symbol);
+          } else if (symbol && ['pDAI', 'frpl', 'PDAI'].includes(symbol)) {
+            // Special case for Frenkabal tokens
+            fallbackUrls[address.toLowerCase()] = '/assets/100xfrenlogo.png';
+            console.log('Using Frenkabal logo for address in batch:', address, symbol);
+          } else {
+            // Default to Frenkabal logo
+            fallbackUrls[address.toLowerCase()] = '/assets/100xfrenlogo.png';
+          }
+        });
+        
+        setLogoUrls(fallbackUrls);
       }
     };
+    
+    fetchBatchLogos();
+  }, [addresses, symbols]);
 
-    fetchLogos();
-  }, [addresses]);
-
-  return { logos, loading, error };
-};
+  return logoUrls;
+}

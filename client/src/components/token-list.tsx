@@ -60,7 +60,7 @@ export function TokenList({
   
   // Pre-fetch all token logos in a single batch request
   // This dramatically reduces API calls and speeds up initial loading
-  const logoUrls = useBatchTokenLogos(tokenAddresses);
+  const logoUrls = useBatchTokenLogos(tokenAddresses, tokenSymbols);
 
   // Handle toggling token visibility
   const handleToggleVisibility = (tokenAddress: string) => {
