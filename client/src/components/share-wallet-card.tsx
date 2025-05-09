@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { formatCurrency, formatTokenAmount } from '@/lib/utils';
 import { TokenLogo } from '@/components/token-logo';
@@ -6,7 +6,6 @@ import { Wallet } from '@shared/schema';
 import { ProcessedToken } from 'server/types';
 import { Share2, Download, Twitter, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { toPng, toCanvas } from 'html-to-image';
 import { saveAs } from 'file-saver';
 import plsLogo from '../assets/pls-logo-optimized.png';
 import frenkabalLogo from '../assets/frenklabal_logo.png';
@@ -32,180 +31,305 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
 
   const { toast } = useToast();
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [tokenImages, setTokenImages] = useState<Record<string, HTMLImageElement>>({});
+  const [fkLogoImg, setFkLogoImg] = useState<HTMLImageElement | null>(null);
+  const [plsLogoImg, setPlsLogoImg] = useState<HTMLImageElement | null>(null);
   
-  // Generate share image and save using a simpler approach without loading external images
+  // Load all token images in advance
+  useEffect(() => {
+    const loadImage = (src: string): Promise<HTMLImageElement> => {
+      return new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image() as HTMLImageElement;
+        img.crossOrigin = 'anonymous';
+        
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+        
+        // Handle relative URLs
+        if (src.startsWith('/') && !src.startsWith('//')) {
+          img.src = window.location.origin + src;
+        } else {
+          img.src = src;
+        }
+      });
+    };
+    
+    // Load FK logo
+    loadImage(window.location.origin + '/assets/frenklabal_logo.png')
+      .then(setFkLogoImg)
+      .catch(err => console.error('Failed to load FK logo:', err));
+      
+    // Load PLS logo
+    loadImage(window.location.origin + '/assets/pls-logo-optimized.png')
+      .then(setPlsLogoImg)
+      .catch(err => console.error('Failed to load PLS logo:', err));
+    
+    // Load token logos
+    const tokenImagesRecord: Record<string, HTMLImageElement> = {};
+    
+    const tokenLogoPromises = top5Tokens
+      .filter(token => token.logo)
+      .map(token => {
+        return loadImage(token.logo!)
+          .then(img => {
+            tokenImagesRecord[token.address.toLowerCase()] = img;
+          })
+          .catch(err => {
+            console.warn(`Failed to load logo for token ${token.symbol}:`, err);
+          });
+      });
+      
+    // Add HEX logo if applicable
+    if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
+      // Try to find HEX token to get its logo
+      const hexToken = tokens.find(t => t.symbol === 'HEX');
+      if (hexToken && hexToken.logo) {
+        tokenLogoPromises.push(
+          loadImage(hexToken.logo)
+            .then(img => {
+              tokenImagesRecord['0x2b591e99afe9f32eaa6214f7b7629768c40eeb39'] = img;
+            })
+            .catch(err => {
+              console.warn('Failed to load HEX logo:', err);
+            })
+        );
+      }
+    }
+    
+    Promise.all(tokenLogoPromises)
+      .then(() => {
+        setTokenImages(tokenImagesRecord);
+      })
+      .catch(err => {
+        console.error('Error loading token images:', err);
+      });
+  }, [top5Tokens, hexStakesSummary, tokens]);
+  
+  // Generate share image and save using a large format canvas with actual logos
   const handleDownloadImage = async () => {
     if (!cardRef.current) return;
     
     setIsGeneratingImage(true);
     
     try {
-      // Create a canvas
+      // Create a canvas with fixed dimensions for better quality
       const canvas = document.createElement('canvas');
+      // Wider aspect ratio for better readability
+      canvas.width = 1200;
+      canvas.height = 800;
+      
       const ctx = canvas.getContext('2d');
-      const boundingRect = cardRef.current.getBoundingClientRect();
-      
-      // Set canvas size to match the card
-      canvas.width = boundingRect.width;
-      canvas.height = boundingRect.height;
-      
       if (!ctx) {
         throw new Error("Could not get canvas context");
       }
       
       // Create a gradient background
-      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      gradient.addColorStop(0, 'rgba(15, 15, 20, 0.95)');
-      gradient.addColorStop(1, 'rgba(30, 30, 45, 0.85)');
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, '#121212');
+      gradient.addColorStop(1, '#000000');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       // Draw border
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 2;
       ctx.strokeRect(0, 0, canvas.width, canvas.height);
       
-      // Draw circle for logo placeholder
-      ctx.beginPath();
-      ctx.arc(30, 30, 15, 0, Math.PI * 2, false);
-      ctx.fillStyle = '#6752f9';
-      ctx.fill();
+      // Draw the FrenKabal logo if loaded
+      if (fkLogoImg) {
+        ctx.drawImage(fkLogoImg, 40, 40, 60, 60);
+      } else {
+        // Fallback logo
+        ctx.beginPath();
+        ctx.arc(70, 70, 30, 0, Math.PI * 2, false);
+        ctx.fillStyle = '#6752f9';
+        ctx.fill();
+        
+        ctx.font = 'bold 24px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('FK', 70, 70);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+      }
       
-      // Draw "FK" text as logo placeholder
-      ctx.font = 'bold 12px Arial';
+      // Draw the portfolio name - larger and bolder
+      ctx.font = 'bold 38px Arial';
       ctx.fillStyle = '#FFFFFF';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('FK', 30, 30);
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'alphabetic';
-      
-      // Draw the portfolio name
-      ctx.font = 'bold 22px Arial';
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(portfolioName ? `${portfolioName} Portfolio` : 'Wallet Portfolio', 60, 35);
+      ctx.fillText(portfolioName ? `${portfolioName} Portfolio` : 'Wallet Portfolio', 120, 80);
       
       // Draw date
-      ctx.font = '14px Arial';
+      ctx.font = '18px Arial';
       ctx.fillStyle = '#888888';
       ctx.textAlign = 'right';
-      ctx.fillText(new Date().toLocaleDateString(), canvas.width - 20, 35);
+      ctx.fillText(new Date().toLocaleDateString(), canvas.width - 40, 80);
       ctx.textAlign = 'left';
       
       // Draw the total value label
-      ctx.font = '16px Arial';
+      ctx.font = '24px Arial';
       ctx.fillStyle = '#888888';
-      ctx.fillText('Total Portfolio Value', 20, 80);
+      ctx.fillText('Total Portfolio Value', 40, 160);
       
-      // Draw the total value
-      ctx.font = 'bold 28px Arial';
+      // Draw the total value - much larger for emphasis
+      ctx.font = 'bold 58px Arial';
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(formatCurrency(wallet.totalValue || 0), 20, 115);
+      ctx.fillText(formatCurrency(wallet.totalValue || 0), 40, 230);
       
       // Draw divider line
       ctx.beginPath();
-      ctx.moveTo(20, 140);
-      ctx.lineTo(canvas.width - 20, 140);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.moveTo(40, 270);
+      ctx.lineTo(canvas.width - 40, 270);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 2;
       ctx.stroke();
       
       // Draw HEX stakes if available
-      let startY = 170;
+      let startY = 320;
       if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
-        // Draw circle for HEX logo placeholder
-        ctx.beginPath();
-        ctx.arc(30, startY - 5, 12, 0, Math.PI * 2, false);
-        ctx.fillStyle = '#9d4cff';
-        ctx.fill();
+        // Draw HEX logo if available
+        const hexLogoImg = tokenImages['0x2b591e99afe9f32eaa6214f7b7629768c40eeb39'];
+        if (hexLogoImg) {
+          ctx.drawImage(hexLogoImg, 40, startY - 25, 50, 50);
+        } else {
+          // Draw circle for HEX logo placeholder
+          ctx.beginPath();
+          ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
+          ctx.fillStyle = '#9d4cff';
+          ctx.fill();
+          
+          ctx.font = 'bold 16px Arial';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('HEX', 65, startY);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+        }
         
-        ctx.font = 'bold 10px Arial';
+        // Draw HEX stakes text - larger
+        ctx.font = 'bold 32px Arial';
         ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('HEX', 30, startY - 5);
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
+        ctx.fillText('HEX Stakes', 110, startY + 10);
         
-        ctx.font = 'bold 18px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('HEX Stakes', 55, startY);
-        
-        ctx.font = '14px Arial';
+        // Draw HEX value - larger
+        ctx.font = '28px Arial';
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'right';
-        ctx.fillText(formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0), canvas.width - 20, startY);
+        ctx.fillText(formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0), canvas.width - 40, startY + 10);
         ctx.textAlign = 'left';
         
-        ctx.font = '12px Arial';
+        // Draw HEX details
+        ctx.font = '20px Arial';
         ctx.fillStyle = '#888888';
-        ctx.fillText(`${formatTokenAmount(parseFloat(hexStakesSummary.totalCombinedHex || '0'))} HEX | ${hexStakesSummary.stakeCount} active stake${hexStakesSummary.stakeCount !== 1 ? 's' : ''}`, 55, startY + 20);
+        ctx.fillText(
+          `${formatTokenAmount(parseFloat(hexStakesSummary.totalCombinedHex || '0'))} HEX | ${hexStakesSummary.stakeCount} active stake${hexStakesSummary.stakeCount !== 1 ? 's' : ''}`, 
+          110, 
+          startY + 50
+        );
         
-        startY += 50;
+        startY += 90; // More spacing
       }
       
-      // Draw top 5 tokens section title
-      ctx.font = '16px Arial';
-      ctx.fillStyle = '#888888';
-      ctx.fillText('Top 5 Holdings', 20, startY);
-      startY += 30;
+      // Draw top 5 tokens section title - larger
+      ctx.font = 'bold 30px Arial';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText('Top 5 Holdings', 40, startY);
+      startY += 60; // More spacing
       
-      // Draw tokens (simplified)
+      // Draw tokens with larger text and actual logos
       top5Tokens.forEach((token, i) => {
-        // Draw circle for token logo placeholder
-        ctx.beginPath();
-        ctx.arc(30, startY - 5, 12, 0, Math.PI * 2, false);
-        ctx.fillStyle = getColorFromString(token.symbol);
-        ctx.fill();
+        // Draw token logo if available
+        const tokenLogoImg = tokenImages[token.address.toLowerCase()];
+        if (tokenLogoImg) {
+          ctx.drawImage(tokenLogoImg, 40, startY - 25, 50, 50);
+        } else {
+          // Draw circle for token logo placeholder
+          ctx.beginPath();
+          ctx.arc(65, startY, 25, 0, Math.PI * 2, false);
+          ctx.fillStyle = getColorFromString(token.symbol);
+          ctx.fill();
+          
+          ctx.font = 'bold 16px Arial';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(token.symbol.slice(0, 3), 65, startY);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+        }
         
-        ctx.font = 'bold 10px Arial';
+        // Draw token symbol - larger
+        ctx.font = 'bold 30px Arial';
         ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(token.symbol.slice(0, 3), 30, startY - 5);
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(token.symbol, 110, startY + 10);
         
-        ctx.font = 'bold 16px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(token.symbol, 55, startY);
-        
-        ctx.font = '14px Arial';
+        // Draw token value - larger
+        ctx.font = '28px Arial';
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'right';
-        ctx.fillText(formatCurrency(token.value || 0), canvas.width - 20, startY);
+        ctx.fillText(formatCurrency(token.value || 0), canvas.width - 40, startY + 10);
         ctx.textAlign = 'left';
         
-        ctx.font = '12px Arial';
+        // Draw token balance
+        ctx.font = '20px Arial';
         ctx.fillStyle = '#888888';
-        ctx.fillText(formatTokenAmount(token.balanceFormatted || 0), 55, startY + 20);
+        ctx.fillText(formatTokenAmount(token.balanceFormatted || 0), 110, startY + 50);
         
-        startY += 40;
+        // Add price change if available
+        if (token.priceChange24h !== undefined) {
+          ctx.fillStyle = token.priceChange24h > 0 ? '#4ade80' : '#ef4444';
+          ctx.textAlign = 'right';
+          ctx.fillText(
+            `${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%`, 
+            canvas.width - 40, 
+            startY + 50
+          );
+          ctx.textAlign = 'left';
+        }
+        
+        startY += 80; // More spacing between tokens
       });
       
       // Draw footer
-      const footerY = canvas.height - 25;
+      const footerY = canvas.height - 40;
       ctx.beginPath();
-      ctx.moveTo(20, footerY - 20);
-      ctx.lineTo(canvas.width - 20, footerY - 20);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.moveTo(40, footerY - 40);
+      ctx.lineTo(canvas.width - 40, footerY - 40);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 2;
       ctx.stroke();
       
-      ctx.font = '14px Arial';
+      // Draw FrenKabal text
+      ctx.font = '22px Arial';
       ctx.fillStyle = '#888888';
-      ctx.fillText('Generated by FrenKabal', 20, footerY);
+      ctx.fillText('Generated by FrenKabal', 40, footerY);
       
-      ctx.beginPath();
-      ctx.arc(canvas.width - 30, footerY - 5, 10, 0, Math.PI * 2, false);
-      ctx.fillStyle = '#e93578';
-      ctx.fill();
+      // Draw PLS logo if loaded
+      if (plsLogoImg) {
+        ctx.drawImage(plsLogoImg, canvas.width - 140, footerY - 20, 40, 40);
+      } else {
+        // Draw circle for PLS logo placeholder
+        ctx.beginPath();
+        ctx.arc(canvas.width - 120, footerY, 20, 0, Math.PI * 2, false);
+        ctx.fillStyle = '#e93578';
+        ctx.fill();
+        
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('PLS', canvas.width - 120, footerY);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+      }
       
-      ctx.font = 'bold 8px Arial';
+      // Draw PulseChain text
+      ctx.font = 'bold 22px Arial';
       ctx.fillStyle = '#FFFFFF';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('PLS', canvas.width - 30, footerY - 5);
+      ctx.textAlign = 'right';
+      ctx.fillText('PulseChain', canvas.width - 150, footerY);
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'alphabetic';
       
       // Convert to blob and download
       canvas.toBlob((blob) => {
@@ -270,11 +394,11 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
       {/* The card that will be captured for the share image */}
       <Card 
         ref={cardRef} 
-        className="p-6 glass-card border-white/15 bg-gradient-to-br from-black/80 to-black/40 backdrop-blur-xl"
+        className="p-4 glass-card border-white/15 bg-gradient-to-br from-black/80 to-black/40 backdrop-blur-xl"
         style={{ width: '600px', maxWidth: '100%' }}
       >
         {/* Header - Logo and Title */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-3">
           <div className="flex items-center">
             <img src={frenkabalLogo} alt="FrenKabal Logo" className="h-8 mr-2" />
             <h2 className="text-xl font-bold text-white">
@@ -287,8 +411,8 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
         </div>
         
         {/* Total Value */}
-        <div className="mb-6">
-          <div className="text-sm text-gray-400 mb-1">Total Portfolio Value</div>
+        <div className="mb-3">
+          <div className="text-sm text-gray-400">Total Portfolio Value</div>
           <div className="text-3xl font-bold text-white">
             {formatCurrency(wallet.totalValue || 0)}
           </div>
@@ -296,8 +420,8 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
         
         {/* HEX Stakes as a regular token entry if available */}
         {hexStakesSummary && hexStakesSummary.stakeCount > 0 && (
-          <div className="mb-6">
-            <div className="flex justify-between items-center">
+          <div className="mb-2">
+            <div className="flex justify-between items-center py-1">
               <div className="flex items-center">
                 <TokenLogo 
                   address="0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39" /* HEX token address */
@@ -305,19 +429,19 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
                   size="sm"
                 />
                 <div className="ml-2">
-                  <div className="text-white font-medium">
+                  <div className="text-white font-medium leading-tight">
                     HEX Stakes
                   </div>
-                  <div className="text-sm text-gray-400">
+                  <div className="text-sm text-gray-400 leading-tight">
                     {formatTokenAmount(parseFloat(hexStakesSummary.totalCombinedHex || '0'))} HEX
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-white font-bold">
+                <div className="text-white font-bold leading-tight">
                   {formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0)}
                 </div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-gray-400 leading-tight">
                   {hexStakesSummary.stakeCount} active stake{hexStakesSummary.stakeCount !== 1 ? 's' : ''}
                 </div>
               </div>
@@ -327,10 +451,10 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
         
         {/* Top 5 Holdings */}
         <div>
-          <div className="text-sm text-gray-400 mb-3">Top 5 Holdings</div>
-          <div className="space-y-3">
+          <div className="text-sm text-gray-400 mb-1">Top 5 Holdings</div>
+          <div className="space-y-2">
             {top5Tokens.map((token, index) => (
-              <div key={`share-${token.address}-${index}`} className="flex justify-between items-center">
+              <div key={`share-${token.address}-${index}`} className="flex justify-between items-center py-1">
                 <div className="flex items-center">
                   <TokenLogo 
                     address={token.address} 
@@ -339,19 +463,19 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
                     size="sm"
                   />
                   <div className="ml-2">
-                    <div className="text-white font-medium">
+                    <div className="text-white font-medium leading-tight">
                       {token.symbol}
                     </div>
-                    <div className="text-sm text-gray-400">
+                    <div className="text-sm text-gray-400 leading-tight">
                       {formatTokenAmount(token.balanceFormatted || 0)}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-white font-bold">
+                  <div className="text-white font-bold leading-tight">
                     {formatCurrency(token.value || 0)}
                   </div>
-                  <div className={`text-xs ${token.priceChange24h && token.priceChange24h > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  <div className={`text-xs leading-tight ${token.priceChange24h && token.priceChange24h > 0 ? 'text-green-500' : 'text-red-500'}`}>
                     {token.priceChange24h !== undefined ? 
                       `${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%` : 
                       ''}
@@ -363,13 +487,13 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
         </div>
         
         {/* Footer */}
-        <div className="mt-6 pt-4 border-t border-white/10 flex justify-between items-center">
+        <div className="mt-3 pt-2 border-t border-white/10 flex justify-between items-center">
           <div className="text-xs text-gray-400">
             Generated by FrenKabal
           </div>
           <div className="flex items-center">
-            <img src={plsLogo} alt="PulseChain" className="h-6" />
-            <span className="ml-2 text-sm text-white font-medium">PulseChain</span>
+            <img src={plsLogo} alt="PulseChain" className="h-5" />
+            <span className="ml-1 text-sm text-white font-medium">PulseChain</span>
           </div>
         </div>
       </Card>
