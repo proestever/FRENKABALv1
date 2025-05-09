@@ -53,66 +53,135 @@ export function ShareWalletCard({ wallet, portfolioName, tokens, hexStakesSummar
         throw new Error("Could not get canvas context");
       }
       
-      // Fill with background color
-      ctx.fillStyle = '#121212';
+      // Create a gradient background
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, 'rgba(10, 10, 10, 0.95)');
+      gradient.addColorStop(1, 'rgba(20, 20, 20, 0.85)');
+      ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw border
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+      
+      // Load and draw the FrenKabal logo
+      const drawLogo = () => {
+        return new Promise((resolve) => {
+          const logo = new Image();
+          logo.crossOrigin = 'anonymous';
+          logo.onload = () => {
+            ctx.drawImage(logo, 20, 20, 40, 40);
+            resolve(null);
+          };
+          logo.onerror = () => {
+            console.error('Failed to load FrenKabal logo');
+            resolve(null);
+          };
+          logo.src = frenkabalLogo;
+        });
+      };
+      
+      // Load and draw the PulseChain logo
+      const drawPulseLogo = () => {
+        return new Promise((resolve) => {
+          const logo = new Image();
+          logo.crossOrigin = 'anonymous';
+          logo.onload = () => {
+            ctx.drawImage(logo, canvas.width - 80, canvas.height - 40, 20, 20);
+            resolve(null);
+          };
+          logo.onerror = () => {
+            console.error('Failed to load PulseChain logo');
+            resolve(null);
+          };
+          logo.src = plsLogo;
+        });
+      };
+      
+      // Wait for the logos to load
+      await Promise.all([drawLogo(), drawPulseLogo()]);
       
       // Draw the portfolio name
       ctx.font = 'bold 24px Arial';
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(portfolioName || 'Wallet Portfolio', 70, 40);
-      
-      // Draw the total value
-      ctx.font = 'bold 28px Arial';
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(formatCurrency(wallet.totalValue || 0), 20, 100);
+      ctx.fillText(portfolioName ? `${portfolioName} Portfolio` : 'Wallet Portfolio', 70, 40);
       
       // Draw date
       ctx.font = '14px Arial';
       ctx.fillStyle = '#888888';
-      ctx.fillText(new Date().toLocaleDateString(), canvas.width - 100, 40);
+      ctx.fillText(new Date().toLocaleDateString(), canvas.width - 120, 40);
+      
+      // Draw the total value label
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#888888';
+      ctx.fillText('Total Portfolio Value', 20, 80);
+      
+      // Draw the total value
+      ctx.font = 'bold 28px Arial';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(formatCurrency(wallet.totalValue || 0), 20, 115);
+      
+      // Draw divider line
+      ctx.beginPath();
+      ctx.moveTo(20, 140);
+      ctx.lineTo(canvas.width - 20, 140);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.stroke();
+      
+      // Draw HEX stakes if available
+      let startY = 160;
+      if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
+        ctx.font = 'bold 18px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('HEX Stakes', 20, startY);
+        
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0), canvas.width - 120, startY);
+        
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#888888';
+        ctx.fillText(`${formatTokenAmount(parseFloat(hexStakesSummary.totalCombinedHex || '0'))} HEX | ${hexStakesSummary.stakeCount} active stake${hexStakesSummary.stakeCount !== 1 ? 's' : ''}`, 20, startY + 20);
+        
+        startY += 50;
+      }
       
       // Draw top 5 tokens section title
       ctx.font = '16px Arial';
       ctx.fillStyle = '#888888';
-      ctx.fillText('Top 5 Holdings', 20, 150);
+      ctx.fillText('Top 5 Holdings', 20, startY);
+      startY += 25;
       
       // Draw tokens (simplified)
-      let yPos = 180;
       top5Tokens.forEach((token, i) => {
         ctx.font = 'bold 16px Arial';
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(token.symbol, 20, yPos);
+        ctx.fillText(token.symbol, 20, startY);
         
         ctx.font = '14px Arial';
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(formatCurrency(token.value || 0), canvas.width - 120, yPos);
+        ctx.fillText(formatCurrency(token.value || 0), canvas.width - 120, startY);
         
-        yPos += 30;
-      });
-      
-      // Draw HEX stakes if available
-      if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
-        yPos += 10;
-        ctx.font = 'bold 16px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('HEX Stakes', 20, yPos);
-        
-        ctx.font = '14px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(formatCurrency(hexStakesSummary.totalCombinedValueUsd || 0), canvas.width - 120, yPos);
-        yPos += 20;
         ctx.font = '12px Arial';
         ctx.fillStyle = '#888888';
-        ctx.fillText(`${hexStakesSummary.stakeCount} active stakes`, 20, yPos);
-      }
+        ctx.fillText(formatTokenAmount(token.balanceFormatted || 0), 20, startY + 20);
+        
+        startY += 40;
+      });
       
       // Draw footer
-      yPos = canvas.height - 30;
+      const footerY = canvas.height - 25;
+      ctx.beginPath();
+      ctx.moveTo(20, footerY - 20);
+      ctx.lineTo(canvas.width - 20, footerY - 20);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.stroke();
+      
       ctx.font = '14px Arial';
       ctx.fillStyle = '#888888';
-      ctx.fillText('Generated by FrenKabal', 20, yPos);
-      ctx.fillText('PulseChain', canvas.width - 100, yPos);
+      ctx.fillText('Generated by FrenKabal', 20, footerY);
+      ctx.fillText('PulseChain', canvas.width - 100, footerY);
       
       // Convert to blob and download
       canvas.toBlob((blob) => {
