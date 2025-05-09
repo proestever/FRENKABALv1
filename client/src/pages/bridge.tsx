@@ -91,6 +91,7 @@ const Bridge = () => {
   
   // UI state
   const [isSwapping, setIsSwapping] = useState(false);
+  const [isEstimating, setIsEstimating] = useState(false);
   const [hasEstimated, setHasEstimated] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
   
@@ -149,6 +150,8 @@ const Bridge = () => {
       });
       return;
     }
+    
+    setIsEstimating(true);
     
     try {
       setHasEstimated(false);
@@ -211,7 +214,7 @@ const Bridge = () => {
         return;
       }
       
-      setEstimatedAmount(data.toAmount);
+      setEstimatedAmount(String(data.toAmount));
       setHasEstimated(true);
       
       toast({
@@ -226,6 +229,8 @@ const Bridge = () => {
         description: error instanceof Error ? error.message : "Failed to estimate exchange",
         variant: "destructive"
       });
+    } finally {
+      setIsEstimating(false);
     }
   };
   

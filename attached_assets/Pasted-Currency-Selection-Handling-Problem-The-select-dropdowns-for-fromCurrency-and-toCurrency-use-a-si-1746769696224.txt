@@ -1,0 +1,282 @@
+Currency Selection Handling
+Problem: The <select> dropdowns for fromCurrency and toCurrency use a simple <select> instead of the Select component imported from @/components/ui/select. This might cause styling or functionality issues, and the code doesn't filter currencies by network compatibility (e.g., ETH on Ethereum vs. BSC).
+Fix: Replace <select> with the Select component for consistency and better UX. Add network filtering to ensure valid currency pairs (e.g., check currency.network in getCurrencyDetails).
+jsx
+
+Copy
+<Select
+  value={fromCurrency}
+  onValueChange={(value) => {
+    setFromCurrency(value);
+    setHasEstimated(false);
+  }}
+>
+  <SelectTrigger className="w-[180px] glass-input bg-black/30 border border-white/15">
+    <SelectValue placeholder="Select currency" />
+  </SelectTrigger>
+  <SelectContent>
+    {isLoadingCurrencies ? (
+      <SelectItem value="loading">Loading...</SelectItem>
+    ) : currencies && Array.isArray(currencies) ? (
+      currencies
+        .filter((c: Currency) => c.sell)
+        .map((currency: Currency) => (
+          <SelectItem key={currency.ticker} value={currency.ticker.toLowerCase()}>
+            {currency.ticker.toUpperCase()} - {currency.name}
+          </SelectItem>
+        ))
+    ) : (
+      <SelectItem value="none">No currencies available</SelectItem>
+    )}
+  </SelectContent>
+</Select>
+Repeat for toCurrency. Add logic to validate network compatibility:
+typescript
+
+Copy
+const isValidPair = (from: Currency, to: Currency) => {
+  return !from.network || !to.network || from.network === to.network || to.isFiat;
+};
+Error Handling and Loading States
+Problem: The code doesn't handle currenciesError from useQuery, which could cause the UI to silently fail if the currency fetch fails. Also, isLoadingCurrencies is checked, but other loading states (e.g., for estimates or transactions) are missing.
+Fix: Display error messages and add loading states.
+jsx
+
+Copy
+if (currenciesError) {
+  return (
+    <div className="text-red-500">
+      Failed to load currencies: {currenciesError.message}
+    </div>
+  );
+}
+Add a loading state for handleEstimateExchange and handleCreateExchange:
+typescript
+
+Copy
+const [isEstimating, setIsEstimating] = useState(false);
+// In handleEstimateExchange
+setIsEstimating(true);
+try {
+  // ... existing code ...
+} finally {
+  setIsEstimating(false);
+}
+Update UI:
+jsx
+
+Copy
+<Button
+  variant="outline"
+  onClick={handleEstimateExchange}
+  disabled={isLoadingCurrencies || isEstimating || !fromCurrency || !toCurrency || !fromAmount || parseFloat(fromAmount) <= 0}
+>
+  {isEstimating ? (
+    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+  ) : hasEstimated ? (
+    <>
+      <RefreshCw className="w-4 h-4 mr-2" />
+      Refresh Estimate
+    </>
+  ) : (
+    'Get Estimate'
+  )}
+</Button>
+Transaction Status Polling
+Problem: The useEffect for polling transaction status runs every 30 seconds but doesn't stop when the transaction is finished or failed, wasting resources. It also assumes /api/bridge/transaction-status/{transactionId} maps to GET https://api.changenow.io/v1/transactions/{transactionId}/{api_key}.
+Fix: Stop polling when the transaction is complete:
+typescript
+
+Copy
+useEffect(() => {
+  if (!transactionId || activeStep !== 2 || ['finished', 'failed'].includes(transactionStatus || '')) return;
+  const fetchStatus = async () => {
+    try {
+      const response = await fetch(`/api/bridge/transaction-status/${transactionId}`);
+      if (!response.ok) throw new Error('Failed to fetch transaction status');
+      const data = await response.json();
+      setTransactionStatus(data.status);
+    } catch (error) {
+      console.error('Error fetching transaction status:', error);
+    }
+  };
+  fetchStatus();
+  const intervalId = setInterval(fetchStatus, 30000);
+  return () => clearInterval(intervalId);
+}, [transactionId, activeStep, transactionStatus]);
+Verify the backend endpoint correctly calls ChangeNOW's status API.
+Input Validation
+Problem: The destinationAddress input isn't validated for format or compatibility with toCurrency. Invalid addresses can cause failed transactions.
+Fix: Add basic validation (e.g., Ethereum address format for ETH):
+typescript
+
+Copy
+const isValidAddress = (address: string, currency: Currency) => {
+  if (!address) return false;
+  if (currency.ticker === 'eth' || currency.network === 'eth') {
+    return /^0x[a-fA-F0-9]{40}$/.test(address);
+  }
+  return true; // Add more validations for other currencies
+};
+// In handleCreateExchange
+if (!isValidAddress(destinationAddress, toCurrencyDetails!)) {
+  toast({
+    title: "Invalid address",
+    description: `Please enter a valid ${toCurrency.toUpperCase()} address`,
+    variant: "destructive",
+  });
+  return;
+}
+API Response Handling
+Problem: The code assumes API responses match the ExchangeEstimate and Transaction interfaces, but ChangeNOW's responses might differ (e.g., toAmount as a number, not a string). This can cause type errors or incorrect data display.
+Fix: Log API responses in your backend to confirm their structure. Update interfaces if needed:
+typescript
+
+Copy
+interface ExchangeEstimate {
+  fromAmount: string | number;
+  toAmount: string | number;
+  flow: string;
+  rate: string | number;
+  validUntil: string;
+  transactionSpeedForecast: string;
+  warningMessage?: string;
+}
+Normalize data in the frontend:
+typescript
+
+Copy
+const data: ExchangeEstimate = await response.json();
+setEstimatedAmount(String(data.toAmount));
+Debugging Steps
+Check Console Logs: Open the browser's DevTools (F12) and check the Console tab for JavaScript errors or failed API requests. Look for 4xx/5xx errors in the Network tab.
+Test Backend Endpoints: Use a tool like Postman to test your /api/bridge/* endpoints directly. Ensure they return the expected data from ChangeNOW's API.
+Log API Responses: Add console.log(data) in handleEstimateExchange and handleCreateExchange to inspect the data returned from your backend.
+Verify API Key: Ensure your ChangeNOW API key is correctly configured in your backend (passed in X-Changenow-Api-Key header).
+Test with Simple Values: Try swapping small amounts (e.g., 0.001 BTC to ETH) with known valid addresses to isolate issues.
+Minimal Code Fix
+Here's a minimal update to address the most critical issues (replace the relevant sections in your code):
+
+jsx
+
+Copy
+// Add state for estimating
+const [isEstimating, setIsEstimating] = useState(false);
+
+// Update currency select (replace both <select> blocks)
+<Select
+  value={fromCurrency}
+  onValueChange={(value) => {
+    setFromCurrency(value);
+    setHasEstimated(false);
+  }}
+>
+  <SelectTrigger className="w-[180px] glass-input bg-black/30 border border-white/15">
+    <SelectValue placeholder="Select currency" />
+  </SelectTrigger>
+  <SelectContent>
+    {isLoadingCurrencies ? (
+      <SelectItem value="loading">Loading...</SelectItem>
+    ) : currencies && Array.isArray(currencies) ? (
+      currencies
+        .filter((c: Currency) => c.sell)
+        .map((currency: Currency) => (
+          <SelectItem key={currency.ticker} value={currency.ticker.toLowerCase()}>
+            {currency.ticker.toUpperCase()} - {currency.name}
+          </SelectItem>
+        ))
+    ) : (
+      <SelectItem value="none">No currencies available</SelectItem>
+    )}
+  </SelectContent>
+</Select>
+
+// Update handleEstimateExchange
+const handleEstimateExchange = async () => {
+  if (!fromCurrency || !toCurrency || !fromAmount || parseFloat(fromAmount) <= 0) {
+    toast({
+      title: "Missing information",
+      description: "Please select currencies and enter a valid amount",
+      variant: "destructive",
+    });
+    return;
+  }
+  setIsEstimating(true);
+  try {
+    const minResponse = await fetch('/api/bridge/min-amount', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromCurrency, toCurrency }),
+    });
+    if (!minResponse.ok) {
+      const error = await minResponse.json();
+      throw new Error(error.error || 'Failed to get minimum amount');
+    }
+    const minData = await minResponse.json();
+    if (parseFloat(fromAmount) < minData.minAmount) {
+      toast({
+        title: "Amount too low",
+        description: `Minimum required amount is ${minData.minAmount} ${fromCurrency.toUpperCase()}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    const response = await fetch('/api/bridge/exchange-range', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromCurrency, toCurrency, fromAmount }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to estimate exchange');
+    }
+    const data: ExchangeEstimate = await response.json();
+    if (!data.toAmount || Number(data.toAmount) <= 0) {
+      toast({
+        title: "Invalid exchange",
+        description: "Could not calculate exchange amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setEstimatedAmount(String(data.toAmount));
+    setHasEstimated(true);
+    toast({
+      title: "Estimate updated",
+      description: `You will receive approximately ${Number(data.toAmount).toFixed(6)} ${toCurrency.toUpperCase()}`,
+    });
+  } catch (error) {
+    console.error('Error estimating exchange:', error);
+    toast({
+      title: "Estimation failed",
+      description: error instanceof Error ? error.message : "Failed to estimate exchange",
+      variant: "destructive",
+    });
+  } finally {
+    setIsEstimating(false);
+  }
+};
+
+// Update action buttons
+<Button
+  variant="outline"
+  onClick={handleEstimateExchange}
+  disabled={isLoadingCurrencies || isEstimating || !fromCurrency || !toCurrency || !fromAmount || parseFloat(fromAmount) <= 0}
+  className="flex-1"
+>
+  {isEstimating ? (
+    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+  ) : hasEstimated ? (
+    <>
+      <RefreshCw className="w-4 h-4 mr-2" />
+      Refresh Estimate
+    </>
+  ) : (
+    'Get Estimate'
+  )}
+</Button>
+Next Steps
+Share specific error messages or behaviors (e.g., "API returns 400", "UI stuck on loading") for targeted fixes.
+Confirm your backend setup (e.g., Node.js, Express) and share relevant backend code if the issue persists.
+Test with ChangeNOW's sandbox API key if you're in development (request via their support).
+This should address the most likely issues. Let me know if you need further help with a specific error!
