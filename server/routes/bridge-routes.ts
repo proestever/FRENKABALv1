@@ -86,25 +86,47 @@ router.post('/exchange-range', async (req: Request, res: Response) => {
   try {
     const { fromCurrency, toCurrency, fromAmount } = ExchangeRangeRequestSchema.parse(req.body);
     
-    // Construct the URL based on provided parameters
-    let url = `${CHANGE_NOW_API_BASE}/exchange-range/${fromCurrency}_${toCurrency}`;
-    if (fromAmount) {
-      url = `${CHANGE_NOW_API_BASE}/exchange-amount/${fromAmount}/${fromCurrency}_${toCurrency}`;
-    }
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error fetching exchange range:', errorText);
-      return res.status(response.status).json({ 
-        error: 'Failed to fetch exchange range information',
-        details: errorText
+    if (!fromAmount) {
+      // If no amount is provided, get the min/max range
+      const url = `${CHANGE_NOW_API_BASE}/exchange-range/${fromCurrency}_${toCurrency}?api_key=${process.env.CHANGE_NOW_API_KEY || ''}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null) || await response.text();
+        console.error('Error fetching exchange range:', errorData);
+        return res.status(response.status).json({ 
+          error: 'Failed to fetch exchange range information',
+          details: errorData
+        });
+      }
+      
+      const data = await response.json();
+      return res.json(data);
+    } else {
+      // If amount is provided, get the estimated exchange amount
+      const url = `${CHANGE_NOW_API_BASE}/exchange-amount/${fromAmount}/${fromCurrency}_${toCurrency}?api_key=${process.env.CHANGE_NOW_API_KEY || ''}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null) || await response.text();
+        console.error('Error fetching exchange range:', errorData);
+        return res.status(response.status).json({ 
+          error: 'Failed to fetch exchange range information',
+          details: errorData
+        });
+      }
+      
+      const data = await response.json();
+      // Format the response to match what our frontend expects
+      return res.json({
+        fromAmount: fromAmount,
+        toAmount: data.estimatedAmount.toString(),
+        flow: "standard",
+        rate: data.rate.toString(),
+        validUntil: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes from now
+        transactionSpeedForecast: "10 minutes"
       });
     }
-    
-    const data = await response.json();
-    return res.json(data);
   } catch (error) {
     console.error('Error fetching exchange range:', error);
     return res.status(500).json({ error: 'Failed to fetch exchange range' });
