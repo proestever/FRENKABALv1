@@ -236,10 +236,19 @@ const Bridge = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-white">Bridge</h1>
-        <p className="text-muted-foreground mb-8">
+        <p className="text-muted-foreground mb-3">
           Easily exchange your assets across different networks with ChangeNOW integration. 
           No registration required, simple and fast.
         </p>
+        
+        <div className="mb-6 flex justify-end">
+          <a 
+            href="/bridge-widget" 
+            className="text-sm text-primary hover:underline"
+          >
+            Try the ChangeNOW widget version →
+          </a>
+        </div>
         
         <Card className="glass-card">
           <CardHeader>
@@ -287,60 +296,32 @@ const Bridge = () => {
                       />
                     </div>
                     
-                    <Select
+                    {/* Simple Select Dropdown */}
+                    <select
                       value={fromCurrency}
-                      onValueChange={(value) => {
-                        setFromCurrency(value);
+                      onChange={(e) => {
+                        setFromCurrency(e.target.value);
                         setHasEstimated(false);
                       }}
+                      className="w-[180px] glass-input bg-black/30 border border-white/15 rounded-md px-3 py-2 text-white"
                     >
-                      <SelectTrigger className="w-[180px] glass-input bg-black/30 border border-white/15">
-                        <SelectValue placeholder="Select currency">
-                          {isLoadingCurrencies ? (
-                            <div className="flex items-center">
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Loading...
-                            </div>
-                          ) : fromCurrencyDetails ? (
-                            <div className="flex items-center">
-                              <img 
-                                src={fromCurrencyDetails.image} 
-                                alt={fromCurrencyDetails.name}
-                                className="w-5 h-5 mr-2 rounded-full"
-                              />
-                              {fromCurrencyDetails.ticker.toUpperCase()}
-                            </div>
-                          ) : (
-                            "Select currency"
-                          )}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="glass-card bg-black/90 border border-white/10 max-h-[300px]">
-                        {currencies && Array.isArray(currencies) ? (
-                          currencies
-                            .filter((c: Currency) => c.sell)
-                            .map((currency: Currency) => (
-                              <SelectItem 
-                                key={currency.ticker} 
-                                value={currency.ticker.toLowerCase()}
-                              >
-                                <div className="flex items-center">
-                                  <img 
-                                    src={currency.image} 
-                                    alt={currency.name}
-                                    className="w-5 h-5 mr-2 rounded-full"
-                                  />
-                                  <span>{currency.ticker.toUpperCase()}</span>
-                                </div>
-                              </SelectItem>
-                            ))
-                        ) : (
-                          <SelectItem value="loading">
-                            {isLoadingCurrencies ? "Loading currencies..." : "No currencies available"}
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
+                      {isLoadingCurrencies ? (
+                        <option value="">Loading...</option>
+                      ) : currencies && Array.isArray(currencies) ? (
+                        currencies
+                          .filter((c: Currency) => c.sell)
+                          .map((currency: Currency) => (
+                            <option 
+                              key={currency.ticker} 
+                              value={currency.ticker.toLowerCase()}
+                            >
+                              {currency.ticker.toUpperCase()} - {currency.name}
+                            </option>
+                          ))
+                      ) : (
+                        <option value="">No currencies available</option>
+                      )}
+                    </select>
                   </div>
                 </div>
                 
@@ -371,60 +352,32 @@ const Bridge = () => {
                       />
                     </div>
                     
-                    <Select
+                    {/* Simple Select Dropdown */}
+                    <select
                       value={toCurrency}
-                      onValueChange={(value) => {
-                        setToCurrency(value);
+                      onChange={(e) => {
+                        setToCurrency(e.target.value);
                         setHasEstimated(false);
                       }}
+                      className="w-[180px] glass-input bg-black/30 border border-white/15 rounded-md px-3 py-2 text-white"
                     >
-                      <SelectTrigger className="w-[180px] glass-input bg-black/30 border border-white/15">
-                        <SelectValue placeholder="Select currency">
-                          {isLoadingCurrencies ? (
-                            <div className="flex items-center">
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Loading...
-                            </div>
-                          ) : toCurrencyDetails ? (
-                            <div className="flex items-center">
-                              <img 
-                                src={toCurrencyDetails.image} 
-                                alt={toCurrencyDetails.name}
-                                className="w-5 h-5 mr-2 rounded-full"
-                              />
-                              {toCurrencyDetails.ticker.toUpperCase()}
-                            </div>
-                          ) : (
-                            "Select currency"
-                          )}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="glass-card bg-black/90 border border-white/10 max-h-[300px]">
-                        {currencies && Array.isArray(currencies) ? (
-                          currencies
-                            .filter((c: Currency) => c.buy)
-                            .map((currency: Currency) => (
-                              <SelectItem 
-                                key={currency.ticker} 
-                                value={currency.ticker.toLowerCase()}
-                              >
-                                <div className="flex items-center">
-                                  <img 
-                                    src={currency.image} 
-                                    alt={currency.name}
-                                    className="w-5 h-5 mr-2 rounded-full"
-                                  />
-                                  <span>{currency.ticker.toUpperCase()}</span>
-                                </div>
-                              </SelectItem>
-                            ))
-                        ) : (
-                          <SelectItem value="loading">
-                            {isLoadingCurrencies ? "Loading currencies..." : "No currencies available"}
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
+                      {isLoadingCurrencies ? (
+                        <option value="">Loading...</option>
+                      ) : currencies && Array.isArray(currencies) ? (
+                        currencies
+                          .filter((c: Currency) => c.buy)
+                          .map((currency: Currency) => (
+                            <option 
+                              key={currency.ticker} 
+                              value={currency.ticker.toLowerCase()}
+                            >
+                              {currency.ticker.toUpperCase()} - {currency.name}
+                            </option>
+                          ))
+                      ) : (
+                        <option value="">No currencies available</option>
+                      )}
+                    </select>
                   </div>
                 </div>
                 

@@ -10,6 +10,7 @@ import { Donations } from "@/pages/donations";
 import PortfoliosPage from "@/pages/portfolios";
 import AdminPage from "@/pages/admin";
 import Bridge from "@/pages/bridge";
+import BridgeWidget from "@/pages/bridge-widget";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthProvider } from "@/providers/auth-provider";
@@ -381,6 +382,7 @@ function Router() {
           <Route path="/portfolio/:portfolioId" component={Home} />
           <Route path="/donations" component={Donations} />
           <Route path="/bridge" component={Bridge} />
+          <Route path="/bridge-widget" component={BridgeWidget} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
