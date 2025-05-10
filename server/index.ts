@@ -41,6 +41,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Add health check endpoint before registering routes
+  app.get('/', (_req, res) => {
+    res.status(200).send('OK');
+  });
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
