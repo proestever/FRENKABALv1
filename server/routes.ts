@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance, getApiCounterStats, resetApiCounter } from "./services/api";
@@ -20,6 +20,7 @@ import subscriptionRoutes from "./routes/subscription-routes";
 import { format } from "date-fns";
 import { dailyCreditsService } from "./services/daily-credits-service";
 import { creditService } from "./services/credit-service";
+import { requireActiveSubscription, restrictToPaidSubscribers } from "./middleware/subscription-check";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -192,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/wallet/:address/all", async (req, res) => {
+  app.get("/api/wallet/:address/all", requireActiveSubscription, async (req: any, res) => {
     try {
       const { address } = req.params;
       
@@ -204,6 +205,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {
         return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      // Check if the user is authenticated and has an active subscription
+      if (req.isAuthenticated && req.isAuthenticated() && !req.hasActiveSubscription) {
+        return res.status(402).json({
+          error: 'Subscription required',
+          message: 'You need an active subscription to access complete wallet data',
+          subscriptionRequired: true
+        });
       }
       
       // Set loading progress to indicate we're fetching all tokens
@@ -233,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // API route to get wallet tokens directly from the blockchain 
   // This is useful for getting up-to-date balances immediately after a swap
-  app.get("/api/wallet/:address/direct", async (req, res) => {
+  app.get("/api/wallet/:address/direct", requireActiveSubscription, async (req: any, res) => {
     try {
       const { address } = req.params;
       
@@ -245,6 +255,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {
         return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      // Check if the user is authenticated and has an active subscription
+      if (req.isAuthenticated && req.isAuthenticated() && !req.hasActiveSubscription) {
+        return res.status(402).json({
+          error: 'Subscription required',
+          message: 'You need an active subscription to access direct blockchain data',
+          subscriptionRequired: true
+        });
       }
       
       // Set loading progress
@@ -285,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // API route to get specific token balance for a wallet
-  app.get("/api/wallet/:address/token/:tokenAddress", async (req, res) => {
+  app.get("/api/wallet/:address/token/:tokenAddress", requireActiveSubscription, async (req: any, res) => {
     try {
       const { address, tokenAddress } = req.params;
       
@@ -305,6 +324,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!addressRegex.test(tokenAddress)) {
         return res.status(400).json({ message: "Invalid token address format" });
+      }
+      
+      // Check if the user is authenticated and has an active subscription
+      if (req.isAuthenticated && req.isAuthenticated() && !req.hasActiveSubscription) {
+        return res.status(402).json({
+          error: 'Subscription required',
+          message: 'You need an active subscription to view detailed token data',
+          subscriptionRequired: true
+        });
       }
       
       // Get the specific token balance

@@ -1,16 +1,30 @@
 import { Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
 
+// Extend type for the expected session user format in our app
+interface UserSession {
+  id: number;
+  username?: string;
+  walletAddress?: string;
+}
+
+interface AuthenticatedRequest extends Request {
+  isAuthenticated?(): boolean;
+  user?: UserSession;
+  hasActiveSubscription?: boolean;
+}
+
 /**
  * Middleware to check if a user has an active subscription
  * - Blocks access to premium features if no active subscription is found
  * - Only applies to authenticated users
  * - Public routes and endpoints bypass this check
  */
-export async function requireActiveSubscription(req: Request, res: Response, next: NextFunction) {
+export async function requireActiveSubscription(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
     // Skip subscription check for unauthenticated users (they'll be handled by the endpoints)
-    if (!req.isAuthenticated || !req.isAuthenticated() || !req.user?.id) {
+    if (typeof req.isAuthenticated !== 'function' || !req.isAuthenticated() || !req.user?.id) {
+      // No authentication, just continue (endpoints will handle access control)
       return next();
     }
     
@@ -22,6 +36,7 @@ export async function requireActiveSubscription(req: Request, res: Response, nex
     // Check if subscription exists and is still valid
     const hasActiveSubscription = subscription && 
       subscription.status === 'confirmed' && 
+      subscription.endDate && // Make sure endDate exists
       new Date(subscription.endDate) > new Date();
     
     // Add subscription status to request object for use in route handlers
@@ -40,9 +55,9 @@ export async function requireActiveSubscription(req: Request, res: Response, nex
  * - Requires an active subscription to access
  * - Will return 402 (Payment Required) if no subscription is found
  */
-export function restrictToPaidSubscribers(req: Request, res: Response, next: NextFunction) {
+export function restrictToPaidSubscribers(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   // If user is not authenticated, return 401
-  if (!req.isAuthenticated || !req.isAuthenticated() || !req.user) {
+  if (typeof req.isAuthenticated !== 'function' || !req.isAuthenticated() || !req.user) {
     return res.status(401).json({ 
       error: 'Authentication required',
       message: 'You must be logged in to access this feature'
@@ -66,6 +81,8 @@ export function restrictToPaidSubscribers(req: Request, res: Response, next: Nex
 declare global {
   namespace Express {
     interface Request {
+      isAuthenticated?(): boolean;
+      user?: UserSession;
       hasActiveSubscription?: boolean;
     }
   }
