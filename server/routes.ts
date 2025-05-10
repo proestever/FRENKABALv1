@@ -15,6 +15,7 @@ import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
 import portfolioRoutes from "./routes/portfolio-routes";
+import creditRoutes from "./routes/credit-routes";
 import { format } from "date-fns";
 
 // Loading progress tracking
@@ -1406,6 +1407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register portfolio routes
   app.use("/api", portfolioRoutes);
+  app.use("/api", creditRoutes);
   
   // API Routes for DexScreener preferred tokens management
   
