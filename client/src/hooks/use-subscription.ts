@@ -2,6 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+// Helper function to handle response parsing
+async function parseResponse<T>(response: Response): Promise<T> {
+  const data = await response.json();
+  return data as T;
+}
+
 export interface SubscriptionPackage {
   id: number;
   name: string;
@@ -34,32 +40,44 @@ export interface SubscriptionPayment {
 }
 
 export function useSubscriptionPackages(activeOnly = true) {
-  return useQuery({
+  return useQuery<SubscriptionPackage[]>({
     queryKey: ['/api/subscription-packages', { activeOnly }],
-    queryFn: () => apiRequest(`/api/subscription-packages?activeOnly=${activeOnly}`),
+    queryFn: async () => {
+      const response = await apiRequest(`/api/subscription-packages?activeOnly=${activeOnly}`);
+      return parseResponse<SubscriptionPackage[]>(response);
+    },
   });
 }
 
 export function useSubscriptionPackage(id: number | null) {
-  return useQuery({
+  return useQuery<SubscriptionPackage>({
     queryKey: ['/api/subscription-packages', id],
-    queryFn: () => apiRequest(`/api/subscription-packages/${id}`),
+    queryFn: async () => {
+      const response = await apiRequest(`/api/subscription-packages/${id}`);
+      return parseResponse<SubscriptionPackage>(response);
+    },
     enabled: !!id,
   });
 }
 
 export function useUserActiveSubscription(userId: number | null) {
-  return useQuery({
+  return useQuery<SubscriptionPayment | null>({
     queryKey: ['/api/users', userId, 'subscription'],
-    queryFn: () => apiRequest(`/api/users/${userId}/subscription`),
+    queryFn: async () => {
+      const response = await apiRequest(`/api/users/${userId}/subscription`);
+      return parseResponse<SubscriptionPayment | null>(response);
+    },
     enabled: !!userId,
   });
 }
 
 export function useUserSubscriptionHistory(userId: number | null) {
-  return useQuery({
+  return useQuery<SubscriptionPayment[]>({
     queryKey: ['/api/users', userId, 'subscription-history'],
-    queryFn: () => apiRequest(`/api/users/${userId}/subscription-history`),
+    queryFn: async () => {
+      const response = await apiRequest(`/api/users/${userId}/subscription-history`);
+      return parseResponse<SubscriptionPayment[]>(response);
+    },
     enabled: !!userId,
   });
 }
@@ -68,16 +86,17 @@ export function useSubscriptionPayment() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: (paymentData: {
-      userId: number;
-      packageId: number;
-      txHash: string;
-      fromAddress: string;
-      toAddress: string;
-      plsAmount: string;
-    }) => {
-      return apiRequest('POST', '/api/subscription-payments', paymentData);
+  return useMutation<SubscriptionPayment, Error, {
+    userId: number;
+    packageId: number;
+    txHash: string;
+    fromAddress: string;
+    toAddress: string;
+    plsAmount: string;
+  }>({
+    mutationFn: async (paymentData) => {
+      const response = await apiRequest('POST', '/api/subscription-payments', paymentData);
+      return parseResponse<SubscriptionPayment>(response);
     },
     onSuccess: (data, variables) => {
       toast({
@@ -108,9 +127,10 @@ export function useUpdateSubscriptionPaymentStatus() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) => {
-      return apiRequest('PATCH', `/api/subscription-payments/${id}/status`, { status });
+  return useMutation<SubscriptionPayment, Error, { id: number; status: string }>({
+    mutationFn: async ({ id, status }) => {
+      const response = await apiRequest('PATCH', `/api/subscription-payments/${id}/status`, { status });
+      return parseResponse<SubscriptionPayment>(response);
     },
     onSuccess: (data) => {
       toast({
@@ -119,14 +139,17 @@ export function useUpdateSubscriptionPaymentStatus() {
       });
       
       // Invalidate user subscription queries
-      if (data.userId) {
-        queryClient.invalidateQueries({ 
-          queryKey: ['/api/users', data.userId, 'subscription'] 
-        });
-        queryClient.invalidateQueries({ 
-          queryKey: ['/api/users', data.userId, 'subscription-history'] 
-        });
-      }
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/users', data.userId, 'subscription'] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/users', data.userId, 'subscription-history'] 
+      });
+      
+      // Also invalidate the payments list
+      queryClient.invalidateQueries({
+        queryKey: ['/api/subscription-payments']
+      });
     },
     onError: (error) => {
       toast({

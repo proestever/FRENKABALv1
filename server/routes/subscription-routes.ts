@@ -3,6 +3,9 @@ import { storage } from "../storage";
 import { z } from "zod";
 import { ethers } from "ethers";
 import { insertSubscriptionPaymentSchema } from "@shared/schema";
+import { db } from "../db";
+import { eq, and, desc } from "drizzle-orm";
+import { subscriptionPayments, subscriptionPackages, users } from "@shared/schema";
 
 const router = Router();
 
@@ -35,6 +38,58 @@ router.get("/subscription-packages/:id", async (req, res) => {
   } catch (error) {
     console.error(`Error fetching subscription package ${req.params.id}:`, error);
     res.status(500).json({ error: "Failed to fetch subscription package" });
+  }
+});
+
+// Create a new subscription package (admin endpoint)
+router.post("/subscription-packages", async (req, res) => {
+  try {
+    // Validate request body
+    const { name, description, durationDays, plsCost, features, isActive, displayOrder } = req.body;
+    
+    if (!name || !durationDays || !plsCost) {
+      return res.status(400).json({ error: "Name, duration, and cost are required" });
+    }
+    
+    // Create the package
+    const newPackage = await storage.createSubscriptionPackage({
+      name,
+      description: description || "",
+      durationDays: parseInt(durationDays),
+      plsCost,
+      features: Array.isArray(features) ? features : [],
+      isActive: isActive !== undefined ? isActive : true,
+      displayOrder: displayOrder !== undefined ? parseInt(displayOrder) : 0,
+    });
+    
+    res.status(201).json(newPackage);
+  } catch (error) {
+    console.error("Error creating subscription package:", error);
+    res.status(500).json({ error: "Failed to create subscription package" });
+  }
+});
+
+// Update a subscription package (admin endpoint)
+router.patch("/subscription-packages/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid package ID" });
+    }
+    
+    // Check if package exists
+    const existingPackage = await storage.getSubscriptionPackageById(id);
+    if (!existingPackage) {
+      return res.status(404).json({ error: "Subscription package not found" });
+    }
+    
+    // Update the package
+    const updatedPackage = await storage.updateSubscriptionPackage(id, req.body);
+    
+    res.json(updatedPackage);
+  } catch (error) {
+    console.error(`Error updating subscription package ${req.params.id}:`, error);
+    res.status(500).json({ error: "Failed to update subscription package" });
   }
 });
 
@@ -148,6 +203,39 @@ router.post("/subscription-payments", async (req, res) => {
     }
     
     res.status(500).json({ error: "Failed to process subscription payment" });
+  }
+});
+
+// Get all subscription payments (admin endpoint)
+router.get("/subscription-payments", async (req, res) => {
+  try {
+    // Get all payments with package and user info
+    const payments = await db.select({
+      payment: subscriptionPayments,
+      package: subscriptionPackages,
+      user: users
+    })
+    .from(subscriptionPayments)
+    .leftJoin(subscriptionPackages, eq(subscriptionPayments.packageId, subscriptionPackages.id))
+    .leftJoin(users, eq(subscriptionPayments.userId, users.id))
+    .orderBy(desc(subscriptionPayments.createdAt));
+    
+    // Format the response
+    const formattedPayments = payments.map(item => {
+      return {
+        ...item.payment,
+        package: item.package || null,
+        user: item.user ? {
+          id: item.user.id,
+          username: item.user.username
+        } : null
+      };
+    });
+    
+    res.json(formattedPayments);
+  } catch (error) {
+    console.error("Error fetching subscription payments:", error);
+    res.status(500).json({ error: "Failed to fetch subscription payments" });
   }
 });
 
