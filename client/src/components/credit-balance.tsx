@@ -2,7 +2,7 @@ import { useCredits } from '@/hooks/use-credits';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { CircleDollarSign } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { useMobile } from '@/hooks/use-mobile';
+import { useState, useEffect } from 'react';
 
 /**
  * Displays the user's current credit balance
@@ -10,7 +10,23 @@ import { useMobile } from '@/hooks/use-mobile';
 export function CreditBalance() {
   const { credits, isLoading } = useCredits();
   const [, setLocation] = useLocation();
-  const isMobile = useMobile();
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Check for mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Set initial value
+    checkMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkMobile);
+    
+    // Clean up
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // Format large numbers with commas
   const formatNumber = (num: number) => {

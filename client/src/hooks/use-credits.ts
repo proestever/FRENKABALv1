@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/providers/auth-provider';
+import { UserCredits } from '../../shared/schema';
 
 /**
  * Hook to fetch user credits data
@@ -13,7 +14,7 @@ export function useCredits() {
     isLoading,
     error,
     refetch,
-  } = useQuery({
+  } = useQuery<UserCredits>({
     queryKey: isConnected && userId ? [`/api/users/${userId}/credits`] : ['credits-none'],
     enabled: !!userId && isConnected,
     staleTime: 60 * 1000, // Consider data fresh for 1 minute
