@@ -426,7 +426,7 @@ const Credits: React.FC = () => {
                   <Skeleton className="h-10 w-full" />
                   <Skeleton className="h-10 w-full" />
                 </div>
-              ) : transactions && transactions.length > 0 ? (
+              ) : transactions && Array.isArray(transactions) && transactions.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
