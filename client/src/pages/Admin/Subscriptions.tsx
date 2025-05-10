@@ -43,7 +43,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
@@ -130,16 +129,24 @@ export default function AdminSubscriptionsPage() {
   
   const onSubmit = async (data: PackageFormValues) => {
     try {
+      // Process features string into array
+      const processedData = {
+        ...data,
+        features: typeof data.features === 'string'
+          ? data.features.split('\n').map(f => f.trim()).filter(Boolean)
+          : data.features
+      };
+      
       if (editingPackage) {
         // Update existing package
-        await apiRequest('PATCH', `/api/subscription-packages/${editingPackage.id}`, data);
+        await apiRequest('PATCH', `/api/subscription-packages/${editingPackage.id}`, processedData);
         toast({
           title: "Package Updated",
           description: `The ${data.name} package has been updated.`,
         });
       } else {
         // Create new package
-        await apiRequest('POST', '/api/subscription-packages', data);
+        await apiRequest('POST', '/api/subscription-packages', processedData);
         toast({
           title: "Package Created",
           description: `The ${data.name} package has been created.`,
