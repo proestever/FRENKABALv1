@@ -15,6 +15,7 @@ import AdminCredits from "@/pages/Admin/Credits";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthProvider } from "@/providers/auth-provider";
+import { CreditBalance } from "@/components/credit-balance";
 import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch, Settings, BarChart, CircleDollarSign } from "lucide-react";
 import telegramLogo from "@assets/Telegram_2019_Logo.svg.png";
 import xLogo from "@assets/X_logo.jpg";
@@ -167,6 +168,7 @@ function Header() {
         </a>
         
         <div className="flex space-x-4 items-center">
+          {isConnected && <CreditBalance />}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
@@ -235,8 +237,9 @@ function Header() {
             {renderConnectButton(true)}
           </div>
           
-          {/* Right area: menu button */}
-          <div className="col-span-1 flex justify-end space-x-2">
+          {/* Right area: credit balance and menu button */}
+          <div className="col-span-1 flex justify-end space-x-2 items-center">
+            {isConnected && <CreditBalance />}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
