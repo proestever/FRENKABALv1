@@ -164,10 +164,20 @@ const Credits: React.FC = () => {
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Credits</h1>
-        {credits && (
+        {credits ? (
           <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2">
             <CircleDollarSign className="h-5 w-5" />
-            <span className="font-bold">{credits.balance.toLocaleString()} Credits</span>
+            <span className="font-bold">{credits.balance?.toLocaleString() || 0} Credits</span>
+          </div>
+        ) : isLoadingCredits ? (
+          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2">
+            <CircleDollarSign className="h-5 w-5" />
+            <Skeleton className="h-6 w-20" />
+          </div>
+        ) : (
+          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg flex items-center gap-2">
+            <CircleDollarSign className="h-5 w-5" />
+            <span className="font-bold">0 Credits</span>
           </div>
         )}
       </div>
@@ -202,7 +212,7 @@ const Credits: React.FC = () => {
                 ) : (
                   <div className="text-3xl font-bold flex items-center gap-2">
                     <CircleDollarSign className="h-6 w-6 text-primary" />
-                    {credits?.balance.toLocaleString() || 0}
+                    {credits && credits.balance ? credits.balance.toLocaleString() : '0'}
                   </div>
                 )}
               </CardContent>
@@ -219,7 +229,7 @@ const Credits: React.FC = () => {
                 ) : (
                   <div className="text-3xl font-bold flex items-center gap-2">
                     <CreditCard className="h-6 w-6 text-primary" />
-                    {credits?.lifetimeCredits.toLocaleString() || 0}
+                    {credits && credits.lifetimeCredits ? credits.lifetimeCredits.toLocaleString() : '0'}
                   </div>
                 )}
               </CardContent>
@@ -236,7 +246,7 @@ const Credits: React.FC = () => {
                 ) : (
                   <div className="text-3xl font-bold flex items-center gap-2">
                     <ReceiptText className="h-6 w-6 text-primary" />
-                    {credits?.lifetimeSpent.toLocaleString() || 0}
+                    {credits && credits.lifetimeSpent ? credits.lifetimeSpent.toLocaleString() : '0'}
                   </div>
                 )}
               </CardContent>
@@ -270,7 +280,7 @@ const Credits: React.FC = () => {
                   <Skeleton className="h-10 w-full" />
                   <Skeleton className="h-10 w-full" />
                 </div>
-              ) : transactions && transactions.length > 0 ? (
+              ) : transactions && Array.isArray(transactions) && transactions.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -301,7 +311,7 @@ const Credits: React.FC = () => {
                 </div>
               )}
             </CardContent>
-            {transactions && transactions.length > 5 && (
+            {transactions && Array.isArray(transactions) && transactions.length > 5 && (
               <CardFooter>
                 <Button 
                   variant="outline" 
@@ -328,18 +338,18 @@ const Credits: React.FC = () => {
                   <Skeleton className="h-24 w-full" />
                   <Skeleton className="h-24 w-full" />
                 </div>
-              ) : packages && packages.length > 0 ? (
+              ) : packages && Array.isArray(packages) && packages.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {packages.map((pkg: CreditPackage) => (
                     <Card key={pkg.id} className="border-2 hover:border-primary transition-colors">
                       <CardHeader className="pb-2">
                         <CardTitle>{pkg.name}</CardTitle>
-                        <CardDescription>{pkg.credits.toLocaleString()} Credits</CardDescription>
+                        <CardDescription>{pkg.credits ? pkg.credits.toLocaleString() : 0} Credits</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold mb-2">{parseInt(pkg.plsCost).toLocaleString()} PLS</div>
+                        <div className="text-2xl font-bold mb-2">{pkg.plsCost ? parseInt(pkg.plsCost).toLocaleString() : 0} PLS</div>
                         <p className="text-sm text-muted-foreground">
-                          That's {(parseInt(pkg.plsCost) / pkg.credits).toFixed(4)} PLS per credit
+                          That's {pkg.plsCost && pkg.credits ? (parseInt(pkg.plsCost) / pkg.credits).toFixed(4) : 0} PLS per credit
                         </p>
                       </CardContent>
                       <CardFooter>
