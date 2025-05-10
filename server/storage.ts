@@ -3,10 +3,15 @@ import {
   tokenLogos, type InsertTokenLogo, type TokenLogo, 
   bookmarks, type InsertBookmark, type Bookmark,
   portfolios, type Portfolio, type InsertPortfolio,
-  portfolioAddresses, type PortfolioAddress, type InsertPortfolioAddress
+  portfolioAddresses, type PortfolioAddress, type InsertPortfolioAddress,
+  userCredits, type UserCredits, type InsertUserCredits,
+  creditTransactions, type CreditTransaction, type InsertCreditTransaction,
+  creditPackages, type CreditPackage, type InsertCreditPackage,
+  creditPayments, type CreditPayment, type InsertCreditPayment,
+  creditUsageSettings, type CreditUsageSetting, type InsertCreditUsageSetting
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 // Storage interface for database access
 export interface IStorage {
@@ -408,6 +413,403 @@ export class DatabaseStorage implements IStorage {
       return updatedAddress;
     } catch (error) {
       console.error(`Error updating portfolio address:`, error);
+      throw error;
+    }
+  }
+
+  // Credit system methods implementation
+
+  // User credits
+  async getUserCredits(userId: number): Promise<UserCredits | undefined> {
+    try {
+      const [userCreditsRecord] = await db
+        .select()
+        .from(userCredits)
+        .where(eq(userCredits.userId, userId));
+      
+      return userCreditsRecord || undefined;
+    } catch (error) {
+      console.error(`Error getting user credits for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  async createUserCredits(credits: InsertUserCredits): Promise<UserCredits> {
+    try {
+      // Check if user already has a credits record
+      const existingCredits = await this.getUserCredits(credits.userId);
+      
+      if (existingCredits) {
+        return existingCredits; // Return existing record
+      }
+      
+      // Create new credits record if none exists
+      const [newCredits] = await db
+        .insert(userCredits)
+        .values(credits)
+        .returning();
+      
+      return newCredits;
+    } catch (error) {
+      console.error(`Error creating user credits for user ${credits.userId}:`, error);
+      throw error;
+    }
+  }
+
+  async updateUserCreditsBalance(userId: number, newBalance: number): Promise<UserCredits> {
+    try {
+      // Ensure user has a credits record
+      let userCreditsRecord = await this.getUserCredits(userId);
+      
+      if (!userCreditsRecord) {
+        // Create new credits record with initial balance
+        userCreditsRecord = await this.createUserCredits({
+          userId,
+          balance: newBalance,
+          lifetimeCredits: newBalance > 0 ? newBalance : 0,
+          lifetimeSpent: 0
+        });
+        return userCreditsRecord;
+      }
+      
+      // Update existing record
+      const [updatedCredits] = await db
+        .update(userCredits)
+        .set({ 
+          balance: newBalance,
+          updatedAt: new Date()
+        })
+        .where(eq(userCredits.userId, userId))
+        .returning();
+      
+      return updatedCredits;
+    } catch (error) {
+      console.error(`Error updating user credits balance for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  async addCreditsToUser(userId: number, amount: number): Promise<UserCredits> {
+    if (amount <= 0) {
+      throw new Error("Credit amount must be positive");
+    }
+    
+    try {
+      // Get existing credits or create if not exists
+      const userCreditsRecord = await this.getUserCredits(userId);
+      
+      if (!userCreditsRecord) {
+        // Create new credits record
+        return this.createUserCredits({
+          userId,
+          balance: amount,
+          lifetimeCredits: amount,
+          lifetimeSpent: 0
+        });
+      }
+      
+      // Update existing record
+      const newBalance = userCreditsRecord.balance + amount;
+      const newLifetimeCredits = userCreditsRecord.lifetimeCredits + amount;
+      
+      const [updatedCredits] = await db
+        .update(userCredits)
+        .set({ 
+          balance: newBalance,
+          lifetimeCredits: newLifetimeCredits,
+          updatedAt: new Date()
+        })
+        .where(eq(userCredits.userId, userId))
+        .returning();
+      
+      return updatedCredits;
+    } catch (error) {
+      console.error(`Error adding ${amount} credits to user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  async deductCreditsFromUser(userId: number, amount: number): Promise<UserCredits> {
+    if (amount <= 0) {
+      throw new Error("Deduction amount must be positive");
+    }
+    
+    try {
+      // Get existing credits
+      const userCreditsRecord = await this.getUserCredits(userId);
+      
+      if (!userCreditsRecord) {
+        throw new Error(`User ${userId} does not have a credits record`);
+      }
+      
+      // Check if user has enough credits
+      if (userCreditsRecord.balance < amount) {
+        throw new Error(`Insufficient credits: User has ${userCreditsRecord.balance}, but ${amount} are required`);
+      }
+      
+      // Update balance and lifetime spent
+      const newBalance = userCreditsRecord.balance - amount;
+      const newLifetimeSpent = userCreditsRecord.lifetimeSpent + amount;
+      
+      const [updatedCredits] = await db
+        .update(userCredits)
+        .set({ 
+          balance: newBalance,
+          lifetimeSpent: newLifetimeSpent,
+          updatedAt: new Date()
+        })
+        .where(eq(userCredits.userId, userId))
+        .returning();
+      
+      return updatedCredits;
+    } catch (error) {
+      console.error(`Error deducting ${amount} credits from user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  // Credit transactions
+  async createCreditTransaction(transaction: InsertCreditTransaction): Promise<CreditTransaction> {
+    try {
+      const [newTransaction] = await db
+        .insert(creditTransactions)
+        .values(transaction)
+        .returning();
+      
+      return newTransaction;
+    } catch (error) {
+      console.error(`Error creating credit transaction:`, error);
+      throw error;
+    }
+  }
+
+  async getCreditTransactionsByUser(userId: number, limit?: number): Promise<CreditTransaction[]> {
+    try {
+      let query = db
+        .select()
+        .from(creditTransactions)
+        .where(eq(creditTransactions.userId, userId))
+        .orderBy(creditTransactions.createdAt, "desc");
+      
+      if (limit) {
+        query = query.limit(limit);
+      }
+      
+      return await query;
+    } catch (error) {
+      console.error(`Error getting credit transactions for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  async getCreditTransactionById(id: number): Promise<CreditTransaction | undefined> {
+    try {
+      const [transaction] = await db
+        .select()
+        .from(creditTransactions)
+        .where(eq(creditTransactions.id, id));
+      
+      return transaction || undefined;
+    } catch (error) {
+      console.error(`Error getting credit transaction ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // Credit packages
+  async createCreditPackage(pkg: InsertCreditPackage): Promise<CreditPackage> {
+    try {
+      const [newPackage] = await db
+        .insert(creditPackages)
+        .values(pkg)
+        .returning();
+      
+      return newPackage;
+    } catch (error) {
+      console.error(`Error creating credit package:`, error);
+      throw error;
+    }
+  }
+
+  async updateCreditPackage(id: number, data: Partial<InsertCreditPackage>): Promise<CreditPackage> {
+    try {
+      const [updatedPackage] = await db
+        .update(creditPackages)
+        .set({
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(eq(creditPackages.id, id))
+        .returning();
+      
+      return updatedPackage;
+    } catch (error) {
+      console.error(`Error updating credit package ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async getCreditPackages(activeOnly = true): Promise<CreditPackage[]> {
+    try {
+      let query = db
+        .select()
+        .from(creditPackages)
+        .orderBy(creditPackages.displayOrder);
+      
+      if (activeOnly) {
+        query = query.where(eq(creditPackages.isActive, true));
+      }
+      
+      return await query;
+    } catch (error) {
+      console.error(`Error getting credit packages:`, error);
+      throw error;
+    }
+  }
+
+  async getCreditPackageById(id: number): Promise<CreditPackage | undefined> {
+    try {
+      const [pkg] = await db
+        .select()
+        .from(creditPackages)
+        .where(eq(creditPackages.id, id));
+      
+      return pkg || undefined;
+    } catch (error) {
+      console.error(`Error getting credit package ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // Credit payments
+  async createCreditPayment(payment: InsertCreditPayment): Promise<CreditPayment> {
+    try {
+      // Ensure addresses are lowercase
+      const processedPayment = {
+        ...payment,
+        fromAddress: payment.fromAddress.toLowerCase(),
+        toAddress: payment.toAddress.toLowerCase(),
+        txHash: payment.txHash.toLowerCase()
+      };
+      
+      const [newPayment] = await db
+        .insert(creditPayments)
+        .values(processedPayment)
+        .returning();
+      
+      return newPayment;
+    } catch (error) {
+      console.error(`Error creating credit payment:`, error);
+      throw error;
+    }
+  }
+
+  async updateCreditPaymentStatus(id: number, status: string, confirmedAt?: Date): Promise<CreditPayment> {
+    try {
+      const updateData: any = {
+        status,
+        updatedAt: new Date()
+      };
+      
+      if (status === 'confirmed' && confirmedAt) {
+        updateData.confirmedAt = confirmedAt;
+      }
+      
+      const [updatedPayment] = await db
+        .update(creditPayments)
+        .set(updateData)
+        .where(eq(creditPayments.id, id))
+        .returning();
+      
+      return updatedPayment;
+    } catch (error) {
+      console.error(`Error updating credit payment status ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async getCreditPaymentByTxHash(txHash: string): Promise<CreditPayment | undefined> {
+    try {
+      const [payment] = await db
+        .select()
+        .from(creditPayments)
+        .where(eq(creditPayments.txHash, txHash.toLowerCase()));
+      
+      return payment || undefined;
+    } catch (error) {
+      console.error(`Error getting credit payment by txHash ${txHash}:`, error);
+      throw error;
+    }
+  }
+
+  async getCreditPaymentsByUser(userId: number): Promise<CreditPayment[]> {
+    try {
+      return await db
+        .select()
+        .from(creditPayments)
+        .where(eq(creditPayments.userId, userId))
+        .orderBy(creditPayments.createdAt, "desc");
+    } catch (error) {
+      console.error(`Error getting credit payments for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  // Credit usage settings
+  async createCreditUsageSetting(setting: InsertCreditUsageSetting): Promise<CreditUsageSetting> {
+    try {
+      const [newSetting] = await db
+        .insert(creditUsageSettings)
+        .values(setting)
+        .returning();
+      
+      return newSetting;
+    } catch (error) {
+      console.error(`Error creating credit usage setting:`, error);
+      throw error;
+    }
+  }
+
+  async updateCreditUsageSetting(id: number, data: Partial<InsertCreditUsageSetting>): Promise<CreditUsageSetting> {
+    try {
+      const [updatedSetting] = await db
+        .update(creditUsageSettings)
+        .set({
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(eq(creditUsageSettings.id, id))
+        .returning();
+      
+      return updatedSetting;
+    } catch (error) {
+      console.error(`Error updating credit usage setting ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async getCreditUsageSettings(): Promise<CreditUsageSetting[]> {
+    try {
+      return await db
+        .select()
+        .from(creditUsageSettings)
+        .orderBy(creditUsageSettings.featureKey);
+    } catch (error) {
+      console.error(`Error getting credit usage settings:`, error);
+      throw error;
+    }
+  }
+
+  async getCreditUsageSettingByKey(featureKey: string): Promise<CreditUsageSetting | undefined> {
+    try {
+      const [setting] = await db
+        .select()
+        .from(creditUsageSettings)
+        .where(eq(creditUsageSettings.featureKey, featureKey));
+      
+      return setting || undefined;
+    } catch (error) {
+      console.error(`Error getting credit usage setting by key ${featureKey}:`, error);
       throw error;
     }
   }
