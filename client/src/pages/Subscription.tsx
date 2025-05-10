@@ -174,20 +174,27 @@ export default function SubscriptionPage() {
               
               {/* Pricing column */}
               <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 gap-4 mb-4">
                   {packages.map((pkg) => (
                     <div 
                       key={pkg.id} 
-                      className={`rounded-lg border border-cyan-200/30 p-4 ${
-                        pkg.durationDays === 365 ? 'bg-gradient-to-r from-cyan-900/30 to-blue-900/30' : 'bg-black/30'
+                      className={`rounded-lg border cursor-pointer ${
+                        selectedPackage === pkg.id
+                          ? 'border-cyan-400 border-2'
+                          : 'border-cyan-200/30'
+                      } p-4 ${
+                        pkg.durationDays === 365 
+                          ? 'bg-gradient-to-r from-cyan-900/30 to-blue-900/30' 
+                          : 'bg-black/30'
                       }`}
+                      onClick={() => !hasActiveSubscription && setSelectedPackage(pkg.id)}
                     >
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between">
                         <div>
                           <h4 className="font-medium">{pkg.durationDays} Days</h4>
                           <p className="text-2xl font-bold text-cyan-100">{formatPlsCost(pkg.plsCost)} PLS</p>
                         </div>
-                        <div>
+                        <div className="flex items-center gap-2">
                           {pkg.durationDays > 30 && (
                             <Badge className={`${
                               pkg.durationDays === 365 
@@ -202,50 +209,76 @@ export default function SubscriptionPage() {
                               }
                             </Badge>
                           )}
+                          
+                          {selectedPackage === pkg.id && (
+                            <div className="h-5 w-5 rounded-full bg-cyan-400 flex items-center justify-center">
+                              <Check className="h-4 w-4 text-black" />
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button 
-                            className={`w-full bg-cyan-900/50 hover:bg-cyan-800/60 text-white border border-cyan-200/30 backdrop-blur-sm ${
-                              pkg.durationDays === 365 ? 'bg-cyan-800/60' : ''
-                            }`}
-                            onClick={() => setSelectedPackage(pkg.id)}
-                            disabled={isProcessing || !walletAddress || hasActiveSubscription}
-                          >
-                            {!walletAddress ? 'Connect Wallet to Subscribe' : 
-                            hasActiveSubscription ? 'Already Subscribed' : 
-                            'Subscribe Now'}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Confirm Subscription</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              You are about to subscribe to the {pkg.name} plan for {formatPlsCost(pkg.plsCost)} PLS.
-                              <br /><br />
-                              This will send a transaction from your wallet to our contract.
-                              Once confirmed, your subscription will be active for {pkg.durationDays} days.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              disabled={isProcessing}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleSubscribe(pkg.id, pkg.plsCost);
-                              }}
-                            >
-                              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                              Confirm Payment
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
                     </div>
                   ))}
                 </div>
+                
+                {/* Subscribe button at the bottom */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      className="w-full bg-cyan-900/50 hover:bg-cyan-800/60 text-white border border-cyan-200/30 backdrop-blur-sm h-12 text-lg"
+                      disabled={!selectedPackage || isProcessing || !walletAddress || hasActiveSubscription}
+                    >
+                      {!walletAddress 
+                        ? 'Connect Wallet to Subscribe' 
+                        : hasActiveSubscription 
+                          ? 'Already Subscribed' 
+                          : !selectedPackage
+                            ? 'Select a Plan to Subscribe'
+                            : `Subscribe to ${selectedPackage && packages.find(p => p.id === selectedPackage)?.durationDays}-Day Plan`}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    {selectedPackage && (
+                      <>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirm Subscription</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {(() => {
+                              const pkg = packages.find(p => p.id === selectedPackage);
+                              if (!pkg) return null;
+                              return (
+                                <>
+                                  You are about to subscribe to the {pkg.name} plan for {formatPlsCost(pkg.plsCost)} PLS.
+                                  <br /><br />
+                                  This will send a transaction from your wallet to our contract.
+                                  Once confirmed, your subscription will be active for {pkg.durationDays} days.
+                                </>
+                              );
+                            })()}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            disabled={isProcessing}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (selectedPackage) {
+                                const pkg = packages.find(p => p.id === selectedPackage);
+                                if (pkg) {
+                                  handleSubscribe(pkg.id, pkg.plsCost);
+                                }
+                              }
+                            }}
+                          >
+                            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirm Payment
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </>
+                    )}
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           </Card>
