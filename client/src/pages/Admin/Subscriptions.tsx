@@ -70,10 +70,41 @@ export default function AdminSubscriptionsPage() {
   const [activeTab, setActiveTab] = useState('packages');
   const [editingPackage, setEditingPackage] = useState<SubscriptionPackage | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [creatingPresets, setCreatingPresets] = useState(false);
   
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: packages, isLoading: isLoadingPackages } = useSubscriptionPackages(false);
   const updatePaymentStatus = useUpdateSubscriptionPaymentStatus();
+  
+  // Function to handle creating preset packages
+  const handleCreatePresets = async () => {
+    setCreatingPresets(true);
+    
+    try {
+      const success = await createAllPresetPackages(
+        // onSuccess callback
+        () => {
+          toast({
+            title: "Success",
+            description: "Created time-based subscription packages (30, 60, 90, 365 days)"
+          });
+          // Invalidate the subscription packages query to refresh the list
+          queryClient.invalidateQueries({ queryKey: ['/api/subscription-packages'] });
+        },
+        // onError callback
+        (error) => {
+          toast({
+            title: "Error",
+            description: error instanceof Error ? error.message : "Failed to create preset packages",
+            variant: "destructive",
+          });
+        }
+      );
+    } finally {
+      setCreatingPresets(false);
+    }
+  };
   
   // Get all subscription payments
   const { data: payments, isLoading: isLoadingPayments } = useQuery<SubscriptionPayment[]>({
@@ -143,15 +174,8 @@ export default function AdminSubscriptionsPage() {
   
   const handleNewPackage = () => {
     setEditingPackage(null);
-    form.reset({
-      name: '',
-      description: '',
-      durationDays: 30,
-      plsCost: '',
-      features: '',
-      isActive: true,
-      displayOrder: 0,
-    });
+    // Use our preset defaults for a 30-day package
+    form.reset(getPresetDefaultValues(30));
     setIsDialogOpen(true);
   };
   
@@ -190,7 +214,24 @@ export default function AdminSubscriptionsPage() {
         </TabsList>
         
         <TabsContent value="packages">
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-between mb-4">
+            <Button 
+              onClick={handleCreatePresets} 
+              disabled={creatingPresets}
+              variant="outline"
+            >
+              {creatingPresets ? (
+                <>
+                  <span className="mr-2 h-4 w-4 animate-spin">⏳</span>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Time-Based Packages
+                </>
+              )}
+            </Button>
             <Button onClick={handleNewPackage}>
               <Plus className="mr-2 h-4 w-4" />
               New Package
