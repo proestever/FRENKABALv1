@@ -34,7 +34,7 @@ const CONTRACT_ADDRESS = "0x87315173fC0B7A3766761C8d199B803697179434";
 
 export default function SubscriptionPage() {
   const { user } = useAuth();
-  const { walletAddress, provider } = useWallet();
+  const { walletAddress, provider, connect } = useWallet();
   const { toast } = useToast();
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -42,6 +42,28 @@ export default function SubscriptionPage() {
   const { data: packages, isLoading: isLoadingPackages } = useSubscriptionPackages();
   const { data: subscription, isLoading: isLoadingSubscription } = useUserActiveSubscription(user?.id || null);
   const subscriptionPayment = useSubscriptionPayment();
+  
+  // Function to handle wallet connection
+  const handleConnectWallet = async () => {
+    try {
+      if (connect) {
+        await connect();
+      } else {
+        toast({
+          title: "Connection Issue",
+          description: "Please use the wallet connect button in the header",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Wallet connection error:", error);
+      toast({
+        title: "Connection Failed",
+        description: "Could not connect to wallet. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Check if user has an active subscription
   const hasActiveSubscription = subscription && 
@@ -229,20 +251,19 @@ export default function SubscriptionPage() {
                   ))}
                 </div>
                 
-                {/* Subscribe button at the bottom */}
-                {selectedPackage && (
-                  <div className="relative mt-4">
+                {/* Single subscribe button for all states */}
+                <div className="mt-4">
+                  {/* When a package is selected and wallet is connected */}
+                  {selectedPackage && walletAddress && !hasActiveSubscription && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button 
                           className="w-full bg-cyan-900/50 hover:bg-cyan-800/60 text-white border border-cyan-200/30 backdrop-blur-sm h-12 text-lg"
-                          disabled={isProcessing || !walletAddress || hasActiveSubscription}
+                          disabled={isProcessing}
                         >
-                          {!walletAddress 
-                            ? 'Connect Wallet First' 
-                            : hasActiveSubscription 
-                              ? 'Already Subscribed' 
-                              : `Subscribe to ${selectedPackage && packages.find(p => p.id === selectedPackage)?.durationDays}-Day Plan`}
+                          {isProcessing 
+                            ? 'Processing...' 
+                            : `Subscribe to ${packages.find(p => p.id === selectedPackage)?.durationDays}-Day Plan`}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
@@ -283,29 +304,44 @@ export default function SubscriptionPage() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                  </div>
-                )}
-                
-                {/* Button when no package is selected or wallet not connected */}
-                {(!selectedPackage || !walletAddress) && (
-                  <Button 
-                    className="w-full mt-4 bg-cyan-900/50 hover:bg-cyan-800/60 text-white border border-cyan-200/30 backdrop-blur-sm h-12 text-lg"
-                    disabled={!walletAddress}
-                    onClick={() => {
-                      if (!selectedPackage) {
+                  )}
+                  
+                  {/* When wallet is not connected */}
+                  {!walletAddress && (
+                    <Button 
+                      className="w-full bg-cyan-900/50 hover:bg-cyan-800/60 text-white border border-cyan-200/30 backdrop-blur-sm h-12 text-lg"
+                      onClick={handleConnectWallet}
+                    >
+                      Connect Wallet to Subscribe
+                    </Button>
+                  )}
+                  
+                  {/* When a package is not selected but wallet is connected */}
+                  {walletAddress && !selectedPackage && !hasActiveSubscription && (
+                    <Button 
+                      className="w-full bg-cyan-900/50 hover:bg-cyan-800/60 text-white border border-cyan-200/30 backdrop-blur-sm h-12 text-lg"
+                      onClick={() => {
                         toast({
                           title: "No Plan Selected",
                           description: "Please select a subscription plan first",
                           variant: "destructive"
                         });
-                      }
-                    }}
-                  >
-                    {!walletAddress 
-                      ? 'Connect Wallet to Subscribe' 
-                      : 'Select a Plan to Subscribe'}
-                  </Button>
-                )}
+                      }}
+                    >
+                      Select a Plan to Subscribe
+                    </Button>
+                  )}
+                  
+                  {/* When user already has an active subscription */}
+                  {hasActiveSubscription && (
+                    <Button 
+                      className="w-full bg-green-700/50 text-white border border-green-200/30 backdrop-blur-sm h-12 text-lg"
+                      disabled
+                    >
+                      Already Subscribed
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </Card>
