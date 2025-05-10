@@ -150,12 +150,12 @@ export default function SubscriptionPage() {
           {/* First row - three packages */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {packages.slice(0, 3).map((pkg) => (
-              <Card key={pkg.id} className="flex flex-col">
-                <CardHeader>
+              <Card key={pkg.id} className="flex flex-col border border-cyan-200/30 backdrop-blur-sm bg-black/20">
+                <CardHeader className="border-b border-cyan-200/20">
                   <div className="flex justify-between items-center">
                     <CardTitle>{pkg.durationDays} Days</CardTitle>
                     {pkg.durationDays > 30 && (
-                      <Badge className="bg-green-500 text-white">
+                      <Badge className="bg-cyan-400/80 text-black font-bold">
                         {pkg.durationDays === 60 ? '10%' : pkg.durationDays === 90 ? '13.3%' : '33.3%'} OFF
                       </Badge>
                     )}
@@ -165,15 +165,15 @@ export default function SubscriptionPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                  <p className="text-3xl font-bold mb-4">
+                  <p className="text-3xl font-bold mb-4 text-cyan-100">
                     {formatPlsCost(pkg.plsCost)} PLS
                   </p>
-                  <Separator className="my-4" />
+                  <Separator className="my-4 bg-cyan-200/20" />
                   <h3 className="font-medium mb-2">Features:</h3>
                   <ul className="space-y-2">
                     {pkg.features?.map((feature, index) => (
                       <li key={index} className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
+                        <span className="text-cyan-400 mr-2">✓</span>
                         {feature}
                       </li>
                     ))}
@@ -183,7 +183,7 @@ export default function SubscriptionPage() {
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button 
-                        className="w-full"
+                        className="w-full bg-cyan-900/50 hover:bg-cyan-800/60 text-white border border-cyan-200/30 backdrop-blur-sm"
                         onClick={() => setSelectedPackage(pkg.id)}
                         disabled={isProcessing || !walletAddress || hasActiveSubscription}
                       >
@@ -225,28 +225,28 @@ export default function SubscriptionPage() {
           {/* Second row - Annual package (if available) */}
           {packages.length > 3 && (
             <div className="md:w-2/3 mx-auto">
-              <Card className="flex flex-col">
-                <CardHeader className="bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-t-lg">
+              <Card className="flex flex-col border border-cyan-200/30 backdrop-blur-sm bg-black/20">
+                <CardHeader className="border-b border-cyan-200/20 rounded-t-lg">
                   <div className="flex justify-between items-center">
-                    <CardTitle className="text-white">365 Days</CardTitle>
-                    <Badge className="bg-yellow-400 text-black font-bold">
+                    <CardTitle>365 Days</CardTitle>
+                    <Badge className="bg-cyan-400/80 text-black font-bold">
                       BEST VALUE! 33.3% OFF
                     </Badge>
                   </div>
-                  <CardDescription className="text-white opacity-90">
+                  <CardDescription>
                     {packages[3].description || 'Full access to all FrenKabal features'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                  <p className="text-3xl font-bold mb-4">
+                  <p className="text-3xl font-bold mb-4 text-cyan-100">
                     {formatPlsCost(packages[3].plsCost)} PLS
                   </p>
-                  <Separator className="my-4" />
+                  <Separator className="my-4 bg-cyan-200/20" />
                   <h3 className="font-medium mb-2">Features:</h3>
                   <ul className="space-y-2">
                     {packages[3].features?.map((feature, index) => (
                       <li key={index} className="flex items-start">
-                        <span className="text-green-500 mr-2">✓</span>
+                        <span className="text-cyan-400 mr-2">✓</span>
                         {feature}
                       </li>
                     ))}
@@ -256,7 +256,7 @@ export default function SubscriptionPage() {
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button 
-                        className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                        className="w-full bg-cyan-900/50 hover:bg-cyan-800/60 text-white border border-cyan-200/30 backdrop-blur-sm"
                         onClick={() => setSelectedPackage(packages[3].id)}
                         disabled={isProcessing || !walletAddress || hasActiveSubscription}
                       >
