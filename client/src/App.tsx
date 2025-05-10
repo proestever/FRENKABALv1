@@ -200,6 +200,11 @@ function Header() {
                   </DropdownMenuItem>
                   
                   {/* Admin link - only show for the admin wallet address */}
+                  <DropdownMenuItem onClick={() => setLocation("/subscription")} className="cursor-pointer dropdown-item-hover">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span>Subscription</span>
+                  </DropdownMenuItem>
+                  
                   <DropdownMenuItem onClick={() => setLocation("/credits")} className="cursor-pointer dropdown-item-hover">
                     <CircleDollarSign className="mr-2 h-4 w-4" />
                     <span>Credits</span>
@@ -268,6 +273,11 @@ function Header() {
                     <DropdownMenuItem onClick={() => setLocation("/portfolios")} className="cursor-pointer dropdown-item-hover">
                       <FolderSearch className="mr-2 h-4 w-4" />
                       <span>Portfolios</span>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuItem onClick={() => setLocation("/subscription")} className="cursor-pointer dropdown-item-hover">
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      <span>Subscription</span>
                     </DropdownMenuItem>
                     
                     <DropdownMenuItem onClick={() => setLocation("/credits")} className="cursor-pointer dropdown-item-hover">
