@@ -1,7 +1,13 @@
 import { useState } from 'react';
-import { useSubscriptionPackages, useUpdateSubscriptionPaymentStatus, SubscriptionPackage } from '@/hooks/use-subscription';
+import { 
+  useSubscriptionPackages, 
+  useUpdateSubscriptionPaymentStatus, 
+  SubscriptionPackage,
+  SubscriptionPayment
+} from '@/hooks/use-subscription';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { useForm, UseFormReturn } from 'react-hook-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -57,6 +63,7 @@ const packageFormSchema = z.object({
 });
 
 type PackageFormValues = z.infer<typeof packageFormSchema>;
+type FormProps = UseFormReturn<PackageFormValues>;
 
 export default function AdminSubscriptionsPage() {
   const [activeTab, setActiveTab] = useState('packages');
@@ -68,9 +75,12 @@ export default function AdminSubscriptionsPage() {
   const updatePaymentStatus = useUpdateSubscriptionPaymentStatus();
   
   // Get all subscription payments
-  const { data: payments, isLoading: isLoadingPayments } = useQuery({
+  const { data: payments, isLoading: isLoadingPayments } = useQuery<SubscriptionPayment[]>({
     queryKey: ['/api/subscription-payments'],
-    queryFn: () => apiRequest('/api/subscription-payments'),
+    queryFn: async () => {
+      const response = await apiRequest('/api/subscription-payments');
+      return response.json();
+    },
   });
   
   const form = useForm<PackageFormValues>({
