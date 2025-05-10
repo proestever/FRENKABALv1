@@ -399,6 +399,7 @@ function Router() {
           <Route path="/admin" component={AdminPage} />
           <Route path="/admin/api-usage" component={ApiUsagePage} />
           <Route path="/admin/credits" component={AdminCredits} />
+          <Route path="/admin/subscriptions" component={() => import('@/pages/Admin/Subscriptions').then(mod => <mod.default />)} />
           <Route path="/credits" component={Credits} />
           <Route path="/subscription" component={SubscriptionPage} />
           <Route path="/:walletAddress" component={Home} />
