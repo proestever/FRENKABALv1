@@ -139,14 +139,22 @@ export default function AdminSubscriptionsPage() {
       
       if (editingPackage) {
         // Update existing package
-        await apiRequest('PATCH', `/api/subscription-packages/${editingPackage.id}`, processedData);
+        await apiRequest({
+          url: `/api/subscription-packages/${editingPackage.id}`,
+          method: 'PATCH',
+          data: processedData
+        });
         toast({
           title: "Package Updated",
           description: `The ${data.name} package has been updated.`,
         });
       } else {
         // Create new package
-        await apiRequest('POST', '/api/subscription-packages', processedData);
+        await apiRequest({
+          url: '/api/subscription-packages',
+          method: 'POST',
+          data: processedData
+        });
         toast({
           title: "Package Created",
           description: `The ${data.name} package has been created.`,

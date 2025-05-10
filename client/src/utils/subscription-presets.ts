@@ -44,7 +44,7 @@ export const subscriptionPresets = [
 export const createAllPresetPackages = async (onSuccess?: () => void, onError?: (error: any) => void) => {
   try {
     // First, get existing packages
-    const response = await apiRequest('/api/subscription-packages');
+    const response = await apiRequest({ url: '/api/subscription-packages', method: 'GET' });
     const existingPackages = await response.json();
     
     // Track success count
@@ -61,11 +61,19 @@ export const createAllPresetPackages = async (onSuccess?: () => void, onError?: 
         
         if (existingPackage) {
           // Update existing package
-          await apiRequest('PATCH', `/api/subscription-packages/${existingPackage.id}`, preset);
+          await apiRequest({
+            url: `/api/subscription-packages/${existingPackage.id}`,
+            method: 'PATCH',
+            data: preset
+          });
           console.log(`Updated existing package: ${preset.name}`);
         } else {
           // Create new package
-          await apiRequest('POST', '/api/subscription-packages', preset);
+          await apiRequest({
+            url: '/api/subscription-packages',
+            method: 'POST',
+            data: preset
+          });
           console.log(`Created new package: ${preset.name}`);
         }
         
