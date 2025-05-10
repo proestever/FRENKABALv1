@@ -11,6 +11,15 @@ export const users = pgTable("users", {
   twitterHandle: text("twitter_handle"),
   bio: text("bio"),
   createdAt: timestamp("created_at").defaultNow(),
+  email: text("email"),
+  // Stripe subscription fields
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionStatus: text("subscription_status"),
+  subscriptionTier: text("subscription_tier"),
+  subscriptionStartDate: timestamp("subscription_start_date"),
+  subscriptionEndDate: timestamp("subscription_end_date"),
+  hasPaidSubscription: boolean("has_paid_subscription").default(false).notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -27,10 +36,23 @@ export const updateUserProfileSchema = createInsertSchema(users).pick({
   website: true,
   twitterHandle: true,
   bio: true,
+  email: true,
+});
+
+// Schema for updating user subscription info
+export const updateUserSubscriptionSchema = createInsertSchema(users).pick({
+  stripeCustomerId: true,
+  stripeSubscriptionId: true,
+  subscriptionStatus: true,
+  subscriptionTier: true,
+  subscriptionStartDate: true,
+  subscriptionEndDate: true,
+  hasPaidSubscription: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
+export type UpdateUserSubscription = z.infer<typeof updateUserSubscriptionSchema>;
 export type User = typeof users.$inferSelect;
 
 // Define schema for PulseChain token data

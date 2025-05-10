@@ -1,5 +1,5 @@
 import { 
-  users, type User, type InsertUser, type UpdateUserProfile, 
+  users, type User, type InsertUser, type UpdateUserProfile, type UpdateUserSubscription,
   tokenLogos, type InsertTokenLogo, type TokenLogo, 
   bookmarks, type InsertBookmark, type Bookmark,
   portfolios, type Portfolio, type InsertPortfolio,
@@ -19,6 +19,11 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserProfile(id: number, profileData: Partial<UpdateUserProfile>): Promise<User>;
+  
+  // Subscription methods
+  updateUserSubscription(id: number, subscriptionData: Partial<UpdateUserSubscription>): Promise<User>;
+  getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
+  getUserByStripeSubscriptionId(stripeSubscriptionId: string): Promise<User | undefined>;
   
   // Token logo methods
   getTokenLogo(tokenAddress: string): Promise<TokenLogo | undefined>;
