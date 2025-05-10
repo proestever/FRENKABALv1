@@ -14,7 +14,7 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { 
   AlertTriangle, UserPlus, DollarSign, Package, Settings, Search, 
   ShieldCheck, CheckCircle, XCircle
@@ -80,7 +80,7 @@ interface CreditPayment {
 const AdminCredits: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [awardCreditsAmount, setAwardCreditsAmount] = useState<number>(0);
@@ -112,9 +112,9 @@ const AdminCredits: React.FC = () => {
         description: "You do not have permission to access this page.",
         variant: "destructive",
       });
-      navigate('/');
+      setLocation('/');
     }
-  }, [user, isAdmin, navigate, toast]);
+  }, [user, isAdmin, setLocation, toast]);
   
   // Fetch users
   const { 

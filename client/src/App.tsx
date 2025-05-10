@@ -10,10 +10,12 @@ import { Donations } from "@/pages/donations";
 import PortfoliosPage from "@/pages/portfolios";
 import AdminPage from "@/pages/admin";
 import ApiUsagePage from "@/pages/api-usage";
+import Credits from "@/pages/Credits";
+import AdminCredits from "@/pages/Admin/Credits";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthProvider } from "@/providers/auth-provider";
-import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch, Settings, BarChart } from "lucide-react";
+import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch, Settings, BarChart, CircleDollarSign } from "lucide-react";
 import telegramLogo from "@assets/Telegram_2019_Logo.svg.png";
 import xLogo from "@assets/X_logo.jpg";
 import {
@@ -195,6 +197,11 @@ function Header() {
                   </DropdownMenuItem>
                   
                   {/* Admin link - only show for the admin wallet address */}
+                  <DropdownMenuItem onClick={() => setLocation("/credits")} className="cursor-pointer dropdown-item-hover">
+                    <CircleDollarSign className="mr-2 h-4 w-4" />
+                    <span>Credits</span>
+                  </DropdownMenuItem>
+                  
                   {account && account.toLowerCase() === '0x592139a3f8cf019f628a152fc1262b8aef5b7199'.toLowerCase() && (
                     <DropdownMenuItem onClick={() => setLocation("/admin")} className="cursor-pointer dropdown-item-hover">
                       <Settings className="mr-2 h-4 w-4" />
@@ -257,6 +264,11 @@ function Header() {
                     <DropdownMenuItem onClick={() => setLocation("/portfolios")} className="cursor-pointer dropdown-item-hover">
                       <FolderSearch className="mr-2 h-4 w-4" />
                       <span>Portfolios</span>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuItem onClick={() => setLocation("/credits")} className="cursor-pointer dropdown-item-hover">
+                      <CircleDollarSign className="mr-2 h-4 w-4" />
+                      <span>Credits</span>
                     </DropdownMenuItem>
                     
                     {/* Admin link in mobile menu - only show for the admin wallet address */}
@@ -372,6 +384,8 @@ function Router() {
           <Route path="/donations" component={Donations} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/admin/api-usage" component={ApiUsagePage} />
+          <Route path="/admin/credits" component={AdminCredits} />
+          <Route path="/credits" component={Credits} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
         </Switch>
