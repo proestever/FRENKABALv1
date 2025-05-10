@@ -50,6 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { address } = req.params;
       const { page = '1', limit = '100' } = req.query; // Default to page 1, limit 100
+      const userId = req.headers['user-id'] ? parseInt(req.headers['user-id'] as string, 10) : null;
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -72,6 +73,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (isNaN(limitNum) || limitNum < 1 || limitNum > 200) {
         return res.status(400).json({ message: "Invalid limit parameter. Must be between 1 and 200" });
+      }
+      
+      // Check if user has enough credits for this wallet search
+      if (userId) {
+        const { creditService } = require('./services/credit-service');
+        
+        // Check if user has enough credits
+        const hasEnoughCredits = await creditService.hasCreditsForWalletSearch(userId);
+        if (!hasEnoughCredits) {
+          return res.status(402).json({ 
+            message: "Insufficient credits for wallet search. Please purchase more credits.",
+            errorCode: "INSUFFICIENT_CREDITS" 
+          });
+        }
+        
+        // Deduct credits
+        await creditService.deductCreditsForWalletSearch(userId);
       }
       
       const walletData = await getWalletData(address, pageNum, limitNum);
@@ -747,6 +765,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // we can still return user info without signature if the user exists
       else if (user) {
         console.log(`Returning existing user ${user.id} for wallet ${walletAddress} without signature verification`);
+        
+        // Check and award daily free credits
+        try {
+          const { dailyCreditsService } = require('./services/daily-credits-service');
+          const creditsAwarded = await dailyCreditsService.checkAndAwardDailyCredits(user.id);
+          
+          if (creditsAwarded > 0) {
+            console.log(`Awarded ${creditsAwarded} daily free credits to user ${user.id}`);
+          }
+        } catch (creditsError) {
+          console.error(`Error awarding daily credits to user ${user.id}:`, creditsError);
+          // Continue even if there's an error with credits
+        }
+        
         return res.json({ 
           id: user.id,
           username: user.username
@@ -779,6 +811,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log(`Created new user ${user.id} for verified wallet ${walletAddress}`);
+        
+        // Award initial free credits to new user
+        try {
+          const { dailyCreditsService } = require('./services/daily-credits-service');
+          const creditsAwarded = await dailyCreditsService.checkAndAwardDailyCredits(user.id);
+          
+          if (creditsAwarded > 0) {
+            console.log(`Awarded ${creditsAwarded} initial free credits to new user ${user.id}`);
+          }
+        } catch (creditsError) {
+          console.error(`Error awarding initial credits to new user ${user.id}:`, creditsError);
+          // Continue even if there's an error with credits
+        }
+        
         return res.json({ 
           id: user.id,
           username: user.username
