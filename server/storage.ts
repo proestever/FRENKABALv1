@@ -39,6 +39,38 @@ export interface IStorage {
   addAddressToPortfolio(address: InsertPortfolioAddress): Promise<PortfolioAddress>;
   removeAddressFromPortfolio(id: number): Promise<boolean>;
   updatePortfolioAddress(id: number, data: Partial<InsertPortfolioAddress>): Promise<PortfolioAddress>;
+  
+  // Credit system methods
+  
+  // User credits
+  getUserCredits(userId: number): Promise<UserCredits | undefined>;
+  createUserCredits(userCredits: InsertUserCredits): Promise<UserCredits>;
+  updateUserCreditsBalance(userId: number, newBalance: number): Promise<UserCredits>;
+  addCreditsToUser(userId: number, amount: number): Promise<UserCredits>;
+  deductCreditsFromUser(userId: number, amount: number): Promise<UserCredits>;
+  
+  // Credit transactions
+  createCreditTransaction(transaction: InsertCreditTransaction): Promise<CreditTransaction>;
+  getCreditTransactionsByUser(userId: number, limit?: number): Promise<CreditTransaction[]>;
+  getCreditTransactionById(id: number): Promise<CreditTransaction | undefined>;
+  
+  // Credit packages
+  createCreditPackage(pkg: InsertCreditPackage): Promise<CreditPackage>;
+  updateCreditPackage(id: number, data: Partial<InsertCreditPackage>): Promise<CreditPackage>;
+  getCreditPackages(activeOnly?: boolean): Promise<CreditPackage[]>;
+  getCreditPackageById(id: number): Promise<CreditPackage | undefined>;
+  
+  // Credit payments
+  createCreditPayment(payment: InsertCreditPayment): Promise<CreditPayment>;
+  updateCreditPaymentStatus(id: number, status: string, confirmedAt?: Date): Promise<CreditPayment>;
+  getCreditPaymentByTxHash(txHash: string): Promise<CreditPayment | undefined>;
+  getCreditPaymentsByUser(userId: number): Promise<CreditPayment[]>;
+  
+  // Credit usage settings
+  createCreditUsageSetting(setting: InsertCreditUsageSetting): Promise<CreditUsageSetting>;
+  updateCreditUsageSetting(id: number, data: Partial<InsertCreditUsageSetting>): Promise<CreditUsageSetting>;
+  getCreditUsageSettings(): Promise<CreditUsageSetting[]>;
+  getCreditUsageSettingByKey(featureKey: string): Promise<CreditUsageSetting | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
