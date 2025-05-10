@@ -16,6 +16,7 @@ import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schem
 import { ethers } from "ethers";
 import portfolioRoutes from "./routes/portfolio-routes";
 import creditRoutes from "./routes/credit-routes";
+import subscriptionRoutes from "./routes/subscription-routes";
 import { format } from "date-fns";
 import { dailyCreditsService } from "./services/daily-credits-service";
 import { creditService } from "./services/credit-service";
@@ -1452,6 +1453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register portfolio routes
   app.use("/api", portfolioRoutes);
   app.use("/api", creditRoutes);
+  app.use("/api", subscriptionRoutes);
   
   // API Routes for DexScreener preferred tokens management
   

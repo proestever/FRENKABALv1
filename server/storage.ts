@@ -4,6 +4,8 @@ import {
   bookmarks, type InsertBookmark, type Bookmark,
   portfolios, type Portfolio, type InsertPortfolio,
   portfolioAddresses, type PortfolioAddress, type InsertPortfolioAddress,
+  subscriptionPackages, type SubscriptionPackage, type InsertSubscriptionPackage,
+  subscriptionPayments, type SubscriptionPayment, type InsertSubscriptionPayment,
   userCredits, type UserCredits, type InsertUserCredits,
   creditTransactions, type CreditTransaction, type InsertCreditTransaction,
   creditPackages, type CreditPackage, type InsertCreditPackage,
@@ -24,6 +26,19 @@ export interface IStorage {
   updateUserSubscription(id: number, subscriptionData: Partial<UpdateUserSubscription>): Promise<User>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
   getUserByStripeSubscriptionId(stripeSubscriptionId: string): Promise<User | undefined>;
+  
+  // Subscription methods
+  createSubscriptionPackage(pkg: InsertSubscriptionPackage): Promise<SubscriptionPackage>;
+  updateSubscriptionPackage(id: number, data: Partial<InsertSubscriptionPackage>): Promise<SubscriptionPackage>;
+  getSubscriptionPackages(activeOnly?: boolean): Promise<SubscriptionPackage[]>;
+  getSubscriptionPackageById(id: number): Promise<SubscriptionPackage | undefined>;
+  
+  // Subscription payments
+  createSubscriptionPayment(payment: InsertSubscriptionPayment): Promise<SubscriptionPayment>;
+  updateSubscriptionPaymentStatus(id: number, status: string, confirmedAt?: Date): Promise<SubscriptionPayment>;
+  getSubscriptionPaymentByTxHash(txHash: string): Promise<SubscriptionPayment | undefined>;
+  getUserActiveSubscription(userId: number): Promise<SubscriptionPayment | undefined>;
+  getUserSubscriptionHistory(userId: number): Promise<SubscriptionPayment[]>;
   
   // Token logo methods
   getTokenLogo(tokenAddress: string): Promise<TokenLogo | undefined>;
@@ -157,6 +172,158 @@ export class DatabaseStorage implements IStorage {
       return user || undefined;
     } catch (error) {
       console.error(`Error getting user by Stripe subscription ID ${stripeSubscriptionId}:`, error);
+      throw error;
+    }
+  }
+  
+  // Subscription package methods
+  async createSubscriptionPackage(pkg: InsertSubscriptionPackage): Promise<SubscriptionPackage> {
+    try {
+      const [subscriptionPackage] = await db
+        .insert(subscriptionPackages)
+        .values(pkg)
+        .returning();
+      
+      return subscriptionPackage;
+    } catch (error) {
+      console.error('Error creating subscription package:', error);
+      throw error;
+    }
+  }
+  
+  async updateSubscriptionPackage(id: number, data: Partial<InsertSubscriptionPackage>): Promise<SubscriptionPackage> {
+    try {
+      const [updatedPackage] = await db
+        .update(subscriptionPackages)
+        .set(data)
+        .where(eq(subscriptionPackages.id, id))
+        .returning();
+      
+      return updatedPackage;
+    } catch (error) {
+      console.error(`Error updating subscription package ${id}:`, error);
+      throw error;
+    }
+  }
+  
+  async getSubscriptionPackages(activeOnly = true): Promise<SubscriptionPackage[]> {
+    try {
+      if (activeOnly) {
+        return db
+          .select()
+          .from(subscriptionPackages)
+          .where(eq(subscriptionPackages.isActive, true))
+          .orderBy(subscriptionPackages.displayOrder);
+      } else {
+        return db
+          .select()
+          .from(subscriptionPackages)
+          .orderBy(subscriptionPackages.displayOrder);
+      }
+    } catch (error) {
+      console.error('Error getting subscription packages:', error);
+      throw error;
+    }
+  }
+  
+  async getSubscriptionPackageById(id: number): Promise<SubscriptionPackage | undefined> {
+    try {
+      const [pkg] = await db
+        .select()
+        .from(subscriptionPackages)
+        .where(eq(subscriptionPackages.id, id));
+      
+      return pkg || undefined;
+    } catch (error) {
+      console.error(`Error getting subscription package by id ${id}:`, error);
+      throw error;
+    }
+  }
+  
+  // Subscription payment methods
+  async createSubscriptionPayment(payment: InsertSubscriptionPayment): Promise<SubscriptionPayment> {
+    try {
+      const [subscriptionPayment] = await db
+        .insert(subscriptionPayments)
+        .values(payment)
+        .returning();
+      
+      return subscriptionPayment;
+    } catch (error) {
+      console.error('Error creating subscription payment:', error);
+      throw error;
+    }
+  }
+  
+  async updateSubscriptionPaymentStatus(id: number, status: string, confirmedAt?: Date): Promise<SubscriptionPayment> {
+    try {
+      const [updatedPayment] = await db
+        .update(subscriptionPayments)
+        .set({
+          status,
+          confirmedAt: confirmedAt || undefined,
+          updatedAt: new Date()
+        })
+        .where(eq(subscriptionPayments.id, id))
+        .returning();
+      
+      return updatedPayment;
+    } catch (error) {
+      console.error(`Error updating subscription payment status ${id}:`, error);
+      throw error;
+    }
+  }
+  
+  async getSubscriptionPaymentByTxHash(txHash: string): Promise<SubscriptionPayment | undefined> {
+    try {
+      const [payment] = await db
+        .select()
+        .from(subscriptionPayments)
+        .where(eq(subscriptionPayments.txHash, txHash));
+      
+      return payment || undefined;
+    } catch (error) {
+      console.error(`Error getting subscription payment by tx hash ${txHash}:`, error);
+      throw error;
+    }
+  }
+  
+  async getUserActiveSubscription(userId: number): Promise<SubscriptionPayment | undefined> {
+    try {
+      const now = new Date();
+      const [subscription] = await db
+        .select()
+        .from(subscriptionPayments)
+        .where(
+          and(
+            eq(subscriptionPayments.userId, userId),
+            eq(subscriptionPayments.status, 'confirmed')
+          )
+        )
+        .orderBy(desc(subscriptionPayments.endDate))
+        .limit(1);
+      
+      // Check if subscription is still active
+      if (subscription && subscription.endDate && new Date(subscription.endDate) > now) {
+        return subscription;
+      }
+      
+      return undefined;
+    } catch (error) {
+      console.error(`Error getting active subscription for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  async getUserSubscriptionHistory(userId: number): Promise<SubscriptionPayment[]> {
+    try {
+      return db
+        .select()
+        .from(subscriptionPayments)
+        .where(eq(subscriptionPayments.userId, userId))
+        .orderBy(desc(subscriptionPayments.createdAt));
+    } catch (error) {
+      console.error(`Error getting subscription history for user ${userId}:`, error);
       throw error;
     }
   }
