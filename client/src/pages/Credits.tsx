@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/providers/auth-provider';
+import { useCredits } from '@/hooks/use-credits';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,21 +47,17 @@ interface CreditPackage {
 
 const Credits: React.FC = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { userId, account } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('balance');
   const [txDetails, setTxDetails] = useState<string>('');
   
-  // Fetch user credits
+  // Use the credits hook for the user's credit balance data
   const { 
-    data: credits, 
+    credits, 
     isLoading: isLoadingCredits,
     error: creditsError
-  } = useQuery({
-    queryKey: ['/api/users', user?.id, 'credits'],
-    queryFn: () => apiRequest(`/api/users/${user?.id}/credits`),
-    enabled: !!user?.id,
-  });
+  } = useCredits();
   
   // Fetch credit transactions
   const { 
@@ -68,9 +65,9 @@ const Credits: React.FC = () => {
     isLoading: isLoadingTransactions,
     error: transactionsError
   } = useQuery({
-    queryKey: ['/api/users', user?.id, 'credit-transactions'],
-    queryFn: () => apiRequest(`/api/users/${user?.id}/credit-transactions`),
-    enabled: !!user?.id,
+    queryKey: ['/api/users', userId, 'credit-transactions'],
+    queryFn: () => apiRequest(`/api/users/${userId}/credit-transactions`),
+    enabled: !!userId,
   });
   
   // Fetch available credit packages
@@ -90,8 +87,8 @@ const Credits: React.FC = () => {
       body: JSON.stringify(data),
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users', user?.id, 'credits'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/users', user?.id, 'credit-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users', userId, 'credits'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users', userId, 'credit-transactions'] });
       toast({
         title: "Payment recorded",
         description: "Your payment has been recorded and is awaiting confirmation.",
@@ -108,7 +105,7 @@ const Credits: React.FC = () => {
   
   // Function to initiate a PLS payment
   const initiatePayment = async (packageId: number, plsCost: string) => {
-    if (!user?.id) {
+    if (!userId) {
       toast({
         title: "Authentication required",
         description: "Please connect your wallet to purchase credits.",
@@ -128,11 +125,11 @@ const Credits: React.FC = () => {
     setTxDetails(mockTxHash);
     
     // Get the connected wallet address
-    const fromAddress = (window as any).ethereum?.selectedAddress || user.wallet;
+    const fromAddress = (window as any).ethereum?.selectedAddress || account;
     
     // Record the payment
     recordPaymentMutation.mutate({
-      userId: user.id,
+      userId: userId,
       packageId,
       txHash: mockTxHash,
       fromAddress,
