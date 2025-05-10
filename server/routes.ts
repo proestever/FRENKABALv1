@@ -17,6 +17,8 @@ import { ethers } from "ethers";
 import portfolioRoutes from "./routes/portfolio-routes";
 import creditRoutes from "./routes/credit-routes";
 import { format } from "date-fns";
+import { dailyCreditsService } from "./services/daily-credits-service";
+import { creditService } from "./services/credit-service";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -77,8 +79,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user has enough credits for this wallet search
       if (userId) {
-        const { creditService } = require('./services/credit-service');
-        
         // Check if user has enough credits
         const hasEnoughCredits = await creditService.hasCreditsForWalletSearch(userId);
         if (!hasEnoughCredits) {
@@ -768,7 +768,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Check and award daily free credits
         try {
-          const { dailyCreditsService } = require('./services/daily-credits-service');
           const creditsAwarded = await dailyCreditsService.checkAndAwardDailyCredits(user.id);
           
           if (creditsAwarded > 0) {
@@ -814,7 +813,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Award initial free credits to new user
         try {
-          const { dailyCreditsService } = require('./services/daily-credits-service');
           const creditsAwarded = await dailyCreditsService.checkAndAwardDailyCredits(user.id);
           
           if (creditsAwarded > 0) {

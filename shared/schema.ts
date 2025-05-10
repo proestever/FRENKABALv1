@@ -381,3 +381,23 @@ export const insertCreditUsageSettingSchema = createInsertSchema(creditUsageSett
 
 export type InsertCreditUsageSetting = z.infer<typeof insertCreditUsageSettingSchema>;
 export type CreditUsageSetting = typeof creditUsageSettings.$inferSelect;
+
+// Daily Free Credits Tracking
+export const userDailyCredits = pgTable("user_daily_credits", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull().unique(),
+  lastAwardedAt: timestamp("last_awarded_at").notNull().defaultNow(),
+  timesAwarded: integer("times_awarded").notNull().default(0),
+  totalAwarded: integer("total_awarded").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertUserDailyCreditsSchema = createInsertSchema(userDailyCredits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserDailyCredits = z.infer<typeof insertUserDailyCreditsSchema>;
+export type UserDailyCredits = typeof userDailyCredits.$inferSelect;
