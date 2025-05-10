@@ -29,8 +29,8 @@ import { Check, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 
-// Hardcoded contract address for now
-const CONTRACT_ADDRESS = "0x592139A3f8cf019f628A152FC1262B8aEf5B7199";
+// FrenKabal donation/subscription address
+const CONTRACT_ADDRESS = "0x87315173fC0B7A3766761C8d199B803697179434";
 
 export default function SubscriptionPage() {
   const { user } = useAuth();
@@ -48,10 +48,10 @@ export default function SubscriptionPage() {
     subscription.status === 'confirmed' && 
     new Date(subscription.endDate) > new Date();
 
-  // Format PLS cost for display
+  // Format PLS cost for display (handling both with and without decimal formatting)
   const formatPlsCost = (cost: string) => {
-    const costBigNumber = ethers.utils.parseEther(cost);
-    return ethers.utils.formatEther(costBigNumber);
+    // If the cost already has decimal places, don't modify it
+    return cost.includes('.') ? cost : ethers.utils.formatEther(ethers.utils.parseEther(cost));
   };
 
   // Handle subscription purchase
@@ -71,10 +71,17 @@ export default function SubscriptionPage() {
       // Get signer from provider
       const signer = provider.getSigner();
       
-      // Send PLS to contract address
+      // Calculate exact amount to send in wei (handling formatted and non-formatted amounts)
+      const weiAmount = plsCost.includes('.') 
+        ? ethers.utils.parseEther(plsCost) 
+        : ethers.utils.parseEther(plsCost);
+      
+      console.log(`Sending payment of ${plsCost} PLS (${weiAmount.toString()} wei) to ${CONTRACT_ADDRESS}`);
+      
+      // Send PLS to FrenKabal donation address
       const tx = await signer.sendTransaction({
         to: CONTRACT_ADDRESS,
-        value: ethers.utils.parseEther(plsCost)
+        value: weiAmount
       });
       
       // Wait for transaction to be mined
@@ -90,9 +97,10 @@ export default function SubscriptionPage() {
         plsAmount: plsCost
       });
       
+      const packageData = packages.find(p => p.id === packageId);
       toast({
-        title: "Success",
-        description: "Subscription payment sent! It will be activated once confirmed."
+        title: "Payment Successful!",
+        description: `You've purchased a ${packageData?.durationDays}-day subscription for ${plsCost} PLS. Your access will be activated shortly.`
       });
     } catch (error) {
       console.error("Transaction error:", error);
