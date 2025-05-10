@@ -1,3 +1,4 @@
+import React from "react";
 import { Switch, Route, Link, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -399,7 +400,16 @@ function Router() {
           <Route path="/admin" component={AdminPage} />
           <Route path="/admin/api-usage" component={ApiUsagePage} />
           <Route path="/admin/credits" component={AdminCredits} />
-          <Route path="/admin/subscriptions" component={() => import('@/pages/Admin/Subscriptions').then(mod => <mod.default />)} />
+          <Route path="/admin/subscriptions">
+            {() => {
+              const AdminSubscriptions = React.lazy(() => import('@/pages/Admin/Subscriptions'));
+              return (
+                <React.Suspense fallback={<div>Loading...</div>}>
+                  <AdminSubscriptions />
+                </React.Suspense>
+              );
+            }}
+          </Route>
           <Route path="/credits" component={Credits} />
           <Route path="/subscription" component={SubscriptionPage} />
           <Route path="/:walletAddress" component={Home} />

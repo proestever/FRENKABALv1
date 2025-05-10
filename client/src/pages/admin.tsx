@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/providers/auth-provider';
 import { useToast } from '@/hooks/use-toast';
+import { BarChart, CircleDollarSign, CreditCard } from 'lucide-react';
 
 // Admin wallet address (case-insensitive for comparison)
 const ADMIN_WALLET_ADDRESS = '0x592139A3f8cf019f628A152FC1262B8aEf5B7199'.toLowerCase();
@@ -84,6 +85,41 @@ export default function AdminPage() {
         </div>
         
         <div className="space-y-6">
+          <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Admin Tools</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Button 
+                onClick={() => setLocation('/admin/api-usage')}
+                variant="secondary"
+                className="p-6 h-auto flex flex-col items-center text-center"
+              >
+                <BarChart className="h-10 w-10 mb-2" />
+                <h3 className="font-semibold text-lg mb-1">API Usage</h3>
+                <p className="text-sm text-muted-foreground">Detailed API usage analytics</p>
+              </Button>
+              
+              <Button 
+                onClick={() => setLocation('/admin/subscriptions')}
+                variant="secondary"
+                className="p-6 h-auto flex flex-col items-center text-center"
+              >
+                <CreditCard className="h-10 w-10 mb-2" />
+                <h3 className="font-semibold text-lg mb-1">Subscriptions</h3>
+                <p className="text-sm text-muted-foreground">Manage subscription packages and payments</p>
+              </Button>
+              
+              <Button 
+                onClick={() => setLocation('/admin/credits')}
+                variant="secondary"
+                className="p-6 h-auto flex flex-col items-center text-center"
+              >
+                <CircleDollarSign className="h-10 w-10 mb-2" />
+                <h3 className="font-semibold text-lg mb-1">Credits</h3>
+                <p className="text-sm text-muted-foreground">Manage credit packages and transactions</p>
+              </Button>
+            </div>
+          </section>
+          
           <section>
             <h2 className="text-xl font-semibold mb-4">API Usage Statistics</h2>
             <Tabs defaultValue="current">
