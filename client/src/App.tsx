@@ -12,11 +12,12 @@ import AdminPage from "@/pages/admin";
 import ApiUsagePage from "@/pages/api-usage";
 import Credits from "@/pages/Credits";
 import AdminCredits from "@/pages/Admin/Credits";
+import SubscriptionPage from "@/pages/Subscription";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { CreditBalance } from "@/components/credit-balance";
-import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch, Settings, BarChart, CircleDollarSign } from "lucide-react";
+import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch, Settings, BarChart, CircleDollarSign, CreditCard } from "lucide-react";
 import telegramLogo from "@assets/Telegram_2019_Logo.svg.png";
 import xLogo from "@assets/X_logo.jpg";
 import {
@@ -389,6 +390,7 @@ function Router() {
           <Route path="/admin/api-usage" component={ApiUsagePage} />
           <Route path="/admin/credits" component={AdminCredits} />
           <Route path="/credits" component={Credits} />
+          <Route path="/subscription" component={SubscriptionPage} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
         </Switch>
