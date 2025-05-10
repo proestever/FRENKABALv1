@@ -286,6 +286,38 @@ export const dexScreenerPreferredTokens = pgTable("dexscreener_preferred_tokens"
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Subscription Packages
+export const subscriptionPackages = pgTable("subscription_packages", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  durationDays: integer("duration_days").notNull(), // Duration in days (30, 90, 365)
+  plsCost: text("pls_cost").notNull(), // String to handle large numbers precisely
+  features: jsonb("features"), // Array of features included in this package
+  isActive: boolean("is_active").notNull().default(true),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Subscription payments (record of PLS payments for subscriptions)
+export const subscriptionPayments = pgTable("subscription_payments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  packageId: integer("package_id").references(() => subscriptionPackages.id),
+  txHash: text("tx_hash").notNull().unique(),
+  fromAddress: text("from_address").notNull(),
+  toAddress: text("to_address").notNull(),
+  plsAmount: text("pls_amount").notNull(), // String to handle large numbers precisely
+  status: text("status").notNull(), // "pending", "confirmed", "rejected"
+  startDate: timestamp("start_date"), // When subscription starts
+  endDate: timestamp("end_date"), // When subscription ends  
+  confirmedAt: timestamp("confirmed_at"),
+  metadata: jsonb("metadata"), // Additional transaction data
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const insertDexScreenerPreferredTokenSchema = createInsertSchema(dexScreenerPreferredTokens).omit({
   id: true,
   createdAt: true,
@@ -294,6 +326,26 @@ export const insertDexScreenerPreferredTokenSchema = createInsertSchema(dexScree
 
 export type InsertDexScreenerPreferredToken = z.infer<typeof insertDexScreenerPreferredTokenSchema>;
 export type DexScreenerPreferredToken = typeof dexScreenerPreferredTokens.$inferSelect;
+
+// Subscription package schema
+export const insertSubscriptionPackageSchema = createInsertSchema(subscriptionPackages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSubscriptionPackage = z.infer<typeof insertSubscriptionPackageSchema>;
+export type SubscriptionPackage = typeof subscriptionPackages.$inferSelect;
+
+// Subscription payment schema
+export const insertSubscriptionPaymentSchema = createInsertSchema(subscriptionPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSubscriptionPayment = z.infer<typeof insertSubscriptionPaymentSchema>;
+export type SubscriptionPayment = typeof subscriptionPayments.$inferSelect;
 
 // Credit System Tables
 

@@ -116,6 +116,50 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+  
+  // Subscription methods
+  async updateUserSubscription(id: number, subscriptionData: Partial<UpdateUserSubscription>): Promise<User> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set(subscriptionData)
+        .where(eq(users.id, id))
+        .returning();
+      
+      return updatedUser;
+    } catch (error) {
+      console.error(`Error updating user subscription for id ${id}:`, error);
+      throw error;
+    }
+  }
+  
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.stripeCustomerId, stripeCustomerId));
+      
+      return user || undefined;
+    } catch (error) {
+      console.error(`Error getting user by Stripe customer ID ${stripeCustomerId}:`, error);
+      throw error;
+    }
+  }
+  
+  async getUserByStripeSubscriptionId(stripeSubscriptionId: string): Promise<User | undefined> {
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.stripeSubscriptionId, stripeSubscriptionId));
+      
+      return user || undefined;
+    } catch (error) {
+      console.error(`Error getting user by Stripe subscription ID ${stripeSubscriptionId}:`, error);
+      throw error;
+    }
+  }
 
   async getTokenLogo(tokenAddress: string): Promise<TokenLogo | undefined> {
     const addressLower = tokenAddress.toLowerCase();
