@@ -41,8 +41,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Add health check endpoint before registering routes
-  app.get('/', (_req, res) => {
+  // Add health check endpoint at /api/health instead of root path
+  app.get('/api/health', (_req, res) => {
     res.status(200).send('OK');
   });
 
