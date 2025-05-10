@@ -146,78 +146,154 @@ export default function SubscriptionPage() {
       </div>
 
       {packages && packages.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {packages.map((pkg) => (
-            <Card key={pkg.id} className="flex flex-col">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>{pkg.durationDays} Days</CardTitle>
-                  {pkg.durationDays > 30 && (
-                    <Badge className="bg-green-500">
-                      {pkg.durationDays === 60 ? '10%' : pkg.durationDays === 90 ? '13.3%' : '33.3%'} OFF
-                    </Badge>
-                  )}
-                </div>
-                <CardDescription>
-                  {pkg.description || 'Full access to all FrenKabal features'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <p className="text-3xl font-bold mb-4">
-                  {formatPlsCost(pkg.plsCost)} PLS
-                </p>
-                <Separator className="my-4" />
-                <h3 className="font-medium mb-2">Features:</h3>
-                <ul className="space-y-2">
-                  {pkg.features?.map((feature, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-green-500 mr-2">✓</span>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-              <CardFooter>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      className="w-full"
-                      onClick={() => setSelectedPackage(pkg.id)}
-                      disabled={isProcessing || !walletAddress || hasActiveSubscription}
-                    >
-                      {!walletAddress ? 'Connect Wallet to Subscribe' : 
-                       hasActiveSubscription ? 'Already Subscribed' : 
-                       'Subscribe Now'}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirm Subscription</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        You are about to subscribe to the {pkg.name} plan for {formatPlsCost(pkg.plsCost)} PLS.
-                        <br /><br />
-                        This will send a transaction from your wallet to our contract.
-                        Once confirmed, your subscription will be active for {pkg.durationDays} days.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        disabled={isProcessing}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleSubscribe(pkg.id, pkg.plsCost);
-                        }}
+        <div className="flex flex-col gap-8">
+          {/* First row - three packages */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {packages.slice(0, 3).map((pkg) => (
+              <Card key={pkg.id} className="flex flex-col">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>{pkg.durationDays} Days</CardTitle>
+                    {pkg.durationDays > 30 && (
+                      <Badge className="bg-green-500 text-white">
+                        {pkg.durationDays === 60 ? '10%' : pkg.durationDays === 90 ? '13.3%' : '33.3%'} OFF
+                      </Badge>
+                    )}
+                  </div>
+                  <CardDescription>
+                    {pkg.description || 'Full access to all FrenKabal features'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p className="text-3xl font-bold mb-4">
+                    {formatPlsCost(pkg.plsCost)} PLS
+                  </p>
+                  <Separator className="my-4" />
+                  <h3 className="font-medium mb-2">Features:</h3>
+                  <ul className="space-y-2">
+                    {pkg.features?.map((feature, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="text-green-500 mr-2">✓</span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        className="w-full"
+                        onClick={() => setSelectedPackage(pkg.id)}
+                        disabled={isProcessing || !walletAddress || hasActiveSubscription}
                       >
-                        {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Confirm Payment
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </CardFooter>
-            </Card>
-          ))}
+                        {!walletAddress ? 'Connect Wallet to Subscribe' : 
+                         hasActiveSubscription ? 'Already Subscribed' : 
+                         'Subscribe Now'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Subscription</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          You are about to subscribe to the {pkg.name} plan for {formatPlsCost(pkg.plsCost)} PLS.
+                          <br /><br />
+                          This will send a transaction from your wallet to our contract.
+                          Once confirmed, your subscription will be active for {pkg.durationDays} days.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          disabled={isProcessing}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSubscribe(pkg.id, pkg.plsCost);
+                          }}
+                        >
+                          {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Confirm Payment
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+          
+          {/* Second row - Annual package (if available) */}
+          {packages.length > 3 && (
+            <div className="md:w-2/3 mx-auto">
+              <Card className="flex flex-col">
+                <CardHeader className="bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-t-lg">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-white">365 Days</CardTitle>
+                    <Badge className="bg-yellow-400 text-black font-bold">
+                      BEST VALUE! 33.3% OFF
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-white opacity-90">
+                    {packages[3].description || 'Full access to all FrenKabal features'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p className="text-3xl font-bold mb-4">
+                    {formatPlsCost(packages[3].plsCost)} PLS
+                  </p>
+                  <Separator className="my-4" />
+                  <h3 className="font-medium mb-2">Features:</h3>
+                  <ul className="space-y-2">
+                    {packages[3].features?.map((feature, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="text-green-500 mr-2">✓</span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                        onClick={() => setSelectedPackage(packages[3].id)}
+                        disabled={isProcessing || !walletAddress || hasActiveSubscription}
+                      >
+                        {!walletAddress ? 'Connect Wallet to Subscribe' : 
+                         hasActiveSubscription ? 'Already Subscribed' : 
+                         'Subscribe Now'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Subscription</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          You are about to subscribe to the {packages[3].name} plan for {formatPlsCost(packages[3].plsCost)} PLS.
+                          <br /><br />
+                          This will send a transaction from your wallet to our contract.
+                          Once confirmed, your subscription will be active for {packages[3].durationDays} days.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          disabled={isProcessing}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSubscribe(packages[3].id, packages[3].plsCost);
+                          }}
+                        >
+                          {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Confirm Payment
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardFooter>
+              </Card>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-12">
