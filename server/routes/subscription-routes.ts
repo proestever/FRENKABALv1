@@ -51,21 +51,37 @@ router.post("/subscription-packages", async (req, res) => {
       return res.status(400).json({ error: "Name, duration, and cost are required" });
     }
     
+    // Process features
+    let processedFeatures = [];
+    
+    if (Array.isArray(features)) {
+      processedFeatures = features;
+    } else if (typeof features === 'string') {
+      processedFeatures = features
+        .split('\n')
+        .map((feature: string) => feature.trim())
+        .filter((feature: string) => feature.length > 0);
+    }
+    
     // Create the package
     const newPackage = await storage.createSubscriptionPackage({
       name,
       description: description || "",
-      durationDays: parseInt(durationDays),
+      durationDays: parseInt(durationDays.toString()),
       plsCost,
-      features: Array.isArray(features) ? features : [],
+      features: processedFeatures,
       isActive: isActive !== undefined ? isActive : true,
-      displayOrder: displayOrder !== undefined ? parseInt(displayOrder) : 0,
+      displayOrder: displayOrder !== undefined ? parseInt(displayOrder.toString()) : 0,
     });
     
     res.status(201).json(newPackage);
   } catch (error) {
     console.error("Error creating subscription package:", error);
-    res.status(500).json({ error: "Failed to create subscription package" });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ 
+      error: "Failed to create subscription package", 
+      details: errorMessage
+    });
   }
 });
 
@@ -83,13 +99,34 @@ router.patch("/subscription-packages/:id", async (req, res) => {
       return res.status(404).json({ error: "Subscription package not found" });
     }
     
+    // Process features array if needed
+    const updateData = { ...req.body };
+    
+    // Convert string features to array if necessary
+    if (typeof updateData.features === 'string') {
+      updateData.features = updateData.features
+        .split('\n')
+        .map((feature: string) => feature.trim())
+        .filter((feature: string) => feature.length > 0);
+    }
+    
+    // Ensure numeric values are numbers
+    if (updateData.durationDays !== undefined) {
+      updateData.durationDays = parseInt(updateData.durationDays.toString());
+    }
+    
+    if (updateData.displayOrder !== undefined) {
+      updateData.displayOrder = parseInt(updateData.displayOrder.toString());
+    }
+    
     // Update the package
-    const updatedPackage = await storage.updateSubscriptionPackage(id, req.body);
+    const updatedPackage = await storage.updateSubscriptionPackage(id, updateData);
     
     res.json(updatedPackage);
   } catch (error) {
     console.error(`Error updating subscription package ${req.params.id}:`, error);
-    res.status(500).json({ error: "Failed to update subscription package" });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: "Failed to update subscription package", details: errorMessage });
   }
 });
 

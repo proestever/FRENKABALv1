@@ -43,11 +43,47 @@ export const subscriptionPresets = [
 // Helper function to create all preset packages
 export const createAllPresetPackages = async (onSuccess?: () => void, onError?: (error: any) => void) => {
   try {
+    // First, get existing packages
+    const response = await apiRequest('/api/subscription-packages');
+    const existingPackages = await response.json();
+    
+    // Track success count
+    let successCount = 0;
+    let errorCount = 0;
+    
+    // Create each preset package if it doesn't already exist with the same name
     for (const preset of subscriptionPresets) {
-      await apiRequest('POST', '/api/subscription-packages', preset);
+      try {
+        // Check if a package with this duration already exists
+        const existingPackage = existingPackages.find(
+          (pkg: any) => pkg.durationDays === preset.durationDays
+        );
+        
+        if (existingPackage) {
+          // Update existing package
+          await apiRequest('PATCH', `/api/subscription-packages/${existingPackage.id}`, preset);
+          console.log(`Updated existing package: ${preset.name}`);
+        } else {
+          // Create new package
+          await apiRequest('POST', '/api/subscription-packages', preset);
+          console.log(`Created new package: ${preset.name}`);
+        }
+        
+        successCount++;
+      } catch (packageError) {
+        console.error(`Error with package ${preset.name}:`, packageError);
+        errorCount++;
+      }
     }
     
-    if (onSuccess) onSuccess();
+    // Call success callback if at least some packages were created
+    if (successCount > 0) {
+      if (onSuccess) onSuccess();
+      return true;
+    } else if (errorCount > 0) {
+      throw new Error(`Failed to create/update any packages. ${errorCount} errors occurred.`);
+    }
+    
     return true;
   } catch (error) {
     console.error("Error creating preset packages:", error);
