@@ -97,10 +97,10 @@ export default function SubscriptionPage() {
         plsAmount: plsCost
       });
       
-      const packageData = packages.find(p => p.id === packageId);
+      const packageData = packages ? packages.find(p => p.id === packageId) : null;
       toast({
         title: "Payment Successful!",
-        description: `You've purchased a ${packageData?.durationDays}-day subscription for ${plsCost} PLS. Your access will be activated shortly.`
+        description: `You've purchased a ${packageData?.durationDays || ''}-day subscription for ${plsCost} PLS. Your access will be activated shortly.`
       });
     } catch (error) {
       console.error("Transaction error:", error);
@@ -230,24 +230,22 @@ export default function SubscriptionPage() {
                 </div>
                 
                 {/* Subscribe button at the bottom */}
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      className="w-full bg-cyan-900/50 hover:bg-cyan-800/60 text-white border border-cyan-200/30 backdrop-blur-sm h-12 text-lg"
-                      disabled={!selectedPackage || isProcessing || !walletAddress || hasActiveSubscription}
-                    >
-                      {!walletAddress 
-                        ? 'Connect Wallet to Subscribe' 
-                        : hasActiveSubscription 
-                          ? 'Already Subscribed' 
-                          : !selectedPackage
-                            ? 'Select a Plan to Subscribe'
-                            : `Subscribe to ${selectedPackage && packages.find(p => p.id === selectedPackage)?.durationDays}-Day Plan`}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    {selectedPackage && (
-                      <>
+                {selectedPackage && (
+                  <div className="relative mt-4">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          className="w-full bg-cyan-900/50 hover:bg-cyan-800/60 text-white border border-cyan-200/30 backdrop-blur-sm h-12 text-lg"
+                          disabled={isProcessing || !walletAddress || hasActiveSubscription}
+                        >
+                          {!walletAddress 
+                            ? 'Connect Wallet First' 
+                            : hasActiveSubscription 
+                              ? 'Already Subscribed' 
+                              : `Subscribe to ${selectedPackage && packages.find(p => p.id === selectedPackage)?.durationDays}-Day Plan`}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Confirm Subscription</AlertDialogTitle>
                           <AlertDialogDescription>
@@ -283,10 +281,31 @@ export default function SubscriptionPage() {
                             Confirm Payment
                           </AlertDialogAction>
                         </AlertDialogFooter>
-                      </>
-                    )}
-                  </AlertDialogContent>
-                </AlertDialog>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                )}
+                
+                {/* Button when no package is selected or wallet not connected */}
+                {(!selectedPackage || !walletAddress) && (
+                  <Button 
+                    className="w-full mt-4 bg-cyan-900/50 hover:bg-cyan-800/60 text-white border border-cyan-200/30 backdrop-blur-sm h-12 text-lg"
+                    disabled={!walletAddress}
+                    onClick={() => {
+                      if (!selectedPackage) {
+                        toast({
+                          title: "No Plan Selected",
+                          description: "Please select a subscription plan first",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                  >
+                    {!walletAddress 
+                      ? 'Connect Wallet to Subscribe' 
+                      : 'Select a Plan to Subscribe'}
+                  </Button>
+                )}
               </div>
             </div>
           </Card>
