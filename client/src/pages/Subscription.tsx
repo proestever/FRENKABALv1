@@ -151,10 +151,16 @@ export default function SubscriptionPage() {
             <Card key={pkg.id} className="flex flex-col">
               <CardHeader>
                 <div className="flex justify-between items-center">
-                  <CardTitle>{pkg.name}</CardTitle>
-                  <Badge variant="outline">{pkg.durationDays} days</Badge>
+                  <CardTitle>{pkg.durationDays} Days</CardTitle>
+                  {pkg.durationDays > 30 && (
+                    <Badge className="bg-green-500">
+                      {pkg.durationDays === 60 ? '10%' : pkg.durationDays === 90 ? '13.3%' : '33.3%'} OFF
+                    </Badge>
+                  )}
                 </div>
-                <CardDescription>{pkg.description}</CardDescription>
+                <CardDescription>
+                  {pkg.description || 'Full access to all FrenKabal features'}
+                </CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">
                 <p className="text-3xl font-bold mb-4">

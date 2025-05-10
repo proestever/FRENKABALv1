@@ -5,9 +5,10 @@ import {
   SubscriptionPackage,
   SubscriptionPayment
 } from '@/hooks/use-subscription';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useForm, UseFormReturn } from 'react-hook-form';
+import { createAllPresetPackages, getPresetDefaultValues } from '@/utils/subscription-presets';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -86,11 +87,11 @@ export default function AdminSubscriptionsPage() {
   const form = useForm<PackageFormValues>({
     resolver: zodResolver(packageFormSchema),
     defaultValues: {
-      name: '',
-      description: '',
+      name: '30 Days',
+      description: 'Full access to all FrenKabal features',
       durationDays: 30,
-      plsCost: '',
-      features: '',
+      plsCost: '1000000',
+      features: 'Real-time wallet tracking\nSupport for all PulseChain tokens\nTransaction history\nPortfolio analytics\nValue tracking',
       isActive: true,
       displayOrder: 0,
     },
