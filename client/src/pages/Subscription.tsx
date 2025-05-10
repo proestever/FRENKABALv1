@@ -78,7 +78,7 @@ export default function SubscriptionPage() {
 
   // Handle subscription purchase
   const handleSubscribe = async (packageId: number, plsCost: string) => {
-    if (!user || !walletAddress || !provider) {
+    if (!user || !walletAddress) {
       toast({
         title: "Error",
         description: "You must connect your wallet to subscribe",
@@ -90,40 +90,111 @@ export default function SubscriptionPage() {
     try {
       setIsProcessing(true);
       
-      // Get signer from provider
-      const signer = provider.getSigner();
+      // Ensure we have access to ethereum provider
+      if (!window.ethereum) {
+        throw new Error("No Ethereum provider found. Please make sure your wallet is correctly installed.");
+      }
+      
+      // Format amount properly
+      const cleanPlsCost = plsCost.replace(/,/g, '');
       
       // Calculate exact amount to send in wei (handling formatted and non-formatted amounts)
-      const weiAmount = plsCost.includes('.') 
-        ? ethers.utils.parseEther(plsCost) 
-        : ethers.utils.parseEther(plsCost);
+      let weiAmount;
+      try {
+        weiAmount = cleanPlsCost.includes('.') 
+          ? ethers.utils.parseEther(cleanPlsCost) 
+          : ethers.utils.parseEther(cleanPlsCost);
+      } catch (error) {
+        console.error("Error parsing PLS amount:", error, "Amount:", cleanPlsCost);
+        throw new Error(`Invalid amount format. Please contact support.`);
+      }
       
-      console.log(`Sending payment of ${plsCost} PLS (${weiAmount.toString()} wei) to ${CONTRACT_ADDRESS}`);
+      console.log(`Sending payment of ${cleanPlsCost} PLS (${weiAmount.toString()} wei) to ${CONTRACT_ADDRESS}`);
       
-      // Send PLS to FrenKabal donation address
-      const tx = await signer.sendTransaction({
-        to: CONTRACT_ADDRESS,
-        value: weiAmount
-      });
-      
-      // Wait for transaction to be mined
-      await tx.wait();
-      
-      // Submit payment record to backend
-      await subscriptionPayment.mutateAsync({
-        userId: user.id,
-        packageId: packageId,
-        txHash: tx.hash,
-        fromAddress: walletAddress,
-        toAddress: CONTRACT_ADDRESS,
-        plsAmount: plsCost
-      });
-      
-      const packageData = packages ? packages.find(p => p.id === packageId) : null;
+      // Show toast to inform user about pending transaction
       toast({
-        title: "Payment Successful!",
-        description: `You've purchased a ${packageData?.durationDays || ''}-day subscription for ${plsCost} PLS. Your access will be activated shortly.`
+        title: "Transaction Initiated",
+        description: "Please confirm the transaction in your wallet to complete your subscription.",
       });
+      
+      // Use the lower-level ethereum API directly to ensure wallet UI always shows
+      const transactionParameters = {
+        to: CONTRACT_ADDRESS,
+        from: walletAddress,
+        value: weiAmount.toHexString(), // Convert to hex string format for wallet
+      };
+      
+      // Request transaction from wallet
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [transactionParameters],
+      });
+      
+      if (!txHash) {
+        throw new Error("Transaction was not completed");
+      }
+      
+      // Inform user transaction was sent
+      toast({
+        title: "Transaction Sent!",
+        description: "Your payment has been sent. Waiting for confirmation...",
+      });
+      
+      // Create ethers provider to wait for transaction
+      const ethProvider = new ethers.providers.Web3Provider(window.ethereum);
+      
+      // Wait for transaction to be mined (with timeout)
+      const tx = await ethProvider.getTransaction(txHash);
+      
+      // If we got this far, transaction was submitted
+      // Now wait for confirmation (with a timeout)
+      const waitPromise = tx.wait();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Transaction confirmation timeout - check your transaction status in your wallet")), 30000)
+      );
+      
+      try {
+        await Promise.race([waitPromise, timeoutPromise]);
+        
+        // Transaction confirmed, submit payment record to backend
+        await subscriptionPayment.mutateAsync({
+          userId: user.id,
+          packageId: packageId,
+          txHash: txHash,
+          fromAddress: walletAddress,
+          toAddress: CONTRACT_ADDRESS,
+          plsAmount: cleanPlsCost
+        });
+        
+        const packageData = packages ? packages.find(p => p.id === packageId) : null;
+        toast({
+          title: "Payment Successful!",
+          description: `You've purchased a ${packageData?.durationDays || ''}-day subscription for ${cleanPlsCost} PLS. Your access has been activated.`
+        });
+      } catch (waitError) {
+        console.error("Transaction wait error:", waitError);
+        
+        // Even if we timeout waiting for confirmation, still record the transaction
+        // since it might confirm later
+        try {
+          await subscriptionPayment.mutateAsync({
+            userId: user.id,
+            packageId: packageId,
+            txHash: txHash,
+            fromAddress: walletAddress,
+            toAddress: CONTRACT_ADDRESS,
+            plsAmount: cleanPlsCost,
+            status: 'pending' // Mark as pending since we don't know if it confirmed
+          });
+          
+          toast({
+            title: "Transaction In Progress",
+            description: "Your payment is being processed. Subscription will activate once confirmed.",
+          });
+        } catch (paymentError) {
+          console.error("Error recording payment:", paymentError);
+        }
+      }
     } catch (error) {
       console.error("Transaction error:", error);
       toast({
