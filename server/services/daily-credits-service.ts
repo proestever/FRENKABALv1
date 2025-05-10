@@ -44,14 +44,42 @@ export class DailyCreditsService {
 
   /**
    * Award daily free credits to a user
+   * This resets the user's balance to exactly 9000 credits, 
+   * rather than adding to the existing balance
    * 
    * @param userId The user ID to award credits to
    * @returns True if credits were awarded, false otherwise
    */
   async awardDailyFreeCredits(userId: number): Promise<boolean> {
     try {
-      // Add credits to user's balance
-      await storage.addCreditsToUser(userId, this.DAILY_CREDITS_AMOUNT);
+      const userCredits = await storage.getUserCredits(userId);
+      
+      if (!userCredits) {
+        // If no credits record exists, create one with 9000 credits
+        await storage.createUserCredits({
+          userId,
+          balance: this.DAILY_CREDITS_AMOUNT,
+          lifetimeCredits: this.DAILY_CREDITS_AMOUNT,
+          lifetimeSpent: 0
+        });
+      } else {
+        // Reset the balance to exactly 9000 credits
+        await storage.updateUserCreditsBalance(userId, this.DAILY_CREDITS_AMOUNT);
+        
+        // Record any lost unspent credits from previous day
+        const lostCredits = userCredits.balance;
+        if (lostCredits > 0) {
+          // Record the transaction for expired credits
+          await storage.createCreditTransaction({
+            userId,
+            amount: -lostCredits,
+            type: 'expiration',
+            relatedEntityType: 'system',
+            relatedEntityId: 'expired_credits',
+            description: 'Daily credits expired',
+          });
+        }
+      }
 
       // Update or create daily credits record
       const [existingRecord] = await db
@@ -81,7 +109,7 @@ export class DailyCreditsService {
           });
       }
 
-      // Record the transaction
+      // Record the transaction for new daily credits
       await storage.createCreditTransaction({
         userId,
         amount: this.DAILY_CREDITS_AMOUNT,

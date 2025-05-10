@@ -64,7 +64,7 @@ const Credits: React.FC = () => {
     data: transactions, 
     isLoading: isLoadingTransactions,
     error: transactionsError
-  } = useQuery({
+  } = useQuery<CreditTransaction[]>({
     queryKey: ['/api/users', userId, 'credit-transactions'],
     queryFn: () => apiRequest(`/api/users/${userId}/credit-transactions`),
     enabled: !!userId,
@@ -201,15 +201,20 @@ const Credits: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Current Balance</CardTitle>
-                <CardDescription>Available credits for searches</CardDescription>
+                <CardDescription>Daily free credits (9,000 every 24h)</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoadingCredits ? (
                   <Skeleton className="h-12 w-20" />
                 ) : (
-                  <div className="text-3xl font-bold flex items-center gap-2">
-                    <CircleDollarSign className="h-6 w-6 text-primary" />
-                    {credits && credits.balance ? credits.balance.toLocaleString() : '0'}
+                  <div className="flex flex-col">
+                    <div className="text-3xl font-bold flex items-center gap-2">
+                      <CircleDollarSign className="h-6 w-6 text-primary" />
+                      {credits && credits.balance ? credits.balance.toLocaleString() : '0'}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-2">
+                      Credits reset to 9,000 every 24 hours
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -218,15 +223,24 @@ const Credits: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Total Purchased</CardTitle>
-                <CardDescription>Lifetime credits acquired</CardDescription>
+                <CardDescription>Credits purchased with PLS</CardDescription>
               </CardHeader>
               <CardContent>
-                {isLoadingCredits ? (
+                {isLoadingCredits || isLoadingTransactions ? (
                   <Skeleton className="h-12 w-20" />
                 ) : (
                   <div className="text-3xl font-bold flex items-center gap-2">
                     <CreditCard className="h-6 w-6 text-primary" />
-                    {credits && credits.lifetimeCredits ? credits.lifetimeCredits.toLocaleString() : '0'}
+                    {(() => {
+                      // Calculate total purchased credits (excluding daily free credits)
+                      let purchasedCredits = 0;
+                      if (transactions && Array.isArray(transactions)) {
+                        purchasedCredits = transactions
+                          .filter((tx: CreditTransaction) => tx.type === 'purchase')
+                          .reduce((sum: number, tx: CreditTransaction) => sum + tx.amount, 0);
+                      }
+                      return purchasedCredits.toLocaleString();
+                    })()}
                   </div>
                 )}
               </CardContent>
@@ -235,15 +249,20 @@ const Credits: React.FC = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Total Used</CardTitle>
-                <CardDescription>Lifetime credits spent</CardDescription>
+                <CardDescription>All credits spent on searches</CardDescription>
               </CardHeader>
               <CardContent>
-                {isLoadingCredits ? (
+                {isLoadingCredits || isLoadingTransactions ? (
                   <Skeleton className="h-12 w-20" />
                 ) : (
                   <div className="text-3xl font-bold flex items-center gap-2">
                     <ReceiptText className="h-6 w-6 text-primary" />
-                    {credits && credits.lifetimeSpent ? credits.lifetimeSpent.toLocaleString() : '0'}
+                    {(() => {
+                      // Show the lifetimeSpent from credits
+                      return credits && credits.lifetimeSpent 
+                        ? credits.lifetimeSpent.toLocaleString() 
+                        : '0';
+                    })()}
                   </div>
                 )}
               </CardContent>
