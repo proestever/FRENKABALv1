@@ -65,10 +65,12 @@ export function LoadingProgress({ isLoading, customProgress }: LoadingProgressPr
     }
   }, [progressPercent, animatedProgress]);
   
-  // Check loading state and progress - only hide if we're not loading or if we're idle with no batches
-  const shouldShow = isLoading && (progress.status !== 'idle' || progress.totalBatches > 0);
+  // Check loading state and progress - hide if we're not loading, if we're idle with no batches, or if status is complete
+  const shouldShow = isLoading && 
+                    (progress.status !== 'idle' || progress.totalBatches > 0) && 
+                    progress.status !== 'complete';
   
-  // Don't show anything if not in loading state
+  // Don't show anything if not in loading state or if complete
   if (!shouldShow) {
     return null;
   }
