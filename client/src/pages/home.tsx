@@ -318,6 +318,13 @@ export default function Home() {
     const search = window.location.search;
     const queryParams = parseQueryString(search);
     
+    // Check if we have a wallet address directly in the URL path
+    if (params.walletAddress && params.walletAddress.startsWith('0x')) {
+      console.log(`Detected wallet address in URL params: ${params.walletAddress}`);
+      handleSearch(params.walletAddress);
+      return;
+    }
+    
     // First check if we're using the clean portfolio URL format (/portfolio/:portfolioId)
     if (params.portfolioId || location.startsWith('/portfolio/')) {
       // Get the portfolio ID either from params or from the URL
