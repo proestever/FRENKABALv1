@@ -121,10 +121,12 @@ export function LoadingProgress({ isLoading, customProgress }: LoadingProgressPr
                 className="h-full w-full absolute progress-shimmer animate-pulse-subtle"
                 style={{
                   background: 'linear-gradient(90deg, #FFEA00 0%, #FF9800 15%, #FF5722 30%, #F50057 50%, #D500F9 70%, #651FFF 85%, #3D5AFE 100%)',
-                  transform: `translateX(-${100 - animatedProgress}%)`,
-                  transition: 'transform 200ms cubic-bezier(0.65, 0, 0.35, 1)',
+                  width: `${animatedProgress}%`,
+                  transform: 'none',
+                  transition: 'width 200ms cubic-bezier(0.65, 0, 0.35, 1)',
                   boxShadow: '0 0 10px rgba(255,80,120,0.7), 0 0 15px rgba(255,80,120,0.3)',
-                  backgroundSize: '200% 100%'
+                  backgroundSize: '200% 100%',
+                  borderRadius: '4px'
                 }}
               />
             }
