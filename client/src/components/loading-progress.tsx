@@ -21,6 +21,7 @@ export function LoadingProgress({ isLoading, customProgress }: LoadingProgressPr
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [prevMessage, setPrevMessage] = useState('');
   const [stageTransition, setStageTransition] = useState(false);
+  const [hideDelay, setHideDelay] = useState(false);
   
   // Calculate the progress percentage based on batches or artificial progress
   const progressPercent = progress.status === 'complete' 
@@ -65,10 +66,25 @@ export function LoadingProgress({ isLoading, customProgress }: LoadingProgressPr
     }
   }, [progressPercent, animatedProgress]);
   
-  // Check loading state and progress - hide if we're not loading, if we're idle with no batches, or if status is complete
-  const shouldShow = isLoading && 
-                    (progress.status !== 'idle' || progress.totalBatches > 0) && 
-                    progress.status !== 'complete';
+  // Add a delay before hiding the loading progress after completion
+  useEffect(() => {
+    if (progress.status === 'complete' && !hideDelay) {
+      // If status becomes complete, set a timer to hide the progress after a delay
+      const timer = setTimeout(() => {
+        setHideDelay(true);
+      }, 1500); // Keep the progress visible for 1.5 seconds after completion
+      return () => clearTimeout(timer);
+    }
+    
+    // Reset hideDelay when loading starts again
+    if (isLoading && progress.status === 'loading' && hideDelay) {
+      setHideDelay(false);
+    }
+  }, [progress.status, isLoading, hideDelay]);
+  
+  // Check loading state and progress - hide if we're not loading, if we're idle with no batches, or if status is complete and delay has passed
+  const shouldShow = (isLoading || !hideDelay) && 
+                    (progress.status !== 'idle' || progress.totalBatches > 0);
   
   // Don't show anything if not in loading state or if complete
   if (!shouldShow) {
