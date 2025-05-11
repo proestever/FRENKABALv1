@@ -44,6 +44,16 @@ export const updateLoadingProgress = (progress: Partial<LoadingProgress>) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for deployment
+  app.get("/", (_req, res) => {
+    const userAgent = _req.get('user-agent') || '';
+    if (userAgent.includes('GoogleHC') || userAgent.includes('HealthCheck')) {
+      return res.status(200).send('OK');
+    }
+    // For non-health check requests, serve the index.html
+    res.sendFile(path.resolve(import.meta.dirname, 'public', 'index.html'));
+  });
+
   // API endpoint to get loading progress
   app.get("/api/loading-progress", (_req, res) => {
     res.json(loadingProgress);
