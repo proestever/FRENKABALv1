@@ -7,7 +7,6 @@ import { User } from '@shared/schema';
 interface UseWalletReturn {
   isConnected: boolean;
   account: string | null;
-  walletAddress: string | null; // Alias for account for consistency
   chainId: number | null;
   userId: number | null;
   user: User | null;
@@ -16,7 +15,6 @@ interface UseWalletReturn {
   isConnecting: boolean;
   isPulseChain: boolean;
   refreshUserProfile: () => Promise<User | null>;
-  provider: ethers.providers.Web3Provider | null;
 }
 
 export function useWallet(): UseWalletReturn {
@@ -25,11 +23,7 @@ export function useWallet(): UseWalletReturn {
   const [userId, setUserId] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
   const { toast } = useToast();
-  
-  // Alias for account for backwards compatibility
-  const walletAddress = account;
 
   // PulseChain mainnet ID
   const PULSE_CHAIN_ID = 369;
@@ -479,7 +473,6 @@ export function useWallet(): UseWalletReturn {
   return {
     isConnected: !!account,
     account,
-    walletAddress, // Alias for account
     chainId,
     userId,
     user,
@@ -488,7 +481,6 @@ export function useWallet(): UseWalletReturn {
     isConnecting,
     isPulseChain,
     refreshUserProfile,
-    provider,
     // Include debug utility only in development
     ...(process.env.NODE_ENV === 'development' ? { resetLoginTimestamp } : {})
   };

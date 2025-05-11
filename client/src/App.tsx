@@ -1,4 +1,3 @@
-import React from "react";
 import { Switch, Route, Link, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -11,14 +10,10 @@ import { Donations } from "@/pages/donations";
 import PortfoliosPage from "@/pages/portfolios";
 import AdminPage from "@/pages/admin";
 import ApiUsagePage from "@/pages/api-usage";
-import Credits from "@/pages/Credits";
-import AdminCredits from "@/pages/Admin/Credits";
-import SubscriptionPage from "@/pages/Subscription";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthProvider } from "@/providers/auth-provider";
-import { CreditBalance } from "@/components/credit-balance";
-import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch, Settings, BarChart, CircleDollarSign, CreditCard } from "lucide-react";
+import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch, Settings, BarChart } from "lucide-react";
 import telegramLogo from "@assets/Telegram_2019_Logo.svg.png";
 import xLogo from "@assets/X_logo.jpg";
 import {
@@ -170,7 +165,6 @@ function Header() {
         </a>
         
         <div className="flex space-x-4 items-center">
-          {isConnected && <CreditBalance />}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
@@ -201,16 +195,6 @@ function Header() {
                   </DropdownMenuItem>
                   
                   {/* Admin link - only show for the admin wallet address */}
-                  <DropdownMenuItem onClick={() => setLocation("/subscription")} className="cursor-pointer dropdown-item-hover">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    <span>Subscription</span>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem onClick={() => setLocation("/credits")} className="cursor-pointer dropdown-item-hover">
-                    <CircleDollarSign className="mr-2 h-4 w-4" />
-                    <span>Credits</span>
-                  </DropdownMenuItem>
-                  
                   {account && account.toLowerCase() === '0x592139a3f8cf019f628a152fc1262b8aef5b7199'.toLowerCase() && (
                     <DropdownMenuItem onClick={() => setLocation("/admin")} className="cursor-pointer dropdown-item-hover">
                       <Settings className="mr-2 h-4 w-4" />
@@ -244,9 +228,8 @@ function Header() {
             {renderConnectButton(true)}
           </div>
           
-          {/* Right area: credit balance and menu button */}
-          <div className="col-span-1 flex justify-end space-x-2 items-center">
-            {isConnected && <CreditBalance />}
+          {/* Right area: menu button */}
+          <div className="col-span-1 flex justify-end space-x-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex p-2 text-white hover:text-white/80 transition-all duration-200 hover:scale-105">
@@ -274,16 +257,6 @@ function Header() {
                     <DropdownMenuItem onClick={() => setLocation("/portfolios")} className="cursor-pointer dropdown-item-hover">
                       <FolderSearch className="mr-2 h-4 w-4" />
                       <span>Portfolios</span>
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuItem onClick={() => setLocation("/subscription")} className="cursor-pointer dropdown-item-hover">
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      <span>Subscription</span>
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuItem onClick={() => setLocation("/credits")} className="cursor-pointer dropdown-item-hover">
-                      <CircleDollarSign className="mr-2 h-4 w-4" />
-                      <span>Credits</span>
                     </DropdownMenuItem>
                     
                     {/* Admin link in mobile menu - only show for the admin wallet address */}
@@ -399,19 +372,6 @@ function Router() {
           <Route path="/donations" component={Donations} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/admin/api-usage" component={ApiUsagePage} />
-          <Route path="/admin/credits" component={AdminCredits} />
-          <Route path="/admin/subscriptions">
-            {() => {
-              const AdminSubscriptions = React.lazy(() => import('@/pages/Admin/Subscriptions'));
-              return (
-                <React.Suspense fallback={<div>Loading...</div>}>
-                  <AdminSubscriptions />
-                </React.Suspense>
-              );
-            }}
-          </Route>
-          <Route path="/credits" component={Credits} />
-          <Route path="/subscription" component={SubscriptionPage} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
         </Switch>

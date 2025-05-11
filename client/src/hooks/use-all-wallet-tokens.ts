@@ -1,14 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAllWalletTokens } from '@/lib/api';
 import { useEffect, useState, useRef } from 'react';
-import { useAuth } from '@/hooks/use-auth';
 
 /**
  * Hook for retrieving all wallet tokens at once (not paginated)
  * This loads all tokens in a single request, which might be batched on the server
  */
 export function useAllWalletTokens(walletAddress: string | null) {
-  const { userId } = useAuth();
   const queryClient = useQueryClient();
   const prevWalletAddress = useRef<string | null>(null);
   
@@ -51,7 +49,7 @@ export function useAllWalletTokens(walletAddress: string | null) {
     refetchOnReconnect: false,
     staleTime: 5 * 60 * 1000, // Data considered fresh for 5 minutes (reducing API calls)
     gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
-    queryFn: () => walletAddress ? fetchAllWalletTokens(walletAddress, userId) : Promise.reject('No wallet address'),
+    queryFn: () => walletAddress ? fetchAllWalletTokens(walletAddress) : Promise.reject('No wallet address'),
   });
   
   // Set loading progress status without polling

@@ -11,15 +11,6 @@ export const users = pgTable("users", {
   twitterHandle: text("twitter_handle"),
   bio: text("bio"),
   createdAt: timestamp("created_at").defaultNow(),
-  email: text("email"),
-  // Stripe subscription fields
-  stripeCustomerId: text("stripe_customer_id"),
-  stripeSubscriptionId: text("stripe_subscription_id"),
-  subscriptionStatus: text("subscription_status"),
-  subscriptionTier: text("subscription_tier"),
-  subscriptionStartDate: timestamp("subscription_start_date"),
-  subscriptionEndDate: timestamp("subscription_end_date"),
-  hasPaidSubscription: boolean("has_paid_subscription").default(false).notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -36,23 +27,10 @@ export const updateUserProfileSchema = createInsertSchema(users).pick({
   website: true,
   twitterHandle: true,
   bio: true,
-  email: true,
-});
-
-// Schema for updating user subscription info
-export const updateUserSubscriptionSchema = createInsertSchema(users).pick({
-  stripeCustomerId: true,
-  stripeSubscriptionId: true,
-  subscriptionStatus: true,
-  subscriptionTier: true,
-  subscriptionStartDate: true,
-  subscriptionEndDate: true,
-  hasPaidSubscription: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
-export type UpdateUserSubscription = z.infer<typeof updateUserSubscriptionSchema>;
 export type User = typeof users.$inferSelect;
 
 // Define schema for PulseChain token data
@@ -286,38 +264,6 @@ export const dexScreenerPreferredTokens = pgTable("dexscreener_preferred_tokens"
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// Subscription Packages
-export const subscriptionPackages = pgTable("subscription_packages", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  durationDays: integer("duration_days").notNull(), // Duration in days (30, 90, 365)
-  plsCost: text("pls_cost").notNull(), // String to handle large numbers precisely
-  features: jsonb("features"), // Array of features included in this package
-  isActive: boolean("is_active").notNull().default(true),
-  displayOrder: integer("display_order").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-// Subscription payments (record of PLS payments for subscriptions)
-export const subscriptionPayments = pgTable("subscription_payments", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  packageId: integer("package_id").references(() => subscriptionPackages.id),
-  txHash: text("tx_hash").notNull().unique(),
-  fromAddress: text("from_address").notNull(),
-  toAddress: text("to_address").notNull(),
-  plsAmount: text("pls_amount").notNull(), // String to handle large numbers precisely
-  status: text("status").notNull(), // "pending", "confirmed", "rejected"
-  startDate: timestamp("start_date"), // When subscription starts
-  endDate: timestamp("end_date"), // When subscription ends  
-  confirmedAt: timestamp("confirmed_at"),
-  metadata: jsonb("metadata"), // Additional transaction data
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
 export const insertDexScreenerPreferredTokenSchema = createInsertSchema(dexScreenerPreferredTokens).omit({
   id: true,
   createdAt: true,
@@ -326,152 +272,3 @@ export const insertDexScreenerPreferredTokenSchema = createInsertSchema(dexScree
 
 export type InsertDexScreenerPreferredToken = z.infer<typeof insertDexScreenerPreferredTokenSchema>;
 export type DexScreenerPreferredToken = typeof dexScreenerPreferredTokens.$inferSelect;
-
-// Subscription package schema
-export const insertSubscriptionPackageSchema = createInsertSchema(subscriptionPackages).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertSubscriptionPackage = z.infer<typeof insertSubscriptionPackageSchema>;
-export type SubscriptionPackage = typeof subscriptionPackages.$inferSelect;
-
-// Subscription payment schema
-export const insertSubscriptionPaymentSchema = createInsertSchema(subscriptionPayments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertSubscriptionPayment = z.infer<typeof insertSubscriptionPaymentSchema>;
-export type SubscriptionPayment = typeof subscriptionPayments.$inferSelect;
-
-// Credit System Tables
-
-// User Credits
-export const userCredits = pgTable("user_credits", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  balance: integer("balance").notNull().default(0),
-  lifetimeCredits: integer("lifetime_credits").notNull().default(0),
-  lifetimeSpent: integer("lifetime_spent").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertUserCreditsSchema = createInsertSchema(userCredits).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertUserCredits = z.infer<typeof insertUserCreditsSchema>;
-export type UserCredits = typeof userCredits.$inferSelect;
-
-// Credit Transactions (purchases, usage, admin adjustments)
-export const creditTransactions = pgTable("credit_transactions", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  amount: integer("amount").notNull(), // positive for additions, negative for deductions
-  type: text("type").notNull(), // "purchase", "usage", "admin_adjustment", "refund"
-  relatedEntityType: text("related_entity_type"), // "wallet_search", "payment", etc.
-  relatedEntityId: text("related_entity_id"), // ID of the related entity
-  description: text("description"),
-  metadata: jsonb("metadata"), // Additional data like transaction details
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const insertCreditTransactionSchema = createInsertSchema(creditTransactions).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSchema>;
-export type CreditTransaction = typeof creditTransactions.$inferSelect;
-
-// Credit Packages (configurations for credit purchases)
-export const creditPackages = pgTable("credit_packages", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  credits: integer("credits").notNull(),
-  plsCost: text("pls_cost").notNull(), // String to handle large numbers precisely
-  isActive: boolean("is_active").notNull().default(true),
-  displayOrder: integer("display_order").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertCreditPackageSchema = createInsertSchema(creditPackages).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertCreditPackage = z.infer<typeof insertCreditPackageSchema>;
-export type CreditPackage = typeof creditPackages.$inferSelect;
-
-// Credit Payments (record of PLS payments for credits)
-export const creditPayments = pgTable("credit_payments", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  packageId: integer("package_id").references(() => creditPackages.id),
-  txHash: text("tx_hash").notNull(),
-  fromAddress: text("from_address").notNull(),
-  toAddress: text("to_address").notNull(),
-  plsAmount: text("pls_amount").notNull(), // String to handle large numbers precisely
-  creditsAwarded: integer("credits_awarded").notNull(),
-  status: text("status").notNull(), // "pending", "confirmed", "rejected"
-  confirmedAt: timestamp("confirmed_at"),
-  metadata: jsonb("metadata"), // Additional transaction data
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertCreditPaymentSchema = createInsertSchema(creditPayments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertCreditPayment = z.infer<typeof insertCreditPaymentSchema>;
-export type CreditPayment = typeof creditPayments.$inferSelect;
-
-// Credit Usage Settings (configure cost for different features)
-export const creditUsageSettings = pgTable("credit_usage_settings", {
-  id: serial("id").primaryKey(),
-  featureKey: text("feature_key").notNull().unique(), // e.g., "wallet_search", "premium_report"
-  displayName: text("display_name").notNull(),
-  creditCost: integer("credit_cost").notNull(),
-  isActive: boolean("is_active").notNull().default(true),
-  description: text("description"),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertCreditUsageSettingSchema = createInsertSchema(creditUsageSettings).omit({
-  id: true,
-  updatedAt: true,
-});
-
-export type InsertCreditUsageSetting = z.infer<typeof insertCreditUsageSettingSchema>;
-export type CreditUsageSetting = typeof creditUsageSettings.$inferSelect;
-
-// Daily Free Credits Tracking
-export const userDailyCredits = pgTable("user_daily_credits", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull().unique(),
-  lastAwardedAt: timestamp("last_awarded_at").notNull().defaultNow(),
-  timesAwarded: integer("times_awarded").notNull().default(0),
-  totalAwarded: integer("total_awarded").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertUserDailyCreditsSchema = createInsertSchema(userDailyCredits).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertUserDailyCredits = z.infer<typeof insertUserDailyCreditsSchema>;
-export type UserDailyCredits = typeof userDailyCredits.$inferSelect;

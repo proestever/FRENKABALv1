@@ -17,25 +17,12 @@ export interface ProcessedToken extends Token {
  * @param address - Wallet address to fetch data for
  * @param page - Page number for pagination (default: 1)
  * @param limit - Number of tokens per page (default: 50)
- * @param userId - Optional user ID to include in the request for credit tracking
  */
-export function fetchWalletData(address: string, page: number = 1, limit: number = 50, userId?: number | null): Promise<Wallet> {
-  // Create headers object with user ID if provided
-  const headers: Record<string, string> = {};
-  if (userId) {
-    headers['user-id'] = userId.toString();
-  }
-
-  return fetch(`/api/wallet/${address}?page=${page}&limit=${limit}`, {
-    headers: headers
-  })
+export function fetchWalletData(address: string, page: number = 1, limit: number = 50): Promise<Wallet> {
+  return fetch(`/api/wallet/${address}?page=${page}&limit=${limit}`)
     .then(response => {
       if (!response.ok) {
         return response.json().then(errorData => {
-          // Check for insufficient credits error
-          if (response.status === 402 && errorData.errorCode === 'INSUFFICIENT_CREDITS') {
-            throw new Error('Insufficient credits for wallet search. Please purchase more credits.');
-          }
           throw new Error(errorData.message || 'Failed to fetch wallet data');
         });
       }
@@ -46,25 +33,12 @@ export function fetchWalletData(address: string, page: number = 1, limit: number
 /**
  * Fetch ALL wallet tokens in a single request (will be loaded in batches on server)
  * @param address - Wallet address to fetch data for
- * @param userId - Optional user ID to include in the request for credit tracking
  */
-export function fetchAllWalletTokens(address: string, userId?: number | null): Promise<Wallet> {
-  // Create headers object with user ID if provided
-  const headers: Record<string, string> = {};
-  if (userId) {
-    headers['user-id'] = userId.toString();
-  }
-
-  return fetch(`/api/wallet/${address}/all`, {
-    headers: headers
-  })
+export function fetchAllWalletTokens(address: string): Promise<Wallet> {
+  return fetch(`/api/wallet/${address}/all`)
     .then(response => {
       if (!response.ok) {
         return response.json().then(errorData => {
-          // Check for insufficient credits error
-          if (response.status === 402 && errorData.errorCode === 'INSUFFICIENT_CREDITS') {
-            throw new Error('Insufficient credits for wallet search. Please purchase more credits.');
-          }
           throw new Error(errorData.message || 'Failed to fetch all wallet tokens');
         });
       }

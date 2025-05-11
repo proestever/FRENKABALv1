@@ -1,4 +1,4 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance, getApiCounterStats, resetApiCounter } from "./services/api";
@@ -15,12 +15,7 @@ import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
 import portfolioRoutes from "./routes/portfolio-routes";
-import creditRoutes from "./routes/credit-routes";
-import subscriptionRoutes from "./routes/subscription-routes";
 import { format } from "date-fns";
-import { dailyCreditsService } from "./services/daily-credits-service";
-import { creditService } from "./services/credit-service";
-import { requireActiveSubscription, restrictToPaidSubscribers } from "./middleware/subscription-check";
 
 // Loading progress tracking
 export interface LoadingProgress {
@@ -44,16 +39,6 @@ export const updateLoadingProgress = (progress: Partial<LoadingProgress>) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Health check endpoint for deployment
-  app.get("/", (_req, res) => {
-    const userAgent = _req.get('user-agent') || '';
-    if (userAgent.includes('GoogleHC') || userAgent.includes('HealthCheck')) {
-      return res.status(200).send('OK');
-    }
-    // For non-health check requests, serve the index.html
-    res.sendFile(path.resolve(import.meta.dirname, 'public', 'index.html'));
-  });
-
   // API endpoint to get loading progress
   app.get("/api/loading-progress", (_req, res) => {
     res.json(loadingProgress);
@@ -64,7 +49,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { address } = req.params;
       const { page = '1', limit = '100' } = req.query; // Default to page 1, limit 100
-      const userId = req.headers['user-id'] ? parseInt(req.headers['user-id'] as string, 10) : null;
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -87,21 +71,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (isNaN(limitNum) || limitNum < 1 || limitNum > 200) {
         return res.status(400).json({ message: "Invalid limit parameter. Must be between 1 and 200" });
-      }
-      
-      // Check if user has enough credits for this wallet search
-      if (userId) {
-        // Check if user has enough credits
-        const hasEnoughCredits = await creditService.hasCreditsForWalletSearch(userId);
-        if (!hasEnoughCredits) {
-          return res.status(402).json({ 
-            message: "Insufficient credits for wallet search. Please purchase more credits.",
-            errorCode: "INSUFFICIENT_CREDITS" 
-          });
-        }
-        
-        // Deduct credits
-        await creditService.deductCreditsForWalletSearch(userId);
       }
       
       const walletData = await getWalletData(address, pageNum, limitNum);
@@ -203,7 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/wallet/:address/all", requireActiveSubscription, async (req: any, res) => {
+  app.get("/api/wallet/:address/all", async (req, res) => {
     try {
       const { address } = req.params;
       
@@ -215,15 +184,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {
         return res.status(400).json({ message: "Invalid wallet address format" });
-      }
-      
-      // Check if the user is authenticated and has an active subscription
-      if (req.isAuthenticated && req.isAuthenticated() && !req.hasActiveSubscription) {
-        return res.status(402).json({
-          error: 'Subscription required',
-          message: 'You need an active subscription to access complete wallet data',
-          subscriptionRequired: true
-        });
       }
       
       // Set loading progress to indicate we're fetching all tokens
@@ -253,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // API route to get wallet tokens directly from the blockchain 
   // This is useful for getting up-to-date balances immediately after a swap
-  app.get("/api/wallet/:address/direct", requireActiveSubscription, async (req: any, res) => {
+  app.get("/api/wallet/:address/direct", async (req, res) => {
     try {
       const { address } = req.params;
       
@@ -265,15 +225,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {
         return res.status(400).json({ message: "Invalid wallet address format" });
-      }
-      
-      // Check if the user is authenticated and has an active subscription
-      if (req.isAuthenticated && req.isAuthenticated() && !req.hasActiveSubscription) {
-        return res.status(402).json({
-          error: 'Subscription required',
-          message: 'You need an active subscription to access direct blockchain data',
-          subscriptionRequired: true
-        });
       }
       
       // Set loading progress
@@ -314,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // API route to get specific token balance for a wallet
-  app.get("/api/wallet/:address/token/:tokenAddress", requireActiveSubscription, async (req: any, res) => {
+  app.get("/api/wallet/:address/token/:tokenAddress", async (req, res) => {
     try {
       const { address, tokenAddress } = req.params;
       
@@ -334,15 +285,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!addressRegex.test(tokenAddress)) {
         return res.status(400).json({ message: "Invalid token address format" });
-      }
-      
-      // Check if the user is authenticated and has an active subscription
-      if (req.isAuthenticated && req.isAuthenticated() && !req.hasActiveSubscription) {
-        return res.status(402).json({
-          error: 'Subscription required',
-          message: 'You need an active subscription to view detailed token data',
-          subscriptionRequired: true
-        });
       }
       
       // Get the specific token balance
@@ -804,19 +746,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // we can still return user info without signature if the user exists
       else if (user) {
         console.log(`Returning existing user ${user.id} for wallet ${walletAddress} without signature verification`);
-        
-        // Check and award daily free credits
-        try {
-          const creditsAwarded = await dailyCreditsService.checkAndAwardDailyCredits(user.id);
-          
-          if (creditsAwarded > 0) {
-            console.log(`Awarded ${creditsAwarded} daily free credits to user ${user.id}`);
-          }
-        } catch (creditsError) {
-          console.error(`Error awarding daily credits to user ${user.id}:`, creditsError);
-          // Continue even if there's an error with credits
-        }
-        
         return res.json({ 
           id: user.id,
           username: user.username
@@ -849,19 +778,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log(`Created new user ${user.id} for verified wallet ${walletAddress}`);
-        
-        // Award initial free credits to new user
-        try {
-          const creditsAwarded = await dailyCreditsService.checkAndAwardDailyCredits(user.id);
-          
-          if (creditsAwarded > 0) {
-            console.log(`Awarded ${creditsAwarded} initial free credits to new user ${user.id}`);
-          }
-        } catch (creditsError) {
-          console.error(`Error awarding initial credits to new user ${user.id}:`, creditsError);
-          // Continue even if there's an error with credits
-        }
-        
         return res.json({ 
           id: user.id,
           username: user.username
@@ -1490,8 +1406,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register portfolio routes
   app.use("/api", portfolioRoutes);
-  app.use("/api", creditRoutes);
-  app.use("/api", subscriptionRoutes);
   
   // API Routes for DexScreener preferred tokens management
   
