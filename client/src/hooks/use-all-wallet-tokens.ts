@@ -14,7 +14,8 @@ export function useAllWalletTokens(walletAddress: string | null) {
     currentBatch: 0,
     totalBatches: 1,
     status: 'idle' as 'idle' | 'loading' | 'complete' | 'error',
-    message: ''
+    message: '',
+    lastUpdated: Date.now() // Track when progress was last updated
   });
   
   // Always invalidate the cache for the current wallet address on mount and when wallet changes
@@ -52,71 +53,73 @@ export function useAllWalletTokens(walletAddress: string | null) {
     queryFn: () => walletAddress ? fetchAllWalletTokens(walletAddress) : Promise.reject('No wallet address'),
   });
   
-  // Set loading progress status with improved polling
+  // Set loading progress status with more controlled polling
   useEffect(() => {
     let pollInterval: NodeJS.Timeout | null = null;
     
     // When fetching starts, update the progress status and start polling
     if (isFetching) {
+      // Initialize progress when fetching starts
       setProgress({
         currentBatch: 1,
         totalBatches: 5, // Initial estimate
         status: 'loading',
-        message: 'Fetching wallet data...'
+        message: 'Fetching wallet data...',
+        lastUpdated: Date.now()
       });
       
-      // Start polling for progress updates
-      pollInterval = setInterval(() => {
+      const fetchProgress = () => {
         fetch('/api/loading-progress')
           .then(response => response.ok ? response.json() : null)
           .then(data => {
             if (data) {
-              setProgress(data);
+              setProgress(prev => ({
+                ...data,
+                lastUpdated: Date.now()
+              }));
             }
           })
           .catch(error => {
             console.error('Error fetching loading progress:', error);
           });
-      }, 700); // Poll every 700ms for progress updates
+      };
       
-      // Make an immediate request as well
+      // Make an immediate request first
+      fetchProgress();
+      
+      // Then poll every 700ms
+      pollInterval = setInterval(fetchProgress, 700);
+    } else if (walletData || isError) {
+      // When data is loaded or there's an error, update the progress
+      const finalStatus = isError ? 'error' : 'complete';
+      const finalMessage = isError 
+        ? 'Error loading wallet data' 
+        : `Successfully loaded ${walletData?.tokens?.length || 0} tokens`;
+      
+      // Update to final status
+      setProgress(prev => ({
+        ...prev,
+        status: finalStatus,
+        message: finalMessage,
+        lastUpdated: Date.now()
+      }));
+      
+      // One last check to get any final updates from server
       fetch('/api/loading-progress')
         .then(response => response.ok ? response.json() : null)
         .then(data => {
           if (data) {
-            setProgress(data);
+            setProgress(prev => ({
+              ...data,
+              status: finalStatus, // Keep our final status
+              message: finalMessage,
+              lastUpdated: Date.now()
+            }));
           }
         })
         .catch(error => {
-          console.error('Error fetching initial loading progress:', error);
+          console.error('Error fetching final loading progress:', error);
         });
-    } else {
-      // When data is loaded or there's an error, update the progress
-      // but keep polling for a moment to ensure we get final status
-      if (walletData || isError) {
-        // When not fetching, set status to complete or error
-        setProgress(prev => ({
-          ...prev,
-          status: isError ? 'error' : 'complete',
-          message: isError ? 'Error loading wallet data' : 'Wallet data loaded successfully'
-        }));
-        
-        // Make one final progress check
-        fetch('/api/loading-progress')
-          .then(response => response.ok ? response.json() : null)
-          .then(data => {
-            if (data && data.status === 'loading') {
-              // If the server is still loading, update our progress but keep our complete status
-              setProgress(prev => ({
-                ...data,
-                status: prev.status // Keep our complete/error status
-              }));
-            }
-          })
-          .catch(error => {
-            console.error('Error fetching final loading progress:', error);
-          });
-      }
     }
     
     // Clean up the interval when component unmounts or dependencies change

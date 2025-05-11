@@ -82,9 +82,14 @@ export function LoadingProgress({ isLoading, customProgress }: LoadingProgressPr
     }
   }, [progress.status, isLoading, hideDelay]);
   
-  // Check loading state and progress - hide if we're not loading, if we're idle with no batches, or if status is complete and delay has passed
-  const shouldShow = (isLoading || !hideDelay) && 
-                    (progress.status !== 'idle' || progress.totalBatches > 0);
+  // Check loading state and progress conditions
+  // Only show when:
+  // 1. We are currently loading (isLoading is true)
+  // 2. We have a meaningful progress state (not idle)
+  // 3. If loading complete, only show during the delay period
+  const shouldShow = isLoading && 
+                    progress.status !== 'idle' && 
+                    (progress.status !== 'complete' || !hideDelay);
   
   // Don't show anything if not in loading state or if complete
   if (!shouldShow) {
