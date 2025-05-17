@@ -501,9 +501,9 @@ export default function Home() {
           // Calculate how long the refresh took
           const refreshTime = ((Date.now() - startTime) / 1000).toFixed(1);
           
-          // Update the query cache with fresh data
-          queryClient.setQueryData([`/api/wallet/${searchedAddress}`], freshData);
-          queryClient.setQueryData([`wallet-all-${searchedAddress}`], freshData);
+          // Explicitly invalidate all related queries
+          queryClient.invalidateQueries({ queryKey: [`wallet-all-${searchedAddress}`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/wallet/${searchedAddress}`] });
           
           // Force a refetch to update the UI with new data
           refetch({ cancelRefetch: true });
