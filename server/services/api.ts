@@ -1707,35 +1707,28 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       console.log(`PLS token not found in fallback. Tokens: ${tokensWithPrice.map(t => t.symbol).join(', ')}`);
     }
     
-    // Skip double-checking to reduce API calls (optimization)
-    updateLoadingProgress({
-      currentBatch: totalBatches + 6, 
-      totalBatches: totalBatches + 7,
-      message: 'Adding important tokens...'
-    });
-    
-    // Check for any important tokens that should always be included
-    if (IMPORTANT_TOKENS && IMPORTANT_TOKENS.length > 0) {
-      console.log(`Checking for ${IMPORTANT_TOKENS.length} important tokens...`);
+    // ENHANCEMENT: Try a more direct Moralis API call to make sure we're getting the latest data
+    // This is more reliable than PulseChain Explorer API and shows new tokens faster
+    try {
+      console.log("Double-checking token balances with direct Moralis API...");
+      updateLoadingProgress({
+        currentBatch: totalBatches + 6, 
+        totalBatches: totalBatches + 7,
+        message: 'Refreshing token balances via Moralis...'
+      });
       
-      for (const tokenAddress of IMPORTANT_TOKENS) {
-        try {
-          console.log(`Fetching specific token balance for ${tokenAddress} in wallet ${walletAddress}`);
-          const specificToken = await getSpecificTokenBalance(walletAddress, tokenAddress);
-          
-          if (specificToken) {
-            console.log(`Found specific token: ${specificToken.symbol}`);
-            tokensWithPrice.push(specificToken);
-          } else {
-            console.log(`No balance found for token ${tokenAddress} in wallet ${walletAddress}`);
-          }
-        } catch (error) {
-          console.error(`Error checking specific token ${tokenAddress}:`, error);
-        }
-      }
-    }
-    
-    // LP tokens processing will happen in the next section
+      // Make a direct API call to Moralis for the most up-to-date token balances
+      console.log(`Making direct Moralis API call for wallet: ${walletAddress}`);
+      
+      try {
+        // Direct API call to Moralis to get all tokens for the wallet
+        const moralisTokensResponse = await Moralis.EvmApi.token.getWalletTokenBalances({
+          chain: "0x171", // PulseChain chain ID
+          address: walletAddress,
+        });
+        
+        if (moralisTokensResponse && moralisTokensResponse.raw) {
+          const moralisTokens = moralisTokensResponse.raw;
           console.log(`Moralis direct API call returned ${moralisTokens.length} tokens`);
           
           // Get existing token addresses for comparison
