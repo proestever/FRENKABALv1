@@ -1249,28 +1249,43 @@ export async function getWalletTransactionHistory(
  * @param walletAddress The wallet address to fetch data for
  * @param page Page number for pagination (1-based)
  * @param limit Number of tokens per page
+ * @param forceRefresh Set to true to bypass cache and fetch fresh data
  */
-export async function getWalletData(walletAddress: string, page: number = 1, limit: number = 100): Promise<WalletData> {
+export async function getWalletData(walletAddress: string, page: number = 1, limit: number = 100, forceRefresh: boolean = false): Promise<WalletData> {
   // Normalize wallet address for consistent caching
   const normalizedAddress = walletAddress.toLowerCase();
   
   // Track this as the main wallet search API call
   trackApiCall(walletAddress, 'getWalletData');
   
-  // Check cache first to avoid unnecessary API calls
-  const cachedWalletData = cacheService.getWalletData(normalizedAddress);
-  if (cachedWalletData) {
-    console.log(`Using cached wallet data for ${normalizedAddress}`);
+  // Check cache first to avoid unnecessary API calls (unless force refresh is requested)
+  if (!forceRefresh) {
+    const cachedWalletData = cacheService.getWalletData(normalizedAddress);
+    if (cachedWalletData) {
+      console.log(`Using cached wallet data for ${normalizedAddress}`);
+      
+      // Still update loading progress for UI
+      updateLoadingProgress({
+        status: 'complete',
+        currentBatch: 1,
+        totalBatches: 1,
+        message: 'Using cached wallet data...'
+      });
+      
+      return cachedWalletData;
+    }
+  } else {
+    console.log(`Force refresh requested for ${normalizedAddress}, bypassing cache`);
+    // Invalidate any existing cache for this wallet
+    cacheService.invalidateWalletData(normalizedAddress);
     
-    // Still update loading progress for UI
+    // Update loading progress for UI
     updateLoadingProgress({
-      status: 'complete',
+      status: 'loading',
       currentBatch: 1,
-      totalBatches: 1,
-      message: 'Using cached wallet data...'
+      totalBatches: 5,
+      message: 'Force refreshing wallet data from blockchain...'
     });
-    
-    return cachedWalletData;
   }
   
   try {
