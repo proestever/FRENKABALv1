@@ -1312,10 +1312,26 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
     if (moralisTokens.length > 0) {
       console.log(`Got wallet data from Moralis with ${moralisTokens.length} tokens`);
       
+      // Configuration for spam filtering
+      const filterSpamTokens = true; // Set this to true to filter out spam tokens
+      
+      // Filter out possible spam tokens if enabled
+      let filteredTokens = moralisTokens;
+      if (filterSpamTokens) {
+        const originalCount = moralisTokens.length;
+        filteredTokens = moralisTokens.filter((item: any) => {
+          return item.possible_spam !== true;
+        });
+        const removedCount = originalCount - filteredTokens.length;
+        if (removedCount > 0) {
+          console.log(`Removed ${removedCount} possible spam tokens from results`);
+        }
+      }
+      
       // Process tokens in batches to avoid overwhelming API
       const BATCH_SIZE = 15; // Process 15 tokens at a time (increased from 5 for faster loading)
       const processedTokens: ProcessedToken[] = [];
-      const totalBatches = Math.ceil(moralisTokens.length/BATCH_SIZE);
+      const totalBatches = Math.ceil(filteredTokens.length/BATCH_SIZE);
       
       // Update existing loading progress with the new batch count
       // But maintain the overall progress count by starting at 5
@@ -1328,7 +1344,7 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       });
       
       // Process tokens in batches
-      for (let i = 0; i < moralisTokens.length; i += BATCH_SIZE) {
+      for (let i = 0; i < filteredTokens.length; i += BATCH_SIZE) {
         const currentBatch = Math.floor(i/BATCH_SIZE) + 1;
         console.log(`Processing token batch ${currentBatch}/${totalBatches}`);
         
@@ -1338,7 +1354,7 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
           message: `Processing token batch ${currentBatch}/${totalBatches}...`
         });
         
-        const batch = moralisTokens.slice(i, i + BATCH_SIZE);
+        const batch = filteredTokens.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(batch.map(async (item: any) => {
           try {
             // Check if this is the native PLS token (has address 0xeeee...eeee and native_token flag)
