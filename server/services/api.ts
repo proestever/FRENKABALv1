@@ -1593,10 +1593,20 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
         console.error('Error retrieving stored logos:', error);
       }
       
-      // Then get all token prices in one batch API call
-      console.log(`Fetching prices for ${tokenAddresses.length} tokens in batch...`);
-      const priceDataMap = await getMultipleTokenPrices(tokenAddresses);
-      console.log(`Retrieved prices for ${Object.keys(priceDataMap).length} tokens in batch`);
+      // Only get prices for tokens that are missing price data
+      // Filter for tokens that don't already have price data from the first call
+      const tokensNeedingPrices = batch.filter(token => token.price === undefined);
+      const addressesNeedingPrices = tokensNeedingPrices.map(token => token.address);
+      
+      let priceDataMap: Record<string, any> = {};
+      
+      if (addressesNeedingPrices.length > 0) {
+        console.log(`Fetching prices for ${addressesNeedingPrices.length} tokens without price data in batch...`);
+        priceDataMap = await getMultipleTokenPrices(addressesNeedingPrices);
+        console.log(`Retrieved prices for ${Object.keys(priceDataMap).length} tokens in batch`);
+      } else {
+        console.log('All tokens in batch already have price data, skipping batch price fetch');
+      }
       
       // Process each token with the retrieved data
       const batchResults = await Promise.all(batch.map(async (token) => {
