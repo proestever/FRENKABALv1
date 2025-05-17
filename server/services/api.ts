@@ -1707,15 +1707,12 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       console.log(`PLS token not found in fallback. Tokens: ${tokensWithPrice.map(t => t.symbol).join(', ')}`);
     }
     
-    // ENHANCEMENT: Try a more direct Moralis API call to make sure we're getting the latest data
-    // This is more reliable than PulseChain Explorer API and shows new tokens faster
-    try {
-      console.log("Double-checking token balances with direct Moralis API...");
-      updateLoadingProgress({
-        currentBatch: totalBatches + 6, 
-        totalBatches: totalBatches + 7,
-        message: 'Refreshing token balances via Moralis...'
-      });
+    // Skip double-checking to reduce API calls (optimization)
+    updateLoadingProgress({
+      currentBatch: totalBatches + 6, 
+      totalBatches: totalBatches + 7,
+      message: 'Adding important tokens...'
+    });
       
       // Make a direct API call to Moralis for the most up-to-date token balances
       console.log(`Making direct Moralis API call for wallet: ${walletAddress}`);
