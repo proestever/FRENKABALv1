@@ -9,7 +9,7 @@ import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
 import ApiStats from '@/components/api-stats';
 import { Button } from '@/components/ui/button';
-import { saveRecentAddress, ProcessedToken } from '@/lib/api';
+import { saveRecentAddress, ProcessedToken, fetchWalletData, fetchAllWalletTokens } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
@@ -486,20 +486,23 @@ export default function Home() {
       
       // First invalidate the queries to clear the client-side cache
       queryClient.invalidateQueries({ queryKey: [`wallet-all-${searchedAddress}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/wallet/${searchedAddress}`] });
       
-      // Fetch fresh data directly from the blockchain with force=true parameter
-      // This makes the server bypass its cache and get fresh data
-      fetchWalletData(searchedAddress, 1, 100, true)
+      // Show initial toast to indicate refresh is in progress
+      toast({
+        title: "Force Refreshing Wallet Data",
+        description: "Bypassing cache and getting fresh data from the blockchain...",
+        duration: 3000,
+      });
+      
+      // Use the fetchAllWalletTokens function with a force parameter
+      // This makes a direct call to /wallet/[address]/all endpoint with force=true
+      fetchAllWalletTokens(searchedAddress, true)
         .then(freshData => {
           // Calculate how long the refresh took
           const refreshTime = ((Date.now() - startTime) / 1000).toFixed(1);
           
-          // After getting fresh data, update any other related queries
-          queryClient.setQueryData([`/api/wallet/${searchedAddress}`, 1], freshData);
-          queryClient.invalidateQueries({ queryKey: [`wallet-all-${searchedAddress}`] });
-          
-          // Force a new refetch to update the UI
+          // Force a refetch to update the UI with new data
           refetch({ cancelRefetch: true });
           
           // Show success toast
@@ -509,22 +512,15 @@ export default function Home() {
             duration: 3000,
           });
         })
-        .catch(error => {
-          console.error('Error during force refresh:', error);
+        .catch(err => {
+          console.error('Error during force refresh:', err);
           toast({
             title: "Refresh Failed",
-            description: error instanceof Error ? error.message : "Could not refresh wallet data",
+            description: err instanceof Error ? err.message : "Could not refresh wallet data",
             variant: "destructive",
             duration: 5000,
           });
         });
-      
-      // Show initial toast to indicate refresh is in progress
-      toast({
-        title: "Force Refreshing Wallet Data",
-        description: "Bypassing cache and getting fresh data from the blockchain...",
-        duration: 3000,
-      });
     }
   };
 

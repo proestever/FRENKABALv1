@@ -34,9 +34,10 @@ export function fetchWalletData(address: string, page: number = 1, limit: number
 /**
  * Fetch ALL wallet tokens in a single request (will be loaded in batches on server)
  * @param address - Wallet address to fetch data for
+ * @param forceRefresh - Whether to force a refresh from blockchain data (default: false)
  */
-export function fetchAllWalletTokens(address: string): Promise<Wallet> {
-  return fetch(`/api/wallet/${address}/all`)
+export function fetchAllWalletTokens(address: string, forceRefresh: boolean = false): Promise<Wallet> {
+  return fetch(`/api/wallet/${address}/all${forceRefresh ? '?force=true' : ''}`)
     .then(response => {
       if (!response.ok) {
         return response.json().then(errorData => {

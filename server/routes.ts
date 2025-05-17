@@ -177,6 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/wallet/:address/all", async (req, res) => {
     try {
       const { address } = req.params;
+      const { force = 'false' } = req.query; // Get force refresh parameter
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -188,17 +189,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid wallet address format" });
       }
       
+      const forceRefresh = force === 'true';
+      
       // Set loading progress to indicate we're fetching all tokens
       updateLoadingProgress({
         status: 'loading',
-        message: 'Loading all wallet tokens in batches...',
+        message: forceRefresh ? 'Force refreshing all wallet tokens...' : 'Loading all wallet tokens in batches...',
         currentBatch: 0,
         totalBatches: 1
       });
       
       // Get all tokens without pagination (backend will still process in batches)
       // Pass a very large limit to essentially get all tokens
-      const walletData = await getWalletData(address, 1, 1000);
+      console.log(`Fetching all tokens for ${address}, force refresh: ${forceRefresh}`);
+      const walletData = await getWalletData(address, 1, 1000, forceRefresh);
       
       // Store this address in recent addresses (for future implementation)
       // This would save the recent searches in the database
