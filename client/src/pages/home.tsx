@@ -476,22 +476,53 @@ export default function Home() {
   }, [isError, error, toast]);
 
   const handleRefresh = () => {
-    // Force a complete refresh by invalidating the query first
+    // Force a complete refresh by using the forceRefresh parameter
     if (searchedAddress) {
-      // This will clear the cache and force a fresh network request
+      // Log the refresh attempt
       console.log('Forcing refresh for wallet:', searchedAddress);
       
-      // First invalidate the query to clear the cache completely
+      // Set loading status
+      const startTime = Date.now();
+      
+      // First invalidate the queries to clear the client-side cache
       queryClient.invalidateQueries({ queryKey: [`wallet-all-${searchedAddress}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
       
-      // Then trigger a refetch with cancellation of any in-flight requests
-      refetch({ cancelRefetch: true });
+      // Fetch fresh data directly from the blockchain with force=true parameter
+      // This makes the server bypass its cache and get fresh data
+      fetchWalletData(searchedAddress, 1, 100, true)
+        .then(freshData => {
+          // Calculate how long the refresh took
+          const refreshTime = ((Date.now() - startTime) / 1000).toFixed(1);
+          
+          // After getting fresh data, update any other related queries
+          queryClient.setQueryData([`/api/wallet/${searchedAddress}`, 1], freshData);
+          queryClient.invalidateQueries({ queryKey: [`wallet-all-${searchedAddress}`] });
+          
+          // Force a new refetch to update the UI
+          refetch({ cancelRefetch: true });
+          
+          // Show success toast
+          toast({
+            title: "Refresh Complete",
+            description: `Successfully refreshed data in ${refreshTime}s with ${freshData.tokens.length} tokens`,
+            duration: 3000,
+          });
+        })
+        .catch(error => {
+          console.error('Error during force refresh:', error);
+          toast({
+            title: "Refresh Failed",
+            description: error instanceof Error ? error.message : "Could not refresh wallet data",
+            variant: "destructive",
+            duration: 5000,
+          });
+        });
       
-      // Show a toast to confirm the refresh action
+      // Show initial toast to indicate refresh is in progress
       toast({
-        title: "Refreshing wallet data",
-        description: "Getting the latest blockchain data for this wallet...",
+        title: "Force Refreshing Wallet Data",
+        description: "Bypassing cache and getting fresh data from the blockchain...",
         duration: 3000,
       });
     }

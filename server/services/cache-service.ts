@@ -266,6 +266,17 @@ class CacheService {
       console.log(`Invalidated token price cache for ${normalizedAddress}`);
     }
   }
+  
+  /**
+   * Invalidate specific wallet data cache entry
+   */
+  invalidateWalletData(walletAddress: string): void {
+    const normalizedAddress = walletAddress.toLowerCase();
+    if (this.walletDataCache.has(normalizedAddress)) {
+      this.walletDataCache.delete(normalizedAddress);
+      console.log(`Invalidated wallet data cache for ${normalizedAddress}`);
+    }
+  }
 }
 
 // Export a singleton instance

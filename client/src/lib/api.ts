@@ -17,9 +17,10 @@ export interface ProcessedToken extends Token {
  * @param address - Wallet address to fetch data for
  * @param page - Page number for pagination (default: 1)
  * @param limit - Number of tokens per page (default: 50)
+ * @param forceRefresh - Whether to force a refresh from blockchain data (default: false)
  */
-export function fetchWalletData(address: string, page: number = 1, limit: number = 50): Promise<Wallet> {
-  return fetch(`/api/wallet/${address}?page=${page}&limit=${limit}`)
+export function fetchWalletData(address: string, page: number = 1, limit: number = 50, forceRefresh: boolean = false): Promise<Wallet> {
+  return fetch(`/api/wallet/${address}?page=${page}&limit=${limit}&force=${forceRefresh}`)
     .then(response => {
       if (!response.ok) {
         return response.json().then(errorData => {
