@@ -9,7 +9,7 @@ import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
 import ApiStats from '@/components/api-stats';
 import { Button } from '@/components/ui/button';
-import { saveRecentAddress, ProcessedToken, fetchWalletData, fetchAllWalletTokens } from '@/lib/api';
+import { saveRecentAddress, ProcessedToken, fetchWalletData, fetchAllWalletTokens, forceRefreshWalletData } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
@@ -476,7 +476,7 @@ export default function Home() {
   }, [isError, error, toast]);
 
   const handleRefresh = () => {
-    // Force a complete refresh by using the forceRefresh parameter
+    // Force a complete refresh using our dedicated force refresh endpoint
     if (searchedAddress) {
       // Log the refresh attempt
       console.log('Forcing refresh for wallet:', searchedAddress);
@@ -491,16 +491,19 @@ export default function Home() {
       // Show initial toast to indicate refresh is in progress
       toast({
         title: "Force Refreshing Wallet Data",
-        description: "Bypassing cache and getting fresh data from the blockchain...",
+        description: "Bypassing cache and getting fresh data directly from the blockchain...",
         duration: 3000,
       });
       
-      // Use the fetchAllWalletTokens function with a force parameter
-      // This makes a direct call to /wallet/[address]/all endpoint with force=true
-      fetchAllWalletTokens(searchedAddress, true)
+      // Use the dedicated force refresh endpoint that completely bypasses cache
+      forceRefreshWalletData(searchedAddress)
         .then(freshData => {
           // Calculate how long the refresh took
           const refreshTime = ((Date.now() - startTime) / 1000).toFixed(1);
+          
+          // Update the query cache with fresh data
+          queryClient.setQueryData([`/api/wallet/${searchedAddress}`], freshData);
+          queryClient.setQueryData([`wallet-all-${searchedAddress}`], freshData);
           
           // Force a refetch to update the UI with new data
           refetch({ cancelRefetch: true });

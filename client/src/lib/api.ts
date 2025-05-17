@@ -49,6 +49,23 @@ export function fetchAllWalletTokens(address: string, forceRefresh: boolean = fa
 }
 
 /**
+ * Force refresh wallet data directly from blockchain sources
+ * This completely bypasses any cache and fetches fresh data
+ * @param address - Wallet address to fetch data for
+ */
+export function forceRefreshWalletData(address: string): Promise<Wallet> {
+  return fetch(`/api/wallet/${address}/force-refresh`)
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(errorData => {
+          throw new Error(errorData.message || 'Failed to force refresh wallet data');
+        });
+      }
+      return response.json();
+    });
+}
+
+/**
  * Get recent addresses from local storage
  */
 export function getRecentAddresses(): string[] {

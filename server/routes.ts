@@ -270,6 +270,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // New endpoint for force refreshing wallet data (bypass cache completely)
+  app.get("/api/wallet/:address/force-refresh", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format (0x followed by 40 hex chars)
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      // Set loading progress message
+      updateLoadingProgress({
+        status: 'loading',
+        message: 'Force refreshing wallet data from blockchain sources...',
+        currentBatch: 1,
+        totalBatches: 5
+      });
+      
+      console.log(`Force refreshing wallet data for ${address} - explicitly bypassing cache`);
+      
+      // First, clear any existing cache for this wallet
+      cacheService.invalidateWalletData(address);
+      
+      // Get fresh data with force refresh parameter
+      const walletData = await getWalletData(address, 1, 1000, true);
+      
+      updateLoadingProgress({
+        status: 'complete',
+        message: `Successfully refreshed data with ${walletData.tokens.length} tokens`,
+        currentBatch: 5,
+        totalBatches: 5
+      });
+      
+      return res.json(walletData);
+    } catch (error) {
+      console.error("Error force refreshing wallet data:", error);
+      
+      updateLoadingProgress({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        currentBatch: 0,
+        totalBatches: 5
+      });
+      
+      return res.status(500).json({ 
+        message: "Failed to force refresh wallet data",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   // API route to get specific token balance for a wallet
   app.get("/api/wallet/:address/token/:tokenAddress", async (req, res) => {
     try {
