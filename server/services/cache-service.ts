@@ -34,8 +34,12 @@ class CacheService {
     // Log cache initialization
     console.log("Cache service initialized with config:", this.config);
     
-    // Setup periodic cleanup
-    setInterval(() => this.cleanupExpiredCache(), 5 * 60 * 1000); // Clean up every 5 minutes
+    // Setup more frequent periodic cleanup
+    setInterval(() => this.cleanupExpiredCache(), 2 * 60 * 1000); // Clean up every 2 minutes
+    
+    // Periodically clear old cache items even if they haven't expired
+    // This helps prevent memory buildup over extended periods
+    setInterval(() => this.forcePartialCleanup(), 60 * 60 * 1000); // Run aggressive cleanup every hour
   }
 
   /**
@@ -254,6 +258,63 @@ class CacheService {
       tokenPriceCacheSize: this.tokenPriceCache.size,
       config: this.config
     };
+  }
+  
+  /**
+   * Force partial cleanup of cache even for non-expired items
+   * This helps prevent memory buildup over time in long-running applications
+   */
+  forcePartialCleanup(): void {
+    const now = Date.now();
+    let walletDeleted = 0;
+    let transactionDeleted = 0;
+    let priceDeleted = 0;
+    
+    // Calculate age thresholds - items older than these will be removed
+    // regardless of their expiry time
+    const oldWalletThreshold = now - (6 * 60 * 60 * 1000); // 6 hours 
+    const oldTransactionThreshold = now - (12 * 60 * 60 * 1000); // 12 hours
+    const oldPriceThreshold = now - (8 * 60 * 60 * 1000); // 8 hours
+    
+    // Only keep the 100 most recent wallet lookups
+    if (this.walletDataCache.size > 100) {
+      // Convert to array for sorting
+      const walletEntries = Array.from(this.walletDataCache.entries());
+      
+      // Sort by expiry (which is creation time + TTL)
+      walletEntries.sort((a, b) => a[1].expiry - b[1].expiry);
+      
+      // Delete older entries beyond 100 most recent
+      const toDelete = walletEntries.slice(0, walletEntries.length - 100);
+      toDelete.forEach(([key]) => {
+        this.walletDataCache.delete(key);
+        walletDeleted++;
+      });
+    }
+    
+    // Similar approach for transaction data
+    if (this.transactionsCache.size > 50) {
+      const txEntries = Array.from(this.transactionsCache.entries());
+      txEntries.sort((a, b) => a[1].expiry - b[1].expiry);
+      const toDelete = txEntries.slice(0, txEntries.length - 50);
+      toDelete.forEach(([key]) => {
+        this.transactionsCache.delete(key);
+        transactionDeleted++;
+      });
+    }
+    
+    // Keep most-used token prices but limit total number
+    if (this.tokenPriceCache.size > 200) {
+      const priceEntries = Array.from(this.tokenPriceCache.entries());
+      priceEntries.sort((a, b) => a[1].expiry - b[1].expiry);
+      const toDelete = priceEntries.slice(0, priceEntries.length - 200);
+      toDelete.forEach(([key]) => {
+        this.tokenPriceCache.delete(key);
+        priceDeleted++;
+      });
+    }
+    
+    console.log(`Forced cache cleanup: removed ${walletDeleted} wallet, ${transactionDeleted} transaction, and ${priceDeleted} price items to prevent memory buildup`);
   }
   
   /**

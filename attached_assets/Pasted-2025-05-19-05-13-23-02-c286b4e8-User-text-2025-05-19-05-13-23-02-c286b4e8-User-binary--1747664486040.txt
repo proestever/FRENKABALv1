@@ -1,0 +1,260 @@
+2025-05-19 05:13:23.02
+c286b4e8
+User
+text: {},
+2025-05-19 05:13:23.02
+c286b4e8
+User
+binary: {}
+2025-05-19 05:13:23.02
+c286b4e8
+User
+},
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_ending: true,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_connecting: false,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_connected: true,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_connectionError: false,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_queryable: false,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+connection: Connection {
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_events: [Object: null prototype] {
+2025-05-19 05:13:23.02
+c286b4e8
+User
+newListener: [Function (anonymous)],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+connect: [ [Function (anonymous)], [Function (anonymous)] ],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+sslconnect: [Function (anonymous)],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+authenticationMD5Password: [Function: bound _handleAuthMD5Password],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+authenticationSASL: [Function: bound _handleAuthSASL],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+authenticationSASLContinue: [Function: bound _handleAuthSASLContinue] AsyncFunction,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+authenticationSASLFinal: [Function: bound _handleAuthSASLFinal],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+backendKeyData: [Function: bound _handleBackendKeyData],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+error: [Function: bound _handleErrorEvent],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+errorMessage: [Function: bound _handleErrorMessage],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+notice: [Function: bound _handleNotice],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+rowDescription: [Function: bound _handleRowDescription],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+dataRow: [Function: bound _handleDataRow],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+portalSuspended: [Function: bound _handlePortalSuspended],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+emptyQuery: [Function: bound _handleEmptyQuery],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+commandComplete: [Function: bound _handleCommandComplete],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+parseComplete: [Function: bound _handleParseComplete],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+copyInResponse: [Function: bound _handleCopyInResponse],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+copyData: [Function: bound _handleCopyData],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+notification: [Function: bound _handleNotification],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+end: [
+2025-05-19 05:13:23.02
+c286b4e8
+User
+[Function: bound onceWrapper] {
+2025-05-19 05:13:23.02
+c286b4e8
+User
+listener: [Function (anonymous)]
+2025-05-19 05:13:23.02
+c286b4e8
+User
+},
+2025-05-19 05:13:23.02
+c286b4e8
+User
+[Function: bound onceWrapper] {
+2025-05-19 05:13:23.02
+c286b4e8
+User
+listener: [Function (anonymous)]
+2025-05-19 05:13:23.02
+c286b4e8
+User
+}
+2025-05-19 05:13:23.02
+c286b4e8
+User
+],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+readyForQuery: [Function: bound _handleReadyForQuery]
+2025-05-19 05:13:23.02
+c286b4e8
+User
+},
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_eventsCount: 22,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_maxListeners: undefined,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+stream: Socket {
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_events: [Object: null prototype] {
+2025-05-19 05:13:23.02
+c286b4e8
+User
+error: [Function: reportStreamError],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+close: [Function (anonymous)],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+end: [ [Function (anonymous)], [Function (anonymous)] ],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+data: [Function (anonymous)]
+2025-05-19 05:13:23.02
+c286b4e8
+User
+},
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_maxListeners: undefined,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+opts: {},
+2025-05-19 05:13:23.02
+c286b4e8
+User
+connecting: false,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+writable: true,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+error: [Function],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+message: [Function],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_eventsCount: 4,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_maxListeners: undefined,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_closeCode: 1006,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_closeFrameReceived: false,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_closeFrameSent: false,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_idleTimeout: 30000,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_idleNext: [Timeout],
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_timerArgs: undefined,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+[Symbol(refed)]: true,
+2025-05-19 05:13:23.02
+c286b4e8
+User
+_receiver: Receiver {
