@@ -1,17 +1,16 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Wallet, Bookmark } from '@shared/schema';
-import { ExternalLink, Copy, RotateCw, Bookmark as BookmarkIcon, CheckCircle, GitCompareArrows, Zap, Database } from 'lucide-react';
+import { ExternalLink, Copy, RotateCw, Bookmark as BookmarkIcon, CheckCircle, GitCompareArrows, Zap } from 'lucide-react';
 import { formatCurrency, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass, truncateAddress } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
 import { useState, useEffect } from 'react';
-import { getHiddenTokens, isTokenHidden, isAddressBookmarked, fetchDirectWalletBalances } from '@/lib/api';
+import { getHiddenTokens, isTokenHidden, isAddressBookmarked } from '@/lib/api';
 import { useAuth } from '@/providers/auth-provider';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useHexStakes, fetchHexStakesSummary, HexStakeSummary } from '@/hooks/use-hex-stakes';
 import { LastUpdatedInfo } from '@/components/last-updated-info';
-import { queryClient } from '@/lib/queryClient';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -29,7 +28,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
   const [visibleTokenCount, setVisibleTokenCount] = useState<number>(0);
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
   const [existingBookmark, setExistingBookmark] = useState<Bookmark | null>(null);
-  const [isRefreshingFromBlockchain, setIsRefreshingFromBlockchain] = useState(false);
+  
 
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isCheckingBookmark, setIsCheckingBookmark] = useState(false);
@@ -78,52 +77,6 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
         });
     }
   }, [wallet?.address, hexStakesSummary, hexStakesFromHook]);
-
-  // Function to handle real-time blockchain balance refresh
-  const handleBlockchainRefresh = async () => {
-    if (!wallet.address || isRefreshingFromBlockchain) return;
-    
-    setIsRefreshingFromBlockchain(true);
-    const startTime = Date.now();
-    
-    try {
-      // Show toast notification
-      toast({
-        title: "Getting real-time balances",
-        description: "Fetching latest token balances directly from the blockchain...",
-        duration: 3000,
-      });
-      
-      // Fetch directly from blockchain
-      const freshData = await fetchDirectWalletBalances(wallet.address);
-      
-      // Calculate how long it took
-      const refreshTime = ((Date.now() - startTime) / 1000).toFixed(1);
-      
-      // Invalidate all related queries to ensure UI updates
-      queryClient.invalidateQueries({ queryKey: [`/api/wallet/${wallet.address}`] });
-      
-      // Show success notification
-      toast({
-        title: "Real-time Update Complete",
-        description: `Refreshed ${freshData.tokens.length} tokens in ${refreshTime}s`,
-        duration: 3000,
-      });
-      
-      // Trigger parent refresh
-      onRefresh();
-    } catch (error) {
-      console.error('Error refreshing from blockchain:', error);
-      toast({
-        title: "Refresh Failed",
-        description: "Could not refresh wallet data from blockchain",
-        variant: "destructive",
-        duration: 5000,
-      });
-    } finally {
-      setIsRefreshingFromBlockchain(false);
-    }
-  };
 
   // Check if the current wallet is bookmarked
   useEffect(() => {
@@ -304,33 +257,15 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                 )}
               </Button>
             )}
-            <div className="flex space-x-2">
-              {/* Original refresh button */}
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={onRefresh}
-                disabled={isLoading}
-                className="glass-card border-white/15 h-8 w-8 hover:bg-black/20 hover:text-white"
-                title="Refresh from Cache"
-              >
-                <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              </Button>
-              
-              {/* Real-time blockchain balance refresh button - only show for single wallet views */}
-              {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={handleBlockchainRefresh}
-                  disabled={isRefreshingFromBlockchain}
-                  className="glass-card border-white/15 h-8 w-8 hover:bg-black/20 hover:text-white"
-                  title="Refresh Directly from Blockchain (Use after swaps)"
-                >
-                  <Database className={`h-4 w-4 ${isRefreshingFromBlockchain ? 'animate-pulse' : ''}`} />
-                </Button>
-              )}
-            </div>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="glass-card border-white/15 h-8 w-8 hover:bg-black/20 hover:text-white"
+            >
+              <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
             
             {/* Only show for single wallet, not for portfolio or combined views */}
             {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
@@ -341,30 +276,6 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
             )}
           </div>
         </div>
-        
-        {/* Direct Blockchain Refresh Hint */}
-        {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
-          <div className="mt-2 border-t border-white/10 pt-2">
-            <div className="flex items-center gap-2 px-1 py-2">
-              <Database className="h-4 w-4 text-primary" />
-              <div className="text-xs text-gray-400">
-                Just made a swap? Use the blockchain refresh button to see your updated token balances immediately.
-              </div>
-            </div>
-            <div className="flex justify-end mt-1">
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={handleBlockchainRefresh}
-                disabled={isRefreshingFromBlockchain}
-                className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
-              >
-                <Database className={`h-4 w-4 mr-2 ${isRefreshingFromBlockchain ? 'animate-pulse' : ''}`} />
-                <span>Real-time Balances</span>
-              </Button>
-            </div>
-          </div>
-        )}
         
         {/* Stats - Re-arranged to stack vertically */}
         <div className="space-y-4">
@@ -405,34 +316,43 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
             </div>
           </div>
           
-          {/* Multi-stat card - combined tokens and PLS price card */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Token Count Card */}
-            <div className="glass-card rounded-lg p-4 border-white/15">
-              <div className="text-sm text-muted-foreground mb-1">Token Count</div>
-              <div className="text-xl font-bold text-white">{visibleTokenCount}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {hiddenTokens.length > 0 && `${hiddenTokens.length} hidden`}
-              </div>
+          {/* PLS Balance Card - Now second */}
+          <div className="glass-card rounded-lg p-4 border-white/15">
+            <div className="flex items-center mb-2">
+              <TokenLogo 
+                address="0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" /* PLS native token address */
+                symbol="PLS"
+                size="sm"
+              />
+              <div className="text-sm text-muted-foreground ml-2">PLS Balance</div>
             </div>
-            
-            {/* PLS Price Card */}
-            <div className="glass-card rounded-lg p-4 border-white/15">
-              <div className="text-sm text-muted-foreground mb-1 flex items-center">
-                <div className="mr-1">PLS Balance</div>
-                <TokenLogo address="0x0000000000000000000000000000000000000000" symbol="PLS" size="xs" />
-              </div>
-              <div className="text-xl font-bold text-white">
-                {wallet.plsBalance !== null ? formatTokenAmount(wallet.plsBalance) : 'N/A'}
-              </div>
-              <div className="text-xs mt-1">
-                {wallet.plsPriceChange !== null && (
-                  <span className={plsPriceChangeClass}>
-                    {wallet.plsPriceChange > 0 ? '+' : ''}{wallet.plsPriceChange.toFixed(2)}% (24h)
-                  </span>
-                )}
-              </div>
+            <div className="text-xl md:text-2xl font-bold text-white">
+              {wallet.plsBalance !== null && wallet.plsBalance !== undefined ? 
+                `${formatTokenAmount(wallet.plsBalance)} PLS` : 
+                'N/A'
+              }
+              {(wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:")) && (
+                <span className="text-sm ml-2 text-purple-300">
+                  (Combined from {
+                    wallet.address.startsWith("Portfolio:") ? 
+                      "all portfolio wallets" : 
+                      wallet.address.includes("(") ? 
+                        wallet.address.split("(")[1].replace(")", "") : 
+                        "5 wallets"
+                  })
+                </span>
+              )}
             </div>
+            {wallet.plsPriceChange !== null && wallet.plsPriceChange !== undefined && (
+              <div className="text-sm mt-2 flex items-center">
+                <span className={wallet.plsPriceChange > 0 
+                  ? "text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium"
+                  : "text-red-400 border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 rounded-md font-medium"
+                }>
+                  {wallet.plsPriceChange > 0 ? '+' : ''}{wallet.plsPriceChange.toFixed(1)}% (24h)
+                </span>
+              </div>
+            )}
           </div>
           
           {/* HEX Stakes Card - Using manualHexSummary for more consistent display */}
@@ -484,16 +404,33 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                 </div>
               </div>
               
-              <div className="mt-2 flex justify-between items-center">
-                <div className="text-xs text-muted-foreground">
-                  Active Stakes: <span className="text-white">{manualHexSummary.stakeCount}</span>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  HEX Price: <span className="text-white">${manualHexSummary.hexPrice?.toFixed(6)}</span>
-                </div>
+              <div className="text-sm mt-2 flex items-center justify-between">
+                <span className="text-purple-400 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">
+                  {manualHexSummary.stakeCount || (hexStakesSummary && hexStakesSummary.stakeCount) || 0} 
+                  {(manualHexSummary.stakeCount || (hexStakesSummary && hexStakesSummary.stakeCount) || 0) === 1 ? ' stake' : ' stakes'}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {(manualHexSummary.hexPrice || (hexStakesSummary && hexStakesSummary.hexPrice) || 0) > 0 ? 
+                    `1 HEX = ${formatCurrency(manualHexSummary.hexPrice || (hexStakesSummary && hexStakesSummary.hexPrice) || 0)}` : ''}
+                </span>
               </div>
             </div>
           )}
+          
+          {/* Token Count Card */}
+          <div className="glass-card rounded-lg p-4 border-white/15">
+            <div className="text-sm text-muted-foreground mb-1">Token Count (Visible)</div>
+            <div className="text-xl md:text-2xl font-bold text-white">
+              {visibleTokenCount || 0}
+            </div>
+            <div className="text-sm mt-2 flex items-center">
+              {hiddenTokens.length > 0 && (
+                <span className="text-purple-400 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">
+                  ({hiddenTokens.length} hidden)
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </Card>
     </section>

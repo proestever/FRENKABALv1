@@ -239,65 +239,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'loading',
         message: 'Querying blockchain directly for real-time token balances...',
         currentBatch: 0,
-        totalBatches: 3
+        totalBatches: 1
       });
-      
-      // Import services properly
-      const blockchainService = require('./services/blockchain-service');
-      const apiService = require('./services/api');
-      const cacheService = require('./services/cache-service');
       
       // Get tokens directly from the blockchain
-      updateLoadingProgress({
-        status: 'loading',
-        message: 'Getting balances directly from blockchain...',
-        currentBatch: 1,
-        totalBatches: 3
-      });
-      
-      const tokens = await blockchainService.getDirectTokenBalances(address);
-      console.log(`Got ${tokens.length} tokens directly from blockchain`);
-      
-      // Get price data for the tokens
-      updateLoadingProgress({
-        status: 'loading',
-        message: 'Getting price data for tokens...',
-        currentBatch: 2,
-        totalBatches: 3
-      });
-      
-      // Get price data in batch
-      const tokenAddresses = tokens.map(token => token.address);
-      const priceMap = await apiService.getMultipleTokenPrices(tokenAddresses);
-      
-      // Enhance tokens with price data
-      for (const token of tokens) {
-        const normalizedAddress = token.address.toLowerCase();
-        const priceData = priceMap[normalizedAddress];
-        
-        if (priceData) {
-          token.price = priceData.usdPrice;
-          token.priceChange24h = priceData.usdPrice24hrPercentChange;
-          token.value = token.price ? token.balanceFormatted * token.price : undefined;
-          
-          // Add logo if available
-          if (priceData.tokenLogo) {
-            token.logo = priceData.tokenLogo;
-          }
-        }
-      }
+      const tokens = await getDirectTokenBalances(address);
       
       // Calculate total value
       const totalValue = tokens.reduce((sum, token) => {
         return sum + (token.value || 0);
       }, 0);
-      
-      // Find the PLS token
-      const plsToken = tokens.find(t => 
-        t.isNative === true || 
-        t.symbol?.toLowerCase() === 'pls' || 
-        t.address?.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
-      );
       
       // Format the response in the same way as getWalletData
       const walletData = {
@@ -305,30 +256,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tokens,
         totalValue,
         tokenCount: tokens.length,
-        plsBalance: plsToken?.balanceFormatted || null,
-        plsPriceChange: plsToken?.priceChange24h || null,
-        networkCount: 1,
-        directBlockchainQuery: true // Flag to indicate this came from direct blockchain query
+        plsBalance: tokens.find(t => t.isNative)?.balanceFormatted || null,
+        plsPriceChange: tokens.find(t => t.isNative)?.priceChange24h || null,
+        networkCount: 1, // Always PulseChain in this case
       };
-      
-      // Sort tokens by value
-      walletData.tokens.sort((a, b) => {
-        const aValue = a.value || 0;
-        const bValue = b.value || 0;
-        return bValue - aValue;
-      });
-      
-      // Update loading progress
-      updateLoadingProgress({
-        status: 'complete',
-        message: `Got ${tokens.length} tokens directly from blockchain`,
-        currentBatch: 3,
-        totalBatches: 3
-      });
-      
-      // After a successful direct blockchain query, also refresh the standard cache
-      // This ensures the main wallet view will update on next view
-      cacheService.invalidateWalletData(address.toLowerCase());
       
       return res.json(walletData);
     } catch (error) {
