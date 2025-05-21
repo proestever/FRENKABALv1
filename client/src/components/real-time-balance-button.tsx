@@ -1,126 +1,97 @@
-import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { RotateCw, Loader2 } from 'lucide-react';
-import { useDirectWalletBalances } from '@/hooks/use-direct-wallet-balances';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { fetchDirectWalletBalances } from '@/lib/api';
 import { queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 interface RealTimeBalanceButtonProps {
   walletAddress: string | null;
-  onBalancesUpdated?: () => void;
+  onSuccess?: () => void;
+  variant?: 'default' | 'secondary' | 'outline' | 'ghost';
+  size?: 'default' | 'sm' | 'lg' | 'icon'; 
+  showLabel?: boolean;
 }
 
 /**
- * Button component for refreshing wallet balances directly from the blockchain
- * This is useful for getting real-time balances immediately after swaps
+ * A button that directly queries the blockchain for token balances
+ * This bypasses any API cache and gives the most up-to-date balances after swaps
  */
-export function RealTimeBalanceButton({ 
+export function RealTimeBalanceButton({
   walletAddress,
-  onBalancesUpdated
+  onSuccess,
+  variant = 'secondary',
+  size = 'default',
+  showLabel = true
 }: RealTimeBalanceButtonProps) {
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [timeAgo, setTimeAgo] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   
-  // Use the direct wallet balances hook
-  // We set enabled to false so it doesn't fetch automatically
-  // We'll only manually fetch when the user clicks the refresh button
-  const {
-    isLoading,
-    isFetching,
-    isRefreshing,
-    refreshBalances,
-    walletData
-  } = useDirectWalletBalances(walletAddress, false);
-  
-  // Track when balances were last updated
-  useEffect(() => {
-    if (walletData && !isLoading && !isFetching) {
-      setLastUpdated(new Date());
-      
-      // Also invalidate the regular wallet data queries to ensure all views refresh
-      if (walletAddress) {
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/wallet/${walletAddress}`]
-        });
-        
-        // Also invalidate the "all" tokens query
-        queryClient.invalidateQueries({
-          queryKey: [`wallet-all-${walletAddress}`]
-        });
-        
-        // Call the callback if provided
-        if (onBalancesUpdated) {
-          onBalancesUpdated();
-        }
-      }
-    }
-  }, [walletData, isLoading, isFetching, walletAddress, onBalancesUpdated]);
-  
-  // Update the "time ago" string
-  useEffect(() => {
-    if (!lastUpdated) return;
-    
-    const updateTimeAgo = () => {
-      if (!lastUpdated) return;
-      
-      const now = new Date();
-      const diffInSeconds = Math.floor((now.getTime() - lastUpdated.getTime()) / 1000);
-      
-      if (diffInSeconds < 5) {
-        setTimeAgo('just now');
-      } else if (diffInSeconds < 60) {
-        setTimeAgo(`${diffInSeconds}s ago`);
-      } else if (diffInSeconds < 3600) {
-        setTimeAgo(`${Math.floor(diffInSeconds / 60)}m ago`);
-      } else {
-        setTimeAgo(`${Math.floor(diffInSeconds / 3600)}h ago`);
-      }
-    };
-    
-    // Update immediately and then every second
-    updateTimeAgo();
-    const interval = setInterval(updateTimeAgo, 1000);
-    
-    return () => clearInterval(interval);
-  }, [lastUpdated]);
-  
-  // Handle refresh
   const handleRefresh = async () => {
-    if (!walletAddress || isLoading || isFetching || isRefreshing) return;
+    if (!walletAddress || isRefreshing) return;
+    
+    setIsRefreshing(true);
+    const startTime = Date.now();
     
     try {
+      // Show toast notification
       toast({
-        title: 'Refreshing balances',
-        description: 'Getting real-time balances directly from the blockchain...',
+        title: "Getting real-time balances",
+        description: "Fetching latest token balances directly from the blockchain...",
         duration: 3000,
       });
       
-      await refreshBalances();
+      // Fetch directly from blockchain
+      const freshData = await fetchDirectWalletBalances(walletAddress);
       
+      // Calculate how long it took
+      const refreshTime = ((Date.now() - startTime) / 1000).toFixed(1);
+      
+      // Invalidate all related queries to ensure UI updates
+      queryClient.invalidateQueries({ queryKey: [`wallet-all-${walletAddress}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/wallet/${walletAddress}`] });
+      
+      // If in a multi-wallet view, also invalidate the combined wallet data
+      queryClient.invalidateQueries({ queryKey: ['combined-wallet'] });
+      
+      // Show success notification
       toast({
-        title: 'Balances updated',
-        description: 'Your wallet balances have been refreshed with the latest blockchain data.',
+        title: "Real-time Update Complete",
+        description: `Refreshed ${freshData.tokens.length} tokens in ${refreshTime}s directly from blockchain`,
         duration: 3000,
       });
+      
+      // Call success callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
-      console.error('Error refreshing balances:', error);
+      console.error('Error refreshing from blockchain:', error);
       toast({
-        title: 'Error refreshing balances',
-        description: 'There was an error getting your real-time balances. Please try again.',
-        variant: 'destructive',
+        title: "Refresh Failed",
+        description: error instanceof Error ? error.message : "Could not refresh wallet data",
+        variant: "destructive",
         duration: 5000,
       });
+    } finally {
+      setIsRefreshing(false);
     }
   };
   
   return (
-    <div className="flex items-center gap-2">
-      {lastUpdated && (
-        <span className="text-xs text-muted-foreground whitespace-nowrap">
-          Updated {timeAgo}
-        </span>
+    <Button
+      variant={variant}
+      size={size}
+      onClick={handleRefresh}
+      disabled={isRefreshing || !walletAddress}
+      className="flex items-center gap-1"
+    >
+      {isRefreshing ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <RotateCw className="h-4 w-4" />
       )}
-    </div>
+      {showLabel && <span>Real-time Balances</span>}
+    </Button>
   );
 }
