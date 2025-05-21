@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Wallet, Bookmark } from '@shared/schema';
-import { ExternalLink, Copy, RotateCw, Bookmark as BookmarkIcon, CheckCircle, GitCompareArrows, Zap } from 'lucide-react';
+import { ExternalLink, Copy, RotateCw, Bookmark as BookmarkIcon, CheckCircle, GitCompareArrows, Zap, Database } from 'lucide-react';
 import { formatCurrency, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass, truncateAddress } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
@@ -11,7 +11,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useHexStakes, fetchHexStakesSummary, HexStakeSummary } from '@/hooks/use-hex-stakes';
 import { LastUpdatedInfo } from '@/components/last-updated-info';
-import { AutoRefreshBalanceToggle } from '@/components/auto-refresh-balance-toggle';
+import { DirectRefreshButton } from '@/components/direct-refresh-button';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -258,15 +258,40 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                 )}
               </Button>
             )}
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={onRefresh}
-              disabled={isLoading}
-              className="glass-card border-white/15 h-8 w-8 hover:bg-black/20 hover:text-white"
-            >
-              <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </Button>
+            <div className="flex space-x-2">
+              {/* Original refresh button */}
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={onRefresh}
+                disabled={isLoading}
+                className="glass-card border-white/15 h-8 w-8 hover:bg-black/20 hover:text-white"
+                title="Refresh from Cache"
+              >
+                <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </Button>
+              
+              {/* New direct blockchain refresh button - only show for single wallet views */}
+              {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => {
+                    /* No action needed here - component handles refresh */
+                  }}
+                  className="glass-card border-white/15 h-8 w-8 hover:bg-black/20 hover:text-white"
+                  title="Refresh Directly from Blockchain (Use after swaps)"
+                  asChild
+                >
+                  <DirectRefreshButton 
+                    walletAddress={wallet.address} 
+                    onSuccess={onRefresh}
+                    size="icon"
+                    showLabel={false} 
+                  />
+                </Button>
+              )}
+            </div>
             
             {/* Only show for single wallet, not for portfolio or combined views */}
             {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
@@ -278,13 +303,23 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
           </div>
         </div>
         
-        {/* Auto-refresh toggle for real-time blockchain updates */}
+        {/* Direct Blockchain Refresh Hint */}
         {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
           <div className="mt-2 border-t border-white/10 pt-2">
-            <AutoRefreshBalanceToggle 
-              walletAddress={wallet.address} 
-              onBalancesUpdated={onRefresh}
-            />
+            <div className="flex items-center gap-2 px-1 py-2">
+              <Database className="h-4 w-4 text-primary" />
+              <div className="text-xs text-gray-400">
+                Just made a swap? Use the blockchain refresh button (top-right) to see your updated token balances immediately.
+              </div>
+            </div>
+            <div className="flex justify-end mt-1">
+              <DirectRefreshButton 
+                walletAddress={wallet.address} 
+                onSuccess={onRefresh}
+                variant="outline"
+                size="sm"
+              />
+            </div>
           </div>
         )}
         
