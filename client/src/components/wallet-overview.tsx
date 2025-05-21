@@ -278,6 +278,16 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
           </div>
         </div>
         
+        {/* Auto-refresh toggle for real-time blockchain updates */}
+        {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
+          <div className="mt-2 border-t border-white/10 pt-2">
+            <AutoRefreshBalanceToggle 
+              walletAddress={wallet.address} 
+              onBalancesUpdated={onRefresh}
+            />
+          </div>
+        )}
+        
         {/* Stats - Re-arranged to stack vertically */}
         <div className="space-y-4">
           {/* Total Value Card - Now first */}
