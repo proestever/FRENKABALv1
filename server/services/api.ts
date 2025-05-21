@@ -1290,7 +1290,6 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
   
   try {
     // Initialize loading progress at the start with a reasonable estimate of total batches
-    // Use an initial high count to show progress for the entire process
     updateLoadingProgress({
       status: 'loading',
       currentBatch: 1,
@@ -1298,28 +1297,57 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       message: 'Initializing wallet data fetch...'
     });
     
-    // Get native PLS balance directly from Moralis API (more reliable and faster)
-    console.log(`Getting native PLS balance for ${normalizedAddress}`);
+    // CHANGE: First, get direct token balances from the blockchain
+    // This ensures we have the most up-to-date balances right after swaps
+    console.log(`Fetching direct token balances from blockchain for ${normalizedAddress}`);
     
-    // Update progress
     updateLoadingProgress({
       currentBatch: 2,
-      message: 'Fetching native PLS balance...'
+      message: 'Fetching real-time balances from blockchain...'
     });
     
-    let nativePlsBalance = await getNativePlsBalance(normalizedAddress);
-    console.log(`Native PLS balance from direct API call: ${nativePlsBalance?.balanceFormatted || 'Not found'}`);
+    // Import the blockchain service functions
+    const { getDirectTokenBalances } = require('./blockchain-service');
     
-    // Try to get token data from Moralis (includes other tokens with prices)
-    // Update progress
+    // Get blockchain-direct balances first (these will be most up-to-date)
+    const directTokens = await getDirectTokenBalances(normalizedAddress);
+    console.log(`Got ${directTokens.length} tokens directly from blockchain`);
+    
+    // Track addresses we've already got from blockchain to avoid duplicates later
+    const blockchainTokenAddresses = new Set(directTokens.map(token => token.address.toLowerCase()));
+    
+    // Get native PLS balance directly from blockchain or fallback to API
+    let nativePlsBalance = directTokens.find(t => 
+      t.isNative === true || 
+      t.symbol.toLowerCase() === 'pls' || 
+      t.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+    );
+    
+    if (!nativePlsBalance) {
+      console.log(`Native PLS not found in blockchain results, fetching from API`);
+      const plsBalanceResult = await getNativePlsBalance(normalizedAddress);
+      if (plsBalanceResult) {
+        nativePlsBalance = {
+          address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+          symbol: 'PLS',
+          name: 'PulseChain',
+          decimals: 18,
+          balance: plsBalanceResult.balance,
+          balanceFormatted: plsBalanceResult.balanceFormatted,
+          isNative: true
+        };
+        blockchainTokenAddresses.add('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+      }
+    }
+    
+    // Now get additional token data from Moralis to enrich our blockchain data
     updateLoadingProgress({
       currentBatch: 3,
-      message: 'Fetching token data from Moralis...'
+      message: 'Enhancing token data with price information...'
     });
     
     const moralisData = await getWalletTokenBalancesFromMoralis(normalizedAddress);
     
-    // If we have Moralis data, use it
     // Check if moralisData is an array (direct result) or has a result property
     const moralisTokens = Array.isArray(moralisData) ? moralisData : 
                          (moralisData && moralisData.result) ? moralisData.result : [];
