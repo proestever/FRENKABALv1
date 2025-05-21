@@ -242,8 +242,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalBatches: 3
       });
       
-      // Import from blockchain service
-      const { getDirectTokenBalances } = require('./services/blockchain-service');
+      // Import services properly
+      const blockchainService = require('./services/blockchain-service');
+      const apiService = require('./services/api');
+      const cacheService = require('./services/cache-service');
       
       // Get tokens directly from the blockchain
       updateLoadingProgress({
@@ -253,7 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalBatches: 3
       });
       
-      const tokens = await getDirectTokenBalances(address);
+      const tokens = await blockchainService.getDirectTokenBalances(address);
       console.log(`Got ${tokens.length} tokens directly from blockchain`);
       
       // Get price data for the tokens
@@ -266,8 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get price data in batch
       const tokenAddresses = tokens.map(token => token.address);
-      const { getMultipleTokenPrices } = require('./services/api');
-      const priceMap = await getMultipleTokenPrices(tokenAddresses);
+      const priceMap = await apiService.getMultipleTokenPrices(tokenAddresses);
       
       // Enhance tokens with price data
       for (const token of tokens) {
@@ -294,8 +295,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find the PLS token
       const plsToken = tokens.find(t => 
         t.isNative === true || 
-        t.symbol.toLowerCase() === 'pls' || 
-        t.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+        t.symbol?.toLowerCase() === 'pls' || 
+        t.address?.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
       );
       
       // Format the response in the same way as getWalletData
@@ -327,7 +328,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // After a successful direct blockchain query, also refresh the standard cache
       // This ensures the main wallet view will update on next view
-      const { cacheService } = require('./services/cache-service');
       cacheService.invalidateWalletData(address.toLowerCase());
       
       return res.json(walletData);

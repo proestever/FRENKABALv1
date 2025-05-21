@@ -11,7 +11,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useHexStakes, fetchHexStakesSummary, HexStakeSummary } from '@/hooks/use-hex-stakes';
 import { LastUpdatedInfo } from '@/components/last-updated-info';
-import { DirectRefreshButton } from '@/components/direct-refresh-button';
+import { RealTimeBalanceButton } from '@/components/real-time-balance-button';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -271,13 +271,13 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                 <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               </Button>
               
-              {/* New direct blockchain refresh button - only show for single wallet views */}
+              {/* Real-time blockchain balance refresh button - only show for single wallet views */}
               {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => {
-                    /* No action needed here - component handles refresh */
+                <RealTimeBalanceButton
+                  walletAddress={wallet.address}
+                  variant="outline"
+                  size="icon"
+                  showLabel={false}
                   }}
                   className="glass-card border-white/15 h-8 w-8 hover:bg-black/20 hover:text-white"
                   title="Refresh Directly from Blockchain (Use after swaps)"
