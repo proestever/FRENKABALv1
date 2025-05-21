@@ -1423,10 +1423,10 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
         }
       }
       
-      // Create the final tokens list by combining blockchain tokens with any additional API tokens
+      // Start with blockchain tokens as our base token list
       let tokensWithPrice: ProcessedToken[] = [...blockchainTokens];
-      // Use blockchain PLS token as our primary PLS token
-      const moralisPLSToken = blockchainPlsToken;
+      // Store reference to our PLS token from blockchain data
+      let plsToken = blockchainPlsToken;
       
       // Process Moralis tokens to add any that weren't found in blockchain
       // Process tokens in batches to avoid overwhelming API
@@ -1550,10 +1550,10 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       );
       
       // Debug the native token detection
-      if (plsToken) {
-        console.log(`Found PLS token: ${plsToken.symbol} with balance ${plsToken.balanceFormatted}`);
+      if (apiPlsToken) {
+        console.log(`Found PLS token from API: ${apiPlsToken.symbol} with balance ${apiPlsToken.balanceFormatted}`);
       } else {
-        console.log(`PLS token not found. Tokens: ${tokens.map(t => t.symbol).join(', ')}`);
+        console.log(`PLS token not found in API. Tokens: ${tokens.map(t => t.symbol).join(', ')}`);
       }
       
       // Calculate total value
@@ -1572,8 +1572,8 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
         tokens,
         totalValue,
         tokenCount: tokens.length,
-        plsBalance: nativePlsBalance?.balanceFormatted || plsToken?.balanceFormatted || null,
-        plsPriceChange: plsToken?.priceChange24h || null,
+        plsBalance: nativePlsBalance?.balanceFormatted || apiPlsToken?.balanceFormatted || null,
+        plsPriceChange: apiPlsToken?.priceChange24h || null,
         networkCount: 1 // Default to PulseChain network
       };
     }
