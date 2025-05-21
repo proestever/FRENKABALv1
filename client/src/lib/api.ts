@@ -66,23 +66,6 @@ export function forceRefreshWalletData(address: string): Promise<Wallet> {
 }
 
 /**
- * Fetch wallet balances directly from the blockchain
- * This gets real-time balances immediately after swaps
- * @param address - Wallet address to fetch balances for
- */
-export function fetchDirectWalletBalances(address: string): Promise<Wallet> {
-  return fetch(`/api/wallet/${address}/direct`)
-    .then(response => {
-      if (!response.ok) {
-        return response.json().then(errorData => {
-          throw new Error(errorData.message || 'Failed to fetch direct blockchain balances');
-        });
-      }
-      return response.json();
-    });
-}
-
-/**
  * Get recent addresses from local storage
  */
 export function getRecentAddresses(): string[] {
