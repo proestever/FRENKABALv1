@@ -6,12 +6,12 @@ import { formatCurrency, formatTokenAmount, getChangeColorClass, getAdvancedChan
 import { useToast } from '@/hooks/use-toast';
 import { TokenLogo } from '@/components/token-logo';
 import { useState, useEffect } from 'react';
-import { getHiddenTokens, isTokenHidden, isAddressBookmarked } from '@/lib/api';
+import { getHiddenTokens, isTokenHidden, isAddressBookmarked, fetchDirectWalletBalances } from '@/lib/api';
 import { useAuth } from '@/providers/auth-provider';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useHexStakes, fetchHexStakesSummary, HexStakeSummary } from '@/hooks/use-hex-stakes';
 import { LastUpdatedInfo } from '@/components/last-updated-info';
-import { RealTimeBalanceButton } from '@/components/real-time-balance-button';
+import { queryClient } from '@/lib/queryClient';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -273,22 +273,46 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
               
               {/* Real-time blockchain balance refresh button - only show for single wallet views */}
               {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
-                <RealTimeBalanceButton
-                  walletAddress={wallet.address}
-                  variant="outline"
-                  size="icon"
-                  showLabel={false}
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={async () => {
+                    try {
+                      toast({
+                        title: "Getting real-time balances",
+                        description: "Fetching latest token balances directly from the blockchain...",
+                        duration: 3000,
+                      });
+                      
+                      // Fetch directly from blockchain
+                      await fetchDirectWalletBalances(wallet.address);
+                      
+                      // Invalidate queries to refresh UI
+                      queryClient.invalidateQueries({ queryKey: [`/api/wallet/${wallet.address}`] });
+                      
+                      // Success notification
+                      toast({
+                        title: "Real-time update complete",
+                        description: "Token balances refreshed directly from blockchain",
+                        duration: 3000,
+                      });
+                      
+                      // Trigger parent refresh
+                      onRefresh();
+                    } catch (error) {
+                      console.error('Error refreshing from blockchain:', error);
+                      toast({
+                        title: "Refresh Failed",
+                        description: "Could not refresh wallet data from blockchain",
+                        variant: "destructive",
+                        duration: 5000,
+                      });
+                    }
                   }}
                   className="glass-card border-white/15 h-8 w-8 hover:bg-black/20 hover:text-white"
                   title="Refresh Directly from Blockchain (Use after swaps)"
-                  asChild
                 >
-                  <DirectRefreshButton 
-                    walletAddress={wallet.address} 
-                    onSuccess={onRefresh}
-                    size="icon"
-                    showLabel={false} 
-                  />
+                  <Database className="h-4 w-4" />
                 </Button>
               )}
             </div>
@@ -313,12 +337,47 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
               </div>
             </div>
             <div className="flex justify-end mt-1">
-              <DirectRefreshButton 
-                walletAddress={wallet.address} 
-                onSuccess={onRefresh}
+              <Button 
                 variant="outline"
                 size="sm"
-              />
+                onClick={async () => {
+                  try {
+                    toast({
+                      title: "Getting real-time balances",
+                      description: "Fetching latest token balances directly from the blockchain...",
+                      duration: 3000,
+                    });
+                    
+                    // Fetch directly from blockchain
+                    await fetchDirectWalletBalances(wallet.address);
+                    
+                    // Invalidate queries to refresh UI
+                    queryClient.invalidateQueries({ queryKey: [`/api/wallet/${wallet.address}`] });
+                    
+                    // Success notification
+                    toast({
+                      title: "Real-time update complete",
+                      description: "Token balances refreshed directly from blockchain",
+                      duration: 3000,
+                    });
+                    
+                    // Trigger parent refresh
+                    onRefresh();
+                  } catch (error) {
+                    console.error('Error refreshing from blockchain:', error);
+                    toast({
+                      title: "Refresh Failed",
+                      description: "Could not refresh wallet data from blockchain",
+                      variant: "destructive",
+                      duration: 5000,
+                    });
+                  }
+                }}
+                className="glass-card border-white/15 hover:bg-black/20 hover:text-white"
+              >
+                <Database className="h-4 w-4 mr-2" />
+                <span>Real-time Balances</span>
+              </Button>
             </div>
           </div>
         )}
