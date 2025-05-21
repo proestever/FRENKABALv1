@@ -329,13 +329,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // This ensures the main wallet view will update on next view
       const { cacheService } = require('./services/cache-service');
       cacheService.invalidateWalletData(address.toLowerCase());
-        tokens,
-        totalValue,
-        tokenCount: tokens.length,
-        plsBalance: tokens.find(t => t.isNative)?.balanceFormatted || null,
-        plsPriceChange: tokens.find(t => t.isNative)?.priceChange24h || null,
-        networkCount: 1, // Always PulseChain in this case
-      };
       
       return res.json(walletData);
     } catch (error) {
