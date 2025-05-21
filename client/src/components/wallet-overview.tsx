@@ -11,6 +11,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useHexStakes, fetchHexStakesSummary, HexStakeSummary } from '@/hooks/use-hex-stakes';
 import { LastUpdatedInfo } from '@/components/last-updated-info';
+import { AutoRefreshBalanceToggle } from '@/components/auto-refresh-balance-toggle';
 
 interface WalletOverviewProps {
   wallet: Wallet;
