@@ -1352,8 +1352,12 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
     const moralisTokens = Array.isArray(moralisData) ? moralisData : 
                          (moralisData && moralisData.result) ? moralisData.result : [];
                          
+    // Start with direct blockchain balances as our base tokens list
+    const blockchainTokens: ProcessedToken[] = [...directTokens];
+    const blockchainPlsToken = nativePlsBalance;
+    
     if (moralisTokens.length > 0) {
-      console.log(`Got wallet data from Moralis with ${moralisTokens.length} tokens`);
+      console.log(`Got wallet data from Moralis with ${moralisTokens.length} tokens for enrichment`);
       
       // Configuration for spam filtering
       const filterSpamTokens = true; // Set this to true to filter out spam tokens
@@ -1371,8 +1375,8 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
         }
       }
       
-      // Process tokens in batches to avoid overwhelming API
-      const BATCH_SIZE = 15; // Process 15 tokens at a time (increased from 5 for faster loading)
+      // Process Moralis tokens to enrich our blockchain data
+      const BATCH_SIZE = 15; // Process 15 tokens at a time
       const processedTokens: ProcessedToken[] = [];
       const totalBatches = Math.ceil(filteredTokens.length/BATCH_SIZE);
       
@@ -1386,46 +1390,90 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
         message: 'Processing token data...'
       });
       
-      // Process tokens in batches
+      // First, enrich the direct blockchain balances with price data from Moralis
+      console.log(`Enriching ${blockchainTokens.length} blockchain tokens with price data...`);
+      
+      // Build a map of token data from Moralis for quick lookup
+      const moralisDataMap: Record<string, any> = {};
+      filteredTokens.forEach((token: any) => {
+        if (token.token_address) {
+          moralisDataMap[token.token_address.toLowerCase()] = token;
+        }
+      });
+      
+      // Enrich blockchain token data with Moralis price data
+      for (let i = 0; i < blockchainTokens.length; i++) {
+        const token = blockchainTokens[i];
+        const normalizedAddress = token.address.toLowerCase();
+        const moralisData = moralisDataMap[normalizedAddress];
+        
+        if (moralisData) {
+          // Update token with price information from Moralis
+          token.price = moralisData.usd_price;
+          token.priceChange24h = moralisData.usd_price_24hr_percent_change;
+          token.value = token.price ? token.balanceFormatted * token.price : undefined;
+          token.verified = moralisData.verified_contract === true;
+          
+          // Add logo if available from Moralis
+          if (!token.logo && moralisData.logo) {
+            token.logo = moralisData.logo;
+          }
+          
+          console.log(`Enriched token ${token.symbol} (${token.address}) with price data: $${token.price}`);
+        }
+      }
+      
+      // Create the final tokens list by combining blockchain tokens with any additional API tokens
+      let tokensWithPrice: ProcessedToken[] = [...blockchainTokens];
+      // Use blockchain PLS token as our primary PLS token
+      const moralisPLSToken = blockchainPlsToken;
+      
+      // Process Moralis tokens to add any that weren't found in blockchain
+      // Process tokens in batches to avoid overwhelming API
       for (let i = 0; i < filteredTokens.length; i += BATCH_SIZE) {
         const currentBatch = Math.floor(i/BATCH_SIZE) + 1;
-        console.log(`Processing token batch ${currentBatch}/${totalBatches}`);
+        console.log(`Processing Moralis tokens batch ${currentBatch}/${totalBatches}`);
         
         // Update loading progress - add the offset to maintain continuous progress
         updateLoadingProgress({
           currentBatch: currentBatch + 5, // Add 5 to account for previous steps
-          message: `Processing token batch ${currentBatch}/${totalBatches}...`
+          message: `Processing API token batch ${currentBatch}/${totalBatches}...`
         });
         
         const batch = filteredTokens.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(batch.map(async (item: any) => {
           try {
+            // Skip tokens we already have from blockchain
+            const tokenAddress = item.token_address.toLowerCase();
+            if (blockchainTokenAddresses.has(tokenAddress)) {
+              return null;
+            }
+            
             // Check if this is the native PLS token (has address 0xeeee...eeee and native_token flag)
             const isNative = item.native_token === true || 
                             (item.token_address && item.token_address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
             
             // Fix the incorrect label of native PLS token (Moralis returns it as WPLS)
-            // Fix incorrect labeling for the native PLS token
             let symbol = item.symbol || 'UNKNOWN';
             let name = item.name || 'Unknown Token';
           
-          if (isNative && symbol.toLowerCase() === 'wpls') {
-            symbol = 'PLS'; // Correct the symbol for native token
-            name = 'PulseChain'; // Correct the name too
-            console.log('Corrected native token from WPLS/Wrapped Pulse to PLS/PulseChain');
-            
-            // For native PLS token, try to get more accurate price data from wPLS contract
-            try {
-              const plsPrice = await getNativePlsPrice();
-              if (plsPrice) {
-                // Update the token with more accurate price data
-                item.usd_price = plsPrice.price;
-                item.usd_price_24hr_percent_change = plsPrice.priceChange24h;
-                console.log(`Updated native PLS price to ${plsPrice.price} USD with 24h change of ${plsPrice.priceChange24h}%`);
+            if (isNative && symbol.toLowerCase() === 'wpls') {
+              symbol = 'PLS'; // Correct the symbol for native token
+              name = 'PulseChain'; // Correct the name too
+              console.log('Corrected native token from WPLS/Wrapped Pulse to PLS/PulseChain');
+              
+              // For native PLS token, try to get more accurate price data from wPLS contract
+              try {
+                const plsPrice = await getNativePlsPrice();
+                if (plsPrice) {
+                  // Update the token with more accurate price data
+                  item.usd_price = plsPrice.price;
+                  item.usd_price_24hr_percent_change = plsPrice.priceChange24h;
+                  console.log(`Updated native PLS price to ${plsPrice.price} USD with 24h change of ${plsPrice.priceChange24h}%`);
+                }
+              } catch (plsPriceError) {
+                console.error('Error fetching PLS price from wPLS contract:', plsPriceError);
               }
-            } catch (plsPriceError) {
-              console.error('Error fetching PLS price from wPLS contract:', plsPriceError);
-            }
           }
           
           let logoUrl = item.logo || null;
@@ -1494,7 +1542,7 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       // Set address as all lowercase for consistent comparison
       const plsTokenAddress = PLS_TOKEN_ADDRESS.toLowerCase();
       
-      const plsToken = tokens.find(token => 
+      const apiPlsToken = tokens.find(token => 
         token.isNative === true || 
         token.symbol.toLowerCase() === 'pls' || 
         token.address.toLowerCase() === plsTokenAddress || 
