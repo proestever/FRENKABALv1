@@ -3,6 +3,77 @@ import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+// Health monitoring and graceful shutdown
+let isShuttingDown = false;
+let connections = new Set();
+
+// Process monitoring
+const processStartTime = Date.now();
+let lastHealthCheck = Date.now();
+
+// Memory monitoring
+const logMemoryUsage = () => {
+  const used = process.memoryUsage();
+  const mb = (bytes: number) => Math.round(bytes / 1024 / 1024 * 100) / 100;
+  
+  console.log(`Memory Usage: RSS: ${mb(used.rss)}MB, Heap Used: ${mb(used.heapUsed)}MB, Heap Total: ${mb(used.heapTotal)}MB, External: ${mb(used.external)}MB`);
+  
+  // Alert if memory usage is high
+  if (used.heapUsed > 300 * 1024 * 1024) { // 300MB threshold
+    console.warn(`⚠️  High memory usage detected: ${mb(used.heapUsed)}MB heap used`);
+  }
+};
+
+// Periodic health checks
+setInterval(() => {
+  lastHealthCheck = Date.now();
+  logMemoryUsage();
+}, 30000); // Every 30 seconds
+
+// Graceful shutdown handlers
+const gracefulShutdown = (signal: string) => {
+  console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+  isShuttingDown = true;
+  
+  setTimeout(() => {
+    console.log('🔄 Forcing shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+  
+  // Close all connections
+  connections.forEach((connection: any) => {
+    connection.destroy();
+  });
+  
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('💥 Uncaught Exception:', error);
+  console.error('Stack trace:', error.stack);
+  
+  // Log memory usage during crash
+  logMemoryUsage();
+  
+  // Try to gracefully shutdown
+  gracefulShutdown('uncaughtException');
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+  
+  // Log memory usage during crash
+  logMemoryUsage();
+  
+  // Try to gracefully shutdown
+  gracefulShutdown('unhandledRejection');
+});
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -41,9 +112,45 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Add health check endpoint at /api/health instead of root path
+  // Enhanced health check endpoint with detailed monitoring
   app.get('/api/health', (_req, res) => {
-    res.status(200).send('OK');
+    if (isShuttingDown) {
+      return res.status(503).json({ 
+        status: 'shutting_down',
+        message: 'Server is shutting down'
+      });
+    }
+
+    const uptime = Date.now() - processStartTime;
+    const used = process.memoryUsage();
+    const mb = (bytes: number) => Math.round(bytes / 1024 / 1024 * 100) / 100;
+
+    res.status(200).json({
+      status: 'healthy',
+      uptime: uptime,
+      uptimeFormatted: `${Math.floor(uptime / (1000 * 60 * 60))}h ${Math.floor((uptime % (1000 * 60 * 60)) / (1000 * 60))}m`,
+      memory: {
+        rss: `${mb(used.rss)}MB`,
+        heapUsed: `${mb(used.heapUsed)}MB`,
+        heapTotal: `${mb(used.heapTotal)}MB`,
+        external: `${mb(used.external)}MB`
+      },
+      lastHealthCheck: new Date(lastHealthCheck).toISOString(),
+      connections: connections.size,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Add system status endpoint
+  app.get('/api/status', (_req, res) => {
+    const uptime = Date.now() - processStartTime;
+    res.json({
+      server: 'online',
+      uptime: uptime,
+      version: process.version,
+      platform: process.platform,
+      environment: process.env.NODE_ENV || 'development'
+    });
   });
 
   const server = await registerRoutes(app);
@@ -65,6 +172,14 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
+  // Track connections for graceful shutdown
+  server.on('connection', (connection) => {
+    connections.add(connection);
+    connection.on('close', () => {
+      connections.delete(connection);
+    });
+  });
+
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
@@ -74,6 +189,9 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    log(`🚀 Server started successfully on port ${port}`);
+    log(`📊 Health check available at /api/health`);
+    log(`📈 System status available at /api/status`);
+    logMemoryUsage();
   });
 })();
