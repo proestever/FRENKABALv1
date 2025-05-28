@@ -87,8 +87,8 @@ export function useAllWalletTokens(walletAddress: string | null) {
       // Make an immediate request first
       fetchProgress();
       
-      // Then poll every 700ms
-      pollInterval = setInterval(fetchProgress, 700);
+      // Then poll every 3 seconds to reduce API load
+      pollInterval = setInterval(fetchProgress, 3000);
     } else if (walletData || isError) {
       // When data is loaded or there's an error, update the progress
       const finalStatus = isError ? 'error' : 'complete';
@@ -104,22 +104,19 @@ export function useAllWalletTokens(walletAddress: string | null) {
         lastUpdated: Date.now()
       }));
       
-      // One last check to get any final updates from server
-      fetch('/api/loading-progress')
-        .then(response => response.ok ? response.json() : null)
-        .then(data => {
-          if (data) {
-            setProgress(prev => ({
-              ...data,
-              status: finalStatus, // Keep our final status
-              message: finalMessage,
-              lastUpdated: Date.now()
-            }));
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching final loading progress:', error);
-        });
+      // Clear any existing polling interval first
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      
+      // One final update without additional API call to reduce load
+      setProgress(prev => ({
+        ...prev,
+        status: finalStatus,
+        message: finalMessage,
+        lastUpdated: Date.now()
+      }));
     }
     
     // Clean up the interval when component unmounts or dependencies change
