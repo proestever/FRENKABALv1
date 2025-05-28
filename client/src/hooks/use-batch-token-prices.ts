@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
-// Price cache with TTL (time-to-live) in milliseconds (30 minutes to match server)
-const CACHE_TTL = 30 * 60 * 1000;
+// Price cache with TTL (time-to-live) in milliseconds (1 minute for frequent updates)
+const CACHE_TTL = 1 * 60 * 1000;
 const priceCache: Record<string, { price: number, timestamp: number }> = {};
 
 /**
