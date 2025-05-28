@@ -120,28 +120,9 @@ export function HexStakes({ walletAddress, otherWalletAddresses = [], isMultiWal
         const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
         const hexContract = new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);
         
-        // Fetch HEX price
-        let currentHexPrice = 0.006; // Default fallback price for PulseChain
-        try {
-          // Use API to fetch price
-          const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
-          const priceData = await response.json();
-          console.log('HEX price data from API:', priceData);
-          
-          if (priceData && priceData.price) {
-            currentHexPrice = priceData.price;
-            console.log('Using HEX price from API:', currentHexPrice);
-          } else if (priceData && priceData.usdPrice) {
-            // Try alternate field if available
-            currentHexPrice = priceData.usdPrice;
-            console.log('Using HEX usdPrice from API:', currentHexPrice);
-          } else {
-            console.log('Using fallback HEX price:', currentHexPrice);
-          }
-        } catch (error) {
-          console.error('Error fetching HEX price:', error);
-          console.log('Using fallback HEX price after error:', currentHexPrice);
-        }
+        // Import the cached price function to avoid duplicate API calls
+        const hexStakesModule = await import('@/hooks/use-hex-stakes');
+        const currentHexPrice = await hexStakesModule.getHexPriceWithCache();
         
         setHexPrice(currentHexPrice);
         

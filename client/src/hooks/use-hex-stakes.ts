@@ -103,47 +103,64 @@ export interface HexStakeSummary {
 
 // Cache HEX price to avoid excessive API calls
 let cachedHexPrice: { price: number; timestamp: number } | null = null;
-const HEX_PRICE_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+const HEX_PRICE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache to reduce API calls
+
+// Track ongoing price requests to prevent duplicate calls
+let ongoingPriceRequest: Promise<number> | null = null;
 
 // Function to get HEX price with caching
-async function getHexPriceWithCache(): Promise<number> {
+export async function getHexPriceWithCache(): Promise<number> {
   // Check if we have a valid cached price
   if (cachedHexPrice && (Date.now() - cachedHexPrice.timestamp < HEX_PRICE_CACHE_TTL)) {
     console.log('Using cached HEX price:', cachedHexPrice.price);
     return cachedHexPrice.price;
   }
   
+  // If there's already an ongoing request, wait for it instead of making a new one
+  if (ongoingPriceRequest) {
+    console.log('Waiting for ongoing HEX price request...');
+    return await ongoingPriceRequest;
+  }
+  
   // Default fallback price
   let hexPrice = 0.00004;
   
-  try {
-    // No valid cache, fetch from API
-    const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
-    const priceData = await response.json();
-    
-    if (priceData && priceData.usdPrice) {
-      hexPrice = priceData.usdPrice;
-    } else if (priceData && priceData.price) {
-      hexPrice = priceData.price;
+  // Create the ongoing request promise
+  ongoingPriceRequest = (async () => {
+    try {
+      // No valid cache, fetch from API
+      const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
+      const priceData = await response.json();
+      
+      if (priceData && priceData.usdPrice) {
+        hexPrice = priceData.usdPrice;
+      } else if (priceData && priceData.price) {
+        hexPrice = priceData.price;
+      }
+      
+      // Update cache
+      cachedHexPrice = {
+        price: hexPrice,
+        timestamp: Date.now()
+      };
+      
+      console.log('Fetched fresh HEX price:', hexPrice);
+    } catch (error) {
+      console.error('Error fetching HEX price:', error);
+      // If we have any cached price (even expired), use it as backup
+      if (cachedHexPrice) {
+        console.log('Using expired cached HEX price after fetch error:', cachedHexPrice.price);
+        hexPrice = cachedHexPrice.price;
+      }
+    } finally {
+      // Clear the ongoing request when done
+      ongoingPriceRequest = null;
     }
     
-    // Update cache
-    cachedHexPrice = {
-      price: hexPrice,
-      timestamp: Date.now()
-    };
-    
-    console.log('Fetched fresh HEX price:', hexPrice);
-  } catch (error) {
-    console.error('Error fetching HEX price:', error);
-    // If we have any cached price (even expired), use it as backup
-    if (cachedHexPrice) {
-      console.log('Using expired cached HEX price after fetch error:', cachedHexPrice.price);
-      return cachedHexPrice.price;
-    }
-  }
+    return hexPrice;
+  })();
   
-  return hexPrice;
+  return await ongoingPriceRequest;
 }
 
 // Function to fetch HEX stakes summary using direct API call
