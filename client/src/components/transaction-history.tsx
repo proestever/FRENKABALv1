@@ -143,6 +143,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   // Add state for transaction type filter
   const [selectedType, setSelectedType] = useState<TransactionType>('all');
   
+  // Add state for token filter
+  const [tokenFilter, setTokenFilter] = useState<string>('');
+  
   // Function to copy text to clipboard
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard.writeText(text)
@@ -581,10 +584,35 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return consolidateSwapTransfers(tx);
   });
   
-  // Filter transactions based on selected type
+  // Filter transactions based on selected type and token filter
   const filteredTransactions = processedTransactions.filter(tx => {
-    if (selectedType === 'all') return true; // Show all transactions
-    return getTransactionType(tx) === selectedType;
+    // First filter by transaction type
+    const typeMatches = selectedType === 'all' || getTransactionType(tx) === selectedType;
+    
+    // Then filter by token name/symbol if a filter is applied
+    if (!tokenFilter.trim()) {
+      return typeMatches; // No token filter, just return type filter result
+    }
+    
+    const searchTerm = tokenFilter.toLowerCase().trim();
+    
+    // Check ERC20 transfers
+    const hasMatchingErc20 = tx.erc20_transfers?.some(transfer => 
+      (transfer.token_symbol?.toLowerCase().includes(searchTerm)) ||
+      (transfer.token_name?.toLowerCase().includes(searchTerm))
+    );
+    
+    // Check native transfers (PLS)
+    const hasMatchingNative = tx.native_transfers?.some(transfer => 
+      (transfer.token_symbol?.toLowerCase().includes(searchTerm)) ||
+      (transfer.token_name?.toLowerCase().includes(searchTerm)) ||
+      'pls'.includes(searchTerm) ||
+      'pulse'.includes(searchTerm)
+    );
+    
+    const tokenMatches = hasMatchingErc20 || hasMatchingNative;
+    
+    return typeMatches && tokenMatches;
   });
   
   // Count transactions by type
@@ -757,8 +785,26 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             </span>
           </h2>
           
-          {/* Filter dropdown */}
+          {/* Filters */}
           <div className="flex flex-wrap gap-2 items-center">
+            {/* Token Search Filter */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search by token (e.g., solidx, hex, pls)"
+                value={tokenFilter}
+                onChange={(e) => setTokenFilter(e.target.value)}
+                className="w-64 px-3 py-1.5 text-sm bg-black/40 border border-white/10 rounded-md text-white placeholder-white/50 focus:outline-none focus:border-white/30 focus:bg-black/60 transition-all duration-200"
+              />
+              {tokenFilter && (
+                <button
+                  onClick={() => setTokenFilter('')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors"
+                >
+                  ×
+                </button>
+              )}
+            </div>
             {!isPricesFetching && Object.keys(batchPrices).length > 0 && (
               <span className="px-2 py-0.5 bg-green-500/20 text-xs rounded-md text-green-400 mr-2">
                 Batch Prices
@@ -863,14 +909,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               </button>
             )}
             
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200"
-            >
-              <ChevronDown size={16} />
-              <span className="text-sm font-medium">Close</span>
-            </button>
+
           </div>
         </div>
       </div>
