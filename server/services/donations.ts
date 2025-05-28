@@ -214,12 +214,17 @@ export async function getDonations(donationAddress: string): Promise<DonationRec
     // Process all transactions in sequence
     for (const tx of allTransactions) {
       if (isDonation(tx, donationAddress)) {
+        const donorAddress = tx.from_address;
+        
+        // Exclude transactions from the donation address itself (e.g., swaps or internal transfers)
+        if (donorAddress.toLowerCase() === donationAddress.toLowerCase()) {
+          continue;
+        }
+        
         // Now await the async function call
         const donationDetails = await getDonationDetails(tx, donationAddress);
         
         for (const donation of donationDetails) {
-          const donorAddress = tx.from_address;
-          
           if (!newDonationCache[donorAddress]) {
             newDonationCache[donorAddress] = {
               donorAddress,
