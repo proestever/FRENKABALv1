@@ -78,20 +78,22 @@ export function Donations() {
       // Get donation records from API
       const donationRecords = await response.json();
       
-      // Map the API response to our Donor type
-      const mappedDonors: Donor[] = donationRecords.map((record: any) => ({
-        address: record.donorAddress,
-        totalDonated: record.totalValueUsd,
-        donations: record.donations.map((donation: any) => ({
-          txHash: donation.txHash,
-          tokenAddress: donation.tokenAddress,
-          tokenSymbol: donation.tokenSymbol || 'Unknown',
-          amount: donation.amount,
-          valueUsd: donation.valueUsd,
-          timestamp: donation.timestamp
-        })),
-        rank: record.rank
-      }));
+      // Map the API response to our Donor type and filter out the donation address itself
+      const mappedDonors: Donor[] = donationRecords
+        .filter((record: any) => record.donorAddress.toLowerCase() !== DONATIONS_ADDRESS.toLowerCase())
+        .map((record: any) => ({
+          address: record.donorAddress,
+          totalDonated: record.totalValueUsd,
+          donations: record.donations.map((donation: any) => ({
+            txHash: donation.txHash,
+            tokenAddress: donation.tokenAddress,
+            tokenSymbol: donation.tokenSymbol || 'Unknown',
+            amount: donation.amount,
+            valueUsd: donation.valueUsd,
+            timestamp: donation.timestamp
+          })),
+          rank: record.rank
+        }));
       
       // If no donations found yet, use an empty array
       const processedDonors = mappedDonors.length > 0 ? mappedDonors : [];
