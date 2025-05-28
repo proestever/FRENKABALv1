@@ -331,11 +331,11 @@ function Footer() {
               />
             </a>
             <a 
-              href="https://github.com/pulsechain/pulsechain" 
+              href="https://github.com/proestever/FRENKABALv1" 
               target="_blank" 
               rel="noopener noreferrer"
               className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
-              title="Visit PulseChain on GitHub"
+              title="Visit FrenKabal on GitHub"
             >
               <SiGithub className="w-6 h-6 text-white" />
             </a>
@@ -375,11 +375,11 @@ function Footer() {
               />
             </a>
             <a 
-              href="https://github.com/pulsechain/pulsechain" 
+              href="https://github.com/proestever/FRENKABALv1" 
               target="_blank" 
               rel="noopener noreferrer"
               className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
-              title="Visit PulseChain on GitHub"
+              title="Visit FrenKabal on GitHub"
             >
               <SiGithub className="w-6 h-6 text-white" />
             </a>
