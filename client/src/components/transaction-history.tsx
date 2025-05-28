@@ -810,9 +810,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1 px-3 py-1.5 rounded-md glass-card border border-white/10 text-white/80 hover:bg-black/40 hover:border-white/30 transition-all duration-200">
                   <Filter size={16} />
-                  <span className="text-sm font-medium capitalize">
-                    {selectedType === 'all' ? 'All Transactions' : selectedType}
-                  </span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 glass-card border border-white/10 bg-black/60 backdrop-blur-lg">
