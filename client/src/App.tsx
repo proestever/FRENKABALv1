@@ -17,6 +17,7 @@ import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { Wallet, Menu, Loader2, Home as HomeIcon, Bookmark, HeartHandshake, FolderSearch, Settings, BarChart, Activity } from "lucide-react";
+import { SiGithub } from "react-icons/si";
 import telegramLogo from "@assets/Telegram_2019_Logo.svg.png";
 import xLogo from "@assets/X_logo.jpg";
 import {
@@ -329,6 +330,15 @@ function Footer() {
                 className="w-6 h-6 object-contain"
               />
             </a>
+            <a 
+              href="https://github.com/pulsechain/pulsechain" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
+              title="Visit PulseChain on GitHub"
+            >
+              <SiGithub className="w-6 h-6 text-white" />
+            </a>
           </div>
         </div>
         
@@ -363,6 +373,15 @@ function Footer() {
                 alt="X (Twitter)" 
                 className="w-6 h-6 object-contain"
               />
+            </a>
+            <a 
+              href="https://github.com/pulsechain/pulsechain" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="transition-all hover:scale-110 bg-black/30 hover:bg-black/40 p-1 rounded-full overflow-hidden flex items-center justify-center"
+              title="Visit PulseChain on GitHub"
+            >
+              <SiGithub className="w-6 h-6 text-white" />
             </a>
           </div>
         </div>
