@@ -430,12 +430,14 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
       if (useDexScreener) {
         console.log(`Using DexScreener for price of token ${tokenAddress}`);
         try {
-          const dexScreenerData = await getTokenPriceDataFromDexScreener(normalizedTokenAddress);
-          if (dexScreenerData !== null) {
-            price = dexScreenerData.price;
+          const dexScreenerPrice = await getTokenPriceFromDexScreener(normalizedTokenAddress);
+          if (dexScreenerPrice !== null) {
+            price = dexScreenerPrice;
             value = price * balanceFormatted;
-            priceChange24h = dexScreenerData.priceChange24h;
-            console.log(`DexScreener data for ${tokenAddress}: price=${price}, change24h=${priceChange24h}%`);
+            // For now, keep DexScreener price change at 0 until we can properly implement it
+            // The DexScreener integration needs more work to extract price change data
+            priceChange24h = 0;
+            console.log(`DexScreener price for ${tokenAddress}: $${price} (price change not implemented yet)`);
           }
         } catch (dexError) {
           console.log(`Error getting price from DexScreener for ${tokenAddress}:`, dexError);
@@ -1676,16 +1678,27 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
               logoUrl = getDefaultLogo(token.symbol);
             }
             
-            // Parse percent change as a number (remove the minus sign if present and convert)
-            const percentChangeStr = priceData['24hrPercentChange'] || '0';
-            const percentChange = parseFloat(percentChangeStr.replace(/-/g, '')) * (percentChangeStr.includes('-') ? -1 : 1);
+            // Handle price change data - prioritize multiple sources
+            let priceChange24h = 0;
+            
+            // Try usdPrice24hrPercentChange first (most reliable)
+            if (priceData.usdPrice24hrPercentChange && typeof priceData.usdPrice24hrPercentChange === 'number') {
+              priceChange24h = priceData.usdPrice24hrPercentChange;
+              console.log(`Using usdPrice24hrPercentChange for ${token.symbol}: ${priceChange24h}%`);
+            }
+            // Fallback to 24hrPercentChange string field
+            else if (priceData['24hrPercentChange']) {
+              const percentChangeStr = priceData['24hrPercentChange'];
+              priceChange24h = parseFloat(percentChangeStr);
+              console.log(`Using 24hrPercentChange string for ${token.symbol}: ${priceChange24h}%`);
+            }
             
             return {
               ...token,
               name: priceData.tokenName || token.name, // Use Moralis name if available
               price: priceData.usdPrice,
               value: token.balanceFormatted * priceData.usdPrice,
-              priceChange24h: priceData.usdPrice24hrPercentChange || percentChange || 0,
+              priceChange24h: priceChange24h,
               logo: logoUrl,
               exchange: priceData.exchangeName,
               verified: priceData.verifiedContract,
@@ -1822,22 +1835,28 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
                 let priceChange: number | undefined = undefined;
                 const normalizedAddress = token.token_address.toLowerCase();
                 
-                // Attempt to get price info if available in Moralis response
+                let logoUrl = token.logo || token.thumbnail || null;
+                
+                // Prioritize Moralis data first
                 if ('usd_price' in token && typeof token.usd_price === 'number') {
                   price = token.usd_price;
                 }
                 
                 if ('usd_price_24hr_percent_change' in token && typeof token.usd_price_24hr_percent_change === 'number') {
                   priceChange = token.usd_price_24hr_percent_change;
+                  console.log(`Using Moralis price change for ${token.symbol}: ${priceChange}%`);
                 }
-                
-                let logoUrl = token.logo || token.thumbnail || null;
                 
                 // If no price from Moralis response, get it from our batch price data
                 if (!price && priceDataMap[normalizedAddress]) {
                   const priceData = priceDataMap[normalizedAddress];
                   price = priceData.usdPrice;
-                  priceChange = priceData.usdPrice24hrPercentChange;
+                  
+                  // Only use batch price change if we don't have it from Moralis
+                  if (priceChange === 0 && priceData.usdPrice24hrPercentChange) {
+                    priceChange = priceData.usdPrice24hrPercentChange;
+                    console.log(`Using batch API price change for ${token.symbol}: ${priceChange}%`);
+                  }
                   
                   // If no logo yet, use from price data
                   if (!logoUrl && priceData.tokenLogo) {
