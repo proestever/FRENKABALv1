@@ -1790,6 +1790,12 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
           const moralisTokens = moralisTokensResponse.raw;
           console.log(`Moralis direct API call returned ${moralisTokens.length} tokens`);
           
+          // Debug: Check what fields are available in the Moralis response
+          if (moralisTokens.length > 0) {
+            console.log(`Sample Moralis token fields:`, Object.keys(moralisTokens[0]));
+            console.log(`Sample token 24hr change field:`, moralisTokens[0].usd_price_24hr_percent_change);
+          }
+          
           // Get existing token addresses for comparison
           const existingTokenAddresses = tokensWithPrice.map(t => t.address.toLowerCase());
           const missingTokens: ProcessedToken[] = [];
