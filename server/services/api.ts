@@ -1018,6 +1018,16 @@ export async function getWalletTokenBalancesFromMoralis(walletAddress: string): 
     
     console.log(`Successfully fetched wallet balances with price for ${walletAddress}`);
     
+    // Debug: Log the structure of the first token to see available fields
+    if (result && Array.isArray(result) && result.length > 0) {
+      console.log(`Sample token fields:`, Object.keys(result[0]));
+      if (result[0].usd_price_24hr_percent_change !== undefined) {
+        console.log(`Sample 24hr change:`, result[0].usd_price_24hr_percent_change);
+      } else {
+        console.log(`No usd_price_24hr_percent_change field found`);
+      }
+    }
+    
     // Enhanced debugging
     const result = response.raw;
     console.log(`Got response from Moralis with type: ${typeof result}`);
