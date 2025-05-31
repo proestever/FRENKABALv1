@@ -6,6 +6,7 @@ import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, Dollar
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { formatDate, shortenAddress } from '@/lib/utils';
+import { formatCurrency } from '@/lib/format';
 import { Link } from 'wouter';
 import { useTokenDataPrefetch } from '@/hooks/use-token-data-prefetch';
 import { useBatchTokenPrices } from '@/hooks/use-batch-token-prices';

@@ -18,12 +18,44 @@ export function shortenAddress(address: string): string {
 }
 
 /**
- * Format a number as currency
+ * Format a number as currency with smart precision for very small values
  * @param value The number to format
  * @param currency The currency code (default: USD)
  * @returns Formatted currency string
  */
 export function formatCurrency(value: number, currency = 'USD'): string {
+  if (value === 0) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  }
+
+  // For very small values, use more decimal places to show meaningful digits
+  if (Math.abs(value) < 0.01) {
+    // Find the first significant digit
+    const absValue = Math.abs(value);
+    let decimalPlaces = 2;
+    
+    // Calculate how many decimal places we need to show at least 4 significant digits
+    if (absValue < 1) {
+      const log = Math.floor(Math.log10(absValue));
+      decimalPlaces = Math.max(2, Math.abs(log) + 3);
+      // Cap at 10 decimal places for readability
+      decimalPlaces = Math.min(decimalPlaces, 10);
+    }
+
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces
+    }).format(value);
+  }
+
+  // For normal values, use standard 2 decimal places
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
