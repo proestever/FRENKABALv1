@@ -54,7 +54,7 @@ interface DexScreenerResponse {
 }
 
 // Cache to avoid excessive API calls
-const priceCache: Record<string, { price: number; timestamp: number }> = {};
+const priceCache: Record<string, { price: number; priceChange24h: number; timestamp: number }> = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
@@ -62,7 +62,17 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
  * @param tokenAddress The token contract address
  * @returns Price in USD or null if not found
  */
+export interface TokenPriceData {
+  price: number;
+  priceChange24h: number;
+}
+
 export async function getTokenPriceFromDexScreener(tokenAddress: string): Promise<number | null> {
+  const data = await getTokenPriceDataFromDexScreener(tokenAddress);
+  return data ? data.price : null;
+}
+
+export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Promise<TokenPriceData | null> {
   if (!tokenAddress) return null;
   
   // Normalize address
@@ -71,8 +81,11 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
   // Check cache first
   const now = Date.now();
   if (priceCache[normalizedAddress] && now - priceCache[normalizedAddress].timestamp < CACHE_TTL) {
-    console.log(`Using cached price for ${normalizedAddress}: $${priceCache[normalizedAddress].price}`);
-    return priceCache[normalizedAddress].price;
+    console.log(`Using cached price data for ${normalizedAddress}: $${priceCache[normalizedAddress].price}, ${priceCache[normalizedAddress].priceChange24h}%`);
+    return {
+      price: priceCache[normalizedAddress].price,
+      priceChange24h: priceCache[normalizedAddress].priceChange24h
+    };
   }
   
   try {
@@ -122,20 +135,22 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
     }
     
     const price = parseFloat(bestPair.priceUsd);
+    const priceChange24h = bestPair.priceChange?.h24 || 0;
     
     if (isNaN(price)) {
       console.log(`Invalid price for token ${addressToUse}`);
       return null;
     }
     
-    // Cache the price
+    // Cache the price and price change
     priceCache[normalizedAddress] = {
       price,
+      priceChange24h,
       timestamp: now
     };
     
-    console.log(`Got price for ${normalizedAddress} from DexScreener: $${price}`);
-    return price;
+    console.log(`Got price data for ${normalizedAddress} from DexScreener: $${price}, 24h change: ${priceChange24h}%`);
+    return { price, priceChange24h };
   } catch (error) {
     console.error(`Error fetching price from DexScreener:`, error);
     return null;
@@ -194,9 +209,9 @@ export async function getTokenPricesFromDexScreener(tokenAddresses: string[]): P
     await Promise.all(batch.map(async (address) => {
       const normalizedAddress = address.toLowerCase();
       try {
-        const price = await getTokenPriceFromDexScreener(normalizedAddress);
-        if (price !== null) {
-          results[normalizedAddress] = price;
+        const priceData = await getTokenPriceDataFromDexScreener(normalizedAddress);
+        if (priceData !== null) {
+          results[normalizedAddress] = priceData.price;
         }
       } catch (error) {
         console.error(`Error fetching price for ${normalizedAddress}:`, error);

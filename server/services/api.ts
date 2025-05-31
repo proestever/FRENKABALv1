@@ -15,7 +15,7 @@ import { updateLoadingProgress } from '../routes';
 import { processLpTokens } from './lp-token-service';
 import { cacheService } from './cache-service';
 import { apiStatsService } from './api-stats-service';
-import { getTokenPriceFromDexScreener } from './dexscreener';
+import { getTokenPriceFromDexScreener, getTokenPriceDataFromDexScreener } from './dexscreener';
 import { shouldUseDexScreenerForToken } from './price-source-service';
 
 // API call counter for monitoring and debugging
@@ -430,12 +430,12 @@ export async function getSpecificTokenBalance(walletAddress: string, tokenAddres
       if (useDexScreener) {
         console.log(`Using DexScreener for price of token ${tokenAddress}`);
         try {
-          const dexScreenerPrice = await getTokenPriceFromDexScreener(normalizedTokenAddress);
-          if (dexScreenerPrice !== null) {
-            price = dexScreenerPrice;
+          const dexScreenerData = await getTokenPriceDataFromDexScreener(normalizedTokenAddress);
+          if (dexScreenerData !== null) {
+            price = dexScreenerData.price;
             value = price * balanceFormatted;
-            // DexScreener doesn't provide 24h change data in the same way
-            priceChange24h = 0;
+            priceChange24h = dexScreenerData.priceChange24h;
+            console.log(`DexScreener data for ${tokenAddress}: price=${price}, change24h=${priceChange24h}%`);
           }
         } catch (dexError) {
           console.log(`Error getting price from DexScreener for ${tokenAddress}:`, dexError);
