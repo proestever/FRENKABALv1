@@ -12,6 +12,7 @@ interface TokenActionsMenuProps {
 export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbol }: TokenActionsMenuProps) {
   const [copied, setCopied] = useState(false);
   const [show, setShow] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -30,11 +31,39 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const calculateMenuPosition = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const windowWidth = window.innerWidth;
+      const menuWidth = 224; // w-56 = 14rem = 224px
+      const menuHeight = 300; // estimated max height
+      
+      let top = rect.bottom + 4;
+      let left = rect.left - 10;
+      
+      // Adjust if menu would go off screen
+      if (left + menuWidth > windowWidth) {
+        left = windowWidth - menuWidth - 10;
+      }
+      if (left < 10) {
+        left = 10;
+      }
+      
+      if (top + menuHeight > windowHeight) {
+        top = rect.top - menuHeight - 4;
+      }
+      
+      setMenuPosition({ top, left });
+    }
+  };
+
   const handleMouseEnter = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
+    calculateMenuPosition();
     setShow(true);
   };
 
@@ -66,10 +95,15 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
       
       {show && (
         <div 
-          className="absolute top-full left-0 mt-1 w-56 rounded-xl border border-white/10 bg-black/85 backdrop-blur-3xl py-2 shadow-xl z-50 animate-in fade-in-50 zoom-in-95 duration-150"
+          className="fixed w-56 rounded-xl border border-white/10 bg-black/85 backdrop-blur-3xl py-2 shadow-xl z-[9999] animate-in fade-in-50 zoom-in-95 duration-150"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          style={{ maxHeight: '300px', transform: 'translateX(-10px)' }}
+          style={{ 
+            maxHeight: '300px',
+            top: `${menuPosition.top}px`,
+            left: `${menuPosition.left}px`,
+            zIndex: 9999
+          }}
         >
           <div className="px-3 py-1 font-bold text-white/90 text-shadow-sm">
             <div className="truncate max-w-[200px]">
