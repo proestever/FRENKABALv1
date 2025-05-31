@@ -1748,6 +1748,23 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
         totalValue += token.value;
       }
     });
+
+    // Get top 10 tokens by value and fetch real price change data from DexScreener
+    console.log("Fetching accurate 24h price changes for top 10 tokens from DexScreener...");
+    const sortedTokens = [...tokensWithPrice].sort((a, b) => (b.value || 0) - (a.value || 0));
+    const top10Tokens = sortedTokens.slice(0, 10);
+    
+    for (const token of top10Tokens) {
+      try {
+        const dexData = await getTokenPriceDataFromDexScreener(token.address);
+        if (dexData && typeof dexData.priceChange24h === 'number') {
+          token.priceChange24h = dexData.priceChange24h;
+          console.log(`Updated ${token.symbol} 24h change: ${dexData.priceChange24h}%`);
+        }
+      } catch (error) {
+        console.log(`Could not get DexScreener price change for ${token.symbol}`);
+      }
+    }
     
     // Find PLS token (native token) - consistent with the above implementation
     const plsTokenAddress = PLS_TOKEN_ADDRESS.toLowerCase();
