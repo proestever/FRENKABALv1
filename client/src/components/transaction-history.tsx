@@ -1233,12 +1233,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         
                         return usdValue ? (
                           <div className="text-xs text-muted-foreground flex items-center justify-end">
-                            {usdValue.toLocaleString('en-US', {
-                              style: 'currency',
-                              currency: 'USD',
-                              maximumFractionDigits: 2,
-                              minimumFractionDigits: 2
-                            })}
+                            {formatCurrency(usdValue)}
                             {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
                           </div>
                         ) : null;
@@ -1268,12 +1263,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         
                         return usdValue ? (
                           <div className="text-xs text-muted-foreground flex items-center justify-end">
-                            {usdValue.toLocaleString('en-US', {
-                              style: 'currency',
-                              currency: 'USD',
-                              maximumFractionDigits: 2,
-                              minimumFractionDigits: 2
-                            })}
+                            {formatCurrency(usdValue)}
                             {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
                           </div>
                         ) : null;
@@ -1292,12 +1282,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       
                       return usdValue ? (
                         <div className="flex items-center justify-end mt-0.5">
-                          {usdValue.toLocaleString('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                            maximumFractionDigits: 2,
-                            minimumFractionDigits: 2
-                          })}
+                          {formatCurrency(usdValue)}
                           {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
                         </div>
                       ) : null;
@@ -1532,12 +1517,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       
                       return usdValue ? (
                         <div className="text-xs text-muted-foreground flex items-center justify-end">
-                          {usdValue.toLocaleString('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                            maximumFractionDigits: 2,
-                            minimumFractionDigits: 2
-                          })}
+                          {formatCurrency(usdValue)}
                           {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
                         </div>
                       ) : null;
@@ -1648,12 +1628,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       
                       return usdValue ? (
                         <div className="text-xs text-muted-foreground flex items-center justify-end">
-                          {usdValue.toLocaleString('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                            maximumFractionDigits: 2,
-                            minimumFractionDigits: 2
-                          })}
+                          {formatCurrency(usdValue)}
                           {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
                         </div>
                       ) : null;
