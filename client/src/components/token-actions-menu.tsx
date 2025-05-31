@@ -73,14 +73,45 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
     }, 300);
   };
 
-  // Clean up timeout on unmount
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (show) {
+      setShow(false);
+    } else {
+      calculateMenuPosition();
+      setShow(true);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (!show) {
+      calculateMenuPosition();
+      setShow(true);
+    }
+  };
+
+  // Clean up timeout on unmount and handle outside clicks
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShow(false);
+      }
+    };
+
+    if (show) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, []);
+  }, [show]);
 
   return (
     <div 
@@ -88,6 +119,8 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
       className="relative inline-block"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
+      onTouchStart={handleTouchStart}
     >
       <div className="cursor-pointer focus:outline-none">
         {children}
