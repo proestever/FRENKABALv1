@@ -1770,8 +1770,8 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
       console.log(`Making direct Moralis API call for wallet: ${walletAddress}`);
       
       try {
-        // Direct API call to Moralis to get all tokens for the wallet
-        const moralisTokensResponse = await Moralis.EvmApi.token.getWalletTokenBalances({
+        // Direct API call to Moralis to get all tokens for the wallet WITH price data
+        const moralisTokensResponse = await Moralis.EvmApi.wallets.getWalletTokenBalancesPrice({
           chain: "0x171", // PulseChain chain ID
           address: walletAddress,
         });
@@ -1845,6 +1845,8 @@ export async function getWalletData(walletAddress: string, page: number = 1, lim
                 if ('usd_price_24hr_percent_change' in token && typeof token.usd_price_24hr_percent_change === 'number') {
                   priceChange = token.usd_price_24hr_percent_change;
                   console.log(`Using Moralis price change for ${token.symbol}: ${priceChange}%`);
+                } else {
+                  console.log(`No Moralis price change data for ${token.symbol}. Available fields:`, Object.keys(token));
                 }
                 
                 // If no price from Moralis response, get it from our batch price data
