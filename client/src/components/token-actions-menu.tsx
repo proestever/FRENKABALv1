@@ -39,28 +39,19 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
       const menuWidth = 224; // w-56 = 14rem = 224px
       const menuHeight = 300; // estimated max height
       
-      // Position menu closer to the token element
-      let top = rect.top + rect.height / 2;
-      let left = rect.right + 8; // Position to the right of the token
+      let top = rect.bottom + 4;
+      let left = rect.left - 10;
       
-      // If menu would go off right edge, position to the left
+      // Adjust if menu would go off screen
       if (left + menuWidth > windowWidth) {
-        left = rect.left - menuWidth - 8;
+        left = windowWidth - menuWidth - 10;
       }
-      
-      // Ensure menu doesn't go off left edge
       if (left < 10) {
         left = 10;
       }
       
-      // If menu would go off bottom, adjust up
       if (top + menuHeight > windowHeight) {
-        top = windowHeight - menuHeight - 10;
-      }
-      
-      // Ensure menu doesn't go off top
-      if (top < 10) {
-        top = 10;
+        top = rect.top - menuHeight - 4;
       }
       
       setMenuPosition({ top, left });
@@ -82,45 +73,14 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
     }, 300);
   };
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (show) {
-      setShow(false);
-    } else {
-      calculateMenuPosition();
-      setShow(true);
-    }
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    if (!show) {
-      calculateMenuPosition();
-      setShow(true);
-    }
-  };
-
-  // Clean up timeout on unmount and handle outside clicks
+  // Clean up timeout on unmount
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShow(false);
-      }
-    };
-
-    if (show) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('touchstart', handleClickOutside);
-    }
-
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [show]);
+  }, []);
 
   return (
     <div 
@@ -128,8 +88,6 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
       className="relative inline-block"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onClick={handleClick}
-      onTouchStart={handleTouchStart}
     >
       <div className="cursor-pointer focus:outline-none">
         {children}
@@ -137,15 +95,14 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
       
       {show && (
         <div 
-          className="fixed w-56 rounded-xl border border-white/10 bg-black/90 backdrop-blur-3xl py-2 shadow-2xl animate-in fade-in-50 zoom-in-95 duration-150"
+          className="fixed w-56 rounded-xl border border-white/10 bg-black/85 backdrop-blur-3xl py-2 shadow-xl z-[9999] animate-in fade-in-50 zoom-in-95 duration-150"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           style={{ 
             maxHeight: '300px',
             top: `${menuPosition.top}px`,
             left: `${menuPosition.left}px`,
-            zIndex: 999999,
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+            zIndex: 9999
           }}
         >
           <div className="px-3 py-1 font-bold text-white/90 text-shadow-sm">
