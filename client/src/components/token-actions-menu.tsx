@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Copy, Check, BarChart2, Search, Info } from 'lucide-react';
 import { copyToClipboard, getTokenExternalLink } from '@/lib/utils';
 
@@ -15,6 +16,11 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setPortalRoot(document.body);
+  }, []);
   
   const handleCopyAddress = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -93,7 +99,7 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
         {children}
       </div>
       
-      {show && (
+      {show && portalRoot && createPortal(
         <div 
           className="fixed w-56 rounded-xl border border-white/10 bg-black/85 backdrop-blur-3xl py-2 shadow-xl z-[9999] animate-in fade-in-50 zoom-in-95 duration-150"
           onMouseEnter={handleMouseEnter}
@@ -102,7 +108,8 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
             maxHeight: '300px',
             top: `${menuPosition.top}px`,
             left: `${menuPosition.left}px`,
-            zIndex: 9999
+            zIndex: 9999,
+            pointerEvents: 'auto'
           }}
         >
           <div className="px-3 py-1 font-bold text-white/90 text-shadow-sm">
@@ -158,7 +165,8 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
             </div>
             <span className="truncate">OtterScan</span>
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
