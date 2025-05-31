@@ -70,15 +70,13 @@ export function formatTokenPrice(value: number, currency = 'USD'): string {
     // Get the significant digits (first 4 non-zero digits)
     const significantPart = str.slice(decimalIndex + 1 + leadingZeros, decimalIndex + 1 + leadingZeros + 4);
     
-    // Convert regular digits to subscript for the significant part
+    // Convert only the leading zeros count to subscript
     const subscriptDigits = '₀₁₂₃₄₅₆₇₈₉';
-    const subscriptSignificant = significantPart.split('').map(digit => 
-      /\d/.test(digit) ? subscriptDigits[parseInt(digit)] : digit
-    ).join('');
+    const subscriptZeros = subscriptDigits[leadingZeros];
     
-    // Format as $0.0₍ₙ₎digits where n is the number of zeros and digits are also small
+    // Format as $0.0ₙdigits where n is the subscript number of zeros and digits are normal size
     const sign = value < 0 ? '-' : '';
-    return `${sign}$0.0₍${leadingZeros}₎${subscriptSignificant}`;
+    return `${sign}$0.0${subscriptZeros}${significantPart}`;
   }
   
   // For small values but not tiny (0.00001 to 0.01), show up to 5 decimals
