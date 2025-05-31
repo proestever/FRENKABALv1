@@ -39,19 +39,28 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
       const menuWidth = 224; // w-56 = 14rem = 224px
       const menuHeight = 300; // estimated max height
       
-      let top = rect.bottom + 4;
-      let left = rect.left - 10;
+      // Position menu closer to the token element
+      let top = rect.top + rect.height / 2;
+      let left = rect.right + 8; // Position to the right of the token
       
-      // Adjust if menu would go off screen
+      // If menu would go off right edge, position to the left
       if (left + menuWidth > windowWidth) {
-        left = windowWidth - menuWidth - 10;
+        left = rect.left - menuWidth - 8;
       }
+      
+      // Ensure menu doesn't go off left edge
       if (left < 10) {
         left = 10;
       }
       
+      // If menu would go off bottom, adjust up
       if (top + menuHeight > windowHeight) {
-        top = rect.top - menuHeight - 4;
+        top = windowHeight - menuHeight - 10;
+      }
+      
+      // Ensure menu doesn't go off top
+      if (top < 10) {
+        top = 10;
       }
       
       setMenuPosition({ top, left });
@@ -128,14 +137,15 @@ export function TokenActionsMenu({ children, tokenAddress, tokenName, tokenSymbo
       
       {show && (
         <div 
-          className="fixed w-56 rounded-xl border border-white/10 bg-black/85 backdrop-blur-3xl py-2 shadow-xl z-[9999] animate-in fade-in-50 zoom-in-95 duration-150"
+          className="fixed w-56 rounded-xl border border-white/10 bg-black/90 backdrop-blur-3xl py-2 shadow-2xl animate-in fade-in-50 zoom-in-95 duration-150"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           style={{ 
             maxHeight: '300px',
             top: `${menuPosition.top}px`,
             left: `${menuPosition.left}px`,
-            zIndex: 9999
+            zIndex: 999999,
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1)'
           }}
         >
           <div className="px-3 py-1 font-bold text-white/90 text-shadow-sm">
