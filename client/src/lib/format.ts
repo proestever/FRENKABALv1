@@ -18,12 +18,28 @@ export function shortenAddress(address: string): string {
 }
 
 /**
- * Format a number as currency with smart precision for very small values
+ * Format a number as currency with standard 2 decimal places for USD values
  * @param value The number to format
  * @param currency The currency code (default: USD)
  * @returns Formatted currency string
  */
 export function formatCurrency(value: number, currency = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+}
+
+/**
+ * Format a token price with special handling for very small values
+ * Shows up to 5 decimals, and uses scientific notation for very small prices
+ * @param value The price to format
+ * @param currency The currency code (default: USD)
+ * @returns Formatted price string
+ */
+export function formatTokenPrice(value: number, currency = 'USD'): string {
   if (value === 0) {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -33,34 +49,48 @@ export function formatCurrency(value: number, currency = 'USD'): string {
     }).format(value);
   }
 
-  // For very small values, use more decimal places to show meaningful digits
-  if (Math.abs(value) < 0.01) {
-    // Find the first significant digit
-    const absValue = Math.abs(value);
-    let decimalPlaces = 2;
+  const absValue = Math.abs(value);
+  
+  // For very small values (< 0.00001), use scientific notation style
+  if (absValue < 0.00001 && absValue > 0) {
+    // Convert to string to count leading zeros after decimal
+    const str = absValue.toFixed(20);
+    const decimalIndex = str.indexOf('.');
+    let leadingZeros = 0;
     
-    // Calculate how many decimal places we need to show at least 4 significant digits
-    if (absValue < 1) {
-      const log = Math.floor(Math.log10(absValue));
-      decimalPlaces = Math.max(2, Math.abs(log) + 3);
-      // Cap at 10 decimal places for readability
-      decimalPlaces = Math.min(decimalPlaces, 10);
+    // Count zeros after decimal point
+    for (let i = decimalIndex + 1; i < str.length; i++) {
+      if (str[i] === '0') {
+        leadingZeros++;
+      } else {
+        break;
+      }
     }
-
+    
+    // Get the significant digits (first 4 non-zero digits)
+    const significantPart = str.slice(decimalIndex + 1 + leadingZeros, decimalIndex + 1 + leadingZeros + 4);
+    
+    // Format as $0.0₍ₙ₎digits where n is the number of zeros
+    const sign = value < 0 ? '-' : '';
+    return `${sign}$0.0₍${leadingZeros}₎${significantPart}`;
+  }
+  
+  // For small values but not tiny (0.00001 to 0.01), show up to 5 decimals
+  if (absValue < 0.01) {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
-      minimumFractionDigits: decimalPlaces,
-      maximumFractionDigits: decimalPlaces
+      minimumFractionDigits: 5,
+      maximumFractionDigits: 5
     }).format(value);
   }
-
-  // For normal values, use standard 2 decimal places
+  
+  // For values >= 0.01, show up to 5 decimals but remove trailing zeros
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 5
   }).format(value);
 }
 

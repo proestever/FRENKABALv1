@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Token } from '@shared/schema';
 import { Search, ArrowDownUp, Eye, EyeOff, Wallet, History, Droplets, GitCompareArrows } from 'lucide-react';
 import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass } from '@/lib/utils';
+import { formatTokenPrice } from '@/lib/format';
 import { TokenLogo } from '@/components/token-logo';
 import { LpTokenDisplay } from '@/components/lp-token-display';
 import { getHiddenTokens, toggleHiddenToken, isTokenHidden } from '@/lib/api';
@@ -439,7 +440,7 @@ export function TokenList({
                           <div className="flex items-center gap-1 mt-0.5 justify-start">
                             <div className="text-xs text-white font-medium">
                               {token.price !== undefined 
-                                ? formatCurrencyWithPrecision(token.price, 2, token.price < 0.01 ? 8 : 2) 
+                                ? formatTokenPrice(token.price) 
                                 : ''}
                             </div>
                             <span className={`text-xs font-medium ${priceChangeClass}`}>
@@ -616,7 +617,7 @@ export function TokenList({
                           <div className="flex flex-col items-end">
                             <div className="text-base font-bold text-white">
                               {token.price !== undefined 
-                                ? formatCurrencyWithPrecision(token.price, 2, token.price < 0.01 ? 8 : 2) 
+                                ? formatTokenPrice(token.price) 
                                 : 'N/A'}
                             </div>
                             <div className={`text-sm font-medium ${priceChangeClass}`}>

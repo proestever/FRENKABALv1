@@ -8,40 +8,9 @@ export function cn(...inputs: ClassValue[]) {
 // Implemented below
 
 /**
- * Format a number as currency with smart precision for very small values
+ * Format a number as currency with standard 2 decimal places
  */
 export function formatCurrency(value: number): string {
-  if (value === 0) {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(value);
-  }
-
-  // For very small values, use more decimal places to show meaningful digits
-  if (Math.abs(value) < 0.01) {
-    const absValue = Math.abs(value);
-    let decimalPlaces = 2;
-    
-    // Calculate how many decimal places we need to show at least 4 significant digits
-    if (absValue < 1) {
-      const log = Math.floor(Math.log10(absValue));
-      decimalPlaces = Math.max(2, Math.abs(log) + 3);
-      // Cap at 10 decimal places for readability
-      decimalPlaces = Math.min(decimalPlaces, 10);
-    }
-
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: decimalPlaces,
-      maximumFractionDigits: decimalPlaces
-    }).format(value);
-  }
-
-  // For normal values, use standard 2 decimal places
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -51,30 +20,9 @@ export function formatCurrency(value: number): string {
 }
 
 /**
- * Format a number as currency with variable precision, enhanced for small values
+ * Format a number as currency with variable precision
  */
 export function formatCurrencyWithPrecision(value: number, minimumFractionDigits: number = 2, maximumFractionDigits: number = 2): string {
-  // If the value is very small and we're using default precision, use smart precision instead
-  if (Math.abs(value) < 0.01 && maximumFractionDigits <= 2) {
-    const absValue = Math.abs(value);
-    let decimalPlaces = Math.max(minimumFractionDigits, 2);
-    
-    // Calculate how many decimal places we need to show meaningful digits
-    if (absValue > 0 && absValue < 1) {
-      const log = Math.floor(Math.log10(absValue));
-      decimalPlaces = Math.max(minimumFractionDigits, Math.abs(log) + 3);
-      // Cap at 10 decimal places for readability
-      decimalPlaces = Math.min(decimalPlaces, 10);
-    }
-    
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: decimalPlaces,
-      maximumFractionDigits: decimalPlaces
-    }).format(value);
-  }
-
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -96,30 +44,10 @@ export function formatTokenAmount(amount: number | undefined): string {
 }
 
 /**
- * Format a USD value without the dollar sign with smart precision for small values
+ * Format a USD value without the dollar sign
  */
 export function formatUsd(amount: number | undefined): string {
   if (amount === undefined || isNaN(amount)) return '0.00';
-  if (amount === 0) return '0.00';
-  
-  // For very small values, use more decimal places to show meaningful digits
-  if (Math.abs(amount) < 0.01) {
-    const absValue = Math.abs(amount);
-    let decimalPlaces = 2;
-    
-    // Calculate how many decimal places we need to show at least 4 significant digits
-    if (absValue < 1) {
-      const log = Math.floor(Math.log10(absValue));
-      decimalPlaces = Math.max(2, Math.abs(log) + 3);
-      // Cap at 10 decimal places for readability
-      decimalPlaces = Math.min(decimalPlaces, 10);
-    }
-
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: decimalPlaces,
-      maximumFractionDigits: decimalPlaces
-    }).format(amount);
-  }
   
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
