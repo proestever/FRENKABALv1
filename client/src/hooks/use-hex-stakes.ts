@@ -122,7 +122,7 @@ export async function getHexPriceWithCache(): Promise<number> {
     return await ongoingPriceRequest;
   }
   
-  // Default fallback price
+  // Default fallback price - ensure it's always a valid number
   let hexPrice = 0.00004;
   
   // Create the ongoing request promise
@@ -132,10 +132,15 @@ export async function getHexPriceWithCache(): Promise<number> {
       const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
       const priceData = await response.json();
       
-      if (priceData && priceData.usdPrice) {
+      if (priceData && priceData.usdPrice && typeof priceData.usdPrice === 'number' && !isNaN(priceData.usdPrice)) {
         hexPrice = priceData.usdPrice;
-      } else if (priceData && priceData.price) {
+      } else if (priceData && priceData.price && typeof priceData.price === 'number' && !isNaN(priceData.price)) {
         hexPrice = priceData.price;
+      }
+      
+      // Ensure hexPrice is always a valid number
+      if (typeof hexPrice !== 'number' || isNaN(hexPrice) || hexPrice <= 0) {
+        hexPrice = 0.00004; // Fallback to default
       }
       
       // Update cache
@@ -338,7 +343,7 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
               totalInterest += interestHex;
             }
             
-            console.log(`Found stake ${i} with ${stakedHex.toFixed(2)} HEX, interest: ${interestHex.toFixed(2)} HEX`);
+            console.log(`Found stake ${i} with ${(typeof stakedHex === 'number' && !isNaN(stakedHex) ? stakedHex : 0).toFixed(2)} HEX, interest: ${(typeof interestHex === 'number' && !isNaN(interestHex) ? interestHex : 0).toFixed(2)} HEX`);
           }
         } catch (stakeErr) {
           console.error(`Error fetching stake ${i}:`, stakeErr);
@@ -348,15 +353,20 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       console.error('Error fetching stake details:', fetchErr);
     }
     
+    // Ensure we have valid numbers before formatting
+    const validTotalStaked = typeof totalStaked === 'number' && !isNaN(totalStaked) ? totalStaked : 0;
+    const validTotalInterest = typeof totalInterest === 'number' && !isNaN(totalInterest) ? totalInterest : 0;
+    const validCurrentHexPrice = typeof currentHexPrice === 'number' && !isNaN(currentHexPrice) ? currentHexPrice : 0;
+    
     // Format the numbers as strings with 2 decimal places
-    const totalStakedHex = totalStaked.toFixed(2);
-    const totalInterestHex = totalInterest.toFixed(2);
-    const totalCombinedHex = (totalStaked + totalInterest).toFixed(2);
+    const totalStakedHex = validTotalStaked.toFixed(2);
+    const totalInterestHex = validTotalInterest.toFixed(2);
+    const totalCombinedHex = (validTotalStaked + validTotalInterest).toFixed(2);
     
     // Calculate USD values
-    const totalStakeValueUsd = totalStaked * currentHexPrice;
-    const totalInterestValueUsd = totalInterest * currentHexPrice;
-    const totalCombinedValueUsd = (totalStaked + totalInterest) * currentHexPrice;
+    const totalStakeValueUsd = validTotalStaked * validCurrentHexPrice;
+    const totalInterestValueUsd = validTotalInterest * validCurrentHexPrice;
+    const totalCombinedValueUsd = (validTotalStaked + validTotalInterest) * validCurrentHexPrice;
     
     return {
       totalStakedHex,
@@ -450,18 +460,31 @@ export async function fetchCombinedHexStakes(walletAddresses: string[]): Promise
     let totalStakeCount = 0;
     
     validResults.forEach(result => {
-      totalStakedHex += parseFloat(result.totalStakedHex);
-      totalInterestHex += parseFloat(result.totalInterestHex);
-      totalStakeCount += result.stakeCount;
+      // Safely parse values with fallback to 0
+      const stakedValue = parseFloat(result.totalStakedHex || '0');
+      const interestValue = parseFloat(result.totalInterestHex || '0');
+      
+      // Only add if the parsed values are valid numbers
+      if (!isNaN(stakedValue)) {
+        totalStakedHex += stakedValue;
+      }
+      if (!isNaN(interestValue)) {
+        totalInterestHex += interestValue;
+      }
+      
+      totalStakeCount += result.stakeCount || 0;
     });
     
-    // Calculate total combined
+    // Calculate total combined - ensure we have valid numbers
     const totalCombinedHex = totalStakedHex + totalInterestHex;
     
+    // Ensure hexPrice is a valid number
+    const validHexPrice = typeof hexPrice === 'number' && !isNaN(hexPrice) ? hexPrice : 0;
+    
     // Calculate USD values
-    const totalStakeValueUsd = totalStakedHex * hexPrice;
-    const totalInterestValueUsd = totalInterestHex * hexPrice;
-    const totalCombinedValueUsd = totalCombinedHex * hexPrice;
+    const totalStakeValueUsd = totalStakedHex * validHexPrice;
+    const totalInterestValueUsd = totalInterestHex * validHexPrice;
+    const totalCombinedValueUsd = totalCombinedHex * validHexPrice;
     
     console.log(`Combined HEX stakes: ${totalStakedHex.toFixed(2)} HEX, interest: ${totalInterestHex.toFixed(2)} HEX`);
     
@@ -473,7 +496,7 @@ export async function fetchCombinedHexStakes(walletAddresses: string[]): Promise
       totalInterestValueUsd,
       totalCombinedValueUsd,
       stakeCount: totalStakeCount,
-      hexPrice,
+      hexPrice: validHexPrice,
       isLoading: false,
       error: null
     };
