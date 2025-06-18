@@ -139,7 +139,8 @@ Required environment variables:
 - **Enhanced HEX stakes support** - HEX tokens properly configured for PulseChain pricing
 - **Added preferred tokens list** - HEX, WPLS, PLSX, and PLS pre-configured for DexScreener
 - **Fixed token logo display issues** - Updated WETH and AURA tokens with proper logo URLs
-- **Enhanced logo system** - Now prioritizes DexScreener token data and PulseX logos over fallback images
+- **Enhanced logo system** - Now automatically fetches proper logos for ALL wallet tokens using DexScreener + PulseX
+- **Removed 2,372 placeholder logos** - Cleaned up database to force fresh logo fetching from authentic sources
 - **Cost reduction achieved** - Zero API costs for price data and wallet balance fetching
 
 ### Architecture Updates

@@ -387,12 +387,80 @@ export async function getWalletDataFull(
         
         let logoUrl = getDefaultLogo(tokenBalance.symbol || '');
         try {
-          const storedLogo = await storage.getTokenLogo(tokenBalance.address);
-          if (storedLogo?.logoUrl) {
+          let storedLogo = await storage.getTokenLogo(tokenBalance.address);
+          
+          // If no logo exists, try to fetch from DexScreener
+          if (!storedLogo) {
+            try {
+              const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${tokenBalance.address}`);
+              
+              if (response.ok) {
+                const data = await response.json() as any;
+                
+                if (data.pairs && data.pairs.length > 0) {
+                  const pair = data.pairs[0];
+                  const tokenInfo = pair.baseToken.address.toLowerCase() === tokenBalance.address.toLowerCase() 
+                    ? pair.baseToken 
+                    : pair.quoteToken;
+                  
+                  let newLogoUrl = getDefaultLogo(tokenBalance.symbol || '');
+                  
+                  if (tokenInfo.symbol) {
+                    const symbol = tokenInfo.symbol.toLowerCase();
+                    
+                    const knownLogos: Record<string, string> = {
+                      'pls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
+                      'wpls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
+                      'plsx': 'https://tokens.app.pulsex.com/images/tokens/0x15D38573d2feeb82e7ad5187aB8c5D52810B6f40.png',
+                      'hex': 'https://tokens.app.pulsex.com/images/tokens/0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39.png',
+                      'weth': 'https://tokens.app.pulsex.com/images/tokens/0x02DcdD04e3F455D838cd1249292C58f3B79e3C3C.png',
+                      'usdc': 'https://tokens.app.pulsex.com/images/tokens/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48.png',
+                      'usdt': 'https://tokens.app.pulsex.com/images/tokens/0xdAC17F958D2ee523a2206206994597C13D831ec7.png',
+                      'inc': 'https://tokens.app.pulsex.com/images/tokens/0x6c203a555824ec90a215f37916cf8db58ebe2fa3.png'
+                    };
+                    
+                    if (knownLogos[symbol]) {
+                      newLogoUrl = knownLogos[symbol];
+                    } else {
+                      newLogoUrl = `https://tokens.app.pulsex.com/images/tokens/${tokenBalance.address}.png`;
+                    }
+                  }
+                  
+                  // Save the new logo to database for future use
+                  const newLogo = {
+                    tokenAddress: tokenBalance.address,
+                    logoUrl: newLogoUrl,
+                    symbol: tokenInfo.symbol || tokenBalance.symbol || "",
+                    name: tokenInfo.name || tokenBalance.name || "",
+                    lastUpdated: new Date().toISOString()
+                  };
+                  
+                  storedLogo = await storage.saveTokenLogo(newLogo);
+                  logoUrl = newLogoUrl;
+                } else {
+                  // No DexScreener data, save default logo to prevent future API calls
+                  const defaultLogo = {
+                    tokenAddress: tokenBalance.address,
+                    logoUrl: getDefaultLogo(tokenBalance.symbol || ''),
+                    symbol: tokenBalance.symbol || "",
+                    name: tokenBalance.name || "",
+                    lastUpdated: new Date().toISOString()
+                  };
+                  
+                  storedLogo = await storage.saveTokenLogo(defaultLogo);
+                  logoUrl = defaultLogo.logoUrl;
+                }
+              }
+            } catch (logoFetchError) {
+              // If DexScreener fails, just use default logo
+              logoUrl = getDefaultLogo(tokenBalance.symbol || '');
+            }
+          } else {
             logoUrl = storedLogo.logoUrl;
           }
         } catch (e) {
-          // Use default logo
+          // Use default logo if everything fails
+          logoUrl = getDefaultLogo(tokenBalance.symbol || '');
         }
         
         processedTokens.push({
