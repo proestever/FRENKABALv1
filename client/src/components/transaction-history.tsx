@@ -78,10 +78,15 @@ type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contr
 
 // Helper function to determine transaction type
 const getTransactionType = (tx: Transaction): TransactionType => {
+  // Ensure tx is valid
+  if (!tx || typeof tx !== 'object') {
+    return 'all';
+  }
+  
   // First check if there are both send and receive transfers in the same transaction
   // This pattern strongly indicates a swap transaction
-  const hasSendTransfers = tx.erc20_transfers?.some(t => t.direction === 'send');
-  const hasReceiveTransfers = tx.erc20_transfers?.some(t => t.direction === 'receive');
+  const hasSendTransfers = tx.erc20_transfers?.some(t => t && t.direction === 'send');
+  const hasReceiveTransfers = tx.erc20_transfers?.some(t => t && t.direction === 'receive');
   
   // If we have at least one send and one receive in the same transaction, it's likely a swap
   if (hasSendTransfers && hasReceiveTransfers && tx.erc20_transfers && tx.erc20_transfers.length >= 2) {
@@ -146,6 +151,22 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Add state for token filter
   const [tokenFilter, setTokenFilter] = useState<string>('');
+  
+  // Validate wallet address
+  if (!walletAddress || typeof walletAddress !== 'string') {
+    console.error('Invalid wallet address provided to TransactionHistory:', walletAddress);
+    return (
+      <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
+        <div className="flex flex-col items-center justify-center min-h-[300px]">
+          <h3 className="text-xl font-bold text-red-400 mb-2">Invalid Wallet Address</h3>
+          <p className="text-muted-foreground mb-4">
+            The provided wallet address is not valid.
+          </p>
+          <button onClick={onClose} className="btn-primary">Close</button>
+        </div>
+      </Card>
+    );
+  }
   
   // Function to copy text to clipboard
   const copyToClipboard = useCallback((text: string) => {
@@ -219,34 +240,58 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         
         // Process the response data to add direction property to transfers
         const processedTransactions = (response.result || []).map(tx => {
+          // Ensure tx is a valid object
+          if (!tx || typeof tx !== 'object') {
+            console.warn('Invalid transaction object:', tx);
+            return tx;
+          }
+          
           // Process ERC20 transfers to add direction
-          if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-            // Use type assertion for TransactionTransfer
-            tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
-              // Set direction based on from/to addresses
-              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-              
-              return {
-                ...transfer,
-                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-              };
-            });
+          if (tx.erc20_transfers && Array.isArray(tx.erc20_transfers) && tx.erc20_transfers.length > 0) {
+            try {
+              tx.erc20_transfers = tx.erc20_transfers.map((transfer: any) => {
+                // Ensure transfer is valid and has required properties
+                if (!transfer || !transfer.to_address || !transfer.from_address) {
+                  console.warn('Invalid transfer object:', transfer);
+                  return transfer;
+                }
+                
+                // Set direction based on from/to addresses
+                const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+                const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+                
+                return {
+                  ...transfer,
+                  direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+                };
+              });
+            } catch (error) {
+              console.warn('Error processing ERC20 transfers:', error);
+            }
           }
           
           // Process native transfers to add direction
-          if (tx.native_transfers && tx.native_transfers.length > 0) {
-            // Use type assertion for TransactionTransfer
-            tx.native_transfers = tx.native_transfers.map((transfer: any) => {
-              // Set direction based on from/to addresses
-              const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
-              const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
-              
-              return {
-                ...transfer,
-                direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
-              };
-            });
+          if (tx.native_transfers && Array.isArray(tx.native_transfers) && tx.native_transfers.length > 0) {
+            try {
+              tx.native_transfers = tx.native_transfers.map((transfer: any) => {
+                // Ensure transfer is valid and has required properties
+                if (!transfer || !transfer.to_address || !transfer.from_address) {
+                  console.warn('Invalid native transfer object:', transfer);
+                  return transfer;
+                }
+                
+                // Set direction based on from/to addresses
+                const isReceiving = transfer.to_address.toLowerCase() === walletAddress.toLowerCase();
+                const isSending = transfer.from_address.toLowerCase() === walletAddress.toLowerCase();
+                
+                return {
+                  ...transfer,
+                  direction: isReceiving ? 'receive' : (isSending ? 'send' : 'unknown')
+                };
+              });
+            } catch (error) {
+              console.warn('Error processing native transfers:', error);
+            }
           }
           
           return tx;
@@ -385,13 +430,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Use our new batch token prices hook
   const {
-    prices: batchPrices,
+    data: batchPrices,
     isLoading: isPricesFetching
   } = useBatchTokenPrices(visibleTokenAddresses);
   
   // Update token prices whenever batch prices are fetched
   useEffect(() => {
-    if (Object.keys(batchPrices).length > 0) {
+    if (batchPrices && Object.keys(batchPrices).length > 0) {
       setTokenPrices(prevPrices => ({
         ...prevPrices,
         ...batchPrices
@@ -753,8 +798,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     );
   }
   
-  // Empty state
-  if (!transactions || transactions.length === 0) {
+  // Empty state - add proper null/undefined checks
+  if (!Array.isArray(transactions) || transactions.length === 0) {
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm glass-card">
         <h3 className="text-xl font-bold mb-2 text-white">
