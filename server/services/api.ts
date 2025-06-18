@@ -142,11 +142,17 @@ export async function getWalletTransactionHistory(
       return null;
     }
     
-    const data = await response.json();
+    const data = await response.json() as any;
     
-    if (!data.result || !Array.isArray(data.result)) {
-      console.log(`No transaction results found for ${walletAddress}`);
-      return { result: [], cursor: null, page: 1, page_size: limit };
+    console.log(`API Response structure:`, Object.keys(data));
+    console.log(`Transaction count in response:`, data.items ? data.items.length : 'no items field');
+    
+    // PulseChain Scan API returns data.items, not data.result
+    const transactions_data = data.items || [];
+    
+    if (!Array.isArray(transactions_data) || transactions_data.length === 0) {
+      console.log(`No transaction results found for ${walletAddress}. Response keys:`, Object.keys(data));
+      return { result: [], cursor: undefined, page: 1, page_size: limit };
     }
     
     // Transform PulseChain Scan API response to match our Transaction interface
