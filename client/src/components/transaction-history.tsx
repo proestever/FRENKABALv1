@@ -148,7 +148,7 @@ const detectTokenSwap = (tx: Transaction) => {
     const receivedAddresses = new Set(receivedTokens.map(t => t.address?.toLowerCase()));
     
     // If there are different tokens involved, it's likely a swap
-    const hasOverlap = [...sentAddresses].some(addr => receivedAddresses.has(addr));
+    const hasOverlap = Array.from(sentAddresses).some(addr => receivedAddresses.has(addr));
     
     if (!hasOverlap || sentAddresses.size + receivedAddresses.size > 2) {
       return {
@@ -1540,13 +1540,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               )}
               
               {/* Token Swap Summary */}
-              {swapInfo && (
+              {(() => {
+                const swapInfo = detectTokenSwap(tx);
+                return swapInfo && (
                 <div className="mb-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                   <div className="text-sm font-medium text-purple-400 mb-2">Token Swap Details</div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <div className="text-xs text-gray-400 mb-1">Sent:</div>
-                      {swapInfo.sentTokens.map((token, i) => (
+                      {swapInfo.sentTokens.map((token: any, i: number) => (
                         <div key={i} className="flex items-center text-sm">
                           <TokenLogo
                             address={token.address || ''}
@@ -1562,7 +1564,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     </div>
                     <div>
                       <div className="text-xs text-gray-400 mb-1">Received:</div>
-                      {swapInfo.receivedTokens.map((token, i) => (
+                      {swapInfo.receivedTokens.map((token: any, i: number) => (
                         <div key={i} className="flex items-center text-sm">
                           <TokenLogo
                             address={token.address || ''}
@@ -1578,7 +1580,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     </div>
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {/* ERC20 Transfers */}
               {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
@@ -1809,7 +1812,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               </div>
             </div>
           </div>
-        )})}
+        ))}
       </div>
       
       {/* Load More Button and Status */}
