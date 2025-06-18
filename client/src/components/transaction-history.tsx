@@ -436,7 +436,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Update token prices whenever batch prices are fetched
   useEffect(() => {
-    if (batchPrices && Object.keys(batchPrices).length > 0) {
+    if (batchPrices && typeof batchPrices === 'object' && Object.keys(batchPrices).length > 0) {
       setTokenPrices(prevPrices => ({
         ...prevPrices,
         ...batchPrices
@@ -1273,7 +1273,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       {(() => {
                         const tokenAddress = (transfer.address || '').toLowerCase();
                         // Check if we have a price from our batch hook
-                        const hasBatchPrice = !!batchPrices[tokenAddress];
+                        const hasBatchPrice = !!(batchPrices && batchPrices[tokenAddress]);
                         const usdValue = calculateUsdValue(transfer.value, transfer.token_decimals, tokenAddress);
                         
                         return usdValue ? (
@@ -1303,7 +1303,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       {(() => {
                         const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
                         // Check if we have a price from our batch hook
-                        const hasBatchPrice = !!batchPrices[plsAddress];
+                        const hasBatchPrice = !!(batchPrices && batchPrices[plsAddress]);
                         const usdValue = calculateUsdValue(transfer.value, '18', plsAddress);
                         
                         return usdValue ? (
@@ -1322,7 +1322,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     {(() => {
                       const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
                       // Check if we have a price from our batch hook
-                      const hasBatchPrice = !!batchPrices[plsAddress];
+                      const hasBatchPrice = !!(batchPrices && batchPrices[plsAddress]);
                       const usdValue = calculateUsdValue(tx.transaction_fee.toString(), '18', plsAddress);
                       
                       return usdValue ? (
@@ -1557,7 +1557,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     </div>
                     {(() => {
                       const tokenAddress = (transfer.address || '').toLowerCase();
-                      const hasBatchPrice = !!batchPrices[tokenAddress];
+                      const hasBatchPrice = !!(batchPrices && batchPrices[tokenAddress]);
                       const usdValue = calculateUsdValue(transfer.value, transfer.token_decimals, tokenAddress);
                       
                       return usdValue ? (
@@ -1668,7 +1668,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     </div>
                     {(() => {
                       const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-                      const hasBatchPrice = !!batchPrices[plsAddress];
+                      const hasBatchPrice = !!(batchPrices && batchPrices[plsAddress]);
                       const usdValue = calculateUsdValue(transfer.value, '18', plsAddress);
                       
                       return usdValue ? (
