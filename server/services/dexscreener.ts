@@ -111,9 +111,10 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
       return null;
     }
     
-    // Find the pair with highest liquidity
+    // Find the best pair with improved selection logic
     let bestPair: DexScreenerPair | null = null;
-    let highestLiquidity = 0;
+    let bestScore = 0;
+    const validPairs: DexScreenerPair[] = [];
     
     for (const pair of data.pairs) {
       // Only use pairs from pulsechain
@@ -122,9 +123,52 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
       // Ensure priceUsd is available
       if (!pair.priceUsd) continue;
       
-      // Prefer pairs with higher liquidity
-      if (pair.liquidity?.usd > highestLiquidity) {
-        highestLiquidity = pair.liquidity.usd;
+      // Must have minimum liquidity to be considered
+      if (!pair.liquidity?.usd || pair.liquidity.usd < 1000) continue;
+      
+      validPairs.push(pair);
+    }
+    
+    if (validPairs.length === 0) {
+      console.log(`No valid pairs found for token ${addressToUse}`);
+      return null;
+    }
+    
+    // If multiple pairs, use quality scoring instead of just liquidity
+    for (const pair of validPairs) {
+      let score = 0;
+      
+      // Base score from liquidity (but cap extreme values)
+      const liquidityScore = Math.min(pair.liquidity.usd / 1000, 1000); // Cap at 1M
+      score += liquidityScore;
+      
+      // Bonus for reasonable volume
+      if (pair.volume?.h24 > 0) {
+        score += Math.min(pair.volume.h24 / 100, 100);
+      }
+      
+      // Bonus for transaction activity
+      if (pair.txns?.h24) {
+        const totalTxns = (pair.txns.h24.buys || 0) + (pair.txns.h24.sells || 0);
+        score += Math.min(totalTxns, 50);
+      }
+      
+      // Penalty for extreme price ratios (likely manipulation)
+      const price = parseFloat(pair.priceUsd);
+      if (validPairs.length > 1) {
+        const prices = validPairs.map(p => parseFloat(p.priceUsd));
+        const medianPrice = prices.sort((a, b) => a - b)[Math.floor(prices.length / 2)];
+        const priceRatio = price / medianPrice;
+        
+        // Heavy penalty if price is more than 10x different from median
+        if (priceRatio > 10 || priceRatio < 0.1) {
+          score *= 0.1;
+          console.log(`Price outlier detected for pair: $${price} vs median $${medianPrice}, applying penalty`);
+        }
+      }
+      
+      if (score > bestScore) {
+        bestScore = score;
         bestPair = pair;
       }
     }

@@ -145,6 +145,9 @@ Required environment variables:
 - Updated `api.ts` to use only DexScreener and PulseChain Scan APIs
 - Modified price source service to default all tokens to DexScreener
 - Enhanced error handling for API fallbacks
+- **Improved price selection algorithm** - Added outlier detection to prevent manipulated prices
+- **Quality scoring system** - Considers liquidity, volume, transactions, and price consistency
+- **Manipulation protection** - Automatically detects and penalizes price outliers over 10x median
 
 ## User Preferences
 
