@@ -78,6 +78,17 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
   // Normalize address
   const normalizedAddress = tokenAddress.toLowerCase();
   
+  // Hardcode stablecoins from Ethereum to $1
+  const stablecoins: Record<string, number> = {
+    '0xefd766ccb38eaf1dfd701853bfce31359239f305': 1.0, // DAI from Ethereum
+    '0xdac17f958d2ee523a2206206994597c13d831ec7': 1.0, // USDT from Ethereum
+    '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': 1.0   // USDC from Ethereum
+  };
+  
+  if (stablecoins[normalizedAddress]) {
+    return { price: stablecoins[normalizedAddress], priceChange24h: 0 };
+  }
+  
   // Check cache first
   const now = Date.now();
   if (priceCache[normalizedAddress] && now - priceCache[normalizedAddress].timestamp < CACHE_TTL) {

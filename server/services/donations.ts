@@ -76,10 +76,16 @@ async function getTokenPriceForDonations(tokenAddress: string): Promise<number> 
     if (normalizedAddress === '0xa1077a294dde1b09bb078844df40758a5d0f9a27') {
       return 0.000026; // WPLS (same as PLS)
     }
-    // Remove hardcoded DAI price - let DexScreener handle it
-    // if (normalizedAddress === '0xca9ba905926e4592632d11827edc47607c92e585') {
-    //   return 0.9999; // DAI - stable coin close to 1 USD  
-    // }
+    // Stablecoins from Ethereum - always $1
+    if (normalizedAddress === '0xefd766ccb38eaf1dfd701853bfce31359239f305') {
+      return 1.0; // DAI from Ethereum
+    }
+    if (normalizedAddress === '0xdac17f958d2ee523a2206206994597c13d831ec7') {
+      return 1.0; // USDT from Ethereum  
+    }
+    if (normalizedAddress === '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48') {
+      return 1.0; // USDC from Ethereum
+    }
     if (normalizedAddress === '0x95b303987a60c71504d99aa1b13b4da07b0790ab') {
       return 0.000020; // PLSX
     }

@@ -217,6 +217,38 @@ export async function getWalletTransactionHistory(
 export async function getTokenPrice(tokenAddress: string): Promise<TokenPriceResponse | null> {
   const normalizedAddress = tokenAddress.toLowerCase();
   
+  // Hardcode stablecoins from Ethereum to $1
+  const stablecoins: Record<string, {symbol: string, name: string}> = {
+    '0xefd766ccb38eaf1dfd701853bfce31359239f305': { symbol: 'DAI', name: 'Dai Stablecoin from Ethereum' },
+    '0xdac17f958d2ee523a2206206994597c13d831ec7': { symbol: 'USDT', name: 'Tether USD from Ethereum' },
+    '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': { symbol: 'USDC', name: 'USD Coin from Ethereum' }
+  };
+  
+  if (stablecoins[normalizedAddress]) {
+    const token = stablecoins[normalizedAddress];
+    return {
+      tokenName: token.name,
+      tokenSymbol: token.symbol,
+      tokenDecimals: "18",
+      tokenLogo: getDefaultLogo(token.symbol),
+      nativePrice: {
+        value: "1000000000000000000",
+        decimals: 18,
+        name: "PLS",
+        symbol: "PLS",
+        address: PLS_TOKEN_ADDRESS
+      },
+      usdPrice: 1.0,
+      usdPriceFormatted: "$1.00",
+      exchangeName: "Stablecoin",
+      exchangeAddress: "0x0000000000000000000000000000000000000000",
+      tokenAddress: normalizedAddress,
+      blockTimestamp: new Date().toISOString(),
+      verifiedContract: true,
+      securityScore: 100
+    };
+  }
+  
   const cachedPrice = cacheService.getTokenPrice(normalizedAddress);
   if (cachedPrice) {
     console.log(`Using cached price for ${normalizedAddress}: ${cachedPrice.usdPrice} USD`);
