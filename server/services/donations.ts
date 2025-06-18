@@ -123,6 +123,10 @@ async function getDonationDetails(transaction: Transaction, donationAddress: str
     pricePromises.push(
       getTokenPriceForDonations('0x0000000000000000000000000000000000000000').then(price => {
         nativeDonation.valueUsd = valueInPls * price;
+        console.log(`PLS donation: ${valueInPls} PLS worth $${nativeDonation.valueUsd.toFixed(4)}`);
+      }).catch(error => {
+        console.error('Error getting PLS price for donation:', error);
+        nativeDonation.valueUsd = 0;
       })
     );
     

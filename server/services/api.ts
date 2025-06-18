@@ -116,15 +116,21 @@ export async function getNativePlsBalance(walletAddress: string): Promise<{balan
 
 export async function getWalletTransactionHistory(
   walletAddress: string,
-  page: number = 1,
-  limit: number = 50
-): Promise<{ transactions: Transaction[], totalCount: number }> {
+  limit: number = 50,
+  cursor?: string | null
+): Promise<{ result: Transaction[]; cursor?: string; page?: number; page_size?: number } | null> {
   try {
     trackApiCall(walletAddress, 'getWalletTransactionHistory');
     console.log(`Fetching transaction history for ${walletAddress} from PulseChain Scan API`);
     
-    const offset = (page - 1) * limit;
-    const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/transactions?limit=${limit}&offset=${offset}`, {
+    let url = `${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/transactions?limit=${limit}`;
+    
+    // Add cursor parameter if provided
+    if (cursor) {
+      url += `&cursor=${cursor}`;
+    }
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Accept': 'application/json'
@@ -132,18 +138,73 @@ export async function getWalletTransactionHistory(
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      console.error(`Error fetching transaction history: ${response.status} ${response.statusText}`);
+      return null;
     }
     
-    const data = await response.json() as { items: Transaction[], next_page_params?: any };
+    const data = await response.json();
+    
+    if (!data.result || !Array.isArray(data.result)) {
+      console.log(`No transaction results found for ${walletAddress}`);
+      return { result: [], cursor: null, page: 1, page_size: limit };
+    }
+    
+    // Transform PulseChain Scan API response to match our Transaction interface
+    const transactions: Transaction[] = data.result.map((tx: any) => ({
+      hash: tx.hash,
+      nonce: tx.nonce?.toString() || '0',
+      transaction_index: tx.position?.toString() || '0',
+      from_address: tx.from?.hash || tx.from_address || '',
+      from_address_label: tx.from?.name || null,
+      to_address: tx.to?.hash || tx.to_address || '',
+      to_address_label: tx.to?.name || null,
+      value: tx.value || '0',
+      gas: tx.gas_limit?.toString() || '0',
+      gas_price: tx.gas_price?.toString() || '0',
+      receipt_gas_used: tx.gas_used?.toString() || '0',
+      receipt_status: tx.status === 'ok' ? '1' : '0',
+      block_timestamp: tx.timestamp || '',
+      block_number: tx.block?.toString() || '0',
+      transaction_fee: tx.fee?.value?.toString() || '0',
+      method_label: tx.method || null,
+      // Map token transfers if they exist
+      erc20_transfers: tx.token_transfers ? tx.token_transfers.map((transfer: any) => ({
+        token_name: transfer.token?.name || null,
+        token_symbol: transfer.token?.symbol || null,
+        token_logo: transfer.token?.icon_url || null,
+        token_decimals: transfer.token?.decimals || null,
+        from_address: transfer.from?.hash || '',
+        from_address_label: transfer.from?.name || null,
+        to_address: transfer.to?.hash || '',
+        to_address_label: transfer.to?.name || null,
+        address: transfer.token?.address || '',
+        log_index: transfer.log_index || 0,
+        value: transfer.total?.value || transfer.value || '0',
+        value_formatted: transfer.total?.value_formatted || null,
+        possible_spam: false,
+        verified_contract: transfer.token?.verified || false,
+        security_score: null,
+        direction: null,
+        internal_transaction: false
+      })) : [],
+      native_transfers: [],
+      nft_transfers: [],
+      summary: null,
+      category: tx.tx_types?.[0] || null,
+      possible_spam: false
+    }));
+    
+    console.log(`Found ${transactions.length} transactions for ${walletAddress}`);
     
     return {
-      transactions: data.items || [],
-      totalCount: data.items?.length || 0
+      result: transactions,
+      cursor: data.next_page_params?.cursor || null,
+      page: 1,
+      page_size: limit
     };
   } catch (error) {
     console.error(`Error fetching transaction history for ${walletAddress}:`, error);
-    return { transactions: [], totalCount: 0 };
+    return null;
   }
 }
 
