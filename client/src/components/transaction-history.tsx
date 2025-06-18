@@ -556,8 +556,67 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
 
 
+  // Enhanced function to extract token contracts from multicalls like Moralis
+  const extractTokensFromMulticall = async (tx: Transaction) => {
+    if (!tx.method_label?.toLowerCase().includes('multicall')) {
+      return null;
+    }
+
+    try {
+      // Fetch transaction details from our new endpoint
+      const response = await fetch(`/api/transaction/${tx.hash}/details`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch transaction details: ${response.status}`);
+      }
+      
+      const txDetails = await response.json();
+      const tokenAddresses = txDetails.extractedTokens || [];
+      
+      if (tokenAddresses.length === 0) {
+        return null;
+      }
+
+      // Fetch token info for each extracted address
+      const tokenPromises = tokenAddresses.map(async (address: string) => {
+        try {
+          const tokenResponse = await fetch(`/api/token/${address}/info`);
+          if (tokenResponse.ok) {
+            const tokenInfo = await tokenResponse.json();
+            return {
+              ...tokenInfo,
+              amount: 'Detected',
+              rawValue: '0',
+              isPlaceholder: false
+            };
+          }
+        } catch (e) {
+          console.warn(`Failed to fetch token info for ${address}:`, e);
+        }
+        return null;
+      });
+
+      const tokens = (await Promise.all(tokenPromises)).filter(Boolean);
+      
+      // For multicalls, we can't easily determine direction, so show as detected tokens
+      return {
+        sentTokens: tokens.slice(0, Math.ceil(tokens.length / 2)).map(token => ({
+          ...token,
+          amount: 'Token detected in multicall'
+        })),
+        receivedTokens: tokens.slice(Math.ceil(tokens.length / 2)).map(token => ({
+          ...token,
+          amount: 'Token detected in multicall'
+        }))
+      };
+      
+    } catch (error) {
+      console.warn('Failed to extract tokens from multicall:', error);
+      return null;
+    }
+  };
+
   // Helper function to detect and format swap details - enhanced for multicalls
-  const detectTokenSwap = (tx: Transaction) => {
+  const detectTokenSwap = async (tx: Transaction) => {
     // Enhanced detection for multicalls and swaps
     const isSwapTransaction = getTransactionType(tx) === 'swap' || 
                              (tx.method_label && tx.method_label.toLowerCase().includes('multicall')) ||
@@ -571,11 +630,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
       const sendTransfers = tx.erc20_transfers.filter(t => t.direction === 'send');
       const receiveTransfers = tx.erc20_transfers.filter(t => t.direction === 'receive');
-
-      // For single direction transfers, still show them if it's a swap method
-      if (sendTransfers.length === 0 && receiveTransfers.length === 0) {
-        return null;
-      }
 
       // Filter out LP tokens and focus on main swap tokens
       const filterLPTokens = (transfers: TransactionTransfer[]) => 
@@ -612,7 +666,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       };
     }
 
-    // For multicalls without ERC20 transfers, try to extract token info
+    // For multicalls without visible ERC20 transfers, extract from transaction logs
+    if (tx.method_label?.toLowerCase().includes('multicall')) {
+      const multicallTokens = await extractTokensFromMulticall(tx);
+      if (multicallTokens) {
+        return multicallTokens;
+      }
+    }
+
+    // Fallback for DEX interactions
     const isDexAddress = tx.to_address && (
       tx.to_address.toLowerCase().includes('router') ||
       tx.to_address.toLowerCase().includes('dex') ||
@@ -624,15 +686,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       return {
         sentTokens: [{
           symbol: 'DEX Interaction',
-          amount: 'See transaction details',
+          amount: 'Check transaction on explorer',
           address: '',
           decimals: '18',
           rawValue: '0',
           isPlaceholder: true
         }],
         receivedTokens: [{
-          symbol: 'Processing...',
-          amount: 'Analyzing swap...',
+          symbol: 'Multicall',
+          amount: 'Multiple operations',
           address: '',
           decimals: '18',
           rawValue: '0',
