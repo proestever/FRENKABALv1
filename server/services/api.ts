@@ -1,22 +1,5 @@
-import fetch from 'node-fetch';
-import Moralis from 'moralis';
-import { 
-  ProcessedToken, 
-  PulseChainTokenBalanceResponse, 
-  PulseChainTokenBalance,
-  PulseChainAddressResponse, 
-  MoralisTokenPriceResponse, 
-  MoralisWalletTokenBalancesResponse,
-  WalletData 
-} from '../types';
-import { storage } from '../storage';
-import { InsertTokenLogo, TokenLogo } from '@shared/schema';
-import { updateLoadingProgress } from '../routes';
-import { processLpTokens } from './lp-token-service';
-import { cacheService } from './cache-service';
-import { apiStatsService } from './api-stats-service';
-import { getTokenPriceFromDexScreener, getTokenPriceDataFromDexScreener } from './dexscreener';
-import { shouldUseDexScreenerForToken } from './price-source-service';
+// Re-export everything from the new clean implementation
+export * from './api-new';
 
 // API call counter for monitoring and debugging
 interface ApiCallCounter {
@@ -93,61 +76,30 @@ export function resetApiCounter(): ApiCallCounter {
 export function getApiCounterStats(): ApiCallCounter {
   return { ...apiCallCounter };
 }
-// Initialize Moralis
-try {
-  const moralisApiKey = process.env.MORALIS_API_KEY;
-  if (!moralisApiKey) {
-    throw new Error("MORALIS_API_KEY environment variable is required");
-  }
-  
-  Moralis.start({
-    apiKey: moralisApiKey
-  });
-  console.log("Moralis initialized successfully");
-} catch (error) {
-  console.error("Failed to initialize Moralis:", error);
-}
+// Using DexScreener and PulseChain Scan APIs only - no Moralis dependency
+console.log("API service initialized with DexScreener and PulseChain Scan");
 
 // Constants
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
-const MORALIS_API_KEY = process.env.MORALIS_API_KEY;
 const PLS_TOKEN_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'; // PulseChain native token is 0xeee...eee 
 const PLS_CONTRACT_ADDRESS = '0x5616458eb2bAc88dD60a4b08F815F37335215f9B'; // Alternative PLS contract address
 const WPLS_CONTRACT_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'; // wPLS contract address for accurate price
 const PLS_DECIMALS = 18; // Native PLS has 18 decimals
-const PLS_PRICE_USD = 0.000025; // Initial placeholder price if API fails - updated May 2024
-
-// List of important tokens that should always be included in wallet data
-const IMPORTANT_TOKENS = [
-  '0xec4252e62c6de3d655ca9ce3afc12e553ebba274', // PUMP token
-  '0x6C203A555824ec90a215f37916cf8Db58EBe2fA3', // Token with incorrect Moralis price
-];
-
-// Note: Moralis is already initialized at the top of the file
 
 /**
- * Get native PLS balance for a wallet address directly from Moralis API
+ * Get native PLS balance for a wallet address using PulseChain Scan API
  */
 export async function getNativePlsBalance(walletAddress: string): Promise<{balance: string, balanceFormatted: number} | null> {
   try {
     // Track API call
     trackApiCall(walletAddress, 'getNativePlsBalance');
-    console.log(`Fetching native PLS balance for ${walletAddress} from Moralis API`);
+    console.log(`Fetching native PLS balance for ${walletAddress} from PulseChain Scan API`);
     
-    // Using direct Moralis API call with the correct endpoint
-    const apiKey = MORALIS_API_KEY;
-    if (!apiKey) {
-      throw new Error("MORALIS_API_KEY environment variable is required");
-    }
-    
-    // Direct API call instead of SDK which might be using a different endpoint
-    const url = `https://deep-index.moralis.io/api/v2/${walletAddress}/balance?chain=0x171`;
-    
-    const response = await fetch(url, {
+    // Using PulseChain Scan API instead of Moralis
+    const response = await fetch(`${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}`, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
-        'X-API-Key': apiKey
+        'Accept': 'application/json'
       }
     });
     

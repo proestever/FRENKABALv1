@@ -34,8 +34,8 @@ export interface PulseChainAddressResponse {
   created_at?: string;
 }
 
-// Moralis API response types
-export interface MoralisTokenPriceResponse {
+// DexScreener-based API response types (replacing Moralis)
+export interface TokenPriceResponse {
   tokenName: string;
   tokenSymbol: string;
   tokenLogo?: string;
@@ -65,8 +65,8 @@ export interface MoralisTokenPriceResponse {
   '24hrPercentChange'?: string;
 }
 
-// Moralis Wallet Token Balances Price Response
-export interface MoralisWalletTokenBalanceItem {
+// Wallet Token Balance Response (using PulseChain Scan + DexScreener)
+export interface WalletTokenBalanceItem {
   token_address: string;
   symbol: string;
   name: string;
@@ -86,11 +86,11 @@ export interface MoralisWalletTokenBalanceItem {
   portfolio_percentage?: number;
 }
 
-export interface MoralisWalletTokenBalancesResponse {
+export interface WalletTokenBalancesResponse {
   cursor: string;
   page: number;
   page_size: number;
-  result: MoralisWalletTokenBalanceItem[];
+  result: WalletTokenBalanceItem[];
 }
 
 // Combined wallet data types

@@ -43,12 +43,11 @@ export async function getDexScreenerPreferredTokens(): Promise<string[]> {
 
 /**
  * Check if a specific token should use DexScreener for pricing
+ * Note: All tokens now use DexScreener since we removed Moralis
  */
 export async function shouldUseDexScreenerForToken(tokenAddress: string): Promise<boolean> {
-  if (!tokenAddress) return false;
-  
-  const preferredTokens = await getDexScreenerPreferredTokens();
-  return preferredTokens.includes(tokenAddress.toLowerCase());
+  // Always return true since we're using DexScreener for all tokens now
+  return true;
 }
 
 /**
