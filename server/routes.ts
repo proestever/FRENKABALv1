@@ -580,6 +580,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Transaction details endpoint for multicall token extraction
+  app.get("/api/transaction/:hash/details", async (req, res) => {
+    try {
+      const { hash } = req.params;
+      
+      if (!hash || hash.length !== 66) {
+        return res.status(400).json({ error: "Invalid transaction hash" });
+      }
+
+      const result = await getTransactionDetails(hash);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching transaction details:", error);
+      res.status(500).json({ error: "Failed to fetch transaction details" });
+    }
+  });
+
+  // Token info endpoint for complete token metadata
+  app.get("/api/token/:address/info", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ error: "Invalid token address" });
+      }
+
+      const result = await getTokenInfo(address);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching token info:", error);
+      res.status(500).json({ error: "Failed to fetch token info" });
+    }
+  });
+
   app.get("/api/token-logo/:address", async (req, res) => {
     try {
       const { address } = req.params;
