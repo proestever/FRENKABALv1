@@ -169,7 +169,9 @@ Required environment variables:
 - **Token icons in transactions** - All transaction transfers now show token logos using DexScreener/PulseX sources
 - **USD values for all transfers** - Real-time USD calculations displayed for every token transfer with color-coded direction indicators
 - **Multicall support** - Enhanced detection for PulseX router multicalls even without visible ERC20 transfers
-- **Placeholder handling** - Smart fallback display for DEX interactions that don't expose token transfer details
+- **Backend token extraction** - Added API endpoints to extract token contracts from transaction logs like original Moralis version
+- **Complete token metadata** - New endpoints fetch full token information including prices, logos, and verification status
+- **Enhanced DEX detection** - Smart identification of DEX router interactions with proper multicall handling
 
 ## User Preferences
 
