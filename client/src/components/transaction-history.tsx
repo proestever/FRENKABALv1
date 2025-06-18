@@ -556,14 +556,77 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
 
 
-  // Enhanced multicall token detection - will be implemented with backend endpoints
-  const isMulticallSwap = (tx: Transaction): boolean => {
-    return !!(tx.method_label?.toLowerCase().includes('multicall') && 
-              tx.to_address && (
-                tx.to_address === '0xDA9aBA4eACF54E0273f56dfFee6B8F1e20B23Bba' || // PulseX Router
-                tx.to_address === '0x274AAe59ad0Ca14BB40ad27A307F00D09a782Ee5' ||    // PulseX Router V1
-                tx.to_address.toLowerCase().includes('router')
-              ));
+  // Helper function to detect and format swap details
+  const detectTokenSwap = (tx: Transaction) => {
+    const isSwapTransaction = getTransactionType(tx) === 'swap';
+    const isMulticallTransaction = tx.method_label?.toLowerCase().includes('multicall');
+    const isDexRouter = tx.to_address && (
+      tx.to_address === '0xDA9aBA4eACF54E0273f56dfFee6B8F1e20B23Bba' || // PulseX Router
+      tx.to_address === '0x274AAe59ad0Ca14BB40ad27A307F00D09a782Ee5' ||    // PulseX Router V1
+      tx.to_address.toLowerCase().includes('router')
+    );
+
+    // Only show swap details for actual swaps or DEX interactions
+    if (!isSwapTransaction && !isMulticallTransaction && !isDexRouter) {
+      return null;
+    }
+
+    // Process visible ERC20 transfers for actual token data
+    if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
+      const sentTokens = tx.erc20_transfers
+        .filter(t => t.direction === 'send')
+        .map(t => ({
+          symbol: t.token_symbol || 'Unknown',
+          amount: formatTokenValue(t.value, t.token_decimals),
+          address: t.address || '',
+          decimals: t.token_decimals || '18',
+          rawValue: t.value,
+          isPlaceholder: false
+        }));
+
+      const receivedTokens = tx.erc20_transfers
+        .filter(t => t.direction === 'receive')
+        .map(t => ({
+          symbol: t.token_symbol || 'Unknown',
+          amount: formatTokenValue(t.value, t.token_decimals),
+          address: t.address || '',
+          decimals: t.token_decimals || '18',
+          rawValue: t.value,
+          isPlaceholder: false
+        }));
+
+      // Only return if we have actual token transfers
+      if (sentTokens.length > 0 || receivedTokens.length > 0) {
+        return {
+          sentTokens,
+          receivedTokens
+        };
+      }
+    }
+
+    // For multicalls or DEX interactions without visible transfers, show placeholders
+    if (isMulticallTransaction || isDexRouter) {
+      return {
+        sentTokens: [{
+          symbol: 'Token Out',
+          amount: 'DEX interaction detected',
+          address: tx.to_address || '',
+          decimals: '18',
+          rawValue: '0',
+          isPlaceholder: true
+        }],
+        receivedTokens: [{
+          symbol: 'Token In',
+          amount: 'DEX interaction detected',
+          address: '',
+          decimals: '18', 
+          rawValue: '0',
+          isPlaceholder: true
+        }]
+      };
+    }
+
+    return null;
   };
 
   // Helper function to detect and format swap details - enhanced for multicalls
@@ -617,20 +680,20 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       };
     }
 
-    // For multicalls without visible ERC20 transfers, show enhanced DEX interaction info
-    if (isMulticallSwap(tx)) {
+    // For multicalls or DEX interactions without visible transfers, show placeholders
+    if (isMulticallTransaction || isDexRouter) {
       return {
         sentTokens: [{
-          symbol: 'DEX Multicall',
-          amount: 'Multiple operations detected',
+          symbol: 'Token Out',
+          amount: 'DEX interaction detected',
           address: tx.to_address || '',
           decimals: '18',
           rawValue: '0',
           isPlaceholder: true
         }],
         receivedTokens: [{
-          symbol: 'Swap Detected',
-          amount: 'Check transaction details',
+          symbol: 'Token In',
+          amount: 'DEX interaction detected',
           address: '',
           decimals: '18', 
           rawValue: '0',
@@ -1251,7 +1314,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 <ArrowUpRight size={12} className="mr-1" />
                                 Sent (Out)
                               </div>
-                              {swapInfo.sentTokens.map((token, i) => {
+                              {swapInfo.sentTokens?.map((token: any, i: number) => {
                                 const usdValue = !token.isPlaceholder ? calculateUsdValue(token.rawValue, token.decimals, token.address) : null;
                                 return (
                                   <div key={`sent-${i}`} className="flex items-center space-x-2 p-2 bg-red-500/5 border border-red-500/10 rounded">
@@ -1293,7 +1356,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 <ArrowDownLeft size={12} className="mr-1" />
                                 Received (In)
                               </div>
-                              {swapInfo.receivedTokens.map((token, i) => {
+                              {swapInfo.receivedTokens?.map((token: any, i: number) => {
                                 const usdValue = !token.isPlaceholder ? calculateUsdValue(token.rawValue, token.decimals, token.address) : null;
                                 return (
                                   <div key={`received-${i}`} className="flex items-center space-x-2 p-2 bg-green-500/5 border border-green-500/10 rounded">
@@ -1822,7 +1885,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           Received (In)
                         </div>
                         <div className="space-y-2">
-                          {swapInfo.receivedTokens.map((token, i) => {
+                          {swapInfo.receivedTokens?.map((token: any, i: number) => {
                             const usdValue = calculateUsdValue(token.rawValue, token.decimals, token.address);
                             return (
                               <div key={`received-${i}`} className="flex items-center space-x-2 p-2 bg-green-500/5 border border-green-500/10 rounded">

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import fetch from "node-fetch";
 import { storage } from "./storage";
-import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance, getApiCounterStats, resetApiCounter } from "./services/api";
+import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance, getApiCounterStats, resetApiCounter, getTransactionDetails, getTokenInfo } from "./services/api";
 import { 
   addDexScreenerPreferredToken, 
   removeDexScreenerPreferredToken, 

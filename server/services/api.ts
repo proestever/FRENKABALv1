@@ -582,5 +582,79 @@ export async function getSpecificTokenBalance(
   }
 }
 
+// Transaction details function for extracting token contracts from multicalls
+export async function getTransactionDetails(hash: string) {
+  try {
+    trackApiCall(null, 'getTransactionDetails');
+    console.log(`Fetching transaction details for ${hash}`);
+    
+    const url = `${PULSECHAIN_SCAN_API_BASE}/transactions/${hash}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`PulseChain Scan API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Extract token addresses from Transfer event logs
+    const tokenAddresses = new Set<string>();
+    if (data.logs) {
+      data.logs.forEach((log: any) => {
+        if (log.topics && log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
+          tokenAddresses.add(log.address);
+        }
+      });
+    }
+
+    return {
+      ...data,
+      extractedTokens: Array.from(tokenAddresses)
+    };
+  } catch (error) {
+    console.error('Error fetching transaction details:', error);
+    throw error;
+  }
+}
+
+// Token info function for complete metadata extraction
+export async function getTokenInfo(address: string) {
+  try {
+    trackApiCall(null, 'getTokenInfo');
+    console.log(`Fetching token info for ${address}`);
+    
+    const url = `${PULSECHAIN_SCAN_API_BASE}/tokens/${address}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`PulseChain Scan API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Get price from DexScreener
+    let priceData = null;
+    try {
+      priceData = await getTokenPriceFromDexScreener(address);
+    } catch (e) {
+      console.warn(`Failed to get price for ${address}`);
+    }
+
+    return {
+      address: data.address || address,
+      name: data.name || 'Unknown',
+      symbol: data.symbol || 'Unknown',
+      decimals: data.decimals || '18',
+      icon_url: data.icon_url || null,
+      verified: data.verified || false,
+      price: priceData?.usdPrice || null,
+      priceChange24h: priceData?.usdPrice24hrPercentChange || null
+    };
+  } catch (error) {
+    console.error('Error fetching token info:', error);
+    throw error;
+  }
+}
+
 // Legacy compatibility - map getWalletData to getWalletDataFull
 export const getWalletData = getWalletDataFull;
