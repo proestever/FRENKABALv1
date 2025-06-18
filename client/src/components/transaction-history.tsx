@@ -629,100 +629,64 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return null;
   };
 
-  // Helper function to detect and format swap details - enhanced for multicalls
-  const detectTokenSwap = (tx: Transaction) => {
-    // Enhanced detection for multicalls and swaps
-    const isSwapTransaction = getTransactionType(tx) === 'swap' || 
-                             (tx.method_label && tx.method_label.toLowerCase().includes('multicall')) ||
-                             (tx.erc20_transfers && tx.erc20_transfers.length >= 1);
+  // Enhanced swap detection that shows "token out" and "token in" 
+  const getSwapDetails = (tx: Transaction) => {
+    // Detect if this is a swap or DEX interaction
+    const isSwap = getTransactionType(tx) === 'swap';
+    const isMulticall = tx.method_label?.toLowerCase().includes('multicall');
+    const isDexRouter = tx.to_address && (
+      tx.to_address === '0xDA9aBA4eACF54E0273f56dfFee6B8F1e20B23Bba' || // PulseX Router
+      tx.to_address === '0x274AAe59ad0Ca14BB40ad27A307F00D09a782Ee5' ||    // PulseX Router V1
+      tx.to_address.toLowerCase().includes('router')
+    );
 
-    if (!isSwapTransaction) {
+    if (!isSwap && !isMulticall && !isDexRouter) {
       return null;
     }
 
-    // If we have ERC20 transfers, use them (existing logic)
+    // Process ERC20 transfers to show actual tokens going in/out
     if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
-      const sendTransfers = tx.erc20_transfers.filter(t => t.direction === 'send');
-      const receiveTransfers = tx.erc20_transfers.filter(t => t.direction === 'receive');
+      const tokensOut = tx.erc20_transfers
+        .filter(t => t.direction === 'send')
+        .map(t => ({
+          symbol: t.token_symbol || 'Unknown',
+          amount: formatTokenValue(t.value, t.token_decimals),
+          address: t.address || '',
+          decimals: t.token_decimals || '18',
+          rawValue: t.value,
+          isPlaceholder: false
+        }));
 
-      // Filter out LP tokens and focus on main swap tokens
-      const filterLPTokens = (transfers: TransactionTransfer[]) => 
-        transfers.filter(t => t.token_symbol && 
-          !t.token_symbol.toLowerCase().includes('lp') && 
-          !t.token_symbol.toLowerCase().includes('pulsex') &&
-          !t.token_symbol.toLowerCase().includes('pair')
-        );
+      const tokensIn = tx.erc20_transfers
+        .filter(t => t.direction === 'receive')
+        .map(t => ({
+          symbol: t.token_symbol || 'Unknown',
+          amount: formatTokenValue(t.value, t.token_decimals),
+          address: t.address || '',
+          decimals: t.token_decimals || '18',
+          rawValue: t.value,
+          isPlaceholder: false
+        }));
 
-      const filteredSent = filterLPTokens(sendTransfers);
-      const filteredReceived = filterLPTokens(receiveTransfers);
-
-      const sentTokens = (filteredSent.length > 0 ? filteredSent : sendTransfers).map(t => ({
-        symbol: t.token_symbol || 'Unknown',
-        amount: t.value_formatted || formatTokenValue(t.value, t.token_decimals),
-        address: t.address || '',
-        decimals: t.token_decimals || '18',
-        rawValue: t.value,
-        isPlaceholder: false
-      }));
-
-      const receivedTokens = (filteredReceived.length > 0 ? filteredReceived : receiveTransfers).map(t => ({
-        symbol: t.token_symbol || 'Unknown', 
-        amount: t.value_formatted || formatTokenValue(t.value, t.token_decimals),
-        address: t.address || '',
-        decimals: t.token_decimals || '18',
-        rawValue: t.value,
-        isPlaceholder: false
-      }));
-
-      return {
-        sentTokens,
-        receivedTokens
-      };
+      if (tokensOut.length > 0 || tokensIn.length > 0) {
+        return { tokensOut, tokensIn };
+      }
     }
 
-    // For multicalls or DEX interactions without visible transfers, show placeholders
-    if (isMulticallTransaction || isDexRouter) {
+    // For multicalls without visible transfers, show placeholders
+    if (isMulticall || isDexRouter) {
       return {
-        sentTokens: [{
+        tokensOut: [{
           symbol: 'Token Out',
-          amount: 'DEX interaction detected',
-          address: tx.to_address || '',
-          decimals: '18',
-          rawValue: '0',
-          isPlaceholder: true
-        }],
-        receivedTokens: [{
-          symbol: 'Token In',
-          amount: 'DEX interaction detected',
-          address: '',
-          decimals: '18', 
-          rawValue: '0',
-          isPlaceholder: true
-        }]
-      };
-    }
-
-    // Fallback for DEX interactions
-    const isDexAddress = tx.to_address && (
-      tx.to_address.toLowerCase().includes('router') ||
-      tx.to_address.toLowerCase().includes('dex') ||
-      tx.to_address === '0xDA9aBA4eACF54E0273f56dfFee6B8F1e20B23Bba' || // PulseX Router
-      tx.to_address === '0x274AAe59ad0Ca14BB40ad27A307F00D09a782Ee5'    // Another common DEX
-    );
-
-    if (isDexAddress && tx.method_label?.toLowerCase().includes('multicall')) {
-      return {
-        sentTokens: [{
-          symbol: 'DEX Interaction',
-          amount: 'Check transaction on explorer',
+          amount: 'DEX interaction',
           address: '',
           decimals: '18',
           rawValue: '0',
           isPlaceholder: true
         }],
-        receivedTokens: [{
-          symbol: 'Multicall',
-          amount: 'Multiple operations',
+        tokensIn: [{
+          symbol: 'Token In', 
+          amount: 'DEX interaction',
           address: '',
           decimals: '18',
           rawValue: '0',
@@ -732,6 +696,17 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     }
 
     return null;
+  };
+
+  // Original detectTokenSwap function for backward compatibility
+  const detectTokenSwap = (tx: Transaction) => {
+    const swapDetails = getSwapDetails(tx);
+    if (!swapDetails) return null;
+    
+    return {
+      sentTokens: swapDetails.tokensOut,
+      receivedTokens: swapDetails.tokensIn
+    };
   };
 
   // Helper function to consolidate swap transfers of the same token
