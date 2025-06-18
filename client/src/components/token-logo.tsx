@@ -11,8 +11,8 @@ interface TokenLogoProps {
 }
 
 export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenLogoProps) {
-  // Disable all debugging logs
-  const DEBUG_LOGGING = false;
+  // Enable debugging logs to troubleshoot logo issues
+  const DEBUG_LOGGING = true;
   
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,13 +95,22 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
         }
         
         const data = await response.json();
+        if (DEBUG_LOGGING) {
+          console.log(`Token logo API response for ${normalizedAddress}:`, data);
+        }
         if (data && data.logoUrl) {
+          if (DEBUG_LOGGING) {
+            console.log(`Setting logo URL for ${normalizedAddress}: ${data.logoUrl}`);
+          }
           // Save to cache
           logoCache[normalizedAddress] = data.logoUrl;
           setLogoUrl(data.logoUrl);
         } else {
           // Default to the app logo if no logo found
           const defaultLogo = '/assets/100xfrenlogo.png';
+          if (DEBUG_LOGGING) {
+            console.log(`Using default logo for ${normalizedAddress}: ${defaultLogo}`);
+          }
           logoCache[normalizedAddress] = defaultLogo;
           setLogoUrl(defaultLogo);
         }
@@ -186,7 +195,9 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
         onError={(e) => {
           // Prevent infinite error loops
           e.currentTarget.onerror = null;
-          // Quietly handle the error - no console warnings
+          if (DEBUG_LOGGING) {
+            console.log(`Image load error for ${logoUrl}, falling back to generated logo`);
+          }
           setError(true);
           setLogoUrl(null);
         }}
