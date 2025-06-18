@@ -235,18 +235,25 @@ export function HexStakes({ walletAddress, otherWalletAddresses = [], isMultiWal
               // Calculate estimated interest using proper HEX mechanics
               let interestEarned = "0";
               if (progressPercentage > 0) {
-                // Calculate bonus hearts using HEX contract formulas
+                // Calculate bonus hearts using actual HEX contract formulas
+                const stakedHeartsNum = parseFloat(stakedHearts);
                 const bonusHearts = calculateStakeStartBonusHearts(stakedHearts, stakedDays);
                 
-                // Calculate stake shares (hearts + bonus) * SHARE_RATE_SCALE / shareRate
-                const approximateShareRate = 100000; // Conservative estimate
-                const stakeShares = (parseFloat(stakedHearts) + bonusHearts) * 100000 / approximateShareRate;
+                // Calculate stake shares: (hearts + bonus) * SHARE_RATE_SCALE / shareRate
+                // Current PulseChain HEX share rate is approximately 150000-200000
+                const currentShareRate = 175000; // More realistic estimate
+                const totalHearts = stakedHeartsNum + bonusHearts;
+                const stakeShares = (totalHearts * SHARE_RATE_SCALE) / currentShareRate;
                 
-                // Estimate daily payout based on current network conditions
-                const dailyYieldRate = 0.0002; // ~0.02% daily yield on shares
-                const daysElapsed = (stakedDays * progressPercentage) / 100;
+                // Calculate days elapsed and estimate daily rewards
+                const daysElapsed = Math.floor((stakedDays * progressPercentage) / 100);
                 
-                // Calculate accumulated interest
+                // More realistic daily yield: HEX historically averages 15-40% APY
+                // Conservative estimate: 25% APY = 0.0685% daily (25%/365)
+                const annualYield = 0.25; // 25% APY
+                const dailyYieldRate = annualYield / 365;
+                
+                // Calculate accumulated rewards based on stake shares
                 const interestHex = stakeShares * dailyYieldRate * daysElapsed;
                 interestEarned = interestHex.toFixed(2);
                 
