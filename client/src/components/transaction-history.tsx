@@ -1261,10 +1261,20 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             <div className="flex items-center">
                               <div className="group relative">
                                 <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30" title={transfer.token_symbol}>
-                                  {transfer.token_symbol && transfer.token_symbol.length > 15 
-                                    ? `${transfer.token_symbol.substring(0, 15)}...` 
+                                  {transfer.direction === 'receive' ? '+' : '-'}
+                                  {formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol && transfer.token_symbol.length > 15 
+                                    ? `${transfer.token_symbol.substring(0, 8)}...` 
                                     : transfer.token_symbol}
                                 </span>
+                                {/* USD Value Display */}
+                                {(() => {
+                                  const usdValue = calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '');
+                                  return usdValue ? (
+                                    <div className={`text-xs mt-1 ${transfer.direction === 'receive' ? 'text-green-300/70' : 'text-red-300/70'}`}>
+                                      {transfer.direction === 'receive' ? '+' : '-'}{formatCurrency(usdValue)}
+                                    </div>
+                                  ) : null;
+                                })()}
                                 <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
                                   <div className="mb-2 text-xs">
                                     <span className="text-muted-foreground">Contract:</span>
