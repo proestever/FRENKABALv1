@@ -11,8 +11,8 @@ interface TokenLogoProps {
 }
 
 export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenLogoProps) {
-  // Enable debugging logs to troubleshoot logo issues
-  const DEBUG_LOGGING = true;
+  // Disable debugging logs
+  const DEBUG_LOGGING = false;
   
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -196,7 +196,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
           // Prevent infinite error loops
           e.currentTarget.onerror = null;
           if (DEBUG_LOGGING) {
-            console.log(`Image load error for ${logoUrl}, falling back to generated logo`);
+            console.log(`Image load error for ${logoUrl} (address: ${address}), falling back to generated logo`);
           }
           setError(true);
           setLogoUrl(null);
