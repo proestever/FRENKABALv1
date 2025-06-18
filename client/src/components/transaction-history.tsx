@@ -134,6 +134,52 @@ const getTransactionType = (tx: Transaction): TransactionType => {
   return 'all'; // Default fallback
 };
 
+// Helper function to detect token swaps
+const detectTokenSwap = (tx: Transaction) => {
+  if (!tx.erc20_transfers || tx.erc20_transfers.length < 2) return null;
+  
+  const sentTokens = tx.erc20_transfers.filter(t => t.direction === 'send');
+  const receivedTokens = tx.erc20_transfers.filter(t => t.direction === 'receive');
+  
+  // A swap typically has tokens going out and different tokens coming in
+  if (sentTokens.length > 0 && receivedTokens.length > 0) {
+    // Check if tokens are different (not just the same token moving around)
+    const sentAddresses = new Set(sentTokens.map(t => t.address?.toLowerCase()));
+    const receivedAddresses = new Set(receivedTokens.map(t => t.address?.toLowerCase()));
+    
+    // If there are different tokens involved, it's likely a swap
+    const hasOverlap = [...sentAddresses].some(addr => receivedAddresses.has(addr));
+    
+    if (!hasOverlap || sentAddresses.size + receivedAddresses.size > 2) {
+      return {
+        type: 'swap',
+        sentTokens,
+        receivedTokens,
+        dexName: tx.to_address_label || 'DEX'
+      };
+    }
+  }
+  
+  return null;
+};
+
+// Helper function to format token values
+const formatTokenValue = (value: string, decimals?: string) => {
+  if (!value) return '0';
+  
+  const decimalPlaces = decimals ? parseInt(decimals, 10) : 18;
+  const divisor = Math.pow(10, decimalPlaces);
+  const numValue = parseFloat(value) / divisor;
+  
+  if (numValue === 0) return '0';
+  if (numValue < 0.000001) return '< 0.000001';
+  if (numValue < 1) return numValue.toFixed(6);
+  if (numValue < 1000) return numValue.toFixed(4);
+  if (numValue < 1000000) return numValue.toFixed(2);
+  
+  return numValue.toExponential(2);
+};
+
 export function TransactionHistory({ walletAddress, onClose }: TransactionHistoryProps) {
   const [visibleTokenAddresses, setVisibleTokenAddresses] = useState<string[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -1493,6 +1539,47 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 </div>
               )}
               
+              {/* Token Swap Summary */}
+              {swapInfo && (
+                <div className="mb-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                  <div className="text-sm font-medium text-purple-400 mb-2">Token Swap Details</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">Sent:</div>
+                      {swapInfo.sentTokens.map((token, i) => (
+                        <div key={i} className="flex items-center text-sm">
+                          <TokenLogo
+                            address={token.address || ''}
+                            symbol={token.token_symbol || ''}
+                            size={16}
+                            className="mr-2"
+                          />
+                          <span className="text-red-400">
+                            -{(token as any).value_formatted || formatTokenValue((token as any).value, (token as any).token_decimals)} {(token as any).token_symbol}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">Received:</div>
+                      {swapInfo.receivedTokens.map((token, i) => (
+                        <div key={i} className="flex items-center text-sm">
+                          <TokenLogo
+                            address={token.address || ''}
+                            symbol={token.token_symbol || ''}
+                            size={16}
+                            className="mr-2"
+                          />
+                          <span className="text-green-400">
+                            +{(token as any).value_formatted || formatTokenValue((token as any).value, (token as any).token_decimals)} {(token as any).token_symbol}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ERC20 Transfers */}
               {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                 <div key={`mobile-${tx.hash}-erc20-${i}`} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
@@ -1722,7 +1809,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               </div>
             </div>
           </div>
-        ))}
+        )})}
       </div>
       
       {/* Load More Button and Status */}

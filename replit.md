@@ -164,6 +164,7 @@ Required environment variables:
 - **Complete client-side migration** - All wallet data and price fetching now happens in browser
 - **Enhanced transaction history** - Increased batch size to 150 transactions with detailed gas info, contract verification status, and comprehensive USD value calculations
 - **Improved transaction display** - Added gas used, gas price in Gwei, block numbers, transaction methods, and spam/verification warnings
+- **Token swap detection** - Automatically detects and highlights token swaps within transactions, showing sent/received tokens with DEX identification
 
 ## User Preferences
 
