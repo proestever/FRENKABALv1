@@ -1460,6 +1460,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   target="_blank"
                   rel="noopener noreferrer"
                   className="ml-2 text-white hover:text-white/80 transition-colors"
+                  title="View transaction on PulseScan"
                 >
                   <ExternalLink size={16} />
                 </a>
