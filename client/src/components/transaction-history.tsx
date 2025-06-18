@@ -70,8 +70,8 @@ interface TransactionHistoryProps {
   onClose: () => void;
 }
 
-// Number of transactions to load per batch (Moralis free plan limit is 100)
-const TRANSACTIONS_PER_BATCH = 100;
+// Number of transactions to load per batch - increased for detailed history
+const TRANSACTIONS_PER_BATCH = 150;
 
 // Define transaction type options
 type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contract';
@@ -1316,22 +1316,50 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     </div>
                   ))}
                   
-                  <div className="text-xs font-semibold text-white mt-2">
-                    Gas: {parseFloat(tx.transaction_fee).toFixed(6)} PLS
-                    {/* Add USD value for gas fee using batch prices */}
-                    {(() => {
-                      const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-                      // Check if we have a price from our batch hook
-                      const hasBatchPrice = !!(batchPrices && batchPrices[plsAddress]);
-                      const usdValue = calculateUsdValue(tx.transaction_fee.toString(), '18', plsAddress);
-                      
-                      return usdValue ? (
-                        <div className="flex items-center justify-end mt-0.5">
-                          {formatCurrency(usdValue)}
-                          {hasBatchPrice && <span className="ml-1 px-1 py-0.5 bg-gray-500/20 text-[9px] rounded text-gray-400">✓</span>}
-                        </div>
-                      ) : null;
-                    })()}
+                  <div className="text-xs text-white mt-2 space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Gas Used:</span>
+                      <span className="font-mono">{parseInt(tx.receipt_gas_used).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Gas Price:</span>
+                      <span className="font-mono">{(parseFloat(tx.gas_price) / 1e9).toFixed(2)} Gwei</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Gas Fee:</span>
+                      <div className="text-right">
+                        <span className="font-mono">{parseFloat(tx.transaction_fee).toFixed(6)} PLS</span>
+                        {/* Add USD value for gas fee using batch prices */}
+                        {(() => {
+                          const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+                          const hasBatchPrice = !!(batchPrices && batchPrices[plsAddress]);
+                          const usdValue = calculateUsdValue(tx.transaction_fee.toString(), '18', plsAddress);
+                          
+                          return usdValue ? (
+                            <div className="text-xs text-gray-400">
+                              {formatCurrency(usdValue)}
+                              {hasBatchPrice && <span className="ml-1 text-green-400">✓</span>}
+                            </div>
+                          ) : null;
+                        })()}
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Block:</span>
+                      <span className="font-mono">#{parseInt(tx.block_number).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Status:</span>
+                      <span className={`font-semibold ${tx.receipt_status === '1' ? 'text-green-400' : 'text-red-400'}`}>
+                        {tx.receipt_status === '1' ? 'Success' : 'Failed'}
+                      </span>
+                    </div>
+                    {tx.method_label && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Method:</span>
+                        <span className="font-mono text-blue-400">{tx.method_label}</span>
+                      </div>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">

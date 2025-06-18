@@ -385,8 +385,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Parse limit to integer with a maximum value to prevent abuse
-      // Allow up to 200 transactions per request (as requested)
-      const parsedLimit = Math.min(parseInt(limit as string, 10) || 200, 200);
+      // Allow up to 200 transactions per request for detailed history
+      const parsedLimit = Math.min(parseInt(limit as string, 10) || 150, 200);
       
       // Call the API service with pagination parameters
       const transactionHistory = await getWalletTransactionHistory(
