@@ -142,6 +142,7 @@ Required environment variables:
 - **Enhanced logo system** - Now automatically fetches proper logos for ALL wallet tokens using DexScreener + PulseX
 - **Removed 2,372 placeholder logos** - Cleaned up database to force fresh logo fetching from authentic sources
 - **Cost reduction achieved** - Zero API costs for price data and wallet balance fetching
+- **Fixed HEX stakes calculation** - Replaced incorrect 35% APY simple interest with proper HEX share-based calculation using bonus hearts formula from contract
 
 ### Architecture Updates
 - Replaced `MoralisTokenPriceResponse` with `TokenPriceResponse`

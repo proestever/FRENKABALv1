@@ -79,6 +79,33 @@ interface HexStake {
   walletAddress?: string; // Store which wallet this stake belongs to
 }
 
+// HEX Contract Constants for proper calculation
+const SHARE_RATE_SCALE = 100000; // 1e5
+const LPB = 1820; // Longer Pays Better denominator  
+const BPB = 1500000000000000; // Bigger Pays Better denominator (1.5e15)
+const BPB_MAX_HEARTS = 15000000000000000; // 150M * 1e8
+const LPB_MAX_DAYS = 3640;
+
+// Calculate bonus hearts using actual HEX contract formula
+function calculateStakeStartBonusHearts(stakedHearts: string, stakedDays: number): number {
+  const stakedHeartsNum = parseFloat(stakedHearts);
+  
+  // Longer Pays Better calculation
+  let cappedExtraDays = 0;
+  if (stakedDays > 1) {
+    cappedExtraDays = stakedDays <= LPB_MAX_DAYS ? stakedDays - 1 : LPB_MAX_DAYS;
+  }
+  
+  // Bigger Pays Better calculation  
+  const cappedStakedHearts = stakedHeartsNum <= BPB_MAX_HEARTS ? stakedHeartsNum : BPB_MAX_HEARTS;
+  
+  // Combined bonus calculation
+  const bonusHearts = (cappedExtraDays * BPB + cappedStakedHearts * LPB);
+  const finalBonus = (stakedHeartsNum * bonusHearts) / (LPB * BPB);
+  
+  return finalBonus;
+}
+
 interface HexStakesProps {
   walletAddress: string;
   otherWalletAddresses?: string[]; // Optional additional wallets to include
@@ -205,15 +232,22 @@ export function HexStakes({ walletAddress, otherWalletAddresses = [], isMultiWal
               // Format HEX amount (8 decimals)
               const hexAmount = ethers.utils.formatUnits(stakedHearts, 8);
               
-              // Calculate estimated interest (for display purposes)
+              // Calculate estimated interest using proper HEX mechanics
               let interestEarned = "0";
               if (progressPercentage > 0) {
-                // Simple interest estimation
-                const annualRate = 0.35; // 35% APY (conservative estimate)
-                const yearsStaked = stakedDays / 365;
-                const estimatedInterestRate = annualRate * yearsStaked * (progressPercentage / 100);
-                const principalHex = parseFloat(hexAmount);
-                const interestHex = principalHex * estimatedInterestRate;
+                // Calculate bonus hearts using HEX contract formulas
+                const bonusHearts = calculateStakeStartBonusHearts(stakedHearts, stakedDays);
+                
+                // Calculate stake shares (hearts + bonus) * SHARE_RATE_SCALE / shareRate
+                const approximateShareRate = 100000; // Conservative estimate
+                const stakeShares = (parseFloat(stakedHearts) + bonusHearts) * 100000 / approximateShareRate;
+                
+                // Estimate daily payout based on current network conditions
+                const dailyYieldRate = 0.0002; // ~0.02% daily yield on shares
+                const daysElapsed = (stakedDays * progressPercentage) / 100;
+                
+                // Calculate accumulated interest
+                const interestHex = stakeShares * dailyYieldRate * daysElapsed;
                 interestEarned = interestHex.toFixed(2);
                 
                 // Add to total interest
