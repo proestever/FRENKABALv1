@@ -621,52 +621,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if logo exists in our database
       let logo = await storage.getTokenLogo(address);
       
-      // If not found in database, fetch from Moralis API and store
+      // If not found in database, try to fetch from DexScreener first
       if (!logo) {
         try {
-          const tokenData = await getTokenPrice(address);
+          console.log(`Fetching token info from DexScreener for ${address}`);
+          const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
           
-          if (tokenData && tokenData.tokenLogo) {
-            const newLogo = {
-              tokenAddress: address,
-              logoUrl: tokenData.tokenLogo,
-              symbol: tokenData.tokenSymbol || "",
-              name: tokenData.tokenName || "",
-              lastUpdated: new Date().toISOString()
-            };
+          if (response.ok) {
+            const data = await response.json();
             
-            logo = await storage.saveTokenLogo(newLogo);
-            console.log(`Saved new token logo for ${address}: ${tokenData.tokenLogo}`);
+            if (data.pairs && data.pairs.length > 0) {
+              const pair = data.pairs[0];
+              const tokenInfo = pair.baseToken.address.toLowerCase() === address.toLowerCase() 
+                ? pair.baseToken 
+                : pair.quoteToken;
+              
+              // Try to get logo from known sources based on token info
+              let logoUrl = '/assets/100xfrenlogo.png'; // Default fallback
+              
+              if (tokenInfo.symbol) {
+                const symbol = tokenInfo.symbol.toLowerCase();
+                
+                // Check if it's a known token with a specific logo
+                const knownLogos: Record<string, string> = {
+                  'pls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
+                  'wpls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
+                  'plsx': 'https://tokens.app.pulsex.com/images/tokens/0x15D38573d2feeb82e7ad5187aB8c5D52810B6f40.png',
+                  'hex': 'https://tokens.app.pulsex.com/images/tokens/0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39.png',
+                  'weth': 'https://tokens.app.pulsex.com/images/tokens/0x02DcdD04e3F455D838cd1249292C58f3B79e3C3C.png',
+                  'usdc': 'https://tokens.app.pulsex.com/images/tokens/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48.png',
+                  'usdt': 'https://tokens.app.pulsex.com/images/tokens/0xdAC17F958D2ee523a2206206994597C13D831ec7.png',
+                  'inc': 'https://tokens.app.pulsex.com/images/tokens/0x6c203a555824ec90a215f37916cf8db58ebe2fa3.png'
+                };
+                
+                if (knownLogos[symbol]) {
+                  logoUrl = knownLogos[symbol];
+                } else {
+                  // Try PulseX token images by address first
+                  logoUrl = `https://tokens.app.pulsex.com/images/tokens/${address}.png`;
+                }
+              }
+              
+              const newLogo = {
+                tokenAddress: address,
+                logoUrl: logoUrl,
+                symbol: tokenInfo.symbol || "",
+                name: tokenInfo.name || "",
+                lastUpdated: new Date().toISOString()
+              };
+              
+              logo = await storage.saveTokenLogo(newLogo);
+              console.log(`Saved DexScreener-based logo for token ${address}: ${logoUrl}`);
+            } else {
+              console.log(`No DexScreener pairs found for ${address}, using default logo`);
+              // No pairs found, save default logo
+              const defaultLogo = {
+                tokenAddress: address,
+                logoUrl: '/assets/100xfrenlogo.png',
+                symbol: "",
+                name: "",
+                lastUpdated: new Date().toISOString()
+              };
+              
+              logo = await storage.saveTokenLogo(defaultLogo);
+              console.log(`Saved default logo for token ${address} - no DexScreener data`);
+            }
           } else {
-            // If Moralis doesn't have a logo, save a default logo
-            // This prevents having to check Moralis again in the future for this token
-            
-            // Store Frenkabal logo as default for unknown tokens
+            console.log(`DexScreener API error for ${address}: ${response.status}`);
+            // DexScreener API error, save default logo
             const defaultLogo = {
               tokenAddress: address,
-              logoUrl: '/assets/100xfrenlogo.png', // Path to static asset
-              symbol: tokenData?.tokenSymbol || "",
-              name: tokenData?.tokenName || "",
+              logoUrl: '/assets/100xfrenlogo.png',
+              symbol: "",
+              name: "",
               lastUpdated: new Date().toISOString()
             };
             
             logo = await storage.saveTokenLogo(defaultLogo);
-            console.log(`Saved default logo for token ${address} with no Moralis logo`);
+            console.log(`Saved default logo for token ${address} after DexScreener API error`);
           }
         } catch (err) {
-          console.error(`Error fetching token data from Moralis: ${err}`);
+          console.error(`Error fetching token data from DexScreener: ${err}`);
           
-          // Even on error, we should store a default logo to prevent future API calls
+          // Even on error, store a default logo to prevent future API calls
           const defaultLogo = {
             tokenAddress: address,
-            logoUrl: '/assets/100xfrenlogo.png', // Path to static asset
+            logoUrl: '/assets/100xfrenlogo.png',
             symbol: "",
             name: "",
             lastUpdated: new Date().toISOString()
           };
           
           logo = await storage.saveTokenLogo(defaultLogo);
-          console.log(`Saved fallback logo for token ${address} after Moralis error`);
+          console.log(`Saved fallback logo for token ${address} after DexScreener error`);
         }
       }
       
