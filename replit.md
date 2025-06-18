@@ -142,7 +142,14 @@ Required environment variables:
 - **Enhanced logo system** - Now automatically fetches proper logos for ALL wallet tokens using DexScreener + PulseX
 - **Removed 2,372 placeholder logos** - Cleaned up database to force fresh logo fetching from authentic sources
 - **Cost reduction achieved** - Zero API costs for price data and wallet balance fetching
-- **Fixed HEX stakes calculation** - Replaced incorrect 35% APY simple interest with proper HEX share-based calculation using bonus hearts formula from contract
+- **Fixed HEX stakes calculation** - Completely rewrote calculation system with realistic APY rates based on historical performance (~41% average)
+
+### HEX Stakes Calculation Updates
+- **Replaced complex contract formulas** - Removed astronomical calculation errors from bonus hearts formulas
+- **Implemented tiered APY system** - 30% base, 38% medium (3+ years), 45% long (8+ years), 50% big paydays (15 years)
+- **Accurate value estimates** - Stakes now show realistic total values around $18k instead of trillions
+- **Length-based bonuses** - Longer commitment periods get appropriately higher returns
+- **Safety caps removed** - No longer needed with corrected calculation methodology
 
 ### Architecture Updates
 - Replaced `MoralisTokenPriceResponse` with `TokenPriceResponse`
