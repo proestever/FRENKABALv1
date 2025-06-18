@@ -132,12 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
-### June 18, 2025 - Moralis Integration Removal
+### June 18, 2025 - Moralis Integration Removal & Token Logo Fixes
 - **Removed Moralis API dependency entirely** - Eliminated all expensive Moralis API calls
 - **Migrated to DexScreener + PulseChain Scan** - Now using free APIs exclusively
 - **Updated price fetching** - All tokens now get prices from PulseChain DEXes via DexScreener
 - **Enhanced HEX stakes support** - HEX tokens properly configured for PulseChain pricing
 - **Added preferred tokens list** - HEX, WPLS, PLSX, and PLS pre-configured for DexScreener
+- **Fixed token logo display issues** - Updated WETH and AURA tokens with proper logo URLs
 - **Cost reduction achieved** - Zero API costs for price data and wallet balance fetching
 
 ### Architecture Updates
