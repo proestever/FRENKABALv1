@@ -99,11 +99,13 @@ function calculateStakeStartBonusHearts(stakedHearts: string, stakedDays: number
   // Bigger Pays Better calculation  
   const cappedStakedHearts = stakedHeartsNum <= BPB_MAX_HEARTS ? stakedHeartsNum : BPB_MAX_HEARTS;
   
-  // Combined bonus calculation
+  // Combined bonus calculation - this was way too high, need to scale properly
   const bonusHearts = (cappedExtraDays * BPB + cappedStakedHearts * LPB);
   const finalBonus = (stakedHeartsNum * bonusHearts) / (LPB * BPB);
   
-  return finalBonus;
+  // The bonus calculation was giving astronomically high values
+  // HEX bonus is typically 10-200% of principal, not millions of times
+  return Math.min(finalBonus, stakedHeartsNum * 3); // Cap at 300% bonus max
 }
 
 interface HexStakesProps {
@@ -232,30 +234,25 @@ export function HexStakes({ walletAddress, otherWalletAddresses = [], isMultiWal
               // Format HEX amount (8 decimals)
               const hexAmount = ethers.utils.formatUnits(stakedHearts, 8);
               
-              // Calculate estimated interest using proper HEX mechanics
+              // Calculate estimated interest using very conservative approach
               let interestEarned = "0";
               if (progressPercentage > 0) {
-                // Calculate bonus hearts using actual HEX contract formulas
-                const stakedHeartsNum = parseFloat(stakedHearts);
-                const bonusHearts = calculateStakeStartBonusHearts(stakedHearts, stakedDays);
+                const stakedHexAmount = parseFloat(hexAmount);
                 
-                // Calculate stake shares: (hearts + bonus) * SHARE_RATE_SCALE / shareRate
-                // Current PulseChain HEX share rate is approximately 150000-200000
-                const currentShareRate = 175000; // More realistic estimate
-                const totalHearts = stakedHeartsNum + bonusHearts;
-                const stakeShares = (totalHearts * SHARE_RATE_SCALE) / currentShareRate;
-                
-                // Calculate days elapsed and estimate daily rewards
+                // Ultra-simple calculation to avoid astronomical values
                 const daysElapsed = Math.floor((stakedDays * progressPercentage) / 100);
+                const yearsElapsed = daysElapsed / 365;
                 
-                // More realistic daily yield: HEX historically averages 15-40% APY
-                // Conservative estimate: 25% APY = 0.0685% daily (25%/365)
-                const annualYield = 0.25; // 25% APY
-                const dailyYieldRate = annualYield / 365;
+                // Very conservative 10% annual return
+                const annualReturn = 0.10;
                 
-                // Calculate accumulated rewards based on stake shares
-                const interestHex = stakeShares * dailyYieldRate * daysElapsed;
-                interestEarned = interestHex.toFixed(2);
+                // Simple interest: principal * rate * time
+                const interestHex = stakedHexAmount * annualReturn * yearsElapsed;
+                
+                // Cap maximum interest at 3x principal to prevent crazy values
+                const cappedInterest = Math.min(interestHex, stakedHexAmount * 3);
+                
+                interestEarned = Math.max(0, cappedInterest).toFixed(2);
                 
                 // Add to total interest
                 totalInterestBN += parseFloat(interestEarned);
