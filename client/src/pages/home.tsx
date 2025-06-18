@@ -7,7 +7,7 @@ import { TokenList } from '@/components/token-list';
 import { EmptyState } from '@/components/empty-state';
 import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
-import { ClientWalletDemo } from '@/components/client-wallet-demo';
+
 import ApiStats from '@/components/api-stats';
 import { Button } from '@/components/ui/button';
 import { saveRecentAddress, ProcessedToken, fetchWalletData, fetchAllWalletTokens, forceRefreshWalletData } from '@/lib/api';
@@ -735,9 +735,7 @@ export default function Home() {
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Left column - Wallet Overview (1/3 width on large screens) */}
               <div className="w-full lg:w-1/3 flex flex-col gap-6">
-                {searchedAddress && (
-                  <ClientWalletDemo walletAddress={searchedAddress} />
-                )}
+
                 
                 {walletData && (
                   <WalletOverview 

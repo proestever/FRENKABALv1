@@ -150,6 +150,7 @@ Required environment variables:
 - **Manipulation protection** - Automatically detects and penalizes price outliers over 10x median
 - **Client-side API calls** - Created services to move external API calls from server to browser
 - **Zero server load option** - Users can now fetch data directly from PulseChain/DexScreener APIs
+- **Complete client-side migration** - All wallet data and price fetching now happens in browser
 
 ## User Preferences
 
