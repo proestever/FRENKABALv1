@@ -132,7 +132,7 @@ Required environment variables:
 
 ## Recent Changes
 
-### June 18, 2025 - Moralis Integration Removal & Token Logo Fixes
+### June 18, 2025 - Enhanced Transaction History & HEX Stakes Fixes
 - **Removed Moralis API dependency entirely** - Eliminated all expensive Moralis API calls
 - **Migrated to DexScreener + PulseChain Scan** - Now using free APIs exclusively
 - **Updated price fetching** - All tokens now get prices from PulseChain DEXes via DexScreener
@@ -162,6 +162,8 @@ Required environment variables:
 - **Client-side API calls** - Created services to move external API calls from server to browser
 - **Zero server load option** - Users can now fetch data directly from PulseChain/DexScreener APIs
 - **Complete client-side migration** - All wallet data and price fetching now happens in browser
+- **Enhanced transaction history** - Increased batch size to 150 transactions with detailed gas info, contract verification status, and comprehensive USD value calculations
+- **Improved transaction display** - Added gas used, gas price in Gwei, block numbers, transaction methods, and spam/verification warnings
 
 ## User Preferences
 

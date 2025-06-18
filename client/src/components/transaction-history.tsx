@@ -824,12 +824,18 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       {/* Header */}
       <div className="p-4 md:p-6 border-b border-border">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-xl font-bold text-white flex items-center">
-            Transaction History
-            <span className="text-white text-sm ml-2 opacity-60">
-              {transactions.length} transactions
-            </span>
-          </h2>
+          <div>
+            <h2 className="text-xl font-bold text-white flex items-center">
+              Transaction History
+              <span className="text-white text-sm ml-2 opacity-60">
+                {transactions.length} transactions
+              </span>
+            </h2>
+            <div className="text-xs text-gray-400 mt-1">
+              Detailed transaction history with gas info, contract details, and USD values
+              {hasMore && <span className="ml-2">• More available</span>}
+            </div>
+          </div>
           
           {/* Filters */}
           <div className="flex flex-wrap gap-2 items-center">
@@ -1719,22 +1725,28 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         ))}
       </div>
       
-      {/* Load More Button (if there are more transactions) */}
+      {/* Load More Button and Status */}
       {hasMore && (
-        <div className="p-6 flex flex-col items-center">
+        <div className="p-6 flex flex-col items-center space-y-3">
           {loadingTimeout && isLoadingMore && (
             <div className="mb-4 px-4 py-3 glass-card border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 rounded-md max-w-md text-center">
               <p className="text-sm mb-2">
                 The request is taking longer than expected. This may be due to:
               </p>
               <ul className="text-xs text-left list-disc pl-5 mb-2">
-                <li>Moralis API rate limits (100 transactions per request)</li>
+                <li>PulseChain Scan API rate limits</li>
                 <li>Network congestion on PulseChain</li>
                 <li>Server-side timeouts</li>
               </ul>
               <p className="text-xs">You can wait or try again.</p>
             </div>
           )}
+          
+          <div className="text-xs text-gray-400 text-center">
+            Currently showing {transactions.length} transactions
+            <br />
+            Fetching up to {TRANSACTIONS_PER_BATCH} transactions per batch for detailed history
+          </div>
           
           <button 
             onClick={() => {
@@ -1764,10 +1776,22 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             ) : (
               <span className="flex items-center">
                 <ChevronDown size={18} className="mr-2" /> 
-                Load More Transactions
+                Load More Transactions ({TRANSACTIONS_PER_BATCH} at a time)
               </span>
             )}
           </button>
+        </div>
+      )}
+      
+      {/* No more transactions indicator */}
+      {!hasMore && transactions.length > 0 && (
+        <div className="text-center p-4 border-t border-white/10">
+          <div className="text-sm text-gray-400">
+            Showing all {transactions.length} available transactions with detailed information
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            Each transaction includes gas details, contract addresses, USD values, and transfer directions
+          </div>
         </div>
       )}
     </Card>
