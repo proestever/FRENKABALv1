@@ -1,7 +1,6 @@
 import { getWalletTransactionHistory } from './api';
 import { getTokenPriceFromDexScreener } from './dexscreener';
 import { Transaction, TransactionTransfer } from '../types';
-import Moralis from 'moralis';
 
 // Donation tracker interface
 export interface DonationRecord {
