@@ -150,7 +150,7 @@ export async function getWalletTransactionHistory(
     }
     
     // Transform PulseChain Scan API response to match our Transaction interface
-    const transactions: Transaction[] = data.result.map((tx: any) => ({
+    const transactions: Transaction[] = transactions_data.map((tx: any) => ({
       hash: tx.hash,
       nonce: tx.nonce?.toString() || '0',
       transaction_index: tx.position?.toString() || '0',
@@ -198,7 +198,7 @@ export async function getWalletTransactionHistory(
     
     return {
       result: transactions,
-      cursor: data.next_page_params?.cursor || null,
+      cursor: data.next_page_params?.cursor || undefined,
       page: 1,
       page_size: limit
     };
