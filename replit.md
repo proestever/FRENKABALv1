@@ -159,4 +159,6 @@ Required environment variables:
 
 ```
 Preferred communication style: Simple, everyday language.
+Token logo priority: Always use DexScreener/PulseX logos over placeholder images.
+Cost optimization: Prioritize free APIs (DexScreener, PulseChain Scan) over paid services.
 ```
