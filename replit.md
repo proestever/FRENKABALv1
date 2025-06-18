@@ -165,7 +165,11 @@ Required environment variables:
 - **Complete client-side migration** - All wallet data and price fetching now happens in browser
 - **Enhanced transaction history** - Increased batch size to 150 transactions with detailed gas info, contract verification status, and comprehensive USD value calculations
 - **Improved transaction display** - Added gas used, gas price in Gwei, block numbers, transaction methods, and spam/verification warnings
-- **Token swap detection** - Automatically detects and highlights token swaps within transactions, showing sent/received tokens with DEX identification
+- **Advanced token swap visualization** - Automatically detects swaps in multicalls and DEX transactions with enhanced visual display
+- **Token icons in transactions** - All transaction transfers now show token logos using DexScreener/PulseX sources
+- **USD values for all transfers** - Real-time USD calculations displayed for every token transfer with color-coded direction indicators
+- **Multicall support** - Enhanced detection for PulseX router multicalls even without visible ERC20 transfers
+- **Placeholder handling** - Smart fallback display for DEX interactions that don't expose token transfer details
 
 ## User Preferences
 

@@ -83,19 +83,19 @@ const getTransactionType = (tx: Transaction): TransactionType => {
     return 'all';
   }
   
-  // First check if there are both send and receive transfers in the same transaction
+  // Check method labels that indicate swaps first (more reliable for multicalls)
+  const swapMethodSignatures = ['swap', 'trade', 'multicall', 'exactinput', 'exactoutput', 'swapexact', 'swaptokens'];
+  if (tx.method_label && swapMethodSignatures.some(sig => tx.method_label?.toLowerCase().includes(sig))) {
+    return 'swap';
+  }
+  
+  // Check if there are both send and receive transfers in the same transaction
   // This pattern strongly indicates a swap transaction
   const hasSendTransfers = tx.erc20_transfers?.some(t => t && t.direction === 'send');
   const hasReceiveTransfers = tx.erc20_transfers?.some(t => t && t.direction === 'receive');
   
   // If we have at least one send and one receive in the same transaction, it's likely a swap
   if (hasSendTransfers && hasReceiveTransfers && tx.erc20_transfers && tx.erc20_transfers.length >= 2) {
-    return 'swap';
-  }
-  
-  // Check method labels that indicate swaps
-  const swapMethodSignatures = ['swap', 'trade', 'multicall', 'exactinput', 'exactoutput'];
-  if (tx.method_label && swapMethodSignatures.some(sig => tx.method_label?.toLowerCase().includes(sig))) {
     return 'swap';
   }
   
@@ -554,16 +554,55 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return usdValue;
   };
 
-  // Helper function to detect and format swap details
+  // Helper function to detect and format swap details - enhanced for multicalls
   const detectTokenSwap = (tx: Transaction) => {
-    if (getTransactionType(tx) !== 'swap' || !tx.erc20_transfers || tx.erc20_transfers.length < 2) {
+    // Enhanced detection for multicalls and swaps
+    const isSwapTransaction = getTransactionType(tx) === 'swap' || 
+                             (tx.method_label && tx.method_label.toLowerCase().includes('multicall')) ||
+                             (tx.erc20_transfers && tx.erc20_transfers.length >= 1);
+
+    if (!isSwapTransaction) {
+      return null;
+    }
+
+    // For multicalls without ERC20 transfers, create a placeholder display
+    if (!tx.erc20_transfers || tx.erc20_transfers.length === 0) {
+      // Check if this is likely a DEX interaction based on recipient address
+      const isDexAddress = tx.to_address && (
+        tx.to_address.toLowerCase().includes('router') ||
+        tx.to_address.toLowerCase().includes('dex') ||
+        tx.to_address === '0xDA9aBA4eACF54E0273f56dfFee6B8F1e20B23Bba' || // PulseX Router
+        tx.to_address === '0x274AAe59ad0Ca14BB40ad27A307F00D09a782Ee5'    // Another common DEX
+      );
+
+      if (isDexAddress && tx.method_label?.toLowerCase().includes('multicall')) {
+        return {
+          sentTokens: [{
+            symbol: 'Processing...',
+            amount: 'Unknown',
+            address: '',
+            decimals: '18',
+            rawValue: '0',
+            isPlaceholder: true
+          }],
+          receivedTokens: [{
+            symbol: 'Processing...',
+            amount: 'Unknown', 
+            address: '',
+            decimals: '18',
+            rawValue: '0',
+            isPlaceholder: true
+          }]
+        };
+      }
       return null;
     }
 
     const sendTransfers = tx.erc20_transfers.filter(t => t.direction === 'send');
     const receiveTransfers = tx.erc20_transfers.filter(t => t.direction === 'receive');
 
-    if (sendTransfers.length === 0 || receiveTransfers.length === 0) {
+    // For single direction transfers, still show them if it's a swap method
+    if (sendTransfers.length === 0 && receiveTransfers.length === 0) {
       return null;
     }
 
@@ -583,7 +622,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       amount: t.value_formatted || formatTokenValue(t.value, t.token_decimals),
       address: t.address || '',
       decimals: t.token_decimals || '18',
-      rawValue: t.value
+      rawValue: t.value,
+      isPlaceholder: false
     }));
 
     const receivedTokens = (filteredReceived.length > 0 ? filteredReceived : receiveTransfers).map(t => ({
@@ -591,8 +631,24 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       amount: t.value_formatted || formatTokenValue(t.value, t.token_decimals),
       address: t.address || '',
       decimals: t.token_decimals || '18',
-      rawValue: t.value
+      rawValue: t.value,
+      isPlaceholder: false
     }));
+
+    // If no tokens found but it's a swap method, show placeholder
+    if (sentTokens.length === 0 && receivedTokens.length === 0) {
+      return {
+        sentTokens: [{
+          symbol: 'DEX Interaction',
+          amount: 'See transaction details',
+          address: '',
+          decimals: '18',
+          rawValue: '0',
+          isPlaceholder: true
+        }],
+        receivedTokens: []
+      };
+    }
 
     return {
       sentTokens,
@@ -1181,15 +1237,21 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 Sent (Out)
                               </div>
                               {swapInfo.sentTokens.map((token, i) => {
-                                const usdValue = calculateUsdValue(token.rawValue, token.decimals, token.address);
+                                const usdValue = !token.isPlaceholder ? calculateUsdValue(token.rawValue, token.decimals, token.address) : null;
                                 return (
                                   <div key={`sent-${i}`} className="flex items-center space-x-2 p-2 bg-red-500/5 border border-red-500/10 rounded">
-                                    <TokenLogo 
-                                      address={token.address}
-                                      symbol={token.symbol}
-                                      fallbackLogo={prefetchedLogos[token.address?.toLowerCase() || '']}
-                                      size="sm"
-                                    />
+                                    {!token.isPlaceholder ? (
+                                      <TokenLogo 
+                                        address={token.address}
+                                        symbol={token.symbol}
+                                        fallbackLogo={prefetchedLogos[token.address?.toLowerCase() || '']}
+                                        size="sm"
+                                      />
+                                    ) : (
+                                      <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center">
+                                        <ArrowUpRight size={12} className="text-red-400" />
+                                      </div>
+                                    )}
                                     <div className="flex-1 min-w-0">
                                       <div className="text-sm font-semibold text-red-400 truncate">
                                         -{token.amount} {token.symbol}
@@ -1197,6 +1259,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                       {usdValue && (
                                         <div className="text-xs text-red-300/70">
                                           -{formatCurrency(usdValue)}
+                                        </div>
+                                      )}
+                                      {token.isPlaceholder && (
+                                        <div className="text-xs text-red-300/50">
+                                          DEX interaction detected
                                         </div>
                                       )}
                                     </div>
@@ -1212,15 +1279,21 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 Received (In)
                               </div>
                               {swapInfo.receivedTokens.map((token, i) => {
-                                const usdValue = calculateUsdValue(token.rawValue, token.decimals, token.address);
+                                const usdValue = !token.isPlaceholder ? calculateUsdValue(token.rawValue, token.decimals, token.address) : null;
                                 return (
                                   <div key={`received-${i}`} className="flex items-center space-x-2 p-2 bg-green-500/5 border border-green-500/10 rounded">
-                                    <TokenLogo 
-                                      address={token.address}
-                                      symbol={token.symbol}
-                                      fallbackLogo={prefetchedLogos[token.address?.toLowerCase() || '']}
-                                      size="sm"
-                                    />
+                                    {!token.isPlaceholder ? (
+                                      <TokenLogo 
+                                        address={token.address}
+                                        symbol={token.symbol}
+                                        fallbackLogo={prefetchedLogos[token.address?.toLowerCase() || '']}
+                                        size="sm"
+                                      />
+                                    ) : (
+                                      <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
+                                        <ArrowDownLeft size={12} className="text-green-400" />
+                                      </div>
+                                    )}
                                     <div className="flex-1 min-w-0">
                                       <div className="text-sm font-semibold text-green-400 truncate">
                                         +{token.amount} {token.symbol}
@@ -1228,6 +1301,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                       {usdValue && (
                                         <div className="text-xs text-green-300/70">
                                           +{formatCurrency(usdValue)}
+                                        </div>
+                                      )}
+                                      {token.isPlaceholder && (
+                                        <div className="text-xs text-green-300/50">
+                                          DEX interaction detected
                                         </div>
                                       )}
                                     </div>
