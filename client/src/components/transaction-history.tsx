@@ -1550,12 +1550,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       <div className="text-xs text-gray-400 mb-1">Sent:</div>
                       {swapInfo.sentTokens.map((token: any, i: number) => (
                         <div key={i} className="flex items-center text-sm">
-                          <TokenLogo
-                            address={token.address || ''}
-                            symbol={token.token_symbol || ''}
-                            size="sm"
-                            className="mr-2"
-                          />
+                          <div className="mr-2">
+                            <TokenLogo
+                              address={token.address || ''}
+                              symbol={token.token_symbol || ''}
+                              size="sm"
+                            />
+                          </div>
                           <span className="text-red-400">
                             -{(token as any).value_formatted || formatTokenValue((token as any).value, (token as any).token_decimals)} {(token as any).token_symbol}
                           </span>
