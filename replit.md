@@ -130,12 +130,21 @@ Required environment variables:
 - **API usage tracking**: Detailed API call statistics and monitoring
 - **Connection monitoring**: Real-time connection status indicators
 
-## Changelog
+## Recent Changes
 
-```
-Changelog:
-- June 18, 2025. Initial setup
-```
+### June 18, 2025 - Moralis Integration Removal
+- **Removed Moralis API dependency entirely** - Eliminated all expensive Moralis API calls
+- **Migrated to DexScreener + PulseChain Scan** - Now using free APIs exclusively
+- **Updated price fetching** - All tokens now get prices from PulseChain DEXes via DexScreener
+- **Enhanced HEX stakes support** - HEX tokens properly configured for PulseChain pricing
+- **Added preferred tokens list** - HEX, WPLS, PLSX, and PLS pre-configured for DexScreener
+- **Cost reduction achieved** - Zero API costs for price data and wallet balance fetching
+
+### Architecture Updates
+- Replaced `MoralisTokenPriceResponse` with `TokenPriceResponse`
+- Updated `api.ts` to use only DexScreener and PulseChain Scan APIs
+- Modified price source service to default all tokens to DexScreener
+- Enhanced error handling for API fallbacks
 
 ## User Preferences
 
