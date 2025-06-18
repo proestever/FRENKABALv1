@@ -133,7 +133,7 @@ Required environment variables:
 ## Recent Changes
 
 ### June 18, 2025 - Enhanced Transaction History & HEX Stakes Fixes
-- **Fixed transaction history links** - All transaction links now properly navigate to PulseScan transaction pages
+- **Updated transaction links to Otterscan** - All transaction links now navigate to Otterscan instead of PulseScan for better user experience
 - **Removed Moralis API dependency entirely** - Eliminated all expensive Moralis API calls
 - **Migrated to DexScreener + PulseChain Scan** - Now using free APIs exclusively
 - **Updated price fetching** - All tokens now get prices from PulseChain DEXes via DexScreener

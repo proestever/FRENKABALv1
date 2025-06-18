@@ -1416,10 +1416,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
                   <a 
-                    href={`https://scan.pulsechain.com/tx/${tx.hash}`}
+                    href={`https://otter.pulsechain.com/tx/${tx.hash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-white hover:text-white/80 transition-colors"
+                    title="View on Otterscan"
                   >
                     <div className="flex justify-center mb-1">
                       <ExternalLink size={16} />
@@ -1456,11 +1457,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   {tx.receipt_status === '1' ? 'Success' : 'Failed'}
                 </span>
                 <a 
-                  href={`https://scan.pulsechain.com/tx/${tx.hash}`}
+                  href={`https://otter.pulsechain.com/tx/${tx.hash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="ml-2 text-white hover:text-white/80 transition-colors"
-                  title="View transaction on PulseScan"
+                  title="View transaction on Otterscan"
                 >
                   <ExternalLink size={16} />
                 </a>
