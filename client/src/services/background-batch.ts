@@ -109,7 +109,8 @@ class BackgroundBatchService {
    * Stop all active background batches
    */
   stopAll() {
-    for (const walletAddress of this.activePolls.keys()) {
+    const activeWallets = Array.from(this.activePolls.keys());
+    for (const walletAddress of activeWallets) {
       this.stopBackgroundBatch(walletAddress);
     }
   }

@@ -111,19 +111,19 @@ export function useAllWalletTokens(walletAddress: string | null) {
         pollInterval = null;
       }
       
-      // Check if background fetch was triggered
-      if (walletData?.backgroundFetchTriggered && walletData?.missingPriceCount && walletAddress) {
+      // Check if background fetch was triggered  
+      if ((walletData as any)?.backgroundFetchTriggered && (walletData as any)?.missingPriceCount && walletAddress) {
         setProgress(prev => ({
           ...prev,
           status: 'loading',
-          message: `Loading prices for ${walletData.missingPriceCount} additional tokens in background...`,
+          message: `Loading prices for ${(walletData as any).missingPriceCount} additional tokens in background...`,
           lastUpdated: Date.now()
         }));
         
         // Start background batch service
         backgroundBatchService.startBackgroundBatch(
           walletAddress,
-          walletData.missingPriceCount,
+          (walletData as any).missingPriceCount,
           (batchProgress: BackgroundBatchProgress) => {
             if (batchProgress.isActive) {
               setProgress(prev => ({

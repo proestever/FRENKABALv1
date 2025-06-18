@@ -172,6 +172,9 @@ Required environment variables:
 - **Backend token extraction** - Added API endpoints to extract token contracts from transaction logs like original Moralis version
 - **Complete token metadata** - New endpoints fetch full token information including prices, logos, and verification status
 - **Enhanced DEX detection** - Smart identification of DEX router interactions with proper multicall handling
+- **Background batch fetching** - Implemented automatic background price fetching for large wallets that exceed initial API limits
+- **Rate limit handling** - Smart detection of missing token prices with background DexScreener batch processing
+- **Progressive loading** - Initial fast load followed by background completion for comprehensive price coverage
 
 ## User Preferences
 
