@@ -10,7 +10,7 @@ import {
 } from "./services/price-source-service";
 import { apiStatsService } from "./services/api-stats-service";
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
-import { getTokenPricesFromDexScreener } from "./services/dexscreener";
+import { getTokenPricesFromDexScreener, getTokenPriceFromDexScreener } from "./services/dexscreener";
 import { getDirectTokenBalances } from "./services/blockchain-service";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";

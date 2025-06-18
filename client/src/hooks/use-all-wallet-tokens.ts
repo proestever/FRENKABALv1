@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchAllWalletTokens } from '@/lib/api';
 import { useEffect, useState, useRef } from 'react';
+import { backgroundBatchService, type BackgroundBatchProgress } from '@/services/background-batch';
 
 /**
  * Hook for retrieving all wallet tokens at once (not paginated)
@@ -111,7 +112,7 @@ export function useAllWalletTokens(walletAddress: string | null) {
       }
       
       // Check if background fetch was triggered
-      if (walletData?.backgroundFetchTriggered && walletData?.missingPriceCount) {
+      if (walletData?.backgroundFetchTriggered && walletData?.missingPriceCount && walletAddress) {
         setProgress(prev => ({
           ...prev,
           status: 'loading',
@@ -119,30 +120,32 @@ export function useAllWalletTokens(walletAddress: string | null) {
           lastUpdated: Date.now()
         }));
         
-        // Set up polling for background fetch completion
-        const backgroundPollInterval = setInterval(() => {
-          // Refetch data to check if background prices have loaded
-          refetch().then(() => {
-            clearInterval(backgroundPollInterval);
-            setProgress(prev => ({
-              ...prev,
-              status: 'complete',
-              message: `Successfully loaded all ${walletData?.tokens?.length || 0} tokens with prices`,
-              lastUpdated: Date.now()
-            }));
-          });
-        }, 5000); // Check every 5 seconds
-        
-        // Clear after max 2 minutes
-        setTimeout(() => {
-          clearInterval(backgroundPollInterval);
-          setProgress(prev => ({
-            ...prev,
-            status: 'complete',
-            message: finalMessage,
-            lastUpdated: Date.now()
-          }));
-        }, 120000);
+        // Start background batch service
+        backgroundBatchService.startBackgroundBatch(
+          walletAddress,
+          walletData.missingPriceCount,
+          (batchProgress: BackgroundBatchProgress) => {
+            if (batchProgress.isActive) {
+              setProgress(prev => ({
+                ...prev,
+                status: 'loading',
+                message: `Background loading: ${batchProgress.completedTokens}/${batchProgress.totalTokens} token prices updated`,
+                lastUpdated: Date.now()
+              }));
+            } else {
+              // Background batch completed
+              setProgress(prev => ({
+                ...prev,
+                status: 'complete',
+                message: `Successfully loaded all ${walletData?.tokens?.length || 0} tokens with updated prices`,
+                lastUpdated: Date.now()
+              }));
+              
+              // Trigger a final refetch to get the updated data
+              refetch();
+            }
+          }
+        );
       } else {
         // One final update without additional API call to reduce load
         setProgress(prev => ({
@@ -158,6 +161,10 @@ export function useAllWalletTokens(walletAddress: string | null) {
     return () => {
       if (pollInterval) {
         clearInterval(pollInterval);
+      }
+      // Clean up background batch service
+      if (walletAddress) {
+        backgroundBatchService.stopBackgroundBatch(walletAddress);
       }
     };
   }, [isFetching, isError, walletData]);
