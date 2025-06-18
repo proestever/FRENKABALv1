@@ -148,6 +148,8 @@ Required environment variables:
 - **Improved price selection algorithm** - Added outlier detection to prevent manipulated prices
 - **Quality scoring system** - Considers liquidity, volume, transactions, and price consistency
 - **Manipulation protection** - Automatically detects and penalizes price outliers over 10x median
+- **Client-side API calls** - Created services to move external API calls from server to browser
+- **Zero server load option** - Users can now fetch data directly from PulseChain/DexScreener APIs
 
 ## User Preferences
 
