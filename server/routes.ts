@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import fetch from "node-fetch";
 import { storage } from "./storage";
 import { getWalletData, getTokenPrice, getWalletTransactionHistory, getSpecificTokenBalance, getApiCounterStats, resetApiCounter } from "./services/api";
 import { 
@@ -628,7 +629,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
           
           if (response.ok) {
-            const data = await response.json();
+            const data = await response.json() as any;
             
             if (data.pairs && data.pairs.length > 0) {
               const pair = data.pairs[0];
