@@ -463,8 +463,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
     const addressToUse = normalizedAddress === plsAddress ? plsAddress : normalizedAddress;
     
-    // Check if we have a price for this token
-    const price = tokenPrices[addressToUse];
+    // Check if we have a price for this token from either source
+    const price = tokenPrices[addressToUse] || (batchPrices && batchPrices[addressToUse]);
     
     // For debugging
     if (DEBUG_LOGGING) {
