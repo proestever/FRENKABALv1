@@ -110,13 +110,48 @@ export function useAllWalletTokens(walletAddress: string | null) {
         pollInterval = null;
       }
       
-      // One final update without additional API call to reduce load
-      setProgress(prev => ({
-        ...prev,
-        status: finalStatus,
-        message: finalMessage,
-        lastUpdated: Date.now()
-      }));
+      // Check if background fetch was triggered
+      if (walletData?.backgroundFetchTriggered && walletData?.missingPriceCount) {
+        setProgress(prev => ({
+          ...prev,
+          status: 'loading',
+          message: `Loading prices for ${walletData.missingPriceCount} additional tokens in background...`,
+          lastUpdated: Date.now()
+        }));
+        
+        // Set up polling for background fetch completion
+        const backgroundPollInterval = setInterval(() => {
+          // Refetch data to check if background prices have loaded
+          refetch().then(() => {
+            clearInterval(backgroundPollInterval);
+            setProgress(prev => ({
+              ...prev,
+              status: 'complete',
+              message: `Successfully loaded all ${walletData?.tokens?.length || 0} tokens with prices`,
+              lastUpdated: Date.now()
+            }));
+          });
+        }, 5000); // Check every 5 seconds
+        
+        // Clear after max 2 minutes
+        setTimeout(() => {
+          clearInterval(backgroundPollInterval);
+          setProgress(prev => ({
+            ...prev,
+            status: 'complete',
+            message: finalMessage,
+            lastUpdated: Date.now()
+          }));
+        }, 120000);
+      } else {
+        // One final update without additional API call to reduce load
+        setProgress(prev => ({
+          ...prev,
+          status: finalStatus,
+          message: finalMessage,
+          lastUpdated: Date.now()
+        }));
+      }
     }
     
     // Clean up the interval when component unmounts or dependencies change

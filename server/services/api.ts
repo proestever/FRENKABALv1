@@ -541,6 +541,30 @@ export async function getWalletDataFull(
 
     const totalValue = processedTokens.reduce((sum, token) => sum + (token.value || 0), 0);
 
+    // Identify tokens without prices for background fetching
+    const tokensWithoutPrices = processedTokens.filter(token => !token.price).map(token => token.address);
+    
+    // Trigger background batch fetch for missing prices if any
+    if (tokensWithoutPrices.length > 0) {
+      console.log(`${tokensWithoutPrices.length} tokens missing prices - starting background fetch`);
+      
+      // Call background batch endpoint asynchronously
+      setImmediate(async () => {
+        try {
+          await fetch('http://localhost:5000/api/token-prices/background-batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              addresses: tokensWithoutPrices,
+              walletAddress 
+            })
+          });
+        } catch (error) {
+          console.error('Error triggering background batch fetch:', error);
+        }
+      });
+    }
+
     const startIndex = (page - 1) * limit;
     const paginatedTokens = processedTokens.slice(startIndex, startIndex + limit);
 
@@ -557,7 +581,9 @@ export async function getWalletDataFull(
         limit,
         totalItems: processedTokens.length,
         totalPages: Math.ceil(processedTokens.length / limit)
-      }
+      },
+      backgroundFetchTriggered: tokensWithoutPrices.length > 0,
+      missingPriceCount: tokensWithoutPrices.length
     };
 
     cacheService.setWalletData(cacheKey, result);

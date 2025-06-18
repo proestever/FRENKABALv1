@@ -1326,6 +1326,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Background batch fetching endpoint for missed token prices
+  app.post("/api/token-prices/background-batch", async (req, res) => {
+    try {
+      const { addresses, walletAddress } = req.body;
+      
+      if (!Array.isArray(addresses)) {
+        return res.status(400).json({ message: "addresses must be an array" });
+      }
+      
+      console.log(`Starting background batch fetch for ${addresses.length} tokens from wallet ${walletAddress}`);
+      
+      // Process in background - don't wait for completion
+      setImmediate(async () => {
+        try {
+          const results: Record<string, any> = {};
+          const batchSize = 10; // Higher batch size for DexScreener
+          
+          for (let i = 0; i < addresses.length; i += batchSize) {
+            const batch = addresses.slice(i, i + batchSize);
+            
+            const promises = batch.map(async (address: string) => {
+              try {
+                const normalizedAddress = address.toLowerCase();
+                
+                // Check if price is already cached
+                const cached = cacheService.getTokenPrice(normalizedAddress);
+                if (cached) {
+                  results[normalizedAddress] = cached;
+                  return;
+                }
+                
+                // Fetch price from DexScreener
+                const priceData = await getTokenPriceFromDexScreener(normalizedAddress);
+                if (priceData) {
+                  const tokenPrice = {
+                    tokenName: 'Unknown Token',
+                    tokenSymbol: 'UNKNOWN',
+                    tokenDecimals: "18",
+                    tokenLogo: null,
+                    nativePrice: {
+                      value: "1000000000000000000",
+                      decimals: 18,
+                      name: "PLS",
+                      symbol: "PLS",
+                      address: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+                    },
+                    usdPrice: priceData,
+                    usdPriceFormatted: priceData.toString(),
+                    exchangeName: "DexScreener",
+                    exchangeAddress: "",
+                    tokenAddress: normalizedAddress,
+                    blockTimestamp: new Date().toISOString(),
+                    verifiedContract: false,
+                    securityScore: 50
+                  };
+                  
+                  // Cache the result
+                  cacheService.setTokenPrice(normalizedAddress, tokenPrice);
+                  results[normalizedAddress] = tokenPrice;
+                  
+                  console.log(`Background fetched price for ${normalizedAddress}: $${priceData}`);
+                }
+              } catch (error) {
+                console.error(`Error fetching background price for ${address}:`, error);
+              }
+            });
+            
+            await Promise.all(promises);
+            
+            // Small delay between batches to be respectful
+            if (i + batchSize < addresses.length) {
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+          }
+          
+          console.log(`Background batch fetch completed for ${Object.keys(results).length} tokens`);
+        } catch (error) {
+          console.error('Error in background batch fetch:', error);
+        }
+      });
+      
+      // Return immediately to not block the main request
+      res.json({ 
+        message: "Background batch fetch started",
+        addressCount: addresses.length,
+        status: "processing"
+      });
+      
+    } catch (error) {
+      console.error('Error starting background batch fetch:', error);
+      res.status(500).json({ 
+        message: "Failed to start background batch fetch",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // Batch API for fetching multiple token prices at once
   app.post("/api/token-prices/batch", async (req, res) => {
     try {

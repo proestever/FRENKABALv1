@@ -145,6 +145,8 @@ export interface WalletData {
     totalItems: number;
     totalPages: number;
   };
+  backgroundFetchTriggered?: boolean;
+  missingPriceCount?: number;
 }
 
 // Transaction history types
