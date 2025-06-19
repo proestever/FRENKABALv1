@@ -517,24 +517,38 @@ export async function getWalletDataFull(
 
     // Detect actual LP tokens by checking if they implement LP interface
     const potentialLpTokens = processedTokens.filter(token => 
-      token.balanceFormatted && token.balanceFormatted > 0 // Only check tokens with balance
+      token.balanceFormatted && token.balanceFormatted > 0 && 
+      !token.isNative && // Skip native token
+      token.decimals === 18 // Most LP tokens have 18 decimals
     );
     
     console.log(`Checking ${potentialLpTokens.length} tokens for LP interface`);
     
-    // Check each token to see if it's an actual LP token
+    // Check tokens in batches to avoid overwhelming the RPC
     const detectedLpTokens: ProcessedToken[] = [];
-    for (const token of potentialLpTokens) {
-      try {
-        // Try to call LP token functions to detect if it's an LP token
-        const isLpToken = await isLiquidityPoolToken(token.address);
-        if (isLpToken) {
+    const batchSize = 3;
+    
+    for (let i = 0; i < potentialLpTokens.length; i += batchSize) {
+      const batch = potentialLpTokens.slice(i, i + batchSize);
+      const batchResults = await Promise.allSettled(
+        batch.map(async (token) => {
+          const isLpToken = await isLiquidityPoolToken(token.address);
+          return { token, isLpToken };
+        })
+      );
+      
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled' && result.value.isLpToken) {
+          const { token } = result.value;
           console.log(`Detected LP token: ${token.symbol} (${token.address})`);
           token.isLp = true;
           detectedLpTokens.push(token);
         }
-      } catch (error) {
-        // Not an LP token, continue
+      }
+      
+      // Small delay between batches
+      if (i + batchSize < potentialLpTokens.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
     
