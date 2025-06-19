@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { ProcessedToken } from '../types';
 import { getTokenPrice } from './api';
-import { updateLoadingProgress } from '../routes';
+
 
 // Standard ERC20 ABI
 const ERC20_ABI = [

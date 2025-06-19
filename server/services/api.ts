@@ -345,21 +345,11 @@ export async function getWalletDataFull(
     
     console.log(`Fetching fresh wallet data for ${walletAddress}`);
 
-    updateLoadingProgress({
-      currentBatch: 1,
-      totalBatches: 6,
-      status: 'loading',
-      message: 'Fetching wallet balances from PulseChain...'
-    });
+    // Silent loading - no progress updates
 
     const walletBalances = await getWalletBalancesFromPulseChainScan(walletAddress);
     
-    updateLoadingProgress({
-      currentBatch: 2,
-      totalBatches: 6,
-      status: 'loading',
-      message: 'Processing native PLS balance...'
-    });
+    // Silent loading - no progress updates
 
     const nativeBalance = parseFloat(walletBalances.nativeBalance) / Math.pow(10, PLS_DECIMALS);
     

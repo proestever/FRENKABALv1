@@ -302,12 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get fresh data with force refresh parameter
       const walletData = await getWalletData(address, 1, 1000, true);
       
-      updateLoadingProgress({
-        status: 'complete',
-        message: `Successfully refreshed data with ${walletData.tokens.length} tokens`,
-        currentBatch: 5,
-        totalBatches: 5
-      });
+      console.log(`Successfully refreshed data with ${walletData.tokens.length} tokens`);
       
       return res.json(walletData);
     } catch (error) {
