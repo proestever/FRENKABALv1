@@ -194,7 +194,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const forceRefresh = force === 'true';
       
       // Set loading progress to indicate we're fetching all tokens
-      // Silent loading - no progress updates
+      updateLoadingProgress({
+        status: 'loading',
+        message: forceRefresh ? 'Force refreshing all wallet tokens...' : 'Loading all wallet tokens in batches...',
+        currentBatch: 0,
+        totalBatches: 1
+      });
       
       // Get all tokens without pagination (backend will still process in batches)
       // Pass a very large limit to essentially get all tokens
@@ -231,7 +236,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Set loading progress
-      // Silent loading - no progress updates
+      updateLoadingProgress({
+        status: 'loading',
+        message: 'Querying blockchain directly for real-time token balances...',
+        currentBatch: 0,
+        totalBatches: 1
+      });
       
       // Get tokens directly from the blockchain
       const tokens = await getDirectTokenBalances(address);
@@ -278,7 +288,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Set loading progress message
-      // Silent loading - no progress updates
+      updateLoadingProgress({
+        status: 'loading',
+        message: 'Force refreshing wallet data from blockchain sources...',
+        currentBatch: 1,
+        totalBatches: 5
+      });
       
       console.log(`Force refreshing wallet data for ${address} - explicitly bypassing cache`);
       
@@ -287,13 +302,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get fresh data with force refresh parameter
       const walletData = await getWalletData(address, 1, 1000, true);
       
-      console.log(`Successfully refreshed data with ${walletData.tokens.length} tokens`);
+      updateLoadingProgress({
+        status: 'complete',
+        message: `Successfully refreshed data with ${walletData.tokens.length} tokens`,
+        currentBatch: 5,
+        totalBatches: 5
+      });
       
       return res.json(walletData);
     } catch (error) {
       console.error("Error force refreshing wallet data:", error);
       
-      // Silent loading - no progress updates
+      updateLoadingProgress({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        currentBatch: 0,
+        totalBatches: 5
+      });
       
       return res.status(500).json({ 
         message: "Failed to force refresh wallet data",

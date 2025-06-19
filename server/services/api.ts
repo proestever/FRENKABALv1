@@ -345,18 +345,33 @@ export async function getWalletDataFull(
     
     console.log(`Fetching fresh wallet data for ${walletAddress}`);
 
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      currentBatch: 1,
+      totalBatches: 6,
+      status: 'loading',
+      message: 'Fetching wallet balances from PulseChain...'
+    });
 
     const walletBalances = await getWalletBalancesFromPulseChainScan(walletAddress);
     
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      currentBatch: 2,
+      totalBatches: 6,
+      status: 'loading',
+      message: 'Processing native PLS balance...'
+    });
 
     const nativeBalance = parseFloat(walletBalances.nativeBalance) / Math.pow(10, PLS_DECIMALS);
     
     const plsPriceData = await getTokenPriceFromDexScreener(WPLS_CONTRACT_ADDRESS);
     const plsPrice = plsPriceData || 0;
 
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      currentBatch: 3,
+      totalBatches: 6,
+      status: 'loading',
+      message: 'Processing token balances...'
+    });
 
     const processedTokens: ProcessedToken[] = [];
 
@@ -374,7 +389,12 @@ export async function getWalletDataFull(
       verified: true
     });
 
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      currentBatch: 4,
+      totalBatches: 6,
+      status: 'loading',
+      message: 'Fetching token prices...'
+    });
 
     for (const tokenBalance of walletBalances.tokenBalances) {
       const decimals = parseInt(tokenBalance.decimals || '18');
@@ -476,7 +496,12 @@ export async function getWalletDataFull(
       }
     }
 
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      currentBatch: 5,
+      totalBatches: 6,
+      status: 'loading',
+      message: 'Detecting and processing LP tokens...'
+    });
 
     // Detect actual LP tokens by checking if they implement LP interface
     const potentialLpTokens = processedTokens.filter(token => 
@@ -526,7 +551,12 @@ export async function getWalletDataFull(
       }
     }
 
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      currentBatch: 6,
+      totalBatches: 6,
+      status: 'loading',
+      message: 'Finalizing results...'
+    });
 
     processedTokens.sort((a, b) => (b.value || 0) - (a.value || 0));
 
@@ -579,14 +609,24 @@ export async function getWalletDataFull(
 
 
     
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      currentBatch: 6,
+      totalBatches: 6,
+      status: 'complete',
+      message: `Found ${processedTokens.length} tokens with total value $${totalValue.toFixed(2)}`
+    });
 
     console.log(`Wallet data fetch completed for ${walletAddress} in ${Date.now() - startTime}ms`);
     return result;
 
   } catch (error) {
     console.error(`Error fetching wallet data for ${walletAddress}:`, error);
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      currentBatch: 0,
+      totalBatches: 0,
+      status: 'error',
+      message: 'Failed to fetch wallet data'
+    });
     throw error;
   }
 }

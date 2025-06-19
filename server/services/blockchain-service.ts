@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { ProcessedToken } from '../types';
 import { getTokenPrice } from './api';
-
+import { updateLoadingProgress } from '../routes';
 
 // Standard ERC20 ABI
 const ERC20_ABI = [
@@ -235,7 +235,12 @@ export async function batchGetTokenBalancesFromChain(
     const currentBatch = Math.floor(i / batchSize) + 1;
     
     console.log(`Processing batch ${currentBatch}/${totalBatches}`);
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      status: 'loading',
+      message: `Fetching token balances from blockchain (batch ${currentBatch}/${totalBatches})...`,
+      currentBatch,
+      totalBatches
+    });
     
     // Process tokens in parallel within the batch
     const batchPromises = batch.map(tokenAddress => 
@@ -336,7 +341,12 @@ export const PULSECHAIN_COMMON_TOKENS = [
 export async function getTokenTransferEvents(walletAddress: string, maxBlocks: number = 20000): Promise<string[]> {
   try {
     console.log(`Scanning for token transfer events for ${walletAddress}`);
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      status: 'loading',
+      message: `Scanning blockchain for token transfers...`,
+      currentBatch: 1,
+      totalBatches: 3
+    });
 
     // Get current block number
     const currentBlock = await provider.getBlockNumber();
@@ -351,7 +361,12 @@ export async function getTokenTransferEvents(walletAddress: string, maxBlocks: n
     const transferEventTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
     
     // Get transfer events where this wallet is the recipient
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      status: 'loading',
+      message: `Scanning incoming token transfers...`,
+      currentBatch: 2,
+      totalBatches: 3
+    });
     
     const incomingLogs = await provider.getLogs({
       fromBlock,
@@ -360,7 +375,12 @@ export async function getTokenTransferEvents(walletAddress: string, maxBlocks: n
     });
     
     // Get transfer events where this wallet is the sender
-    // Silent loading - no progress updates
+    updateLoadingProgress({
+      status: 'loading',
+      message: `Scanning outgoing token transfers...`,
+      currentBatch: 3,
+      totalBatches: 3
+    });
     
     const outgoingLogs = await provider.getLogs({
       fromBlock,

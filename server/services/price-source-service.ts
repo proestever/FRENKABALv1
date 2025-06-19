@@ -87,7 +87,8 @@ export async function addDexScreenerPreferredToken(tokenData: InsertDexScreenerP
     preferredTokensCache = [];
     preferredTokensCacheLastUpdate = 0;
     
-    // No cache to invalidate since we removed caching
+    // Also invalidate price cache for this token
+    cacheService.invalidateTokenPrice(normalizedAddress);
   } catch (error) {
     console.error(`Error adding DexScreener preferred token ${tokenData.tokenAddress}:`, error);
     throw error;
@@ -109,7 +110,8 @@ export async function removeDexScreenerPreferredToken(tokenAddress: string): Pro
     preferredTokensCache = [];
     preferredTokensCacheLastUpdate = 0;
     
-    // No cache to invalidate since we removed caching
+    // Also invalidate price cache for this token
+    cacheService.invalidateTokenPrice(normalizedAddress);
     
     console.log(`Removed DexScreener preferred token: ${normalizedAddress}`);
     return true;

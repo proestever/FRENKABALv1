@@ -54,18 +54,42 @@ export function useAllWalletTokens(walletAddress: string | null) {
     queryFn: () => walletAddress ? fetchAllWalletTokens(walletAddress) : Promise.reject('No wallet address'),
   });
   
-  // Set loading progress status - only for initial loads, not background fetches
+  // Set loading progress status with more controlled polling
   useEffect(() => {
-    // Only show loading progress for initial data fetch, not background operations
-    if (isFetching && !walletData) {
-      // Initialize progress for initial load only
+    let pollInterval: NodeJS.Timeout | null = null;
+    
+    // When fetching starts, update the progress status and start polling
+    if (isFetching) {
+      // Initialize progress when fetching starts
       setProgress({
         currentBatch: 1,
-        totalBatches: 1,
+        totalBatches: 5, // Initial estimate
         status: 'loading',
-        message: 'Loading wallet data...',
+        message: 'Fetching wallet data...',
         lastUpdated: Date.now()
       });
+      
+      const fetchProgress = () => {
+        fetch('/api/loading-progress')
+          .then(response => response.ok ? response.json() : null)
+          .then(data => {
+            if (data) {
+              setProgress(prev => ({
+                ...data,
+                lastUpdated: Date.now()
+              }));
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching loading progress:', error);
+          });
+      };
+      
+      // Make an immediate request first
+      fetchProgress();
+      
+      // Then poll every 3 seconds to reduce API load
+      pollInterval = setInterval(fetchProgress, 3000);
     } else if (walletData || isError) {
       // When data is loaded or there's an error, update the progress
       const finalStatus = isError ? 'error' : 'complete';
@@ -74,33 +98,71 @@ export function useAllWalletTokens(walletAddress: string | null) {
         : `Successfully loaded ${walletData?.tokens?.length || 0} tokens`;
       
       // Update to final status
-      setProgress({
-        currentBatch: 1,
-        totalBatches: 1,
+      setProgress(prev => ({
+        ...prev,
         status: finalStatus,
         message: finalMessage,
         lastUpdated: Date.now()
-      });
+      }));
       
-      // Silent background fetch - don't show loading progress for background operations
+      // Clear any existing polling interval first
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      
+      // Check if background fetch was triggered  
       if ((walletData as any)?.backgroundFetchTriggered && (walletData as any)?.missingPriceCount && walletAddress) {
-        // Start background batch service silently
+        setProgress(prev => ({
+          ...prev,
+          status: 'loading',
+          message: `Loading prices for ${(walletData as any).missingPriceCount} additional tokens in background...`,
+          lastUpdated: Date.now()
+        }));
+        
+        // Start background batch service
         backgroundBatchService.startBackgroundBatch(
           walletAddress,
           (walletData as any).missingPriceCount,
           (batchProgress: BackgroundBatchProgress) => {
-            // Silent background operation - only refetch when complete
-            if (!batchProgress.isActive) {
-              // Background batch completed - silently refetch
+            if (batchProgress.isActive) {
+              setProgress(prev => ({
+                ...prev,
+                status: 'loading',
+                message: `Background loading: ${batchProgress.completedTokens}/${batchProgress.totalTokens} token prices updated`,
+                lastUpdated: Date.now()
+              }));
+            } else {
+              // Background batch completed
+              setProgress(prev => ({
+                ...prev,
+                status: 'complete',
+                message: `Successfully loaded all ${walletData?.tokens?.length || 0} tokens with updated prices`,
+                lastUpdated: Date.now()
+              }));
+              
+              // Trigger a final refetch to get the updated data
               refetch();
             }
           }
         );
+      } else {
+        // One final update without additional API call to reduce load
+        setProgress(prev => ({
+          ...prev,
+          status: finalStatus,
+          message: finalMessage,
+          lastUpdated: Date.now()
+        }));
       }
     }
     
-    // Clean up background batch service when component unmounts
+    // Clean up the interval when component unmounts or dependencies change
     return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+      // Clean up background batch service
       if (walletAddress) {
         backgroundBatchService.stopBackgroundBatch(walletAddress);
       }
