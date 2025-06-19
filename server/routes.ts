@@ -1359,7 +1359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 // Fetch price from DexScreener
                 const priceData = await getTokenPriceFromDexScreener(normalizedAddress);
-                if (priceData) {
+                if (priceData && priceData > 0) {
                   const tokenPrice = {
                     tokenName: 'Unknown Token',
                     tokenSymbol: 'UNKNOWN',

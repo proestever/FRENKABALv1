@@ -69,7 +69,12 @@ export interface TokenPriceData {
 
 export async function getTokenPriceFromDexScreener(tokenAddress: string): Promise<number | null> {
   const data = await getTokenPriceDataFromDexScreener(tokenAddress);
-  return data ? data.price : null;
+  if (data && data.price > 0) {
+    console.log(`Successfully fetched price for ${tokenAddress}: $${data.price}`);
+    return data.price;
+  }
+  console.log(`No valid price found for ${tokenAddress}`);
+  return null;
 }
 
 export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Promise<TokenPriceData | null> {
@@ -171,10 +176,13 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
         const medianPrice = prices.sort((a, b) => a - b)[Math.floor(prices.length / 2)];
         const priceRatio = price / medianPrice;
         
-        // Heavy penalty if price is more than 10x different from median
-        if (priceRatio > 10 || priceRatio < 0.1) {
+        // Heavy penalty if price is more than 100x different from median (more lenient)
+        if (priceRatio > 100 || priceRatio < 0.01) {
           score *= 0.1;
-          console.log(`Price outlier detected for pair: $${price} vs median $${medianPrice}, applying penalty`);
+          console.log(`Extreme price outlier detected for pair: $${price} vs median $${medianPrice}, applying penalty`);
+        } else if (priceRatio > 10 || priceRatio < 0.1) {
+          score *= 0.5;
+          console.log(`Price outlier detected for pair: $${price} vs median $${medianPrice}, applying reduced penalty`);
         }
       }
       
