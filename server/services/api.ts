@@ -9,7 +9,7 @@ import {
 import { storage } from '../storage';
 import { updateLoadingProgress } from '../routes';
 import { processLpTokens, isLiquidityPoolToken } from './lp-token-service';
-import { cacheService } from './cache-service';
+
 import { apiStatsService } from './api-stats-service';
 import { getTokenPriceFromDexScreener, getWalletBalancesFromPulseChainScan } from './dexscreener';
 
@@ -247,13 +247,7 @@ export async function getTokenPrice(tokenAddress: string): Promise<TokenPriceRes
     };
   }
   
-  const cachedPrice = cacheService.getTokenPrice(normalizedAddress);
-  if (cachedPrice) {
-    console.log(`Using cached price for ${normalizedAddress}: ${cachedPrice.usdPrice} USD`);
-    return cachedPrice;
-  }
-  
-  console.log(`Cache miss for token price: ${normalizedAddress}`);
+  console.log(`Fetching fresh price for token: ${normalizedAddress}`);
   trackApiCall(null, 'getTokenPrice');
   
   try {
@@ -350,12 +344,7 @@ export async function getWalletDataFull(
     
     console.log(`Starting comprehensive wallet data fetch for ${walletAddress}`);
     
-    const cacheKey = `${walletAddress}_${page}_${limit}`;
-    const cachedData = cacheService.getWalletData(cacheKey);
-    if (cachedData) {
-      console.log(`Using cached wallet data for ${walletAddress}`);
-      return cachedData;
-    }
+    console.log(`Fetching fresh wallet data for ${walletAddress}`);
 
     updateLoadingProgress({
       currentBatch: 1,

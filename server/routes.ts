@@ -17,7 +17,7 @@ import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schem
 import { ethers } from "ethers";
 import portfolioRoutes from "./routes/portfolio-routes";
 import { format } from "date-fns";
-import { cacheService } from "./services/cache-service";
+
 
 // Loading progress tracking
 export interface LoadingProgress {

@@ -70,18 +70,7 @@ interface WalletData {
 
 const BASE_URL = 'https://scan.pulsechain.com/api/v2';
 
-// Client-side cache
-const walletCache = new Map<string, { data: WalletData; timestamp: number }>();
-const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
-
 export async function getWalletTokenBalances(walletAddress: string): Promise<WalletData | null> {
-  const normalizedAddress = walletAddress.toLowerCase();
-  
-  // Check cache first
-  const cached = walletCache.get(normalizedAddress);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data;
-  }
 
   try {
     // Fetch wallet info (including native PLS balance)
@@ -151,12 +140,6 @@ export async function getWalletTokenBalances(walletAddress: string): Promise<Wal
       plsPriceChange: null,
       networkCount: 1
     };
-    
-    // Cache the result
-    walletCache.set(normalizedAddress, {
-      data: result,
-      timestamp: Date.now()
-    });
     
     return result;
   } catch (error) {
