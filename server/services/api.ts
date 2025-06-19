@@ -496,12 +496,7 @@ export async function getWalletDataFull(
       }
     }
 
-    updateLoadingProgress({
-      currentBatch: 5,
-      totalBatches: 6,
-      status: 'loading',
-      message: 'Detecting and processing LP tokens...'
-    });
+    // Silent loading - no progress updates
 
     // Detect actual LP tokens by checking if they implement LP interface
     const potentialLpTokens = processedTokens.filter(token => 
@@ -609,24 +604,14 @@ export async function getWalletDataFull(
 
 
     
-    updateLoadingProgress({
-      currentBatch: 6,
-      totalBatches: 6,
-      status: 'complete',
-      message: `Found ${processedTokens.length} tokens with total value $${totalValue.toFixed(2)}`
-    });
+    // Silent loading - no progress updates
 
     console.log(`Wallet data fetch completed for ${walletAddress} in ${Date.now() - startTime}ms`);
     return result;
 
   } catch (error) {
     console.error(`Error fetching wallet data for ${walletAddress}:`, error);
-    updateLoadingProgress({
-      currentBatch: 0,
-      totalBatches: 0,
-      status: 'error',
-      message: 'Failed to fetch wallet data'
-    });
+    // Silent loading - no progress updates
     throw error;
   }
 }

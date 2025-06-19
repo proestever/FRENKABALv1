@@ -111,50 +111,29 @@ export function useAllWalletTokens(walletAddress: string | null) {
         pollInterval = null;
       }
       
-      // Check if background fetch was triggered  
+      // Silent background fetch - don't show loading progress for background operations
       if ((walletData as any)?.backgroundFetchTriggered && (walletData as any)?.missingPriceCount && walletAddress) {
-        setProgress(prev => ({
-          ...prev,
-          status: 'loading',
-          message: `Loading prices for ${(walletData as any).missingPriceCount} additional tokens in background...`,
-          lastUpdated: Date.now()
-        }));
-        
-        // Start background batch service
+        // Start background batch service silently
         backgroundBatchService.startBackgroundBatch(
           walletAddress,
           (walletData as any).missingPriceCount,
           (batchProgress: BackgroundBatchProgress) => {
-            if (batchProgress.isActive) {
-              setProgress(prev => ({
-                ...prev,
-                status: 'loading',
-                message: `Background loading: ${batchProgress.completedTokens}/${batchProgress.totalTokens} token prices updated`,
-                lastUpdated: Date.now()
-              }));
-            } else {
-              // Background batch completed
-              setProgress(prev => ({
-                ...prev,
-                status: 'complete',
-                message: `Successfully loaded all ${walletData?.tokens?.length || 0} tokens with updated prices`,
-                lastUpdated: Date.now()
-              }));
-              
-              // Trigger a final refetch to get the updated data
+            // Silent background operation - only refetch when complete
+            if (!batchProgress.isActive) {
+              // Background batch completed - silently refetch
               refetch();
             }
           }
         );
-      } else {
-        // One final update without additional API call to reduce load
-        setProgress(prev => ({
-          ...prev,
-          status: finalStatus,
-          message: finalMessage,
-          lastUpdated: Date.now()
-        }));
       }
+      
+      // One final update without additional API call to reduce load
+      setProgress(prev => ({
+        ...prev,
+        status: finalStatus,
+        message: finalMessage,
+        lastUpdated: Date.now()
+      }));
     }
     
     // Clean up the interval when component unmounts or dependencies change
