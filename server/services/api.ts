@@ -8,7 +8,7 @@ import {
 } from '../types';
 import { storage } from '../storage';
 import { updateLoadingProgress } from '../routes';
-import { processLpTokens } from './lp-token-service';
+import { processLpTokens, isLiquidityPoolToken } from './lp-token-service';
 import { cacheService } from './cache-service';
 import { apiStatsService } from './api-stats-service';
 import { getTokenPriceFromDexScreener, getWalletBalancesFromPulseChainScan } from './dexscreener';
@@ -195,7 +195,7 @@ export async function getWalletTransactionHistory(
       })) : [],
       native_transfers: [],
       nft_transfers: [],
-      summary: null,
+      summary: undefined,
       category: tx.tx_types?.[0] || null,
       possible_spam: false
     }));
@@ -512,17 +512,38 @@ export async function getWalletDataFull(
       currentBatch: 5,
       totalBatches: 6,
       status: 'loading',
-      message: 'Processing LP tokens...'
+      message: 'Detecting and processing LP tokens...'
     });
 
-    const lpTokens = processedTokens.filter(token => token.symbol && 
-      (token.symbol.toLowerCase().includes('lp') || 
-       token.symbol.toLowerCase().includes('sushi') ||
-       token.symbol.toLowerCase().includes('uni')));
+    // Detect actual LP tokens by checking if they implement LP interface
+    const potentialLpTokens = processedTokens.filter(token => 
+      token.balanceFormatted && token.balanceFormatted > 0 // Only check tokens with balance
+    );
     
-    if (lpTokens.length > 0) {
+    console.log(`Checking ${potentialLpTokens.length} tokens for LP interface`);
+    
+    // Check each token to see if it's an actual LP token
+    const detectedLpTokens: ProcessedToken[] = [];
+    for (const token of potentialLpTokens) {
       try {
-        await processLpTokens(lpTokens, walletAddress);
+        // Try to call LP token functions to detect if it's an LP token
+        const isLpToken = await isLiquidityPoolToken(token.address);
+        if (isLpToken) {
+          console.log(`Detected LP token: ${token.symbol} (${token.address})`);
+          token.isLp = true;
+          detectedLpTokens.push(token);
+        }
+      } catch (error) {
+        // Not an LP token, continue
+      }
+    }
+    
+    if (detectedLpTokens.length > 0) {
+      console.log(`Processing ${detectedLpTokens.length} detected LP tokens`);
+      try {
+        const processedTokensWithLp = await processLpTokens(processedTokens, walletAddress);
+        // Update processedTokens with LP-enhanced data
+        processedTokens.splice(0, processedTokens.length, ...processedTokensWithLp);
       } catch (lpError) {
         console.error('Error processing LP tokens:', lpError);
       }

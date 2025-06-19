@@ -3,6 +3,31 @@ import { ethers } from 'ethers';
 import { ProcessedToken } from '../types';
 import { getTokenPrice } from './api';
 
+/**
+ * Check if a token address is a liquidity pool token by trying to call LP-specific functions
+ */
+export async function isLiquidityPoolToken(tokenAddress: string): Promise<boolean> {
+  try {
+    // Try to call token0() and token1() functions which are LP-specific
+    const [token0Address, token1Address] = await Promise.all([
+      callContractFunction<string>(tokenAddress, LP_TOKEN_ABI, 'token0'),
+      callContractFunction<string>(tokenAddress, LP_TOKEN_ABI, 'token1')
+    ]);
+    
+    // If both token0 and token1 return valid addresses, it's likely an LP token
+    if (token0Address && token1Address && 
+        token0Address.startsWith('0x') && token1Address.startsWith('0x') &&
+        token0Address !== token1Address) {
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    // If any of the LP functions fail, it's not an LP token
+    return false;
+  }
+}
+
 // Standard PulseX LP token/pair ABI (simplified to just what we need)
 const LP_TOKEN_ABI = [
   // Get total supply of LP tokens
