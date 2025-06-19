@@ -139,8 +139,8 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
       // Ensure priceUsd is available
       if (!pair.priceUsd) continue;
       
-      // Must have minimum liquidity to be considered
-      if (!pair.liquidity?.usd || pair.liquidity.usd < 1000) continue;
+      // Must have minimum liquidity to be considered (very low threshold for comprehensive coverage)
+      if (!pair.liquidity?.usd || pair.liquidity.usd < 50) continue;
       
       validPairs.push(pair);
     }

@@ -38,9 +38,9 @@ class BackgroundBatchService {
       lastUpdate: Date.now()
     });
     
-    // Poll every 5 seconds for up to 2 minutes
+    // Poll every 10 seconds for up to 5 minutes (to account for rate limiting)
     let pollCount = 0;
-    const maxPolls = 24; // 2 minutes / 5 seconds
+    const maxPolls = 30; // 5 minutes / 10 seconds
     
     const pollInterval = setInterval(async () => {
       pollCount++;
@@ -80,7 +80,7 @@ class BackgroundBatchService {
       } catch (error) {
         console.error('Error polling for background batch progress:', error);
       }
-    }, 5000);
+    }, 10000); // 10 second intervals to reduce server load
     
     this.activePolls.set(walletAddress, pollInterval);
   }

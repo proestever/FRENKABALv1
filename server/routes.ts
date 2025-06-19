@@ -1342,7 +1342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       setImmediate(async () => {
         try {
           const results: Record<string, any> = {};
-          const batchSize = 10; // Higher batch size for DexScreener
+          const batchSize = 5; // Reduced batch size to avoid rate limits
           
           for (let i = 0; i < addresses.length; i += batchSize) {
             const batch = addresses.slice(i, i + batchSize);
@@ -1388,6 +1388,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   results[normalizedAddress] = tokenPrice;
                   
                   console.log(`Background fetched price for ${normalizedAddress}: $${priceData}`);
+                } else {
+                  console.log(`No price data found for ${normalizedAddress} in background fetch`);
                 }
               } catch (error) {
                 console.error(`Error fetching background price for ${address}:`, error);
@@ -1396,9 +1398,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             await Promise.all(promises);
             
-            // Small delay between batches to be respectful
+            // Longer delay between batches to respect rate limits
             if (i + batchSize < addresses.length) {
-              await new Promise(resolve => setTimeout(resolve, 200));
+              await new Promise(resolve => setTimeout(resolve, 1000));
             }
           }
           

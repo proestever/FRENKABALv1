@@ -175,6 +175,9 @@ Required environment variables:
 - **Background batch fetching** - Implemented automatic background price fetching for large wallets that exceed initial API limits
 - **Rate limit handling** - Smart detection of missing token prices with background DexScreener batch processing
 - **Progressive loading** - Initial fast load followed by background completion for comprehensive price coverage
+- **Improved DexScreener filtering** - Reduced liquidity requirements from $1000 to $100 minimum to capture more tokens
+- **Fallback price detection** - Added fallback system for tokens that don't meet normal criteria but have valid prices
+- **Enhanced background logging** - Added detailed logging for background batch processing to identify missed tokens
 
 ## User Preferences
 
