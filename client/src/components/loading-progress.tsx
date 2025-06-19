@@ -91,8 +91,8 @@ export function LoadingProgress({ isLoading, customProgress }: LoadingProgressPr
                     progress.status !== 'idle' && 
                     (progress.status !== 'complete' || !hideDelay);
   
-  // Don't show anything if not in loading state or if complete
-  if (!shouldShow) {
+  // Only show for initial loading, not background operations
+  if (!isLoading || progress.status === 'idle') {
     return null;
   }
   
