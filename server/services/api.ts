@@ -356,12 +356,7 @@ export async function getWalletDataFull(
     const plsPriceData = await getTokenPriceFromDexScreener(WPLS_CONTRACT_ADDRESS);
     const plsPrice = plsPriceData || 0;
 
-    updateLoadingProgress({
-      currentBatch: 3,
-      totalBatches: 6,
-      status: 'loading',
-      message: 'Processing token balances...'
-    });
+    // Silent loading - no progress updates
 
     const processedTokens: ProcessedToken[] = [];
 
@@ -379,12 +374,7 @@ export async function getWalletDataFull(
       verified: true
     });
 
-    updateLoadingProgress({
-      currentBatch: 4,
-      totalBatches: 6,
-      status: 'loading',
-      message: 'Fetching token prices...'
-    });
+    // Silent loading - no progress updates
 
     for (const tokenBalance of walletBalances.tokenBalances) {
       const decimals = parseInt(tokenBalance.decimals || '18');
@@ -536,12 +526,7 @@ export async function getWalletDataFull(
       }
     }
 
-    updateLoadingProgress({
-      currentBatch: 6,
-      totalBatches: 6,
-      status: 'loading',
-      message: 'Finalizing results...'
-    });
+    // Silent loading - no progress updates
 
     processedTokens.sort((a, b) => (b.value || 0) - (a.value || 0));
 
