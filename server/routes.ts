@@ -1336,13 +1336,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`Starting background batch fetch for ${addresses.length} tokens from wallet ${walletAddress}`);
-      console.log(`First 5 addresses:`, addresses.slice(0, 5));
       
       // Process in background - don't wait for completion
       setImmediate(async () => {
         try {
           const results: Record<string, any> = {};
-          const batchSize = 5; // Reduced batch size to avoid rate limits
+          const batchSize = 10; // Higher batch size for DexScreener
           
           for (let i = 0; i < addresses.length; i += batchSize) {
             const batch = addresses.slice(i, i + batchSize);
@@ -1360,7 +1359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 // Fetch price from DexScreener
                 const priceData = await getTokenPriceFromDexScreener(normalizedAddress);
-                if (priceData && priceData > 0) {
+                if (priceData) {
                   const tokenPrice = {
                     tokenName: 'Unknown Token',
                     tokenSymbol: 'UNKNOWN',
@@ -1388,8 +1387,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   results[normalizedAddress] = tokenPrice;
                   
                   console.log(`Background fetched price for ${normalizedAddress}: $${priceData}`);
-                } else {
-                  console.log(`No price data found for ${normalizedAddress} in background fetch`);
                 }
               } catch (error) {
                 console.error(`Error fetching background price for ${address}:`, error);
@@ -1398,9 +1395,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             await Promise.all(promises);
             
-            // Longer delay between batches to respect rate limits
+            // Small delay between batches to be respectful
             if (i + batchSize < addresses.length) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await new Promise(resolve => setTimeout(resolve, 200));
             }
           }
           

@@ -69,12 +69,7 @@ export interface TokenPriceData {
 
 export async function getTokenPriceFromDexScreener(tokenAddress: string): Promise<number | null> {
   const data = await getTokenPriceDataFromDexScreener(tokenAddress);
-  if (data && data.price > 0) {
-    console.log(`Successfully fetched price for ${tokenAddress}: $${data.price}`);
-    return data.price;
-  }
-  console.log(`No valid price found for ${tokenAddress}`);
-  return null;
+  return data ? data.price : null;
 }
 
 export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Promise<TokenPriceData | null> {
@@ -139,30 +134,14 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
       // Ensure priceUsd is available
       if (!pair.priceUsd) continue;
       
-      // Must have minimum liquidity to be considered (very low threshold for comprehensive coverage)
-      if (!pair.liquidity?.usd || pair.liquidity.usd < 50) continue;
+      // Must have minimum liquidity to be considered
+      if (!pair.liquidity?.usd || pair.liquidity.usd < 1000) continue;
       
       validPairs.push(pair);
     }
     
     if (validPairs.length === 0) {
       console.log(`No valid pairs found for token ${addressToUse}`);
-      // Try a fallback with even more lenient criteria
-      const fallbackPairs = data.pairs.filter(pair => 
-        pair.priceUsd && parseFloat(pair.priceUsd) > 0
-      );
-      
-      if (fallbackPairs.length > 0) {
-        console.log(`Using fallback pair with minimal criteria for ${addressToUse}`);
-        const bestFallback = fallbackPairs.reduce((best, current) => 
-          (current.liquidity?.usd || 0) > (best.liquidity?.usd || 0) ? current : best
-        );
-        return {
-          price: parseFloat(bestFallback.priceUsd),
-          priceChange24h: bestFallback.priceChange?.h24 || 0
-        };
-      }
-      
       return null;
     }
     
@@ -192,13 +171,10 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
         const medianPrice = prices.sort((a, b) => a - b)[Math.floor(prices.length / 2)];
         const priceRatio = price / medianPrice;
         
-        // Heavy penalty if price is more than 100x different from median (more lenient)
-        if (priceRatio > 100 || priceRatio < 0.01) {
+        // Heavy penalty if price is more than 10x different from median
+        if (priceRatio > 10 || priceRatio < 0.1) {
           score *= 0.1;
-          console.log(`Extreme price outlier detected for pair: $${price} vs median $${medianPrice}, applying penalty`);
-        } else if (priceRatio > 10 || priceRatio < 0.1) {
-          score *= 0.5;
-          console.log(`Price outlier detected for pair: $${price} vs median $${medianPrice}, applying reduced penalty`);
+          console.log(`Price outlier detected for pair: $${price} vs median $${medianPrice}, applying penalty`);
         }
       }
       
