@@ -1336,6 +1336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`Starting background batch fetch for ${addresses.length} tokens from wallet ${walletAddress}`);
+      console.log(`First 5 addresses:`, addresses.slice(0, 5));
       
       // Process in background - don't wait for completion
       setImmediate(async () => {

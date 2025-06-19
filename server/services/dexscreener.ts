@@ -147,6 +147,22 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
     
     if (validPairs.length === 0) {
       console.log(`No valid pairs found for token ${addressToUse}`);
+      // Try a fallback with even more lenient criteria
+      const fallbackPairs = data.pairs.filter(pair => 
+        pair.priceUsd && parseFloat(pair.priceUsd) > 0
+      );
+      
+      if (fallbackPairs.length > 0) {
+        console.log(`Using fallback pair with minimal criteria for ${addressToUse}`);
+        const bestFallback = fallbackPairs.reduce((best, current) => 
+          (current.liquidity?.usd || 0) > (best.liquidity?.usd || 0) ? current : best
+        );
+        return {
+          price: parseFloat(bestFallback.priceUsd),
+          priceChange24h: bestFallback.priceChange?.h24 || 0
+        };
+      }
+      
       return null;
     }
     
