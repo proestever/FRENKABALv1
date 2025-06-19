@@ -297,8 +297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Force refreshing wallet data for ${address} - explicitly bypassing cache`);
       
-      // First, clear any existing cache for this wallet
-      cacheService.invalidateWalletData(address);
+      // Force refresh wallet data
       
       // Get fresh data with force refresh parameter
       const walletData = await getWalletData(address, 1, 1000, true);
@@ -1350,12 +1349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               try {
                 const normalizedAddress = address.toLowerCase();
                 
-                // Check if price is already cached
-                const cached = cacheService.getTokenPrice(normalizedAddress);
-                if (cached) {
-                  results[normalizedAddress] = cached;
-                  return;
-                }
+                // Fetch fresh price data
                 
                 // Fetch price from DexScreener
                 const priceData = await getTokenPriceFromDexScreener(normalizedAddress);
@@ -1382,8 +1376,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     securityScore: 50
                   };
                   
-                  // Cache the result
-                  cacheService.setTokenPrice(normalizedAddress, tokenPrice);
                   results[normalizedAddress] = tokenPrice;
                   
                   console.log(`Background fetched price for ${normalizedAddress}: $${priceData}`);

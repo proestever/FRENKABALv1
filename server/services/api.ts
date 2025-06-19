@@ -293,7 +293,6 @@ export async function getTokenPrice(tokenAddress: string): Promise<TokenPriceRes
         securityScore: 50
       };
       
-      cacheService.setTokenPrice(normalizedAddress, result);
       return result;
     } else {
       console.log(`DexScreener didn't return price for ${normalizedAddress}`);
@@ -608,7 +607,7 @@ export async function getWalletDataFull(
       missingPriceCount: tokensWithoutPrices.length
     };
 
-    cacheService.setWalletData(cacheKey, result);
+
     
     updateLoadingProgress({
       currentBatch: 6,

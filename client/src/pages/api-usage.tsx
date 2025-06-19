@@ -68,17 +68,17 @@ export default function ApiUsagePage() {
             <li><strong>Token Logo Fetch:</strong> 1 CU</li>
           </ul>
           
-          <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-md">
-            <h3 className="text-md font-semibold mb-2">Cache Benefits</h3>
+          <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-md">
+            <h3 className="text-md font-semibold mb-2">Client-Side Fetching</h3>
             <p>
-              When data is served from cache, it consumes only 20% of the normal CUs.
-              Our caching system significantly reduces API calls:
+              All data is now fetched directly from your browser to PulseChain and DexScreener APIs.
+              This eliminates server load and provides real-time data:
             </p>
             <ul className="list-disc list-inside space-y-1 ml-4 mt-2 text-sm">
-              <li>Wallet data is cached for 3 minutes</li>
-              <li>Token prices are cached for 5 minutes</li>
-              <li>Transaction history is cached for 10 minutes</li>
-              <li>Token logos are cached for 24 hours</li>
+              <li>Fresh wallet data on every request</li>
+              <li>Real-time token prices from DexScreener</li>
+              <li>Direct blockchain transaction data</li>
+              <li>No server-side caching delays</li>
             </ul>
           </div>
         </div>

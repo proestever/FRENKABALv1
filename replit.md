@@ -132,6 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
+### June 19, 2025 - Cache System Removal
+- **Removed all caching infrastructure** - Eliminated server-side and client-side caching entirely
+- **Simplified architecture** - All data fetching is now direct from browser to APIs
+- **Real-time data guarantee** - Every request provides fresh blockchain data
+- **Reduced server complexity** - Removed cache service, cache management, and TTL configurations
+- **Updated UI messaging** - Changed cache-related text to reflect direct API fetching
+
 ### June 18, 2025 - Enhanced Transaction History & HEX Stakes Fixes
 - **Updated transaction links to Otterscan** - All transaction links now navigate to Otterscan instead of PulseScan for better user experience
 - **Removed Moralis API dependency entirely** - Eliminated all expensive Moralis API calls

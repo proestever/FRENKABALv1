@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { dexScreenerPreferredTokens, type InsertDexScreenerPreferredToken } from '@shared/schema';
-import { cacheService } from './cache-service';
+
 import { eq } from 'drizzle-orm';
 
 // Cache the preferred tokens in memory to avoid database lookups on every token price request

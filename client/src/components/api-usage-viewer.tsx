@@ -263,13 +263,13 @@ export function ApiUsageViewer() {
             </div>
             
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-4">
-              <h3 className="text-lg font-semibold mb-2">Tips to Reduce API Usage</h3>
+              <h3 className="text-lg font-semibold mb-2">Data Fetching Information</h3>
               <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Use bookmarks instead of repeatedly searching the same wallet</li>
-                <li>Create a portfolio to track multiple wallets together with fewer API calls</li>
-                <li>Limit unnecessary refreshes - data is automatically cached for 3-10 minutes</li>
-                <li>For wallets with many tokens (100+), use the wallet overview instead of loading all tokens</li>
-                <li>Use the transaction history feature sparingly as it makes several API calls</li>
+                <li>All data is now fetched directly from your browser to blockchain APIs</li>
+                <li>Use bookmarks to quickly access frequently viewed wallets</li>
+                <li>Create portfolios to track multiple wallets in one view</li>
+                <li>Real-time data provides the most current blockchain information</li>
+                <li>No server-side processing means faster, more direct access to data</li>
               </ul>
             </div>
           </div>
