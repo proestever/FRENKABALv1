@@ -54,42 +54,18 @@ export function useAllWalletTokens(walletAddress: string | null) {
     queryFn: () => walletAddress ? fetchAllWalletTokens(walletAddress) : Promise.reject('No wallet address'),
   });
   
-  // Set loading progress status with more controlled polling
+  // Set loading progress status - only for initial loads, not background fetches
   useEffect(() => {
-    let pollInterval: NodeJS.Timeout | null = null;
-    
-    // When fetching starts, update the progress status and start polling
-    if (isFetching) {
-      // Initialize progress when fetching starts
+    // Only show loading progress for initial data fetch, not background operations
+    if (isFetching && !walletData) {
+      // Initialize progress for initial load only
       setProgress({
         currentBatch: 1,
-        totalBatches: 5, // Initial estimate
+        totalBatches: 1,
         status: 'loading',
-        message: 'Fetching wallet data...',
+        message: 'Loading wallet data...',
         lastUpdated: Date.now()
       });
-      
-      const fetchProgress = () => {
-        fetch('/api/loading-progress')
-          .then(response => response.ok ? response.json() : null)
-          .then(data => {
-            if (data) {
-              setProgress(prev => ({
-                ...data,
-                lastUpdated: Date.now()
-              }));
-            }
-          })
-          .catch(error => {
-            console.error('Error fetching loading progress:', error);
-          });
-      };
-      
-      // Make an immediate request first
-      fetchProgress();
-      
-      // Then poll every 3 seconds to reduce API load
-      pollInterval = setInterval(fetchProgress, 3000);
     } else if (walletData || isError) {
       // When data is loaded or there's an error, update the progress
       const finalStatus = isError ? 'error' : 'complete';
@@ -98,18 +74,13 @@ export function useAllWalletTokens(walletAddress: string | null) {
         : `Successfully loaded ${walletData?.tokens?.length || 0} tokens`;
       
       // Update to final status
-      setProgress(prev => ({
-        ...prev,
+      setProgress({
+        currentBatch: 1,
+        totalBatches: 1,
         status: finalStatus,
         message: finalMessage,
         lastUpdated: Date.now()
-      }));
-      
-      // Clear any existing polling interval first
-      if (pollInterval) {
-        clearInterval(pollInterval);
-        pollInterval = null;
-      }
+      });
       
       // Silent background fetch - don't show loading progress for background operations
       if ((walletData as any)?.backgroundFetchTriggered && (walletData as any)?.missingPriceCount && walletAddress) {
@@ -126,22 +97,10 @@ export function useAllWalletTokens(walletAddress: string | null) {
           }
         );
       }
-      
-      // One final update without additional API call to reduce load
-      setProgress(prev => ({
-        ...prev,
-        status: finalStatus,
-        message: finalMessage,
-        lastUpdated: Date.now()
-      }));
     }
     
-    // Clean up the interval when component unmounts or dependencies change
+    // Clean up background batch service when component unmounts
     return () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
-      // Clean up background batch service
       if (walletAddress) {
         backgroundBatchService.stopBackgroundBatch(walletAddress);
       }
