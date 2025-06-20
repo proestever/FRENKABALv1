@@ -41,10 +41,14 @@ export function usePagedWallet(walletAddress: string | null, initialPage: number
         });
     },
     enabled: !!walletAddress,
-    staleTime: 60000, // Consider data fresh for 1 minute
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    retry: 1,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    refetchInterval: false,
+    refetchIntervalInBackground: false,
+    staleTime: Infinity, // Data never becomes stale - remains static after initial load
+    gcTime: Infinity, // Keep in cache indefinitely
+    retry: 1,
   });
 
   // Function to change the current page with optional prefetching

@@ -132,6 +132,12 @@ Required environment variables:
 
 ## Recent Changes
 
+### June 20, 2025 - Disabled Automatic Refreshing
+- **Removed all automatic wallet data refreshing** - Wallet data now remains completely static after initial load
+- **Disabled background batch services** - No more automatic price fetching or data updates
+- **Set infinite cache duration** - Data never expires or refreshes automatically
+- **Disabled all refetch triggers** - No refreshing on window focus, reconnect, or mount
+
 ### June 19, 2025 - Cache System Removal
 - **Removed all caching infrastructure** - Eliminated server-side and client-side caching entirely
 - **Simplified architecture** - All data fetching is now direct from browser to APIs

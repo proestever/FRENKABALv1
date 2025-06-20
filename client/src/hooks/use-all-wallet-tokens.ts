@@ -19,22 +19,13 @@ export function useAllWalletTokens(walletAddress: string | null) {
     lastUpdated: Date.now() // Track when progress was last updated
   });
   
-  // Always invalidate the cache for the current wallet address on mount and when wallet changes
+  // Track wallet address changes but don't automatically invalidate cache
   useEffect(() => {
-    // Always clear the cache for the current wallet address - even if it's the same as before
-    if (walletAddress) {
-      console.log('Invalidating cache for wallet:', walletAddress);
-      queryClient.invalidateQueries({ queryKey: [`wallet-all-${walletAddress}`] });
-      
-      // Clear any previous wallet address cache as well
-      if (prevWalletAddress.current && prevWalletAddress.current !== walletAddress) {
-        console.log('Clearing previous wallet cache:', prevWalletAddress.current);
-        queryClient.invalidateQueries({ queryKey: [`wallet-all-${prevWalletAddress.current}`] });
-      }
-      
+    if (walletAddress && prevWalletAddress.current !== walletAddress) {
+      console.log('Wallet address changed to:', walletAddress);
       prevWalletAddress.current = walletAddress;
     }
-  }, [walletAddress, queryClient]);
+  }, [walletAddress]);
   
   // Fetch wallet data with all tokens
   const { 
@@ -49,8 +40,11 @@ export function useAllWalletTokens(walletAddress: string | null) {
     enabled: !!walletAddress,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    staleTime: 5 * 60 * 1000, // Data considered fresh for 5 minutes (reducing API calls)
-    gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
+    refetchOnMount: false,
+    refetchInterval: false,
+    refetchIntervalInBackground: false,
+    staleTime: Infinity, // Data never becomes stale - remains static after initial load
+    gcTime: Infinity, // Keep in cache indefinitely
     queryFn: () => walletAddress ? fetchAllWalletTokens(walletAddress) : Promise.reject('No wallet address'),
   });
   
@@ -82,21 +76,8 @@ export function useAllWalletTokens(walletAddress: string | null) {
         lastUpdated: Date.now()
       });
       
-      // Silent background fetch - don't show loading progress for background operations
-      if ((walletData as any)?.backgroundFetchTriggered && (walletData as any)?.missingPriceCount && walletAddress) {
-        // Start background batch service silently
-        backgroundBatchService.startBackgroundBatch(
-          walletAddress,
-          (walletData as any).missingPriceCount,
-          (batchProgress: BackgroundBatchProgress) => {
-            // Silent background operation - only refetch when complete
-            if (!batchProgress.isActive) {
-              // Background batch completed - silently refetch
-              refetch();
-            }
-          }
-        );
-      }
+      // DISABLED: No automatic background fetching or refreshing
+      // Data will remain static after initial load to prevent unwanted reloading
     }
     
     // Clean up background batch service when component unmounts
