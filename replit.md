@@ -145,6 +145,13 @@ Required environment variables:
 - **Fixed contract address display issue** - Tokens now show proper symbols (e.g., "BEEF") instead of contract addresses everywhere in transaction history
 - **Comprehensive token symbol resolution** - Applied enhanced token metadata lookup across all display areas including transfers, values, and swap summaries
 
+### July 3, 2025 - Fixed Transaction History Overflow & Enhanced Token Display  
+- **Fixed text overflow issues** - Added proper overflow controls with truncate and max-height constraints to prevent UI spillage
+- **Enhanced token amount formatting** - Created formatTokenValue function that shows K, M, B, T suffixes for large numbers (e.g., "500K" instead of "500000")
+- **Explicit swap display** - Swaps now show clear "SWAPPED 500K PLS into 10k BEEF" format instead of generic arrows
+- **Fixed hover tooltip overflow** - Added max-height, overflow-y-auto, and z-index fixes to prevent tooltips from breaking layout
+- **Consistent mobile/desktop display** - Both views now use the same explicit "SWAPPED X into Y" format with proper formatting
+
 ### July 3, 2025 - Transfer History-Based Balance Calculation
 - **Added alternative balance calculation method** - Users can now toggle between standard API-based balance fetching and a more accurate transfer history-based calculation
 - **Created transfer-history-service.ts** - New service that calculates balances by analyzing complete on-chain transfer history

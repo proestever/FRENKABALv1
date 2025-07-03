@@ -209,11 +209,13 @@ const formatTokenValue = (value: string, decimals?: string) => {
   
   if (numValue === 0) return '0';
   if (numValue < 0.000001) return '< 0.000001';
-  if (numValue < 1) return numValue.toFixed(6);
-  if (numValue < 1000) return numValue.toFixed(4);
-  if (numValue < 1000000) return numValue.toFixed(2);
+  if (numValue < 1) return numValue.toFixed(6).replace(/\.?0+$/, '');
+  if (numValue < 1000) return numValue.toFixed(2).replace(/\.?0+$/, '');
+  if (numValue < 1000000) return `${(numValue / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+  if (numValue < 1000000000) return `${(numValue / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (numValue < 1000000000000) return `${(numValue / 1000000000).toFixed(1).replace(/\.0$/, '')}B`;
   
-  return numValue.toExponential(2);
+  return `${(numValue / 1000000000000).toFixed(1).replace(/\.0$/, '')}T`;
 };
 
 export function TransactionHistory({ walletAddress, onClose }: TransactionHistoryProps) {
@@ -1564,11 +1566,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       const primaryReceived = swapInfo.receivedTokens.find(t => !t.isPlaceholder) || swapInfo.receivedTokens[0];
                       
                       return (
-                        <div className="mb-2 flex items-center text-sm">
-                          <RefreshCw className="mr-2 text-purple-400" size={14} />
-                          <span className="font-medium text-purple-400">Swap:</span>
-                          <span className="ml-2 text-white">
-                            {primarySent.amount} {primarySent.symbol} → {primaryReceived.amount} {primaryReceived.symbol}
+                        <div className="mb-2 flex items-center text-sm overflow-hidden">
+                          <RefreshCw className="mr-2 text-purple-400 flex-shrink-0" size={14} />
+                          <span className="font-medium text-purple-400 whitespace-nowrap">SWAPPED</span>
+                          <span className="ml-2 text-white font-semibold truncate">
+                            {primarySent.amount} {primarySent.symbol} into {primaryReceived.amount} {primaryReceived.symbol}
                           </span>
                         </div>
                       );
@@ -1646,7 +1648,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                     </div>
                                   ) : null;
                                 })()}
-                                <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-10 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px]">
+                                <div className="absolute left-0 top-full mt-0.5 opacity-0 invisible group-hover:visible group-hover:opacity-100 bg-black/80 backdrop-blur-md border border-white/10 rounded p-2 z-50 w-48 transition-all duration-200 ease-in-out transform origin-top-left group-hover:translate-y-0 translate-y-[-8px] pb-3 pt-3 px-3 before:content-[''] before:absolute before:top-[-10px] before:left-0 before:w-full before:h-[10px] max-h-64 overflow-y-auto shadow-xl">
                                   <div className="mb-2 text-xs">
                                     <span className="text-muted-foreground">Contract:</span>
                                     <div className="flex items-center mt-1">
@@ -2075,11 +2077,11 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 const primaryReceived = swapInfo.receivedTokens.find(t => !t.isPlaceholder) || swapInfo.receivedTokens[0];
                 
                 return (
-                  <div className="mb-3 p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg flex items-center text-sm">
-                    <RefreshCw className="mr-2 text-purple-400" size={14} />
-                    <span className="font-medium text-purple-400">Swap:</span>
-                    <span className="ml-2 text-white text-xs">
-                      {primarySent.amount} {primarySent.symbol} → {primaryReceived.amount} {primaryReceived.symbol}
+                  <div className="mb-3 p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg flex items-center text-sm overflow-hidden">
+                    <RefreshCw className="mr-2 text-purple-400 flex-shrink-0" size={14} />
+                    <span className="font-medium text-purple-400 whitespace-nowrap">SWAPPED</span>
+                    <span className="ml-2 text-white text-xs font-semibold truncate">
+                      {primarySent.amount} {primarySent.symbol} into {primaryReceived.amount} {primaryReceived.symbol}
                     </span>
                   </div>
                 );
