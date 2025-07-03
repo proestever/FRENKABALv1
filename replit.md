@@ -138,6 +138,8 @@ Required environment variables:
 - **Enhanced placeholder tokens** - When actual tokens can't be determined, shows more descriptive placeholders instead of generic "DEX interaction"
 - **Added transaction summary parsing** - Attempts to extract token symbols from transaction summaries when available
 - **Unified desktop/mobile display** - Both views now use the same compact swap format for consistency
+- **Fixed contract address display issue** - Tokens now show proper symbols (e.g., "BEEF") instead of contract addresses everywhere in transaction history
+- **Comprehensive token symbol resolution** - Applied enhanced token metadata lookup across all display areas including transfers, values, and swap summaries
 
 ### July 3, 2025 - Transfer History-Based Balance Calculation
 - **Added alternative balance calculation method** - Users can now toggle between standard API-based balance fetching and a more accurate transfer history-based calculation

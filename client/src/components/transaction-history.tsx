@@ -1465,13 +1465,39 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             const sendParts = effectiveSendTransfers.map(transfer => {
                               const amount = transfer.value_formatted || 
                                 formatTokenValue(transfer.value, transfer.token_decimals);
-                              return `${amount} ${transfer.token_symbol || 'tokens'}`;
+                              let symbol = transfer.token_symbol || 'tokens';
+                              // Check if token symbol is a contract address
+                              if (symbol.startsWith('0x') && symbol.length === 42) {
+                                const enhanced = enhancedTransactions[tx.hash];
+                                if (enhanced && enhanced.tokenMetadata) {
+                                  const tokenMeta = enhanced.tokenMetadata.find(
+                                    (meta: any) => meta.address.toLowerCase() === transfer.address?.toLowerCase()
+                                  );
+                                  if (tokenMeta && tokenMeta.symbol) {
+                                    symbol = tokenMeta.symbol;
+                                  }
+                                }
+                              }
+                              return `${amount} ${symbol}`;
                             });
                             
                             const receiveParts = effectiveReceiveTransfers.map(transfer => {
                               const amount = transfer.value_formatted || 
                                 formatTokenValue(transfer.value, transfer.token_decimals);
-                              return `${amount} ${transfer.token_symbol || 'tokens'}`;
+                              let symbol = transfer.token_symbol || 'tokens';
+                              // Check if token symbol is a contract address
+                              if (symbol.startsWith('0x') && symbol.length === 42) {
+                                const enhanced = enhancedTransactions[tx.hash];
+                                if (enhanced && enhanced.tokenMetadata) {
+                                  const tokenMeta = enhanced.tokenMetadata.find(
+                                    (meta: any) => meta.address.toLowerCase() === transfer.address?.toLowerCase()
+                                  );
+                                  if (tokenMeta && tokenMeta.symbol) {
+                                    symbol = tokenMeta.symbol;
+                                  }
+                                }
+                              }
+                              return `${amount} ${symbol}`;
                             });
                             
                             const sendText = sendParts.join(' and ');
@@ -1489,7 +1515,36 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             const receiveAmount = receiveTransfer.value_formatted || 
                               formatTokenValue(receiveTransfer.value, receiveTransfer.token_decimals);
                             
-                            return `Swapped ${sendAmount} ${sendTransfer.token_symbol || 'tokens'} for ${receiveAmount} ${receiveTransfer.token_symbol || 'tokens'}`;
+                            let sendSymbol = sendTransfer.token_symbol || 'tokens';
+                            let receiveSymbol = receiveTransfer.token_symbol || 'tokens';
+                            
+                            // Check if send token symbol is a contract address
+                            if (sendSymbol.startsWith('0x') && sendSymbol.length === 42) {
+                              const enhanced = enhancedTransactions[tx.hash];
+                              if (enhanced && enhanced.tokenMetadata) {
+                                const tokenMeta = enhanced.tokenMetadata.find(
+                                  (meta: any) => meta.address.toLowerCase() === sendTransfer.address?.toLowerCase()
+                                );
+                                if (tokenMeta && tokenMeta.symbol) {
+                                  sendSymbol = tokenMeta.symbol;
+                                }
+                              }
+                            }
+                            
+                            // Check if receive token symbol is a contract address
+                            if (receiveSymbol.startsWith('0x') && receiveSymbol.length === 42) {
+                              const enhanced = enhancedTransactions[tx.hash];
+                              if (enhanced && enhanced.tokenMetadata) {
+                                const tokenMeta = enhanced.tokenMetadata.find(
+                                  (meta: any) => meta.address.toLowerCase() === receiveTransfer.address?.toLowerCase()
+                                );
+                                if (tokenMeta && tokenMeta.symbol) {
+                                  receiveSymbol = tokenMeta.symbol;
+                                }
+                              }
+                            }
+                            
+                            return `Swapped ${sendAmount} ${sendSymbol} for ${receiveAmount} ${receiveSymbol}`;
                           }
                         }
                       }
@@ -1546,11 +1601,41 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           <div className="flex flex-col">
                             <div className="flex items-center">
                               <div className="group relative">
-                                <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30" title={transfer.token_symbol}>
+                                <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30" title={(() => {
+                                  let symbol = transfer.token_symbol || 'Unknown';
+                                  if (symbol.startsWith('0x') && symbol.length === 42) {
+                                    const enhanced = enhancedTransactions[tx.hash];
+                                    if (enhanced && enhanced.tokenMetadata) {
+                                      const tokenMeta = enhanced.tokenMetadata.find(
+                                        (meta: any) => meta.address.toLowerCase() === transfer.address?.toLowerCase()
+                                      );
+                                      if (tokenMeta && tokenMeta.symbol) {
+                                        symbol = tokenMeta.symbol;
+                                      }
+                                    }
+                                  }
+                                  return symbol;
+                                })()}>
                                   {transfer.direction === 'receive' ? '+' : '-'}
-                                  {formatTokenValue(transfer.value, transfer.token_decimals)} {transfer.token_symbol && transfer.token_symbol.length > 15 
-                                    ? `${transfer.token_symbol.substring(0, 8)}...` 
-                                    : transfer.token_symbol}
+                                  {formatTokenValue(transfer.value, transfer.token_decimals)} {(() => {
+                                    let symbol = transfer.token_symbol || 'Unknown';
+                                    // Check if token symbol is a contract address
+                                    if (symbol.startsWith('0x') && symbol.length === 42) {
+                                      // Try to find enhanced data for this token
+                                      const enhanced = enhancedTransactions[tx.hash];
+                                      if (enhanced && enhanced.tokenMetadata) {
+                                        const tokenMeta = enhanced.tokenMetadata.find(
+                                          (meta: any) => meta.address.toLowerCase() === transfer.address?.toLowerCase()
+                                        );
+                                        if (tokenMeta && tokenMeta.symbol) {
+                                          symbol = tokenMeta.symbol;
+                                        }
+                                      }
+                                    }
+                                    return symbol && symbol.length > 15 
+                                      ? `${symbol.substring(0, 8)}...` 
+                                      : symbol;
+                                  })()}
                                 </span>
                                 {/* USD Value Display */}
                                 {(() => {
@@ -1738,9 +1823,25 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           {transfer.value_formatted || formatTokenValue(transfer.value, transfer.token_decimals)}
                         </span>
                         <span className="ml-1 break-all">
-                          {transfer.token_symbol && transfer.token_symbol.length > 6 
-                            ? `${transfer.token_symbol.substring(0, 6)}...` 
-                            : transfer.token_symbol}
+                          {(() => {
+                            let symbol = transfer.token_symbol || 'Unknown';
+                            // Check if token symbol is a contract address
+                            if (symbol.startsWith('0x') && symbol.length === 42) {
+                              // Try to find enhanced data for this token
+                              const enhanced = enhancedTransactions[tx.hash];
+                              if (enhanced && enhanced.tokenMetadata) {
+                                const tokenMeta = enhanced.tokenMetadata.find(
+                                  (meta: any) => meta.address.toLowerCase() === transfer.address?.toLowerCase()
+                                );
+                                if (tokenMeta && tokenMeta.symbol) {
+                                  symbol = tokenMeta.symbol;
+                                }
+                              }
+                            }
+                            return symbol && symbol.length > 6 
+                              ? `${symbol.substring(0, 6)}...` 
+                              : symbol;
+                          })()}
                         </span>
                       </div>
                       {/* Add USD value display using batch token prices */}
