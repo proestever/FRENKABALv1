@@ -142,14 +142,36 @@ export async function calculateBalancesFromTransferHistory(
     // Calculate balances by token
     const tokenBalances = new Map<string, ethers.BigNumber>();
     
+    // Track processed transactions to avoid duplicates
+    const processedTxs = new Set<string>();
+    
     for (const transfer of allTransfers) {
       const tokenAddress = transfer.tokenAddress.toLowerCase();
+      const txKey = `${transfer.transactionHash}-${transfer.tokenAddress}-${transfer.from}-${transfer.to}-${transfer.value.toString()}`;
+      
+      // Skip if we've already processed this exact transfer
+      if (processedTxs.has(txKey)) {
+        continue;
+      }
+      processedTxs.add(txKey);
       
       if (!tokenBalances.has(tokenAddress)) {
         tokenBalances.set(tokenAddress, ethers.BigNumber.from(0));
       }
       
       const currentBalance = tokenBalances.get(tokenAddress)!;
+      
+      // Debug logging for WPLS
+      if (tokenAddress === WPLS_CONTRACT_ADDRESS.toLowerCase()) {
+        console.log('WPLS Transfer:', {
+          from: transfer.from,
+          to: transfer.to,
+          value: ethers.utils.formatUnits(transfer.value, 18),
+          isIncoming: transfer.to.toLowerCase() === normalizedAddress,
+          isOutgoing: transfer.from.toLowerCase() === normalizedAddress,
+          txHash: transfer.transactionHash
+        });
+      }
       
       // If wallet is recipient, add to balance
       if (transfer.to.toLowerCase() === normalizedAddress) {
@@ -163,6 +185,17 @@ export async function calculateBalancesFromTransferHistory(
     }
 
     console.log(`Calculated balances for ${tokenBalances.size} tokens`);
+    
+    // Log WPLS balance if present
+    const wplsAddress = WPLS_CONTRACT_ADDRESS.toLowerCase();
+    if (tokenBalances.has(wplsAddress)) {
+      const wplsBalance = tokenBalances.get(wplsAddress)!;
+      console.log('Final WPLS balance:', {
+        raw: wplsBalance.toString(),
+        formatted: ethers.utils.formatUnits(wplsBalance, 18),
+        wallet: walletAddress
+      });
+    }
 
     // Get native PLS balance
     const plsBalance = await provider.getBalance(walletAddress);
