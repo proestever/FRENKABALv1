@@ -5,7 +5,7 @@ import { TokenLogo } from '@/components/token-logo';
 import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
-import { formatDate, shortenAddress } from '@/lib/utils';
+import { shortenAddress } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
 import { Link } from 'wouter';
 import { useTokenDataPrefetch } from '@/hooks/use-token-data-prefetch';
@@ -115,6 +115,11 @@ const detectTokenSwap = (tx: Transaction) => {
   return null;
 };
 
+// Format date helper
+const formatDate = (timestamp: number): string => {
+  return new Date(timestamp).toLocaleString();
+};
+
 // Format token value helper
 const formatTokenValue = (value: string, decimals?: string, maxLength: number = 20): string => {
   if (!value || value === '0') return '0';
@@ -165,8 +170,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     return Array.from(addresses);
   }, [transactions]);
   
-  const { prefetchedLogos } = useTokenDataPrefetch(tokenAddresses);
-  const { prices: batchPrices } = useBatchTokenPrices(tokenAddresses);
+  const { logos: prefetchedLogos } = useTokenDataPrefetch(walletAddress, tokenAddresses);
+  const batchPricesResult = useBatchTokenPrices(tokenAddresses);
+  const batchPrices = batchPricesResult.data;
   
   // Copy to clipboard helper
   const copyToClipboard = async (text: string, key?: string) => {

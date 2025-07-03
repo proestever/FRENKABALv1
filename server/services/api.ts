@@ -222,6 +222,9 @@ export async function getWalletTransactionHistory(
       erc20_transfers: tx.token_transfers ? tx.token_transfers.map((transfer: any) => {
         const tokenAddress = transfer.token?.address?.toLowerCase() || '';
         const dexScreenerLogo = tokenLogos[tokenAddress];
+        const fromAddress = transfer.from?.hash?.toLowerCase() || '';
+        const toAddress = transfer.to?.hash?.toLowerCase() || '';
+        const wallet = walletAddress.toLowerCase();
         
         return {
           token_name: transfer.token?.name || null,
@@ -239,7 +242,7 @@ export async function getWalletTransactionHistory(
           possible_spam: false,
           verified_contract: transfer.token?.verified || false,
           security_score: null,
-          direction: null,
+          direction: fromAddress === wallet ? 'send' : (toAddress === wallet ? 'receive' : null),
           internal_transaction: false
         };
       }) : [],
