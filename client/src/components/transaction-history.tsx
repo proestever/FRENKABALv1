@@ -134,28 +134,63 @@ const getTransactionType = (tx: Transaction): TransactionType => {
   return 'all'; // Default fallback
 };
 
-// Helper function to detect token swaps
+// Helper function to detect token swaps with improved logic
 const detectTokenSwap = (tx: Transaction) => {
-  if (!tx.erc20_transfers || tx.erc20_transfers.length < 2) return null;
+  // First check if method label indicates a swap
+  const swapMethodSignatures = ['swap', 'trade', 'multicall', 'exactinput', 'exactoutput', 'swapexact', 'swaptokens'];
+  const isSwapMethod = tx.method_label && swapMethodSignatures.some(sig => tx.method_label?.toLowerCase().includes(sig));
+  
+  // Check for DEX router contracts
+  const dexRouterAddresses = [
+    '0xda9aba4eacf54e0273f56dfffee6b8f1e20b23bba', // PulseX Router
+    '0x165c3410fc91ef562c50559f7d2289febb913d90', // PulseX Router V2
+    '0x98bf93ebf5c380c0e6ae8e192a7e2ae08edacc02', // PulseX Factory
+  ];
+  const isDexRouter = dexRouterAddresses.includes(tx.to_address?.toLowerCase() || '');
+  
+  if (!tx.erc20_transfers || tx.erc20_transfers.length < 2) {
+    // For multicalls without visible transfers, still show as swap if it's a DEX interaction
+    if ((isSwapMethod || isDexRouter) && tx.to_address_label?.includes('PulseX')) {
+      return {
+        type: 'swap',
+        sentTokens: [],
+        receivedTokens: [],
+        dexName: tx.to_address_label || 'PulseX',
+        isMulticall: true
+      };
+    }
+    return null;
+  }
   
   const sentTokens = tx.erc20_transfers.filter(t => t.direction === 'send');
   const receivedTokens = tx.erc20_transfers.filter(t => t.direction === 'receive');
   
   // A swap typically has tokens going out and different tokens coming in
   if (sentTokens.length > 0 && receivedTokens.length > 0) {
+    // Filter out LP tokens and intermediate transfers
+    const filteredSent = sentTokens.filter(t => 
+      !t.token_symbol?.includes('LP') && 
+      !t.token_symbol?.toLowerCase().includes('pulseX')
+    );
+    const filteredReceived = receivedTokens.filter(t => 
+      !t.token_symbol?.includes('LP') && 
+      !t.token_symbol?.toLowerCase().includes('pulseX')
+    );
+    
     // Check if tokens are different (not just the same token moving around)
-    const sentAddresses = new Set(sentTokens.map(t => t.address?.toLowerCase()));
-    const receivedAddresses = new Set(receivedTokens.map(t => t.address?.toLowerCase()));
+    const sentAddresses = new Set(filteredSent.map(t => t.address?.toLowerCase()));
+    const receivedAddresses = new Set(filteredReceived.map(t => t.address?.toLowerCase()));
     
     // If there are different tokens involved, it's likely a swap
     const hasOverlap = Array.from(sentAddresses).some(addr => receivedAddresses.has(addr));
     
-    if (!hasOverlap || sentAddresses.size + receivedAddresses.size > 2) {
+    if (!hasOverlap || sentAddresses.size + receivedAddresses.size > 2 || isSwapMethod || isDexRouter) {
       return {
         type: 'swap',
-        sentTokens,
-        receivedTokens,
-        dexName: tx.to_address_label || 'DEX'
+        sentTokens: filteredSent.length > 0 ? filteredSent : sentTokens,
+        receivedTokens: filteredReceived.length > 0 ? filteredReceived : receivedTokens,
+        dexName: tx.to_address_label || (isDexRouter ? 'PulseX' : 'DEX'),
+        isMulticall: isSwapMethod && tx.method_label?.includes('multicall')
       };
     }
   }
@@ -607,7 +642,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         }));
 
       if (tokensOut.length > 0 || tokensIn.length > 0) {
-        return { tokensOut, tokensIn };
+        return { 
+          tokensOut, 
+          tokensIn, 
+          isMulticall: false,
+          dexName: tx.to_address_label || 'DEX'
+        };
       }
     }
 
@@ -629,7 +669,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           decimals: '18',
           rawValue: '0',
           isPlaceholder: true
-        }]
+        }],
+        isMulticall: true,
+        dexName: tx.to_address_label || 'DEX'
       };
     }
 
@@ -1104,27 +1146,76 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             </tr>
           </thead>
           <tbody className="bg-black/20 backdrop-blur-sm divide-y divide-border">
-            {filteredTransactions.map((tx, index) => (
-              <tr key={tx.hash + index} className="hover:bg-white/5 transition-colors">
+            {filteredTransactions.map((tx, index) => {
+              const txType = getTransactionType(tx);
+              const swapInfo = detectTokenSwap(tx);
+              
+              // Calculate total transaction value
+              let totalValue = 0;
+              if (tx.erc20_transfers) {
+                tx.erc20_transfers.forEach(transfer => {
+                  const value = calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '');
+                  if (value) totalValue += value;
+                });
+              }
+              
+              return (
+                <tr key={tx.hash + index} className="hover:bg-white/5 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-semibold text-white">
                     {formatTimestamp(tx.block_timestamp)}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1 flex flex-col">
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-2">
                       <span className={`
-                        mr-1 px-1.5 py-0.5 text-xs font-medium rounded-sm ${
+                        px-1.5 py-0.5 text-xs font-medium rounded-sm ${
                           tx.receipt_status === '1' 
                             ? 'bg-green-500/20 text-green-400' 
                             : 'bg-red-500/20 text-red-400'
                         }`}>
                         {tx.receipt_status === '1' ? 'Success' : 'Failed'}
                       </span>
-                    </div>
-                    <div className="flex items-center mt-1">
-                      <span className="text-xs font-medium text-white/70">
-                        Type: {getTransactionType(tx).charAt(0).toUpperCase() + getTransactionType(tx).slice(1)}
-                      </span>
+                      {(() => {
+                        const txType = getTransactionType(tx);
+                        const swapInfo = detectTokenSwap(tx);
+                        const isMulticall = swapInfo?.isMulticall;
+                        
+                        return (
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center gap-1 ${(() => {
+                            switch (txType) {
+                              case 'swap':
+                                return 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-400 border border-purple-500/30';
+                              case 'send':
+                                return 'bg-red-500/20 text-red-400 border border-red-500/30';
+                              case 'receive':
+                                return 'bg-green-500/20 text-green-400 border border-green-500/30';
+                              case 'approval':
+                                return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
+                              case 'contract':
+                                return 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
+                              default:
+                                return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
+                            }
+                          })()}`}>
+                            {(() => {
+                              switch (txType) {
+                                case 'swap':
+                                  return <><RefreshCw size={10} /> {isMulticall ? 'Multicall Swap' : 'Swap'}</>;
+                                case 'send':
+                                  return <><ArrowUpRight size={10} /> Send</>;
+                                case 'receive':
+                                  return <><ArrowDownLeft size={10} /> Receive</>;
+                                case 'approval':
+                                  return <><Check size={10} /> Approval</>;
+                                case 'contract':
+                                  return <><Wallet size={10} /> Contract</>;
+                                default:
+                                  return <><Wallet size={10} /> Transaction</>;
+                              }
+                            })()}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 </td>
@@ -1207,8 +1298,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       return (
                         <div className="mb-4 p-3 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg">
                           <div className="text-sm font-medium text-purple-400 mb-3 flex items-center">
-                            <ArrowUpRight className="mr-1" size={14} />
+                            <RefreshCw className="mr-1" size={14} />
                             Token Swap Details
+                            {swapInfo.dexName && (
+                              <span className="ml-auto text-xs text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">
+                                via {swapInfo.dexName}
+                              </span>
+                            )}
                           </div>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1626,7 +1722,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   </a>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
