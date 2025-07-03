@@ -3,6 +3,7 @@ import { ProcessedToken } from '../types';
 import { getDefaultLogo } from './blockchain-service';
 import { getTokenPriceFromDexScreener } from './dexscreener';
 import { storage } from '../storage';
+import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
 
 // Initialize ethers provider
 const RPC_ENDPOINT = 'https://rpc-pulsechain.g4mm4.io';
@@ -189,6 +190,28 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       if (i + BATCH_SIZE < tokenArray.length) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
+    }
+    
+    // Detect LP tokens
+    console.log(`Checking ${processedTokens.length} tokens for LP interface`);
+    for (const token of processedTokens) {
+      try {
+        const isLp = await isLiquidityPoolToken(token.address);
+        if (isLp) {
+          console.log(`Detected LP token: ${token.symbol} (${token.address})`);
+          token.isLp = true;
+        }
+      } catch (error) {
+        // Skip if can't determine LP status
+      }
+    }
+    
+    // Process LP tokens to get pooled amounts
+    const lpTokens = processedTokens.filter(t => t.isLp);
+    if (lpTokens.length > 0) {
+      console.log(`Processing ${lpTokens.length} LP tokens for pooled amounts`);
+      const processedTokensWithLp = await processLpTokens(processedTokens, walletAddress);
+      processedTokens = processedTokensWithLp;
     }
     
     // Sort by value descending
