@@ -132,13 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
-### July 3, 2025 - Always Use Largest WPLS Pair for Token Pricing
-- **Major price algorithm change** - Updated DexScreener to always use the largest WPLS pair when available
-- **WPLS-first strategy** - If any WPLS pairs exist, the system now selects the one with highest liquidity, ignoring all other pairs
-- **Fallback mechanism** - Only uses quality scoring for non-WPLS pairs when no WPLS pairs exist for a token
-- **Maximum reliability** - Tokens like MISSOR will now always get prices from the largest WPLS liquidity pool
-- **Prevents manipulation** - Eliminates risk of selecting smaller, potentially manipulated pairs when WPLS pairs are available
-- **Clear logging** - System logs which WPLS pair is selected with its liquidity amount for transparency
+### July 3, 2025 - Fixed Token Price Inversion Issue & WPLS Pair Selection
+- **Critical bug fix** - Fixed issue where tokens were showing incorrect prices when they appeared as quote tokens in pairs
+- **Base token filter** - System now only considers pairs where the searched token is the BASE token, preventing inverted prices
+- **MISSOR fix** - Resolved specific issue where MISSOR showed $0.1159 instead of correct $0.004437 from WPLS pair
+- **WPLS-first strategy** - When WPLS pairs exist, system selects the one with highest liquidity, ignoring all other pairs
+- **Correct pair selection** - Now properly selects pair 0xf3a8541894e4d789e6257a63440094d698d82bad for MISSOR
+- **Prevents price manipulation** - Ensures accurate pricing by using only the largest WPLS liquidity pools when available
 
 ### July 3, 2025 - Replaced Transfer History with Direct Blockchain Balance Fetching
 - **Major architecture change** - Replaced flawed transfer history calculation method with direct blockchain balance fetching

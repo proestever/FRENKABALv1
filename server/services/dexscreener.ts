@@ -129,6 +129,10 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
       // Only use pairs from pulsechain
       if (pair.chainId !== 'pulsechain') continue;
       
+      // IMPORTANT: Only use pairs where our token is the BASE token
+      // This ensures we get the correct price (not inverted)
+      if (pair.baseToken.address.toLowerCase() !== addressToUse.toLowerCase()) continue;
+      
       // Ensure priceUsd is available
       if (!pair.priceUsd) continue;
       
