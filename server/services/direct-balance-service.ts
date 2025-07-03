@@ -128,7 +128,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     const plsBalanceFormatted = parseFloat(ethers.utils.formatUnits(plsBalance, PLS_DECIMALS));
     const plsPrice = await getTokenPriceFromDexScreener(WPLS_CONTRACT_ADDRESS) || 0;
     
-    const processedTokens: ProcessedToken[] = [];
+    let processedTokens: ProcessedToken[] = [];
     
     // Add native PLS if balance > 0
     if (plsBalanceFormatted > 0) {
