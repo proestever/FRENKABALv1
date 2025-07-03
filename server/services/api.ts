@@ -11,7 +11,7 @@ import { updateLoadingProgress } from '../routes';
 import { processLpTokens, isLiquidityPoolToken } from './lp-token-service';
 
 import { apiStatsService } from './api-stats-service';
-import { getTokenPriceFromDexScreener, getWalletBalancesFromPulseChainScan } from './dexscreener';
+import { getTokenPriceFromDexScreener, getWalletBalancesFromPulseChainScan, getDexScreenerTokenData } from './dexscreener';
 
 // API call counter
 interface ApiCallCounter {
@@ -156,6 +156,51 @@ export async function getWalletTransactionHistory(
     }
     
     // Transform PulseChain Scan API response to match our Transaction interface
+    // Collect unique token addresses from all transactions for batch fetching
+    const tokenAddressesSet = new Set<string>();
+    transactions_data.forEach((tx: any) => {
+      if (tx.token_transfers) {
+        tx.token_transfers.forEach((transfer: any) => {
+          if (transfer.token?.address) {
+            tokenAddressesSet.add(transfer.token.address.toLowerCase());
+          }
+        });
+      }
+    });
+    
+    // Batch fetch token logos from DexScreener for all unique tokens
+    const tokenLogos: Record<string, string> = {};
+    const tokenAddresses = Array.from(tokenAddressesSet);
+    
+    if (tokenAddresses.length > 0) {
+      console.log(`Fetching DexScreener data for ${tokenAddresses.length} unique tokens`);
+      
+      // Process in batches to avoid overwhelming the API
+      const batchSize = 10;
+      for (let i = 0; i < tokenAddresses.length; i += batchSize) {
+        const batch = tokenAddresses.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(async (address) => {
+            try {
+              const dexData = await getDexScreenerTokenData(address);
+              if (dexData && dexData.pairs && dexData.pairs.length > 0) {
+                const tokenInfo = dexData.pairs[0].baseToken.address.toLowerCase() === address 
+                  ? dexData.pairs[0].baseToken 
+                  : dexData.pairs[0].quoteToken;
+                
+                if (tokenInfo.info?.imageUrl) {
+                  tokenLogos[address] = tokenInfo.info.imageUrl;
+                }
+              }
+            } catch (error) {
+              // Silently ignore errors for individual tokens
+              console.warn(`Failed to get DexScreener logo for ${address}`);
+            }
+          })
+        );
+      }
+    }
+    
     const transactions: Transaction[] = transactions_data.map((tx: any) => ({
       hash: tx.hash,
       nonce: tx.nonce?.toString() || '0',
@@ -173,26 +218,31 @@ export async function getWalletTransactionHistory(
       block_number: tx.block?.toString() || '0',
       transaction_fee: tx.fee?.value?.toString() || '0',
       method_label: tx.method || null,
-      // Map token transfers if they exist
-      erc20_transfers: tx.token_transfers ? tx.token_transfers.map((transfer: any) => ({
-        token_name: transfer.token?.name || null,
-        token_symbol: transfer.token?.symbol || null,
-        token_logo: transfer.token?.icon_url || null,
-        token_decimals: transfer.token?.decimals || null,
-        from_address: transfer.from?.hash || '',
-        from_address_label: transfer.from?.name || null,
-        to_address: transfer.to?.hash || '',
-        to_address_label: transfer.to?.name || null,
-        address: transfer.token?.address || '',
-        log_index: transfer.log_index || 0,
-        value: transfer.total?.value || transfer.value || '0',
-        value_formatted: transfer.total?.value_formatted || null,
-        possible_spam: false,
-        verified_contract: transfer.token?.verified || false,
-        security_score: null,
-        direction: null,
-        internal_transaction: false
-      })) : [],
+      // Map token transfers with enhanced logos
+      erc20_transfers: tx.token_transfers ? tx.token_transfers.map((transfer: any) => {
+        const tokenAddress = transfer.token?.address?.toLowerCase() || '';
+        const dexScreenerLogo = tokenLogos[tokenAddress];
+        
+        return {
+          token_name: transfer.token?.name || null,
+          token_symbol: transfer.token?.symbol || null,
+          token_logo: dexScreenerLogo || transfer.token?.icon_url || null,
+          token_decimals: transfer.token?.decimals || null,
+          from_address: transfer.from?.hash || '',
+          from_address_label: transfer.from?.name || null,
+          to_address: transfer.to?.hash || '',
+          to_address_label: transfer.to?.name || null,
+          address: transfer.token?.address || '',
+          log_index: transfer.log_index || 0,
+          value: transfer.total?.value || transfer.value || '0',
+          value_formatted: transfer.total?.value_formatted || null,
+          possible_spam: false,
+          verified_contract: transfer.token?.verified || false,
+          security_score: null,
+          direction: null,
+          internal_transaction: false
+        };
+      }) : [],
       native_transfers: [],
       nft_transfers: [],
       summary: undefined,

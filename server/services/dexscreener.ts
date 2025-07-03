@@ -355,3 +355,27 @@ export async function getWalletBalancesFromPulseChainScan(walletAddress: string)
     throw error;
   }
 }
+
+/**
+ * Get full token data from DexScreener including logos
+ */
+export async function getDexScreenerTokenData(tokenAddress: string): Promise<any> {
+  if (!tokenAddress) return null;
+  
+  const normalizedAddress = tokenAddress.toLowerCase();
+  
+  try {
+    const response = await fetch(`${DEX_SCREENER_API_BASE}/tokens/${normalizedAddress}`);
+    
+    if (!response.ok) {
+      console.warn(`DexScreener API returned ${response.status} for ${normalizedAddress}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Error fetching DexScreener data for ${normalizedAddress}:`, error);
+    return null;
+  }
+}
