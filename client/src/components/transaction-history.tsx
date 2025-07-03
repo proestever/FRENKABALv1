@@ -1337,8 +1337,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       </div>
       
       {/* Transactions Table - Desktop View */}
-      <div className="hidden md:block">
-        <table className="w-full">
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full table-fixed">
           <thead className="bg-black/40 border-b border-white/20">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
@@ -1816,7 +1816,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     ))}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-6 py-4 text-right w-64 max-w-64 overflow-hidden">
                   {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                     <div key={`${tx.hash}-erc20-value-${i}`} className={`${i > 0 ? 'mt-2' : ''}`}>
                       <div className={`text-sm font-bold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'} flex flex-wrap justify-end`}>
@@ -1893,19 +1893,19 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     </div>
                   ))}
                   
-                  <div className="text-xs text-white mt-2 space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Gas Used:</span>
-                      <span className="font-mono">{parseInt(tx.receipt_gas_used).toLocaleString()}</span>
+                  <div className="text-xs text-white mt-2 space-y-1 min-w-0">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-400 flex-shrink-0">Gas Used:</span>
+                      <span className="font-mono truncate">{parseInt(tx.receipt_gas_used).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Gas Price:</span>
-                      <span className="font-mono">{(parseFloat(tx.gas_price) / 1e9).toFixed(2)} Gwei</span>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-400 flex-shrink-0">Gas Price:</span>
+                      <span className="font-mono truncate">{(parseFloat(tx.gas_price) / 1e9).toFixed(2)} Gwei</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Gas Fee:</span>
-                      <div className="text-right">
-                        <span className="font-mono">{parseFloat(tx.transaction_fee).toFixed(6)} PLS</span>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-400 flex-shrink-0">Gas Fee:</span>
+                      <div className="text-right min-w-0">
+                        <span className="font-mono truncate block">{parseFloat(tx.transaction_fee).toFixed(6)} PLS</span>
                         {/* Add USD value for gas fee using batch prices */}
                         {(() => {
                           const plsAddress = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
@@ -1921,20 +1921,20 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         })()}
                       </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Block:</span>
-                      <span className="font-mono">#{parseInt(tx.block_number).toLocaleString()}</span>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-400 flex-shrink-0">Block:</span>
+                      <span className="font-mono truncate">#{parseInt(tx.block_number).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Status:</span>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-400 flex-shrink-0">Status:</span>
                       <span className={`font-semibold ${tx.receipt_status === '1' ? 'text-green-400' : 'text-red-400'}`}>
                         {tx.receipt_status === '1' ? 'Success' : 'Failed'}
                       </span>
                     </div>
                     {tx.method_label && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Method:</span>
-                        <span className="font-mono text-blue-400">{tx.method_label}</span>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-gray-400 flex-shrink-0">Method:</span>
+                        <span className="font-mono text-blue-400 truncate">{tx.method_label}</span>
                       </div>
                     )}
                   </div>
