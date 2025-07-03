@@ -258,6 +258,32 @@ export async function fetchWalletBalancesFromTransferHistory(
 }
 
 /**
+ * Fetch direct token balances from blockchain
+ * This is more accurate for tax tokens and tokens with special mechanics
+ * @param address - Wallet address to fetch balances for
+ * @returns Wallet data with direct blockchain balances
+ */
+export async function fetchDirectBalances(address: string): Promise<Wallet> {
+  try {
+    const url = `/api/wallet/${address}/direct-balances`;
+    
+    console.log(`Fetching direct balances from blockchain: ${url}`);
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Failed to fetch direct balances:', errorData);
+      throw new Error(errorData.message || 'Failed to fetch direct balances');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching direct balances:', error);
+    throw error;
+  }
+}
+
+/**
  * Get all bookmarks for a user
  */
 export async function getBookmarks(userId: number): Promise<Bookmark[]> {

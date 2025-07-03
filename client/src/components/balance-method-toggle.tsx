@@ -44,10 +44,10 @@ export function BalanceMethodToggle({
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <p className="text-sm">
-                  <strong>Standard Method (Fast):</strong> Fetches current balances from blockchain APIs. Quick but may occasionally miss tokens or show outdated data.
+                  <strong>Direct Blockchain (Recommended):</strong> Fetches current balances directly from the blockchain. Accurate for all token types including tax tokens.
                 </p>
                 <p className="text-sm mt-2">
-                  <strong>Transfer History (Accurate):</strong> Calculates balances by analyzing complete on-chain transfer history. More accurate but slower, especially for active wallets.
+                  <strong>Transfer History (Experimental):</strong> Calculates balances by analyzing on-chain transfers. May show incorrect balances for tax tokens and tokens with special mechanics.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -55,8 +55,8 @@ export function BalanceMethodToggle({
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           {useTransferHistory 
-            ? "Calculating from complete on-chain history (default - more accurate, slower)"
-            : "Using API balances (faster, may be less accurate)"}
+            ? "Calculating from transfer history (experimental - may show incorrect balances)"
+            : "Fetching directly from blockchain (recommended - accurate for all tokens)"}
         </p>
       </div>
     </div>

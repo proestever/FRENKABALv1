@@ -15,6 +15,7 @@ import { saveRecentAddress, ProcessedToken, fetchWalletData, fetchAllWalletToken
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
 import { useTransferHistoryBalance } from '@/hooks/use-transfer-history-balance';
+import { useDirectBalance } from '@/hooks/use-direct-balance';
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
 import { combineWalletData } from '@/lib/utils';
@@ -31,7 +32,7 @@ export default function Home() {
   const [isMultiWalletLoading, setIsMultiWalletLoading] = useState(false);
   const [portfolioName, setPortfolioName] = useState<string | null>(null);
   const [portfolioUrlId, setPortfolioUrlId] = useState<string | null>(null);
-  const [useTransferHistory, setUseTransferHistory] = useState(true);
+  const [useTransferHistory, setUseTransferHistory] = useState(false); // Default to direct balance method
   const [multiWalletProgress, setMultiWalletProgress] = useState<{
     currentBatch: number;
     totalBatches: number;
@@ -474,13 +475,23 @@ export default function Home() {
     isFetching: transferHistoryIsFetching,
   } = useTransferHistoryBalance(searchedAddress, { enabled: useTransferHistory })
   
+  // Use direct balance hook when transfer history is disabled
+  const {
+    walletData: directBalanceData,
+    isLoading: directBalanceIsLoading,
+    isError: directBalanceIsError,
+    error: directBalanceError,
+    refetch: directBalanceRefetch,
+    isFetching: directBalanceIsFetching,
+  } = useDirectBalance(searchedAddress, { enabled: !useTransferHistory })
+  
   // Select which data to use based on the toggle
-  const walletData = useTransferHistory ? transferHistoryData : standardWalletData;
-  const isLoading = useTransferHistory ? transferHistoryIsLoading : standardIsLoading;
-  const isError = useTransferHistory ? transferHistoryIsError : standardIsError;
-  const error = useTransferHistory ? transferHistoryError : standardError;
-  const refetch = useTransferHistory ? transferHistoryRefetch : standardRefetch;
-  const isFetching = useTransferHistory ? transferHistoryIsFetching : standardIsFetching;
+  const walletData = useTransferHistory ? transferHistoryData : directBalanceData;
+  const isLoading = useTransferHistory ? transferHistoryIsLoading : directBalanceIsLoading;
+  const isError = useTransferHistory ? transferHistoryIsError : directBalanceIsError;
+  const error = useTransferHistory ? transferHistoryError : directBalanceError;
+  const refetch = useTransferHistory ? transferHistoryRefetch : directBalanceRefetch;
+  const isFetching = useTransferHistory ? transferHistoryIsFetching : directBalanceIsFetching;
   
   // Debug wallet data
   useEffect(() => {

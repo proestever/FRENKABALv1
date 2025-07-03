@@ -13,6 +13,7 @@ import { getDonations, getTopDonors, clearDonationCache } from "./services/donat
 import { getTokenPricesFromDexScreener, getTokenPriceFromDexScreener } from "./services/dexscreener";
 import { getDirectTokenBalances } from "./services/blockchain-service";
 import { calculateBalancesFromTransferHistory, getTransferHistoryWithBalances } from "./services/transfer-history-service";
+import { getDirectTokenBalances as getDirectBalances } from "./services/direct-balance-service";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
@@ -123,6 +124,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // API route to get direct blockchain balances (more accurate for tax tokens)
+  app.get("/api/wallet/:address/direct-balances", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      console.log(`Fetching direct balances for ${address}`);
+      
+      // Get direct balances from blockchain
+      const tokens = await getDirectBalances(address);
+      
+      // Calculate total value
+      const totalValue = tokens.reduce((sum, token) => sum + (token.value || 0), 0);
+      
+      // Find PLS balance
+      const plsToken = tokens.find(t => t.isNative);
+      const plsBalance = plsToken ? plsToken.balanceFormatted : 0;
+      
+      // Return in the same format as regular wallet data
+      return res.json({
+        address,
+        tokens,
+        totalValue,
+        tokenCount: tokens.length,
+        plsBalance,
+        plsPriceChange: null,
+        networkCount: 1,
+        calculationMethod: 'direct-blockchain',
+        message: 'Balances fetched directly from blockchain (accurate for tax tokens)'
+      });
+    } catch (error) {
+      console.error("Error fetching direct balances:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch direct balances",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // API route to calculate wallet balances from complete transfer history
   app.get("/api/wallet/:address/transfer-history-balances", async (req, res) => {
     try {

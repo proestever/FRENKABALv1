@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 3, 2025 - Replaced Transfer History with Direct Blockchain Balance Fetching
+- **Major architecture change** - Replaced flawed transfer history calculation method with direct blockchain balance fetching
+- **Created direct-balance-service.ts** - New service that fetches actual token balances directly from blockchain contracts
+- **Fixed incorrect balance calculations** - Transfer history method showed 129M WPLS when actual balance was 0
+- **Accurate for all token types** - Direct method works correctly for tax tokens, reflection tokens, and complex mechanics
+- **Updated balance method toggle** - Changed default to direct blockchain method, marked transfer history as experimental
+- **Better performance** - Direct balance fetching completed in ~12 seconds vs longer transfer history calculations
+
 ### July 3, 2025 - Fixed Infinite Loop & Enhanced Token Display
 - **Fixed infinite loop in Home component** - Added check to prevent handleSearch from being called repeatedly when URL params contain wallet address
 - **Resolved "Maximum update depth exceeded" error** - Modified useEffect to only trigger search when address actually changes
