@@ -1465,7 +1465,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             const sendParts = effectiveSendTransfers.map(transfer => {
                               const amount = transfer.value_formatted || 
                                 formatTokenValue(transfer.value, transfer.token_decimals);
-                              let symbol = transfer.token_symbol || 'tokens';
+                              let symbol = transfer.token_symbol || transfer.address || 'Unknown';
                               // Check if token symbol is a contract address
                               if (symbol.startsWith('0x') && symbol.length === 42) {
                                 const enhanced = enhancedTransactions[tx.hash];
@@ -1484,7 +1484,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             const receiveParts = effectiveReceiveTransfers.map(transfer => {
                               const amount = transfer.value_formatted || 
                                 formatTokenValue(transfer.value, transfer.token_decimals);
-                              let symbol = transfer.token_symbol || 'tokens';
+                              let symbol = transfer.token_symbol || transfer.address || 'Unknown';
                               // Check if token symbol is a contract address
                               if (symbol.startsWith('0x') && symbol.length === 42) {
                                 const enhanced = enhancedTransactions[tx.hash];
@@ -1602,7 +1602,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                             <div className="flex items-center">
                               <div className="group relative">
                                 <span className="text-sm font-semibold whitespace-nowrap cursor-pointer border-b border-dotted border-white/30" title={(() => {
-                                  let symbol = transfer.token_symbol || 'Unknown';
+                                  let symbol = transfer.token_symbol || transfer.address || 'Unknown';
                                   if (symbol.startsWith('0x') && symbol.length === 42) {
                                     const enhanced = enhancedTransactions[tx.hash];
                                     if (enhanced && enhanced.tokenMetadata) {
@@ -1618,7 +1618,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                                 })()}>
                                   {transfer.direction === 'receive' ? '+' : '-'}
                                   {formatTokenValue(transfer.value, transfer.token_decimals)} {(() => {
-                                    let symbol = transfer.token_symbol || 'Unknown';
+                                    let symbol = transfer.token_symbol || transfer.address || 'Unknown';
                                     // Check if token symbol is a contract address
                                     if (symbol.startsWith('0x') && symbol.length === 42) {
                                       // Try to find enhanced data for this token
@@ -2033,13 +2033,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         const sendParts = effectiveSendTransfers.map(transfer => {
                           const amount = transfer.value_formatted || 
                             formatTokenValue(transfer.value, transfer.token_decimals);
-                          return `${amount} ${transfer.token_symbol || 'tokens'}`;
+                          return `${amount} ${transfer.token_symbol || transfer.address || 'Unknown'}`;
                         });
                         
                         const receiveParts = effectiveReceiveTransfers.map(transfer => {
                           const amount = transfer.value_formatted || 
                             formatTokenValue(transfer.value, transfer.token_decimals);
-                          return `${amount} ${transfer.token_symbol || 'tokens'}`;
+                          return `${amount} ${transfer.token_symbol || transfer.address || 'Unknown'}`;
                         });
                         
                         const sendText = sendParts.join(' and ');
@@ -2057,7 +2057,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         const receiveAmount = receiveTransfer.value_formatted || 
                           formatTokenValue(receiveTransfer.value, receiveTransfer.token_decimals);
                         
-                        return `Swapped ${sendAmount} ${sendTransfer.token_symbol || 'tokens'} for ${receiveAmount} ${receiveTransfer.token_symbol || 'tokens'}`;
+                        return `Swapped ${sendAmount} ${sendTransfer.token_symbol || sendTransfer.address || 'Unknown'} for ${receiveAmount} ${receiveTransfer.token_symbol || receiveTransfer.address || 'Unknown'}`;
                       }
                     }
                     return null;
