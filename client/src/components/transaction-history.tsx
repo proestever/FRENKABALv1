@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/format';
 import { Link } from 'wouter';
 import { useTokenDataPrefetch } from '@/hooks/use-token-data-prefetch';
 import { useBatchTokenPrices } from '@/hooks/use-batch-token-prices';
+import { fetchTransactionDetails, extractTokensFromTxDetails } from '@/services/transaction-service';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -216,6 +217,7 @@ const formatTokenValue = (value: string, decimals?: string) => {
 };
 
 export function TransactionHistory({ walletAddress, onClose }: TransactionHistoryProps) {
+  const [enhancedTransactions, setEnhancedTransactions] = useState<Record<string, any>>({});
   const [visibleTokenAddresses, setVisibleTokenAddresses] = useState<string[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -232,6 +234,46 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Add state for token filter
   const [tokenFilter, setTokenFilter] = useState<string>('');
+  
+  // Effect to fetch enhanced transaction data for swaps with placeholders
+  useEffect(() => {
+    const fetchEnhancedData = async () => {
+      for (const tx of transactions) {
+        // Skip if we already have enhanced data
+        if (enhancedTransactions[tx.hash]) continue;
+        
+        // Check if this is a swap with placeholders
+        const swapDetails = getSwapDetails(tx);
+        if (!swapDetails) continue;
+        
+        const hasPlaceholders = 
+          swapDetails.tokensOut.some(t => t.isPlaceholder) ||
+          swapDetails.tokensIn.some(t => t.isPlaceholder);
+          
+        if (hasPlaceholders) {
+          try {
+            const details = await fetchTransactionDetails(tx.hash);
+            if (details && details.tokenMetadata && details.tokenMetadata.length > 0) {
+              const enhanced = {
+                ...details,
+                extractedTokens: extractTokensFromTxDetails(details)
+              };
+              setEnhancedTransactions(prev => ({
+                ...prev,
+                [tx.hash]: enhanced
+              }));
+            }
+          } catch (error) {
+            console.error(`Error fetching enhanced data for ${tx.hash}:`, error);
+          }
+        }
+      }
+    };
+    
+    if (transactions.length > 0) {
+      fetchEnhancedData();
+    }
+  }, [transactions]);
   
   // Validate wallet address
   if (!walletAddress || typeof walletAddress !== 'string') {
@@ -604,6 +646,50 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
 
   // Enhanced swap detection that shows "token out" and "token in" 
   const getSwapDetails = (tx: Transaction) => {
+    // Check if we have enhanced data for this transaction
+    const enhanced = enhancedTransactions[tx.hash];
+    if (enhanced && enhanced.extractedTokens) {
+      const { sent, received } = enhanced.extractedTokens;
+      
+      if (sent.length > 0 || received.length > 0) {
+        const tokensOut = sent.map((token: any) => ({
+          symbol: token.symbol || 'Unknown',
+          amount: formatTokenValue(token.amount || '0', token.decimals || '18'),
+          address: token.address || '',
+          decimals: token.decimals || '18',
+          rawValue: token.amount || '0',
+          isPlaceholder: false
+        }));
+        
+        const tokensIn = received.map((token: any) => ({
+          symbol: token.symbol || 'Unknown',
+          amount: formatTokenValue(token.amount || '0', token.decimals || '18'),
+          address: token.address || '',
+          decimals: token.decimals || '18',
+          rawValue: token.amount || '0',
+          isPlaceholder: false
+        }));
+        
+        return {
+          tokensOut: tokensOut.length > 0 ? tokensOut : [{
+            symbol: 'Token',
+            amount: 'Sent',
+            address: '',
+            decimals: '18',
+            rawValue: '0',
+            isPlaceholder: true
+          }],
+          tokensIn: tokensIn.length > 0 ? tokensIn : [{
+            symbol: 'Token',
+            amount: 'Received',
+            address: '',
+            decimals: '18',
+            rawValue: '0',
+            isPlaceholder: true
+          }]
+        };
+      }
+    }
     // Detect if this is a swap or DEX interaction
     const isSwap = getTransactionType(tx) === 'swap';
     const isMulticall = tx.method_label?.toLowerCase().includes('multicall');

@@ -622,7 +622,7 @@ export async function getSpecificTokenBalance(
 }
 
 // Transaction details function for extracting token contracts from multicalls
-export async function getTransactionDetails(hash: string) {
+export async function getTransactionDetails(hash: string): Promise<any> {
   try {
     trackApiCall(null, 'getTransactionDetails');
     console.log(`Fetching transaction details for ${hash}`);
@@ -634,7 +634,7 @@ export async function getTransactionDetails(hash: string) {
       throw new Error(`PulseChain Scan API error: ${response.status}`);
     }
     
-    const data = await response.json();
+    const data: any = await response.json();
     
     // Extract token addresses from Transfer event logs
     const tokenAddresses = new Set<string>();
@@ -646,9 +646,35 @@ export async function getTransactionDetails(hash: string) {
       });
     }
 
+    // Fetch token metadata for extracted addresses
+    const tokenMetadata = await Promise.all(
+      Array.from(tokenAddresses).map(async (address) => {
+        try {
+          const tokenInfo = await getTokenInfo(address as string);
+          return {
+            address: tokenInfo.address,
+            symbol: tokenInfo.symbol,
+            name: tokenInfo.name,
+            decimals: tokenInfo.decimals,
+            logo: tokenInfo.icon_url,
+            price: tokenInfo.price
+          };
+        } catch (error) {
+          console.error(`Error fetching token metadata for ${address}:`, error);
+          return {
+            address,
+            symbol: 'Unknown',
+            name: 'Unknown Token',
+            decimals: '18'
+          };
+        }
+      })
+    );
+
     return {
       ...data,
-      extractedTokens: Array.from(tokenAddresses)
+      extractedTokens: Array.from(tokenAddresses),
+      tokenMetadata
     };
   } catch (error) {
     console.error('Error fetching transaction details:', error);
@@ -669,12 +695,12 @@ export async function getTokenInfo(address: string) {
       throw new Error(`PulseChain Scan API error: ${response.status}`);
     }
     
-    const data = await response.json();
+    const data: any = await response.json();
     
     // Get price from DexScreener
-    let priceData = null;
+    let price = null;
     try {
-      priceData = await getTokenPriceFromDexScreener(address);
+      price = await getTokenPriceFromDexScreener(address);
     } catch (e) {
       console.warn(`Failed to get price for ${address}`);
     }
@@ -686,8 +712,8 @@ export async function getTokenInfo(address: string) {
       decimals: data.decimals || '18',
       icon_url: data.icon_url || null,
       verified: data.verified || false,
-      price: priceData?.usdPrice || null,
-      priceChange24h: priceData?.usdPrice24hrPercentChange || null
+      price: price || null,
+      priceChange24h: null
     };
   } catch (error) {
     console.error('Error fetching token info:', error);
