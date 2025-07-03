@@ -1291,107 +1291,22 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     })()}
                     
                     {/* Token Swap Visualization - Enhanced display for swaps */}
+                    {/* Simple Swap Display */}
                     {(() => {
                       const swapInfo = detectTokenSwap(tx);
-                      if (!swapInfo) return null;
+                      if (!swapInfo || swapInfo.sentTokens.length === 0 || swapInfo.receivedTokens.length === 0) return null;
+                      
+                      // Get primary tokens (first non-placeholder or first token)
+                      const primarySent = swapInfo.sentTokens.find(t => !t.isPlaceholder) || swapInfo.sentTokens[0];
+                      const primaryReceived = swapInfo.receivedTokens.find(t => !t.isPlaceholder) || swapInfo.receivedTokens[0];
                       
                       return (
-                        <div className="mb-4 p-3 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg">
-                          <div className="text-sm font-medium text-purple-400 mb-3 flex items-center">
-                            <RefreshCw className="mr-1" size={14} />
-                            Token Swap Details
-                            {swapInfo.dexName && (
-                              <span className="ml-auto text-xs text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">
-                                via {swapInfo.dexName}
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Tokens Sent (Going Out) */}
-                            <div className="space-y-2">
-                              <div className="text-xs text-red-400 font-medium mb-2 flex items-center">
-                                <ArrowUpRight size={12} className="mr-1" />
-                                Sent (Out)
-                              </div>
-                              {swapInfo.sentTokens?.map((token: any, i: number) => {
-                                const usdValue = !token.isPlaceholder ? calculateUsdValue(token.rawValue, token.decimals, token.address) : null;
-                                return (
-                                  <div key={`sent-${i}`} className="flex items-center space-x-2 p-2 bg-red-500/5 border border-red-500/10 rounded">
-                                    {!token.isPlaceholder ? (
-                                      <TokenLogo 
-                                        address={token.address}
-                                        symbol={token.symbol}
-                                        fallbackLogo={prefetchedLogos[token.address?.toLowerCase() || '']}
-                                        size="sm"
-                                      />
-                                    ) : (
-                                      <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center">
-                                        <ArrowUpRight size={12} className="text-red-400" />
-                                      </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-semibold text-red-400 truncate">
-                                        -{token.amount} {token.symbol}
-                                      </div>
-                                      {usdValue && (
-                                        <div className="text-xs text-red-300/70">
-                                          -{formatCurrency(usdValue)}
-                                        </div>
-                                      )}
-                                      {token.isPlaceholder && (
-                                        <div className="text-xs text-red-300/50">
-                                          DEX interaction detected
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            
-                            {/* Tokens Received (Coming In) */}
-                            <div className="space-y-2">
-                              <div className="text-xs text-green-400 font-medium mb-2 flex items-center">
-                                <ArrowDownLeft size={12} className="mr-1" />
-                                Received (In)
-                              </div>
-                              {swapInfo.receivedTokens?.map((token: any, i: number) => {
-                                const usdValue = !token.isPlaceholder ? calculateUsdValue(token.rawValue, token.decimals, token.address) : null;
-                                return (
-                                  <div key={`received-${i}`} className="flex items-center space-x-2 p-2 bg-green-500/5 border border-green-500/10 rounded">
-                                    {!token.isPlaceholder ? (
-                                      <TokenLogo 
-                                        address={token.address}
-                                        symbol={token.symbol}
-                                        fallbackLogo={prefetchedLogos[token.address?.toLowerCase() || '']}
-                                        size="sm"
-                                      />
-                                    ) : (
-                                      <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-                                        <ArrowDownLeft size={12} className="text-green-400" />
-                                      </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-semibold text-green-400 truncate">
-                                        +{token.amount} {token.symbol}
-                                      </div>
-                                      {usdValue && (
-                                        <div className="text-xs text-green-300/70">
-                                          +{formatCurrency(usdValue)}
-                                        </div>
-                                      )}
-                                      {token.isPlaceholder && (
-                                        <div className="text-xs text-green-300/50">
-                                          DEX interaction detected
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
+                        <div className="mb-2 flex items-center text-sm">
+                          <RefreshCw className="mr-2 text-purple-400" size={14} />
+                          <span className="font-medium text-purple-400">Swap:</span>
+                          <span className="ml-2 text-white">
+                            {primarySent.amount} {primarySent.symbol} → {primaryReceived.amount} {primaryReceived.symbol}
+                          </span>
                         </div>
                       );
                     })()}
@@ -1833,85 +1748,22 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 </div>
               )}
               
-              {/* Token Swap Visualization - Enhanced display for mobile */}
+              {/* Simple Swap Display for Mobile */}
               {(() => {
                 const swapInfo = detectTokenSwap(tx);
-                if (!swapInfo) return null;
+                if (!swapInfo || swapInfo.sentTokens.length === 0 || swapInfo.receivedTokens.length === 0) return null;
+                
+                // Get primary tokens (first non-placeholder or first token)
+                const primarySent = swapInfo.sentTokens.find(t => !t.isPlaceholder) || swapInfo.sentTokens[0];
+                const primaryReceived = swapInfo.receivedTokens.find(t => !t.isPlaceholder) || swapInfo.receivedTokens[0];
                 
                 return (
-                  <div className="mb-4 p-3 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg">
-                    <div className="text-sm font-medium text-purple-400 mb-3 flex items-center">
-                      <ArrowUpRight className="mr-1" size={14} />
-                      Token Swap Details
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {/* Tokens Sent (Going Out) */}
-                      <div>
-                        <div className="text-xs text-red-400 font-medium mb-2 flex items-center">
-                          <ArrowUpRight size={12} className="mr-1" />
-                          Sent (Out)
-                        </div>
-                        <div className="space-y-2">
-                          {swapInfo.sentTokens.map((token, i) => {
-                            const usdValue = calculateUsdValue(token.rawValue, token.decimals, token.address);
-                            return (
-                              <div key={`sent-${i}`} className="flex items-center space-x-2 p-2 bg-red-500/5 border border-red-500/10 rounded">
-                                <TokenLogo 
-                                  address={token.address}
-                                  symbol={token.symbol}
-                                  fallbackLogo={prefetchedLogos[token.address?.toLowerCase() || '']}
-                                  size="sm"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-semibold text-red-400 truncate">
-                                    -{token.amount} {token.symbol}
-                                  </div>
-                                  {usdValue && (
-                                    <div className="text-xs text-red-300/70">
-                                      -{formatCurrency(usdValue)}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      
-                      {/* Tokens Received (Coming In) */}
-                      <div>
-                        <div className="text-xs text-green-400 font-medium mb-2 flex items-center">
-                          <ArrowDownLeft size={12} className="mr-1" />
-                          Received (In)
-                        </div>
-                        <div className="space-y-2">
-                          {swapInfo.receivedTokens?.map((token: any, i: number) => {
-                            const usdValue = calculateUsdValue(token.rawValue, token.decimals, token.address);
-                            return (
-                              <div key={`received-${i}`} className="flex items-center space-x-2 p-2 bg-green-500/5 border border-green-500/10 rounded">
-                                <TokenLogo 
-                                  address={token.address}
-                                  symbol={token.symbol}
-                                  fallbackLogo={prefetchedLogos[token.address?.toLowerCase() || '']}
-                                  size="sm"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-semibold text-green-400 truncate">
-                                    +{token.amount} {token.symbol}
-                                  </div>
-                                  {usdValue && (
-                                    <div className="text-xs text-green-300/70">
-                                      +{formatCurrency(usdValue)}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
+                  <div className="mb-3 p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg flex items-center text-sm">
+                    <RefreshCw className="mr-2 text-purple-400" size={14} />
+                    <span className="font-medium text-purple-400">Swap:</span>
+                    <span className="ml-2 text-white text-xs">
+                      {primarySent.amount} {primarySent.symbol} → {primaryReceived.amount} {primaryReceived.symbol}
+                    </span>
                   </div>
                 );
               })()}
