@@ -143,54 +143,58 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
       return null;
     }
     
-    // If multiple pairs, use quality scoring with preference for WPLS pairs
+    // First, try to find the largest WPLS pair
     const WPLS_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'.toLowerCase();
+    const wplsPairs = validPairs.filter(pair => 
+      pair.baseToken.address.toLowerCase() === WPLS_ADDRESS || 
+      pair.quoteToken.address.toLowerCase() === WPLS_ADDRESS
+    );
     
-    for (const pair of validPairs) {
-      let score = 0;
+    if (wplsPairs.length > 0) {
+      // If WPLS pairs exist, use the one with highest liquidity
+      bestPair = wplsPairs.reduce((best, current) => {
+        return current.liquidity.usd > best.liquidity.usd ? current : best;
+      });
+      console.log(`Using WPLS pair for ${addressToUse}: ${bestPair.baseToken.symbol}/${bestPair.quoteToken.symbol}, liquidity: $${bestPair.liquidity.usd.toLocaleString()}`);
+    } else {
+      // Fallback to quality scoring if no WPLS pairs exist
+      console.log(`No WPLS pairs found for ${addressToUse}, using quality scoring`);
       
-      // Check if this is a WPLS pair (either base or quote token)
-      const isWPLSPair = pair.baseToken.address.toLowerCase() === WPLS_ADDRESS || 
-                         pair.quoteToken.address.toLowerCase() === WPLS_ADDRESS;
-      
-      // Base score from liquidity with higher weight
-      const liquidityScore = Math.min(pair.liquidity.usd / 1000, 5000); // Cap at 5M
-      score += liquidityScore * 2; // Double weight for liquidity
-      
-      // Major bonus for WPLS pairs (typically more reliable)
-      if (isWPLSPair) {
-        score *= 2; // Double the score for WPLS pairs
-        console.log(`WPLS pair found for ${addressToUse}: ${pair.baseToken.symbol}/${pair.quoteToken.symbol}, liquidity: $${pair.liquidity.usd.toLocaleString()}`);
-      }
-      
-      // Bonus for reasonable volume
-      if (pair.volume?.h24 > 0) {
-        score += Math.min(pair.volume.h24 / 100, 100);
-      }
-      
-      // Bonus for transaction activity
-      if (pair.txns?.h24) {
-        const totalTxns = (pair.txns.h24.buys || 0) + (pair.txns.h24.sells || 0);
-        score += Math.min(totalTxns, 50);
-      }
-      
-      // Penalty for extreme price ratios (likely manipulation)
-      const price = parseFloat(pair.priceUsd);
-      if (validPairs.length > 1) {
-        const prices = validPairs.map(p => parseFloat(p.priceUsd));
-        const medianPrice = prices.sort((a, b) => a - b)[Math.floor(prices.length / 2)];
-        const priceRatio = price / medianPrice;
+      for (const pair of validPairs) {
+        let score = 0;
         
-        // Heavy penalty if price is more than 10x different from median
-        if (priceRatio > 10 || priceRatio < 0.1) {
-          score *= 0.1;
-          console.log(`Price outlier detected for pair: $${price} vs median $${medianPrice}, applying penalty`);
+        // Base score from liquidity
+        const liquidityScore = Math.min(pair.liquidity.usd / 1000, 5000);
+        score += liquidityScore * 2;
+        
+        // Bonus for volume
+        if (pair.volume?.h24 > 0) {
+          score += Math.min(pair.volume.h24 / 100, 100);
         }
-      }
-      
-      if (score > bestScore) {
-        bestScore = score;
-        bestPair = pair;
+        
+        // Bonus for transaction activity
+        if (pair.txns?.h24) {
+          const totalTxns = (pair.txns.h24.buys || 0) + (pair.txns.h24.sells || 0);
+          score += Math.min(totalTxns, 50);
+        }
+        
+        // Penalty for extreme price ratios
+        const price = parseFloat(pair.priceUsd);
+        if (validPairs.length > 1) {
+          const prices = validPairs.map(p => parseFloat(p.priceUsd));
+          const medianPrice = prices.sort((a, b) => a - b)[Math.floor(prices.length / 2)];
+          const priceRatio = price / medianPrice;
+          
+          if (priceRatio > 10 || priceRatio < 0.1) {
+            score *= 0.1;
+            console.log(`Price outlier detected for pair: $${price} vs median $${medianPrice}, applying penalty`);
+          }
+        }
+        
+        if (score > bestScore) {
+          bestScore = score;
+          bestPair = pair;
+        }
       }
     }
     
