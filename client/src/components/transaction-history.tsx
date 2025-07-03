@@ -74,13 +74,14 @@ interface TransactionHistoryProps {
 type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contract';
 
 const getTransactionType = (tx: Transaction): TransactionType => {
-  const hasSendTransfers = tx.erc20_transfers?.some(t => t && t.direction === 'send');
-  const hasReceiveTransfers = tx.erc20_transfers?.some(t => t && t.direction === 'receive');
-  
-  // Check for swaps
-  if (hasSendTransfers && hasReceiveTransfers && tx.erc20_transfers && tx.erc20_transfers.length >= 2) {
+  // Check for swaps using enhanced detection
+  const swapInfo = detectTokenSwap(tx);
+  if (swapInfo) {
     return 'swap';
   }
+  
+  const hasSendTransfers = tx.erc20_transfers?.some(t => t && t.direction === 'send');
+  const hasReceiveTransfers = tx.erc20_transfers?.some(t => t && t.direction === 'receive');
   
   // Check for approvals
   if (tx.method_label?.toLowerCase().includes('approve')) {
@@ -460,25 +461,87 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {(() => {
                 const swapInfo = detectTokenSwap(tx);
                 
-                // Debug logging
                 if (swapInfo) {
-                  console.log('Swap detected:', tx.hash, swapInfo);
-                }
-                
-                if (swapInfo && swapInfo.sentTokens.length > 0 && swapInfo.receivedTokens.length > 0) {
-                  // Get primary tokens
-                  const primarySent = swapInfo.sentTokens[0];
-                  const primaryReceived = swapInfo.receivedTokens[0];
+                  // Handle multicall swaps without visible transfers
+                  if (swapInfo.isMulticall && swapInfo.sentTokens.length === 0 && swapInfo.receivedTokens.length === 0) {
+                    return (
+                      <div className="mb-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <RefreshCw className="text-purple-400" size={16} />
+                          <span className="font-medium text-purple-400">SWAP via {swapInfo.dexName || 'DEX'}</span>
+                        </div>
+                        <div className="text-sm text-gray-300">
+                          Multicall transaction - Check transaction details on explorer
+                        </div>
+                        {tx.value && tx.value !== '0' && (
+                          <div className="mt-2 text-sm">
+                            <span className="text-gray-400">Value:</span>
+                            <span className="ml-2 text-white font-medium">{formatTokenValue(tx.value, '18')} PLS</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
                   
-                  return (
-                    <div className="mb-2 flex items-center text-sm overflow-hidden">
-                      <RefreshCw className="mr-2 text-purple-400 flex-shrink-0" size={14} />
-                      <span className="font-medium text-purple-400 whitespace-nowrap">SWAPPED</span>
-                      <span className="ml-2 text-white font-semibold truncate">
-                        {formatTokenValue(primarySent.value, primarySent.token_decimals)} {primarySent.token_symbol || 'Unknown'} into {formatTokenValue(primaryReceived.value, primaryReceived.token_decimals)} {primaryReceived.token_symbol || 'Unknown'}
-                      </span>
-                    </div>
-                  );
+                  // Handle swaps with visible token transfers
+                  if (swapInfo.sentTokens.length > 0 && swapInfo.receivedTokens.length > 0) {
+                    // Get primary tokens
+                    const primarySent = swapInfo.sentTokens[0];
+                    const primaryReceived = swapInfo.receivedTokens[0];
+                    
+                    return (
+                      <div className="mb-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                        <div className="flex items-center gap-2 mb-3">
+                          <RefreshCw className="text-purple-400" size={16} />
+                          <span className="font-medium text-purple-400">SWAPPED</span>
+                        </div>
+                        
+                        {/* Token Out */}
+                        <div className="flex items-center gap-3 mb-2">
+                          <TokenLogo 
+                            address={primarySent.address || ''}
+                            symbol={primarySent.token_symbol || 'Unknown'}
+                            fallbackLogo={primarySent.token_logo !== null ? primarySent.token_logo : undefined}
+                            size="sm"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <ArrowUpRight size={14} className="text-red-400" />
+                              <span className="text-red-400 font-semibold">
+                                -{formatTokenValue(primarySent.value, primarySent.token_decimals)}
+                              </span>
+                              <span className="text-white font-medium">{primarySent.token_symbol || 'Unknown'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Token In */}
+                        <div className="flex items-center gap-3">
+                          <TokenLogo 
+                            address={primaryReceived.address || ''}
+                            symbol={primaryReceived.token_symbol || 'Unknown'}
+                            fallbackLogo={primaryReceived.token_logo !== null ? primaryReceived.token_logo : undefined}
+                            size="sm"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <ArrowDownLeft size={14} className="text-green-400" />
+                              <span className="text-green-400 font-semibold">
+                                +{formatTokenValue(primaryReceived.value, primaryReceived.token_decimals)}
+                              </span>
+                              <span className="text-white font-medium">{primaryReceived.token_symbol || 'Unknown'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {swapInfo.dexName && (
+                          <div className="mt-2 text-xs text-gray-400">
+                            via {swapInfo.dexName}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
                 }
                 return null;
               })()}
