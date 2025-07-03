@@ -132,6 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 3, 2025 - Enhanced Swap Detection & Display
+- **Simplified swap display format** - Replaced large swap details box with clean "Token A → Token B" format
+- **Improved native token detection** - Better handling of PLS swaps in DEX multicalls by checking transaction value and native transfers
+- **Enhanced placeholder tokens** - When actual tokens can't be determined, shows more descriptive placeholders instead of generic "DEX interaction"
+- **Added transaction summary parsing** - Attempts to extract token symbols from transaction summaries when available
+- **Unified desktop/mobile display** - Both views now use the same compact swap format for consistency
+
 ### July 3, 2025 - Transfer History-Based Balance Calculation
 - **Added alternative balance calculation method** - Users can now toggle between standard API-based balance fetching and a more accurate transfer history-based calculation
 - **Created transfer-history-service.ts** - New service that calculates balances by analyzing complete on-chain transfer history

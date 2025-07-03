@@ -651,27 +651,115 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       }
     }
 
-    // For multicalls without visible transfers, show placeholders
+    // For multicalls without visible transfers, check native and other indicators
     if (isMulticall || isDexRouter) {
+      const tokensOut = [];
+      const tokensIn = [];
+      
+      // Check if native PLS is being sent (value > 0)
+      if (tx.value && tx.value !== '0' && parseFloat(tx.value) > 0) {
+        tokensOut.push({
+          symbol: 'PLS',
+          amount: formatTokenValue(tx.value, '18'),
+          address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+          decimals: '18',
+          rawValue: tx.value,
+          isPlaceholder: false
+        });
+      }
+      
+      // Check native transfers
+      if (tx.native_transfers && tx.native_transfers.length > 0) {
+        tx.native_transfers.forEach(transfer => {
+          const token = {
+            symbol: 'PLS',
+            amount: formatTokenValue(transfer.value, '18'),
+            address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+            decimals: '18',
+            rawValue: transfer.value,
+            isPlaceholder: false
+          };
+          
+          if (transfer.direction === 'send' && !(tx.value && tx.value !== '0')) {
+            tokensOut.push(token);
+          } else if (transfer.direction === 'receive') {
+            tokensIn.push(token);
+          }
+        });
+      }
+      
+      // Check transaction summary for hints about tokens
+      if (tx.summary) {
+        // Try to extract token symbols from summary (e.g., "Swap 100 PLS for 50 BEEF")
+        const swapMatch = tx.summary.match(/swap\s+(\d+(?:\.\d+)?)\s+(\w+)\s+for\s+(\d+(?:\.\d+)?)\s+(\w+)/i);
+        if (swapMatch) {
+          if (tokensOut.length === 0) {
+            tokensOut.push({
+              symbol: swapMatch[2],
+              amount: swapMatch[1],
+              address: '',
+              decimals: '18',
+              rawValue: '0',
+              isPlaceholder: false
+            });
+          }
+          if (tokensIn.length === 0) {
+            tokensIn.push({
+              symbol: swapMatch[4],
+              amount: swapMatch[3],
+              address: '',
+              decimals: '18',
+              rawValue: '0',
+              isPlaceholder: false
+            });
+          }
+        }
+      }
+      
+      // If we still don't have complete information, use better placeholders
+      if (tokensOut.length > 0 && tokensIn.length === 0) {
+        tokensIn.push({
+          symbol: 'Token',
+          amount: 'Received',
+          address: '',
+          decimals: '18',
+          rawValue: '0',
+          isPlaceholder: true
+        });
+      } else if (tokensIn.length > 0 && tokensOut.length === 0) {
+        tokensOut.push({
+          symbol: 'Token',
+          amount: 'Sent',
+          address: '',
+          decimals: '18',
+          rawValue: '0',
+          isPlaceholder: true
+        });
+      } else if (tokensOut.length === 0 && tokensIn.length === 0) {
+        // Last resort placeholders
+        tokensOut.push({
+          symbol: 'Token',
+          amount: 'Swapped',
+          address: '',
+          decimals: '18',
+          rawValue: '0',
+          isPlaceholder: true
+        });
+        tokensIn.push({
+          symbol: 'Token',
+          amount: 'Received',
+          address: '',
+          decimals: '18',
+          rawValue: '0',
+          isPlaceholder: true
+        });
+      }
+      
       return {
-        tokensOut: [{
-          symbol: 'Token Out',
-          amount: 'DEX interaction',
-          address: '',
-          decimals: '18',
-          rawValue: '0',
-          isPlaceholder: true
-        }],
-        tokensIn: [{
-          symbol: 'Token In', 
-          amount: 'DEX interaction',
-          address: '',
-          decimals: '18',
-          rawValue: '0',
-          isPlaceholder: true
-        }],
+        tokensOut,
+        tokensIn,
         isMulticall: true,
-        dexName: tx.to_address_label || 'DEX'
+        dexName: tx.to_address_label || 'PulseX'
       };
     }
 
