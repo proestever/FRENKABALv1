@@ -127,10 +127,23 @@ export async function calculateBalancesFromTransferHistory(
 
     console.log(`Found ${incomingLogs.length} incoming and ${outgoingLogs.length} outgoing transfers`);
 
+    // Deduplicate logs by creating a unique key for each log
+    const uniqueLogs = new Map<string, any>();
+    
+    // Process all logs and deduplicate
+    [...incomingLogs, ...outgoingLogs].forEach(log => {
+      const key = `${log.transactionHash}-${log.logIndex}`;
+      if (!uniqueLogs.has(key)) {
+        uniqueLogs.set(key, log);
+      }
+    });
+    
+    console.log(`After deduplication: ${uniqueLogs.size} unique transfer events`);
+
     // Parse all transfer events
     const allTransfers: TransferEvent[] = [];
     
-    for (const log of [...incomingLogs, ...outgoingLogs]) {
+    for (const log of uniqueLogs.values()) {
       try {
         const transfer = parseTransferEvent(log);
         allTransfers.push(transfer);
