@@ -143,13 +143,25 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
       return null;
     }
     
-    // If multiple pairs, use quality scoring instead of just liquidity
+    // If multiple pairs, use quality scoring with preference for WPLS pairs
+    const WPLS_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'.toLowerCase();
+    
     for (const pair of validPairs) {
       let score = 0;
       
-      // Base score from liquidity (but cap extreme values)
-      const liquidityScore = Math.min(pair.liquidity.usd / 1000, 1000); // Cap at 1M
-      score += liquidityScore;
+      // Check if this is a WPLS pair (either base or quote token)
+      const isWPLSPair = pair.baseToken.address.toLowerCase() === WPLS_ADDRESS || 
+                         pair.quoteToken.address.toLowerCase() === WPLS_ADDRESS;
+      
+      // Base score from liquidity with higher weight
+      const liquidityScore = Math.min(pair.liquidity.usd / 1000, 5000); // Cap at 5M
+      score += liquidityScore * 2; // Double weight for liquidity
+      
+      // Major bonus for WPLS pairs (typically more reliable)
+      if (isWPLSPair) {
+        score *= 2; // Double the score for WPLS pairs
+        console.log(`WPLS pair found for ${addressToUse}: ${pair.baseToken.symbol}/${pair.quoteToken.symbol}, liquidity: $${pair.liquidity.usd.toLocaleString()}`);
+      }
       
       // Bonus for reasonable volume
       if (pair.volume?.h24 > 0) {

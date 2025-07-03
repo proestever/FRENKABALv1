@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 3, 2025 - Enhanced Price Selection for WPLS Pair Priority
+- **Improved price accuracy** - Modified DexScreener price selection algorithm to prioritize WPLS (Wrapped PulseChain) pairs
+- **WPLS pair preference** - Pairs trading against WPLS now get 2x score boost as they typically have better liquidity and more reliable pricing
+- **Increased liquidity weight** - Doubled the weight of liquidity in scoring calculation and raised cap from $1M to $5M
+- **Better price reliability** - Tokens like MISSOR will now prefer larger WPLS pools over smaller, potentially manipulated pairs
+- **Consistent implementation** - Applied same logic to both server-side and client-side DexScreener services
+- **Enhanced logging** - Added console logging when WPLS pairs are found for better debugging
+
 ### July 3, 2025 - Replaced Transfer History with Direct Blockchain Balance Fetching
 - **Major architecture change** - Replaced flawed transfer history calculation method with direct blockchain balance fetching
 - **Created direct-balance-service.ts** - New service that fetches actual token balances directly from blockchain contracts
