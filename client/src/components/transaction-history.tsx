@@ -707,25 +707,59 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     if (tx.erc20_transfers && tx.erc20_transfers.length > 0) {
       const tokensOut = tx.erc20_transfers
         .filter(t => t.direction === 'send')
-        .map(t => ({
-          symbol: t.token_symbol || 'Unknown',
-          amount: formatTokenValue(t.value, t.token_decimals),
-          address: t.address || '',
-          decimals: t.token_decimals || '18',
-          rawValue: t.value,
-          isPlaceholder: false
-        }));
+        .map(t => {
+          // Check if token symbol is a contract address
+          let symbol = t.token_symbol || 'Unknown';
+          if (symbol.startsWith('0x') && symbol.length === 42) {
+            // Try to find enhanced data for this token
+            const enhanced = enhancedTransactions[tx.hash];
+            if (enhanced && enhanced.tokenMetadata) {
+              const tokenMeta = enhanced.tokenMetadata.find(
+                (meta: any) => meta.address.toLowerCase() === t.address?.toLowerCase()
+              );
+              if (tokenMeta && tokenMeta.symbol) {
+                symbol = tokenMeta.symbol;
+              }
+            }
+          }
+          
+          return {
+            symbol,
+            amount: formatTokenValue(t.value, t.token_decimals),
+            address: t.address || '',
+            decimals: t.token_decimals || '18',
+            rawValue: t.value,
+            isPlaceholder: false
+          };
+        });
 
       const tokensIn = tx.erc20_transfers
         .filter(t => t.direction === 'receive')
-        .map(t => ({
-          symbol: t.token_symbol || 'Unknown',
-          amount: formatTokenValue(t.value, t.token_decimals),
-          address: t.address || '',
-          decimals: t.token_decimals || '18',
-          rawValue: t.value,
-          isPlaceholder: false
-        }));
+        .map(t => {
+          // Check if token symbol is a contract address
+          let symbol = t.token_symbol || 'Unknown';
+          if (symbol.startsWith('0x') && symbol.length === 42) {
+            // Try to find enhanced data for this token
+            const enhanced = enhancedTransactions[tx.hash];
+            if (enhanced && enhanced.tokenMetadata) {
+              const tokenMeta = enhanced.tokenMetadata.find(
+                (meta: any) => meta.address.toLowerCase() === t.address?.toLowerCase()
+              );
+              if (tokenMeta && tokenMeta.symbol) {
+                symbol = tokenMeta.symbol;
+              }
+            }
+          }
+          
+          return {
+            symbol,
+            amount: formatTokenValue(t.value, t.token_decimals),
+            address: t.address || '',
+            decimals: t.token_decimals || '18',
+            rawValue: t.value,
+            isPlaceholder: false
+          };
+        });
 
       if (tokensOut.length > 0 || tokensIn.length > 0) {
         return { 
@@ -1485,8 +1519,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       );
                     })()}
                     
-                    {/* ERC20 Transfers */}
-                    {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
+                    {/* ERC20 Transfers - Only show if not already displayed as a swap */}
+                    {(() => {
+                      const swapInfo = detectTokenSwap(tx);
+                      // Don't show individual transfers if we already displayed a swap
+                      if (swapInfo && swapInfo.sentTokens.length > 0 && swapInfo.receivedTokens.length > 0) {
+                        return null;
+                      }
+                      
+                      return tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
                       <div key={`${tx.hash}-erc20-${i}`} className="flex items-center mt-2">
                         <TokenLogo 
                           address={transfer.address || ''}
@@ -1589,7 +1630,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           </div>
                         </div>
                       </div>
-                    ))}
+                    ))
+                    })()}
                     
                     {/* Native Transfers */}
                     {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
