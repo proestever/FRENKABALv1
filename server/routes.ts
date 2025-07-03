@@ -12,6 +12,7 @@ import { apiStatsService } from "./services/api-stats-service";
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
 import { getTokenPricesFromDexScreener, getTokenPriceFromDexScreener } from "./services/dexscreener";
 import { getDirectTokenBalances } from "./services/blockchain-service";
+import { calculateBalancesFromTransferHistory, getTransferHistoryWithBalances } from "./services/transfer-history-service";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
@@ -122,6 +123,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // API route to calculate wallet balances from complete transfer history
+  app.get("/api/wallet/:address/transfer-history-balances", async (req, res) => {
+    try {
+      const { address } = req.params;
+      const { fromBlock = '0', toBlock = 'latest' } = req.query;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      console.log(`Calculating balances from transfer history for ${address}`);
+      
+      // Convert block parameters
+      const startBlock = fromBlock === '0' ? 0 : parseInt(fromBlock as string, 10);
+      const endBlock = toBlock === 'latest' ? 'latest' : parseInt(toBlock as string, 10);
+      
+      // Calculate balances from transfer history
+      const result = await getTransferHistoryWithBalances(
+        address,
+        startBlock,
+        endBlock === 'latest' ? undefined : endBlock
+      );
+      
+      // Calculate total value
+      const totalValue = result.tokens.reduce((sum, token) => sum + (token.value || 0), 0);
+      
+      // Find PLS balance
+      const plsToken = result.tokens.find(t => t.isNative);
+      const plsBalance = plsToken ? plsToken.balanceFormatted : 0;
+      
+      // Return in the same format as regular wallet data
+      return res.json({
+        address,
+        tokens: result.tokens,
+        totalValue,
+        tokenCount: result.tokens.length,
+        plsBalance,
+        plsPriceChange: null,
+        networkCount: 1,
+        blockRange: result.blockRange,
+        calculationMethod: 'transfer-history',
+        message: 'Balances calculated from complete on-chain transfer history'
+      });
+    } catch (error) {
+      console.error("Error calculating balances from transfer history:", error);
+      return res.status(500).json({ 
+        message: "Failed to calculate balances from transfer history",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // API route to get ALL wallet tokens without pagination
   // Batch API for fetching multiple wallets at once
   app.post("/api/wallets/batch", async (req, res) => {

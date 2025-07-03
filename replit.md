@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 3, 2025 - Transfer History-Based Balance Calculation
+- **Added alternative balance calculation method** - Users can now toggle between standard API-based balance fetching and a more accurate transfer history-based calculation
+- **Created transfer-history-service.ts** - New service that calculates balances by analyzing complete on-chain transfer history
+- **Added balance method toggle UI** - New toggle component allows users to switch between calculation methods
+- **Implemented dual data fetching** - Home page now supports both calculation methods with appropriate loading states
+- **Added new API endpoint** - `/api/wallet/:address/transfer-history-balances` endpoint for transfer history calculations
+- **Enhanced accuracy** - Transfer history method provides true on-chain balances by summing all historical transfers
+
 ### June 20, 2025 - Disabled Automatic Refreshing
 - **Removed all automatic wallet data refreshing** - Wallet data now remains completely static after initial load
 - **Disabled background batch services** - No more automatic price fetching or data updates

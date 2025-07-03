@@ -226,6 +226,38 @@ export async function fetchTransactionHistory(
 }
 
 /**
+ * Calculate wallet balances from complete transfer history
+ * This provides more accurate balances by analyzing all on-chain transfers
+ * @param address - Wallet address to calculate balances for
+ * @param fromBlock - Starting block number (default: 0 for genesis)
+ * @param toBlock - Ending block number (default: 'latest')
+ * @returns Wallet data calculated from transfer history
+ */
+export async function fetchWalletBalancesFromTransferHistory(
+  address: string,
+  fromBlock: number = 0,
+  toBlock: number | 'latest' = 'latest'
+): Promise<Wallet> {
+  try {
+    const url = `/api/wallet/${address}/transfer-history-balances?fromBlock=${fromBlock}&toBlock=${toBlock}`;
+    
+    console.log(`Calculating balances from transfer history: ${url}`);
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Failed to calculate balances from transfer history:', errorData);
+      throw new Error(errorData.message || 'Failed to calculate balances from transfer history');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error calculating balances from transfer history:', error);
+    throw error;
+  }
+}
+
+/**
  * Get all bookmarks for a user
  */
 export async function getBookmarks(userId: number): Promise<Bookmark[]> {

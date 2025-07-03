@@ -7,12 +7,14 @@ import { TokenList } from '@/components/token-list';
 import { EmptyState } from '@/components/empty-state';
 import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
+import { BalanceMethodToggle } from '@/components/balance-method-toggle';
 
 import ApiStats from '@/components/api-stats';
 import { Button } from '@/components/ui/button';
 import { saveRecentAddress, ProcessedToken, fetchWalletData, fetchAllWalletTokens, forceRefreshWalletData } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
+import { useTransferHistoryBalance } from '@/hooks/use-transfer-history-balance';
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
 import { combineWalletData } from '@/lib/utils';
@@ -29,6 +31,7 @@ export default function Home() {
   const [isMultiWalletLoading, setIsMultiWalletLoading] = useState(false);
   const [portfolioName, setPortfolioName] = useState<string | null>(null);
   const [portfolioUrlId, setPortfolioUrlId] = useState<string | null>(null);
+  const [useTransferHistory, setUseTransferHistory] = useState(false);
   const [multiWalletProgress, setMultiWalletProgress] = useState<{
     currentBatch: number;
     totalBatches: number;
@@ -449,14 +452,32 @@ export default function Home() {
 
   // Use our new hook for loading all wallet tokens without pagination
   const { 
-    walletData, 
-    isLoading, 
-    isError, 
-    error, 
-    refetch,
-    isFetching,
+    walletData: standardWalletData, 
+    isLoading: standardIsLoading, 
+    isError: standardIsError, 
+    error: standardError, 
+    refetch: standardRefetch,
+    isFetching: standardIsFetching,
     progress
   } = useAllWalletTokens(searchedAddress)
+  
+  // Use transfer history hook when enabled
+  const {
+    walletData: transferHistoryData,
+    isLoading: transferHistoryIsLoading,
+    isError: transferHistoryIsError,
+    error: transferHistoryError,
+    refetch: transferHistoryRefetch,
+    isFetching: transferHistoryIsFetching,
+  } = useTransferHistoryBalance(searchedAddress, { enabled: useTransferHistory })
+  
+  // Select which data to use based on the toggle
+  const walletData = useTransferHistory ? transferHistoryData : standardWalletData;
+  const isLoading = useTransferHistory ? transferHistoryIsLoading : standardIsLoading;
+  const isError = useTransferHistory ? transferHistoryIsError : standardIsError;
+  const error = useTransferHistory ? transferHistoryError : standardError;
+  const refetch = useTransferHistory ? transferHistoryRefetch : standardRefetch;
+  const isFetching = useTransferHistory ? transferHistoryIsFetching : standardIsFetching;
   
   // Debug wallet data
   useEffect(() => {
@@ -744,6 +765,13 @@ export default function Home() {
                     onRefresh={handleRefresh}
                   />
                 )}
+                
+                {/* Balance method toggle */}
+                <BalanceMethodToggle
+                  useTransferHistory={useTransferHistory}
+                  onToggle={setUseTransferHistory}
+                  isLoading={isLoading || isFetching}
+                />
                 
                 {/* Search bar placed below the wallet overview */}
                 <div className="w-full">
