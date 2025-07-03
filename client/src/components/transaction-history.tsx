@@ -459,6 +459,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {/* Swap Detection */}
               {(() => {
                 const swapInfo = detectTokenSwap(tx);
+                
+                // Debug logging
+                if (swapInfo) {
+                  console.log('Swap detected:', tx.hash, swapInfo);
+                }
+                
                 if (swapInfo && swapInfo.sentTokens.length > 0 && swapInfo.receivedTokens.length > 0) {
                   // Get primary tokens
                   const primarySent = swapInfo.sentTokens[0];
