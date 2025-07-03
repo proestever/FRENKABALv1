@@ -55,7 +55,7 @@ export function BalanceMethodToggle({
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           {useTransferHistory 
-            ? "Calculating from complete on-chain history (more accurate, slower)"
+            ? "Calculating from complete on-chain history (default - more accurate, slower)"
             : "Using API balances (faster, may be less accurate)"}
         </p>
       </div>

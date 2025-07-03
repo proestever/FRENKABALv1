@@ -139,6 +139,8 @@ Required environment variables:
 - **Implemented dual data fetching** - Home page now supports both calculation methods with appropriate loading states
 - **Added new API endpoint** - `/api/wallet/:address/transfer-history-balances` endpoint for transfer history calculations
 - **Enhanced accuracy** - Transfer history method provides true on-chain balances by summing all historical transfers
+- **Made transfer history the default** - Transfer history calculation is now the default method for better accuracy
+- **Server-side blockchain calls** - Currently all blockchain RPC calls happen on the server, not on users' machines
 
 ### June 20, 2025 - Disabled Automatic Refreshing
 - **Removed all automatic wallet data refreshing** - Wallet data now remains completely static after initial load

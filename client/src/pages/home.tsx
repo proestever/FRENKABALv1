@@ -31,7 +31,7 @@ export default function Home() {
   const [isMultiWalletLoading, setIsMultiWalletLoading] = useState(false);
   const [portfolioName, setPortfolioName] = useState<string | null>(null);
   const [portfolioUrlId, setPortfolioUrlId] = useState<string | null>(null);
-  const [useTransferHistory, setUseTransferHistory] = useState(false);
+  const [useTransferHistory, setUseTransferHistory] = useState(true);
   const [multiWalletProgress, setMultiWalletProgress] = useState<{
     currentBatch: number;
     totalBatches: number;
