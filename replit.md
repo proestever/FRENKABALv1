@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 3, 2025 - Enhanced Transaction History Swap Detection
+- **Fixed swap detection** - Replaced simplified detectTokenSwap function with sophisticated multi-method detection
+- **DEX router detection** - Added support for PulseX router addresses to identify swaps even without visible transfers
+- **Multicall support** - Detects multicall transactions and shows them as swaps when interacting with DEX contracts
+- **Method signature detection** - Identifies swap transactions by method names (swap, trade, multicall, exactinput, etc.)
+- **LP token filtering** - Filters out LP tokens from swap display to show only the actual tokens being swapped
+- **SWAPPED format** - Updated display to show clear "SWAPPED X Token into Y Token" format with purple styling
+
 ### July 3, 2025 - Fixed Token Price Inversion Issue & WPLS Pair Selection
 - **Critical bug fix** - Fixed issue where tokens were showing incorrect prices when they appeared as quote tokens in pairs
 - **Base token filter** - System now only considers pairs where the searched token is the BASE token, preventing inverted prices

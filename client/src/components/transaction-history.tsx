@@ -99,17 +99,65 @@ const getTransactionType = (tx: Transaction): TransactionType => {
   return 'all';
 };
 
-// Token swap detection
+// Enhanced token swap detection with multicall support
 const detectTokenSwap = (tx: Transaction) => {
-  if (!tx.erc20_transfers || !Array.isArray(tx.erc20_transfers) || tx.erc20_transfers.length < 2) {
+  // First check if method label indicates a swap
+  const swapMethodSignatures = ['swap', 'trade', 'multicall', 'exactinput', 'exactoutput', 'swapexact', 'swaptokens'];
+  const isSwapMethod = tx.method_label && swapMethodSignatures.some(sig => tx.method_label?.toLowerCase().includes(sig));
+  
+  // Check for DEX router contracts
+  const dexRouterAddresses = [
+    '0xda9aba4eacf54e0273f56dfffee6b8f1e20b23bba', // PulseX Router
+    '0x165c3410fc91ef562c50559f7d2289febb913d90', // PulseX Router V2
+    '0x98bf93ebf5c380c0e6ae8e192a7e2ae08edacc02', // PulseX Factory
+  ];
+  const isDexRouter = dexRouterAddresses.includes(tx.to_address?.toLowerCase() || '');
+  
+  if (!tx.erc20_transfers || tx.erc20_transfers.length < 2) {
+    // For multicalls without visible transfers, still show as swap if it's a DEX interaction
+    if ((isSwapMethod || isDexRouter) && tx.to_address_label?.includes('PulseX')) {
+      return {
+        type: 'swap',
+        sentTokens: [],
+        receivedTokens: [],
+        dexName: tx.to_address_label || 'PulseX',
+        isMulticall: true
+      };
+    }
     return null;
   }
   
   const sentTokens = tx.erc20_transfers.filter(t => t && t.direction === 'send');
   const receivedTokens = tx.erc20_transfers.filter(t => t && t.direction === 'receive');
   
+  // A swap typically has tokens going out and different tokens coming in
   if (sentTokens.length > 0 && receivedTokens.length > 0) {
-    return { sentTokens, receivedTokens };
+    // Filter out LP tokens and intermediate transfers
+    const filteredSent = sentTokens.filter(t => 
+      !t.token_symbol?.includes('LP') && 
+      !t.token_symbol?.toLowerCase().includes('pulsex')
+    );
+    const filteredReceived = receivedTokens.filter(t => 
+      !t.token_symbol?.includes('LP') && 
+      !t.token_symbol?.toLowerCase().includes('pulsex')
+    );
+    
+    // Check if tokens are different (not just the same token moving around)
+    const sentAddresses = new Set(filteredSent.map(t => t.address?.toLowerCase()));
+    const receivedAddresses = new Set(filteredReceived.map(t => t.address?.toLowerCase()));
+    
+    // If there are different tokens involved, it's likely a swap
+    const hasOverlap = Array.from(sentAddresses).some(addr => receivedAddresses.has(addr));
+    
+    if (!hasOverlap || sentAddresses.size + receivedAddresses.size > 2 || isSwapMethod || isDexRouter) {
+      return {
+        type: 'swap',
+        sentTokens: filteredSent.length > 0 ? filteredSent : sentTokens,
+        receivedTokens: filteredReceived.length > 0 ? filteredReceived : receivedTokens,
+        dexName: tx.to_address_label || (isDexRouter ? 'PulseX' : 'DEX'),
+        isMulticall: isSwapMethod && tx.method_label?.includes('multicall')
+      };
+    }
   }
   
   return null;
@@ -412,16 +460,17 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               {(() => {
                 const swapInfo = detectTokenSwap(tx);
                 if (swapInfo && swapInfo.sentTokens.length > 0 && swapInfo.receivedTokens.length > 0) {
+                  // Get primary tokens
+                  const primarySent = swapInfo.sentTokens[0];
+                  const primaryReceived = swapInfo.receivedTokens[0];
+                  
                   return (
-                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                      <div className="text-sm font-medium text-blue-400 mb-2">Token Swap</div>
-                      <div className="flex items-center gap-2 text-white">
-                        <span>{formatTokenValue(swapInfo.sentTokens[0].value, swapInfo.sentTokens[0].token_decimals)}</span>
-                        <span>{swapInfo.sentTokens[0].token_symbol || 'Unknown'}</span>
-                        <ArrowUpRight size={16} className="text-gray-400" />
-                        <span>{formatTokenValue(swapInfo.receivedTokens[0].value, swapInfo.receivedTokens[0].token_decimals)}</span>
-                        <span>{swapInfo.receivedTokens[0].token_symbol || 'Unknown'}</span>
-                      </div>
+                    <div className="mb-2 flex items-center text-sm overflow-hidden">
+                      <RefreshCw className="mr-2 text-purple-400 flex-shrink-0" size={14} />
+                      <span className="font-medium text-purple-400 whitespace-nowrap">SWAPPED</span>
+                      <span className="ml-2 text-white font-semibold truncate">
+                        {formatTokenValue(primarySent.value, primarySent.token_decimals)} {primarySent.token_symbol || 'Unknown'} into {formatTokenValue(primaryReceived.value, primaryReceived.token_decimals)} {primaryReceived.token_symbol || 'Unknown'}
+                      </span>
                     </div>
                   );
                 }
