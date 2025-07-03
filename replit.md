@@ -132,6 +132,10 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 3, 2025 - Fixed Infinite Loop & Enhanced Token Display
+- **Fixed infinite loop in Home component** - Added check to prevent handleSearch from being called repeatedly when URL params contain wallet address
+- **Resolved "Maximum update depth exceeded" error** - Modified useEffect to only trigger search when address actually changes
+
 ### July 3, 2025 - Enhanced Swap Detection & Display
 - **Simplified swap display format** - Replaced large swap details box with clean "Token A → Token B" format
 - **Improved native token detection** - Better handling of PLS swaps in DEX multicalls by checking transaction value and native transfers

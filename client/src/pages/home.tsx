@@ -324,8 +324,11 @@ export default function Home() {
     
     // Check if we have a wallet address directly in the URL path
     if (params.walletAddress && params.walletAddress.startsWith('0x')) {
-      console.log(`Detected wallet address in URL params: ${params.walletAddress}`);
-      handleSearch(params.walletAddress);
+      // Only search if this is a different address than what we're currently showing
+      if (searchedAddress !== params.walletAddress) {
+        console.log(`Detected wallet address in URL params: ${params.walletAddress}`);
+        handleSearch(params.walletAddress);
+      }
       return;
     }
     
