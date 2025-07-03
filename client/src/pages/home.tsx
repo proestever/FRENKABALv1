@@ -7,14 +7,14 @@ import { TokenList } from '@/components/token-list';
 import { EmptyState } from '@/components/empty-state';
 import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
-import { BalanceMethodToggle } from '@/components/balance-method-toggle';
+
 
 import ApiStats from '@/components/api-stats';
 import { Button } from '@/components/ui/button';
 import { saveRecentAddress, ProcessedToken, fetchWalletData, fetchAllWalletTokens, forceRefreshWalletData } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
-import { useTransferHistoryBalance } from '@/hooks/use-transfer-history-balance';
+
 import { useDirectBalance } from '@/hooks/use-direct-balance';
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
@@ -32,7 +32,7 @@ export default function Home() {
   const [isMultiWalletLoading, setIsMultiWalletLoading] = useState(false);
   const [portfolioName, setPortfolioName] = useState<string | null>(null);
   const [portfolioUrlId, setPortfolioUrlId] = useState<string | null>(null);
-  const [useTransferHistory, setUseTransferHistory] = useState(false); // Default to direct balance method
+
   const [multiWalletProgress, setMultiWalletProgress] = useState<{
     currentBatch: number;
     totalBatches: number;
@@ -465,33 +465,15 @@ export default function Home() {
     progress
   } = useAllWalletTokens(searchedAddress)
   
-  // Use transfer history hook when enabled
+  // Use direct balance hook
   const {
-    walletData: transferHistoryData,
-    isLoading: transferHistoryIsLoading,
-    isError: transferHistoryIsError,
-    error: transferHistoryError,
-    refetch: transferHistoryRefetch,
-    isFetching: transferHistoryIsFetching,
-  } = useTransferHistoryBalance(searchedAddress, { enabled: useTransferHistory })
-  
-  // Use direct balance hook when transfer history is disabled
-  const {
-    walletData: directBalanceData,
-    isLoading: directBalanceIsLoading,
-    isError: directBalanceIsError,
-    error: directBalanceError,
-    refetch: directBalanceRefetch,
-    isFetching: directBalanceIsFetching,
-  } = useDirectBalance(searchedAddress, { enabled: !useTransferHistory })
-  
-  // Select which data to use based on the toggle
-  const walletData = useTransferHistory ? transferHistoryData : directBalanceData;
-  const isLoading = useTransferHistory ? transferHistoryIsLoading : directBalanceIsLoading;
-  const isError = useTransferHistory ? transferHistoryIsError : directBalanceIsError;
-  const error = useTransferHistory ? transferHistoryError : directBalanceError;
-  const refetch = useTransferHistory ? transferHistoryRefetch : directBalanceRefetch;
-  const isFetching = useTransferHistory ? transferHistoryIsFetching : directBalanceIsFetching;
+    walletData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useDirectBalance(searchedAddress, { enabled: true })
   
   // Debug wallet data
   useEffect(() => {
@@ -780,12 +762,7 @@ export default function Home() {
                   />
                 )}
                 
-                {/* Balance method toggle */}
-                <BalanceMethodToggle
-                  useTransferHistory={useTransferHistory}
-                  onToggle={setUseTransferHistory}
-                  isLoading={isLoading || isFetching}
-                />
+
                 
                 {/* Search bar placed below the wallet overview */}
                 <div className="w-full">

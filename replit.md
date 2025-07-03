@@ -168,15 +168,16 @@ Required environment variables:
 - **Fixed hover tooltip overflow** - Added max-height, overflow-y-auto, and z-index fixes to prevent tooltips from breaking layout
 - **Consistent mobile/desktop display** - Both views now use the same explicit "SWAPPED X into Y" format with proper formatting
 
-### July 3, 2025 - Transfer History-Based Balance Calculation
-- **Added alternative balance calculation method** - Users can now toggle between standard API-based balance fetching and a more accurate transfer history-based calculation
-- **Created transfer-history-service.ts** - New service that calculates balances by analyzing complete on-chain transfer history
-- **Added balance method toggle UI** - New toggle component allows users to switch between calculation methods
-- **Implemented dual data fetching** - Home page now supports both calculation methods with appropriate loading states
-- **Added new API endpoint** - `/api/wallet/:address/transfer-history-balances` endpoint for transfer history calculations
-- **Enhanced accuracy** - Transfer history method provides true on-chain balances by summing all historical transfers
-- **Made transfer history the default** - Transfer history calculation is now the default method for better accuracy
-- **Server-side blockchain calls** - Currently all blockchain RPC calls happen on the server, not on users' machines
+### July 3, 2025 - Removed Transfer History Method & Enhanced LP Token Display
+- **Removed transfer history method** - Simplified wallet data fetching by removing the experimental transfer history calculation method
+- **Single balance method** - Now exclusively uses direct blockchain balance fetching for accurate, real-time token balances
+- **LP token pooled amounts display** - PulseX LP tokens show detailed pooled amounts when viewing the "Liquidity" tab
+- **Enhanced liquidity view** - Click "Liquidity" tab to see full breakdown of LP positions including:
+  - Individual token amounts (e.g., 68M LOTTO + 75M WPLS)
+  - USD values for each token in the pair
+  - Pool share percentage
+  - Total LP position value
+- **Simplified token view** - LP tokens show compact display in main "Tokens" tab, full details in "Liquidity" tab
 
 ### June 20, 2025 - Disabled Automatic Refreshing
 - **Removed all automatic wallet data refreshing** - Wallet data now remains completely static after initial load
