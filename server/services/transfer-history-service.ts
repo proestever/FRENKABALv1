@@ -143,7 +143,7 @@ export async function calculateBalancesFromTransferHistory(
     // Parse all transfer events
     const allTransfers: TransferEvent[] = [];
     
-    for (const log of uniqueLogs.values()) {
+    for (const log of Array.from(uniqueLogs.values())) {
       try {
         const transfer = parseTransferEvent(log);
         allTransfers.push(transfer);

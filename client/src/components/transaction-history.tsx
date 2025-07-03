@@ -101,12 +101,12 @@ const getTransactionType = (tx: Transaction): TransactionType => {
 
 // Token swap detection
 const detectTokenSwap = (tx: Transaction) => {
-  if (!tx.erc20_transfers || tx.erc20_transfers.length < 2) {
+  if (!tx.erc20_transfers || !Array.isArray(tx.erc20_transfers) || tx.erc20_transfers.length < 2) {
     return null;
   }
   
-  const sentTokens = tx.erc20_transfers.filter(t => t.direction === 'send');
-  const receivedTokens = tx.erc20_transfers.filter(t => t.direction === 'receive');
+  const sentTokens = tx.erc20_transfers.filter(t => t && t.direction === 'send');
+  const receivedTokens = tx.erc20_transfers.filter(t => t && t.direction === 'receive');
   
   if (sentTokens.length > 0 && receivedTokens.length > 0) {
     return { sentTokens, receivedTokens };
