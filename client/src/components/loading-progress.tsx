@@ -28,13 +28,10 @@ const STAGE_COLORS = {
 
 // Define loading stages with weights
 const LOADING_STAGES = [
-  { id: 'connect', label: 'Connecting to PulseChain', icon: Activity, weight: 5, duration: 800, color: 'purple' },
-  { id: 'wallet', label: 'Fetching wallet data', icon: Wallet, weight: 10, duration: 1500, color: 'blue' },
-  { id: 'tokens', label: 'Loading token balances', icon: Coins, weight: 30, duration: 4000, color: 'green' },
-  { id: 'prices', label: 'Fetching token prices', icon: TrendingUp, weight: 25, duration: 3000, color: 'yellow' },
-  { id: 'lp', label: 'Analyzing LP tokens', icon: Database, weight: 15, duration: 2000, color: 'pink' },
-  { id: 'verify', label: 'Verifying token contracts', icon: Shield, weight: 10, duration: 1200, color: 'indigo' },
-  { id: 'complete', label: 'Finalizing data', icon: CheckCircle, weight: 5, duration: 500, color: 'emerald' }
+  { id: 'tokens', label: 'Fetching tokens', icon: Coins, weight: 25, duration: 2000, color: 'purple' },
+  { id: 'lp', label: 'Fetching LPs', icon: Database, weight: 25, duration: 2000, color: 'blue' },
+  { id: 'hex', label: 'Fetching HEX stakes', icon: Shield, weight: 25, duration: 2000, color: 'green' },
+  { id: 'prices', label: 'Fetching prices', icon: TrendingUp, weight: 25, duration: 2000, color: 'yellow' }
 ];
 
 export function LoadingProgress({ isLoading, walletAddress, customProgress }: LoadingProgressProps) {
@@ -76,14 +73,11 @@ export function LoadingProgress({ isLoading, walletAddress, customProgress }: Lo
   useEffect(() => {
     // Map percentage ranges to stages
     const percentageToStage = (percent: number): number => {
-      if (percent < 10) return 0;      // Connecting
-      if (percent < 20) return 1;      // Fetching wallet
-      if (percent < 50) return 2;      // Loading tokens
-      if (percent < 65) return 3;      // Fetching prices
-      if (percent < 80) return 4;      // Analyzing LP
-      if (percent < 95) return 5;      // Verifying
-      if (percent < 100) return 6;     // Finalizing
-      return 6;                        // Complete
+      if (percent < 25) return 0;      // Fetching tokens
+      if (percent < 50) return 1;      // Fetching LPs
+      if (percent < 75) return 2;      // Fetching HEX stakes
+      if (percent < 100) return 3;     // Fetching prices
+      return 3;                        // Complete
     };
     
     // When using percentage-based progress
@@ -96,13 +90,11 @@ export function LoadingProgress({ isLoading, walletAddress, customProgress }: Lo
     } else {
       // Fallback to message-based stage detection
       const messageToStage: Record<string, number> = {
-        'Connecting to PulseChain network...': 0,
-        'Fetching wallet data...': 1,
-        'Loading token balances...': 2,
-        'Fetching token prices...': 3,
-        'Analyzing LP tokens...': 4,
-        'Verifying token contracts...': 5,
-        'Processing complete': 6
+        'Fetching tokens...': 0,
+        'Fetching LPs...': 1,
+        'Fetching HEX stakes...': 2,
+        'Fetching prices...': 3,
+        'Processing complete': 4
       };
       
       for (const [msg, stageIdx] of Object.entries(messageToStage)) {

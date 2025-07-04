@@ -120,34 +120,20 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     console.log(`Getting direct token balances for ${walletAddress}`);
     const startTime = Date.now();
     
-    // Update progress - Connecting to blockchain
+    // Update progress - Fetching tokens
     updateLoadingProgress({
       status: 'loading',
       currentBatch: 0,
       totalBatches: 100, // Use percentage
-      message: 'Connecting to PulseChain network...'
+      message: 'Fetching tokens...'
     });
     
     // Get all tokens the wallet has interacted with
     const tokenAddresses = await getWalletTokens(walletAddress);
     console.log(`Fetching balances for ${tokenAddresses.size} tokens...`);
     
-    // Add delay to show connecting stage
+    // Add delay to show fetching tokens stage
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Update progress - Fetching wallet information (10%)
-    updateLoadingProgress({
-      status: 'loading',
-      currentBatch: 10,
-      totalBatches: 100,
-      message: 'Fetching wallet data...'
-    });
-    
-    // Add delay to show wallet data stage
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Add delay to make stage visible
-    await new Promise(resolve => setTimeout(resolve, 600));
     
     // Get native PLS balance first
     const plsBalance = await provider.getBalance(walletAddress);
@@ -173,16 +159,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       });
     }
     
-    // Update progress - Scanning token balances (20%)
-    updateLoadingProgress({
-      status: 'loading',
-      currentBatch: 20,
-      totalBatches: 100,
-      message: 'Loading token balances...'
-    });
-    
-    // Add delay to make stage visible
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Continue showing fetching tokens progress
     
     // Process tokens in batches
     const BATCH_SIZE = 5;
@@ -192,15 +169,15 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     for (let i = 0; i < tokenArray.length; i += BATCH_SIZE) {
       const batch = tokenArray.slice(i, i + BATCH_SIZE);
       
-      // Calculate progress: 20% to 50% for token loading
-      const tokenProgress = (i / totalTokens) * 30; // 30% range for tokens
-      const currentProgress = Math.floor(20 + tokenProgress);
+      // Calculate progress: 0% to 25% for token fetching
+      const tokenProgress = (i / totalTokens) * 25; // 25% range for tokens
+      const currentProgress = Math.floor(tokenProgress);
       
       updateLoadingProgress({
         status: 'loading',
         currentBatch: currentProgress,
         totalBatches: 100,
-        message: `Loading token balances... (${Math.min(i + BATCH_SIZE, totalTokens)}/${totalTokens})`
+        message: `Fetching tokens... (${Math.min(i + BATCH_SIZE, totalTokens)}/${totalTokens})`
       });
       
       await Promise.all(batch.map(async (tokenAddress) => {
@@ -241,26 +218,15 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       }
     }
     
-    // Update progress - Retrieving token prices (50%)
+    // Update progress - Fetching LPs (25%)
     updateLoadingProgress({
       status: 'loading',
-      currentBatch: 50,
+      currentBatch: 25,
       totalBatches: 100,
-      message: 'Fetching token prices...'
+      message: 'Fetching LPs...'
     });
     
-    // Add delay to show price fetching progress
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Update progress - Analyzing LP positions (65%)
-    updateLoadingProgress({
-      status: 'loading',
-      currentBatch: 65,
-      totalBatches: 100,
-      message: 'Analyzing LP tokens...'
-    });
-    
-    // Add delay to make stage visible
+    // Add delay to show LP fetching stage
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Detect LP tokens
@@ -285,29 +251,29 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       processedTokens = processedTokensWithLp;
     }
     
-    // Update progress - Verifying contract data (80%)
+    // Update progress - Fetching HEX stakes (50%)
     updateLoadingProgress({
       status: 'loading',
-      currentBatch: 80,
+      currentBatch: 50,
       totalBatches: 100,
-      message: 'Verifying token contracts...'
+      message: 'Fetching HEX stakes...'
     });
     
-    // Add delay to make stage visible
+    // Add delay to show HEX stakes stage
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Sort by value descending
     processedTokens.sort((a, b) => (b.value || 0) - (a.value || 0));
     
-    // Update progress - Finalizing data (95%)
+    // Update progress - Fetching prices (75%)
     updateLoadingProgress({
       status: 'loading',
-      currentBatch: 95,
+      currentBatch: 75,
       totalBatches: 100,
-      message: 'Finalizing data...'
+      message: 'Fetching prices...'
     });
     
-    // Add delay to make stage visible
+    // Add delay to show prices stage
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     const endTime = Date.now();
