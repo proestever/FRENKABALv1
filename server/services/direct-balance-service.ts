@@ -4,6 +4,7 @@ import { getDefaultLogo } from './blockchain-service';
 import { getTokenPriceFromDexScreener } from './dexscreener';
 import { storage } from '../storage';
 import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
+import { updateLoadingProgress } from '../routes';
 
 // Initialize ethers provider
 const RPC_ENDPOINT = 'https://rpc-pulsechain.g4mm4.io';
@@ -119,9 +120,25 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     console.log(`Getting direct token balances for ${walletAddress}`);
     const startTime = Date.now();
     
+    // Update progress - Connecting to blockchain
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: 0,
+      totalBatches: 7,
+      message: 'Connecting to PulseChain network...'
+    });
+    
     // Get all tokens the wallet has interacted with
     const tokenAddresses = await getWalletTokens(walletAddress);
     console.log(`Fetching balances for ${tokenAddresses.size} tokens...`);
+    
+    // Update progress - Fetching wallet information
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: 1,
+      totalBatches: 7,
+      message: 'Fetching wallet information...'
+    });
     
     // Get native PLS balance first
     const plsBalance = await provider.getBalance(walletAddress);
@@ -147,12 +164,30 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       });
     }
     
+    // Update progress - Scanning token balances
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: 2,
+      totalBatches: 7,
+      message: `Scanning ${tokenAddresses.size} token balances...`
+    });
+    
     // Process tokens in batches
     const BATCH_SIZE = 5;
     const tokenArray = Array.from(tokenAddresses);
     
     for (let i = 0; i < tokenArray.length; i += BATCH_SIZE) {
       const batch = tokenArray.slice(i, i + BATCH_SIZE);
+      
+      // Update progress with current batch
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(tokenArray.length / BATCH_SIZE);
+      updateLoadingProgress({
+        status: 'loading',
+        currentBatch: 2,
+        totalBatches: 7,
+        message: `Scanning token balances (${Math.min(i + BATCH_SIZE, tokenArray.length)}/${tokenArray.length})...`
+      });
       
       await Promise.all(batch.map(async (tokenAddress) => {
         const tokenInfo = await getTokenInfo(tokenAddress, walletAddress);
@@ -192,6 +227,25 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       }
     }
     
+    // Update progress - Retrieving token prices (step 3 is already handled in the batch loop)
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: 3,
+      totalBatches: 7,
+      message: 'Retrieving token prices...'
+    });
+    
+    // Add small delay to show price fetching progress
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Update progress - Analyzing LP positions
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: 4,
+      totalBatches: 7,
+      message: 'Analyzing LP positions...'
+    });
+    
     // Detect LP tokens
     console.log(`Checking ${processedTokens.length} tokens for LP interface`);
     for (const token of processedTokens) {
@@ -214,16 +268,49 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       processedTokens = processedTokensWithLp;
     }
     
+    // Update progress - Verifying contract data
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: 5,
+      totalBatches: 7,
+      message: 'Verifying contract data...'
+    });
+    
     // Sort by value descending
     processedTokens.sort((a, b) => (b.value || 0) - (a.value || 0));
+    
+    // Update progress - Finalizing data
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: 6,
+      totalBatches: 7,
+      message: 'Finalizing data...'
+    });
     
     const endTime = Date.now();
     console.log(`Direct balance fetch completed in ${endTime - startTime}ms`);
     console.log(`Found ${processedTokens.length} tokens with non-zero balances`);
     
+    // Update progress - Complete
+    updateLoadingProgress({
+      status: 'complete',
+      currentBatch: 7,
+      totalBatches: 7,
+      message: 'Loading complete'
+    });
+    
     return processedTokens;
   } catch (error) {
     console.error('Error getting direct token balances:', error);
+    
+    // Update progress - Error
+    updateLoadingProgress({
+      status: 'error',
+      currentBatch: 0,
+      totalBatches: 7,
+      message: 'Error loading wallet data. Please try again.'
+    });
+    
     throw error;
   }
 }

@@ -603,6 +603,7 @@ export default function Home() {
       {/* Loading Progress Bar - shows during loading */}
       <LoadingProgress 
         isLoading={isLoading || isFetching || isMultiWalletLoading} 
+        walletAddress={searchedAddress || (multiWalletData ? 'Multiple wallets' : undefined)}
         customProgress={isMultiWalletLoading ? multiWalletProgress : progress}
       />
       
