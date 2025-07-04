@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 4, 2025 - Sequential Loading Progress with Stage Badges
+- **Sequential stage highlighting** - Replaced percentage-based progress bar with sequential stage badges
+- **Visual stage progression** - Six loading stages displayed as badges that highlight in order: Connecting → Wallet Data → Token Balances → Price Data → LP Analysis → Verification
+- **Stage states** - Each badge shows three states: inactive (gray) → active (blue with loading spinner) → complete (green with checkmark)
+- **No percentage display** - Removed progress bar and percentage counter for cleaner visual design
+- **Smooth transitions** - Badges highlight sequentially as loading progresses through percentage ranges
+- **Progress mapping** - Backend percentages mapped to stage activation: 0-10% (Connecting), 10-20% (Wallet), 20-50% (Tokens), 50-65% (Prices), 65-80% (LP), 80-95% (Verification)
+
 ### July 4, 2025 - Percentage-Based Loading Progress System
 - **Major loading system overhaul** - Changed from 7-stage system to percentage-based progress (0-100%)
 - **Percentage distribution** - Connecting (0-10%), Wallet data (10-20%), Token balances (20-50%), Prices (50-65%), LP analysis (65-80%), Verification (80-95%), Finalizing (95-100%)
