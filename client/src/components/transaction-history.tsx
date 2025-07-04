@@ -442,20 +442,20 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       </div>
       
       {/* Transactions List */}
-      <div className="divide-y divide-border max-h-[70vh] overflow-y-auto">
+      <div className="divide-y divide-border max-h-[80vh] overflow-y-auto">
         {filteredTransactions.map((tx, index) => (
-          <div key={`${tx.hash}-${index}`} className="p-4 hover:bg-white/5 transition-colors">
+          <div key={`${tx.hash}-${index}`} className="p-3 hover:bg-white/5 transition-colors">
             {/* Transaction Header */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
                 <a 
                   href={`https://otter.pulsechain.com/tx/${tx.hash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-mono text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+                  className="text-xs font-mono text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
                 >
                   {shortenAddress(tx.hash)}
-                  <ExternalLink size={12} />
+                  <ExternalLink size={10} />
                 </a>
                 <span className="text-xs text-muted-foreground">
                   {formatDate(parseInt(tx.block_timestamp) * 1000)}
@@ -510,15 +510,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     }
                     
                     return (
-                      <div className="mb-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <RefreshCw className="text-purple-400" size={20} />
+                      <div className="mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <RefreshCw className="text-purple-400" size={16} />
                           <div className="flex items-center gap-2 text-sm">
                             <span className="font-medium text-white">
                               {tx.value && tx.value !== '0' ? `${formatTokenValue(tx.value, '18')} ` : ''}
                               {tokenOut}
                             </span>
-                            <ArrowRight size={16} className="text-purple-400" />
+                            <ArrowRight size={14} className="text-purple-400" />
                             <span className="font-medium text-white">{tokenIn}</span>
                             {swapInfo.dexName && (
                               <span className="text-xs text-gray-400 ml-2">via {swapInfo.dexName}</span>
@@ -536,32 +536,32 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     const primaryReceived = swapInfo.receivedTokens[0];
                     
                     return (
-                      <div className="mb-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <RefreshCw className="text-purple-400" size={20} />
-                          <div className="flex items-center gap-2 flex-wrap">
+                      <div className="mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <RefreshCw className="text-purple-400" size={16} />
+                          <div className="flex items-center gap-2 flex-wrap text-sm">
                             {/* Token Out */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
                               <TokenLogo 
                                 address={primarySent.address || ''}
                                 symbol={primarySent.token_symbol || ''}
                                 fallbackLogo={primarySent.token_logo || undefined}
-                                size="sm"
+                                size="xs"
                               />
                               <span className="font-medium text-white">
                                 {formatTokenValue(primarySent.value, primarySent.token_decimals)} {primarySent.token_symbol || 'UNKNOWN'}
                               </span>
                             </div>
                             
-                            <ArrowRight size={16} className="text-purple-400" />
+                            <ArrowRight size={14} className="text-purple-400" />
                             
                             {/* Token In */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
                               <TokenLogo 
                                 address={primaryReceived.address || ''}
                                 symbol={primaryReceived.token_symbol || ''}
                                 fallbackLogo={primaryReceived.token_logo || undefined}
-                                size="sm"
+                                size="xs"
                               />
                               <span className="font-medium text-white">
                                 {formatTokenValue(primaryReceived.value, primaryReceived.token_decimals)} {primaryReceived.token_symbol || 'UNKNOWN'}
@@ -610,14 +610,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 </div>
               ))}
               
-              {/* Transaction Details */}
-              <div className="flex justify-between text-xs text-gray-400 mt-2">
-                <span>Gas: {parseInt(tx.receipt_gas_used).toLocaleString()}</span>
-                <span>Fee: {formatTokenValue(tx.transaction_fee)} PLS</span>
-                {tx.receipt_status === '0' && (
-                  <span className="text-red-400">Failed</span>
-                )}
-              </div>
+              {/* Transaction Details - Only show if failed */}
+              {tx.receipt_status === '0' && (
+                <div className="text-xs text-red-400 mt-1">
+                  Transaction Failed
+                </div>
+              )}
             </div>
           </div>
         ))}
