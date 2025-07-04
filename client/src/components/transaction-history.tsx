@@ -195,10 +195,21 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   const [typeFilter, setTypeFilter] = useState<TransactionType>('all');
   const [copiedAddresses, setCopiedAddresses] = useState<Record<string, boolean>>({});
   
-  // Fetch initial transactions
+  // Fetch initial transactions using blockchain endpoint
   const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/wallet/${walletAddress}/transactions`, { limit: 150 }],
-    queryFn: () => fetchTransactionHistory(walletAddress, 150),
+    queryKey: [`/api/wallet/${walletAddress}/blockchain-transactions`, { limit: 100 }],
+    queryFn: async () => {
+      const url = `/api/wallet/${walletAddress}/blockchain-transactions?limit=100`;
+      console.log(`Fetching blockchain transactions: ${url}`);
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch blockchain transactions');
+      }
+      
+      return response.json();
+    },
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -648,11 +659,19 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               
               setIsLoadingMore(true);
               try {
-                const response = await fetchTransactionHistory(walletAddress, 150, cursor);
-                if (response.result) {
-                  setTransactions([...transactions, ...response.result]);
-                  setCursor(response.cursor || null);
-                  setHasMore(!!response.cursor);
+                const url = `/api/wallet/${walletAddress}/blockchain-transactions?limit=100${cursor ? `&startBlock=${cursor}` : ''}`;
+                console.log(`Loading more blockchain transactions: ${url}`);
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                  throw new Error('Failed to load more transactions');
+                }
+                
+                const data = await response.json();
+                if (data.result) {
+                  setTransactions([...transactions, ...data.result]);
+                  setCursor(data.cursor || null);
+                  setHasMore(!!data.cursor);
                 }
               } catch (error) {
                 console.error('Failed to load more transactions:', error);

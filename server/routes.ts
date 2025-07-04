@@ -478,10 +478,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Return structured response even if there are no transactions
-      if (!transactionHistory || transactionHistory.error) {
+      if (!transactionHistory) {
         return res.status(500).json({ 
           message: "Failed to fetch transaction history",
-          error: transactionHistory?.error || "Unknown error"
+          error: "Unknown error"
         });
       }
       
@@ -490,6 +490,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching transaction history:", error);
       return res.status(500).json({ 
         message: "Failed to fetch transaction history",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // New direct blockchain transaction history endpoint
+  app.get("/api/wallet/:address/blockchain-transactions", async (req, res) => {
+    try {
+      const { address } = req.params;
+      const { limit = '100', startBlock } = req.query;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      const parsedLimit = Math.min(parseInt(limit as string, 10) || 100, 200);
+      const parsedStartBlock = startBlock ? parseInt(startBlock as string, 10) : undefined;
+      
+      // Import the blockchain service
+      const { fetchTransactionsFromBlockchain, batchFetchTokenMetadata } = await import('./services/blockchain-transaction-service.js');
+      
+      console.log(`Fetching blockchain transactions for ${address}, limit: ${parsedLimit}, startBlock: ${parsedStartBlock || 'latest'}`);
+      
+      // Fetch transactions directly from blockchain
+      const result = await fetchTransactionsFromBlockchain(address, parsedLimit, parsedStartBlock);
+      
+      // Collect unique token addresses for metadata fetching
+      const tokenAddresses = new Set<string>();
+      result.transactions.forEach(tx => {
+        tx.erc20_transfers?.forEach(transfer => {
+          if (transfer.address) {
+            tokenAddresses.add(transfer.address.toLowerCase());
+          }
+        });
+      });
+      
+      // Batch fetch token metadata
+      if (tokenAddresses.size > 0) {
+        console.log(`Fetching metadata for ${tokenAddresses.size} tokens`);
+        const tokenMetadata = await batchFetchTokenMetadata(Array.from(tokenAddresses));
+        
+        // Update transfers with token metadata
+        result.transactions.forEach(tx => {
+          tx.erc20_transfers?.forEach(transfer => {
+            if (transfer.address) {
+              const metadata = tokenMetadata[transfer.address.toLowerCase()];
+              if (metadata) {
+                transfer.token_name = metadata.name;
+                transfer.token_symbol = metadata.symbol;
+                transfer.token_decimals = metadata.decimals.toString();
+                
+                // Calculate formatted value
+                const decimals = metadata.decimals;
+                const value = BigInt(transfer.value);
+                const divisor = BigInt(10 ** decimals);
+                const integerPart = value / divisor;
+                const fractionalPart = value % divisor;
+                transfer.value_formatted = `${integerPart}.${fractionalPart.toString().padStart(decimals, '0')}`;
+              }
+            }
+          });
+        });
+      }
+      
+      // Format response to match expected structure
+      return res.json({
+        result: result.transactions,
+        cursor: result.hasMore ? result.lastBlock.toString() : undefined,
+        page: 1,
+        page_size: parsedLimit
+      });
+    } catch (error) {
+      console.error("Error fetching blockchain transactions:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch blockchain transactions",
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
