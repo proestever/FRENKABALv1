@@ -137,8 +137,11 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       status: 'loading',
       currentBatch: 1,
       totalBatches: 7,
-      message: 'Fetching wallet information...'
+      message: 'Fetching wallet data...'
     });
+    
+    // Add delay to make stage visible
+    await new Promise(resolve => setTimeout(resolve, 600));
     
     // Get native PLS balance first
     const plsBalance = await provider.getBalance(walletAddress);
@@ -169,8 +172,11 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       status: 'loading',
       currentBatch: 2,
       totalBatches: 7,
-      message: `Scanning ${tokenAddresses.size} token balances...`
+      message: 'Loading token balances...'
     });
+    
+    // Add delay to make stage visible
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Process tokens in batches
     const BATCH_SIZE = 5;
@@ -232,7 +238,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       status: 'loading',
       currentBatch: 3,
       totalBatches: 7,
-      message: 'Retrieving token prices...'
+      message: 'Fetching token prices...'
     });
     
     // Add small delay to show price fetching progress
@@ -243,8 +249,11 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       status: 'loading',
       currentBatch: 4,
       totalBatches: 7,
-      message: 'Analyzing LP positions...'
+      message: 'Analyzing LP tokens...'
     });
+    
+    // Add delay to make stage visible
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Detect LP tokens
     console.log(`Checking ${processedTokens.length} tokens for LP interface`);
@@ -273,8 +282,11 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       status: 'loading',
       currentBatch: 5,
       totalBatches: 7,
-      message: 'Verifying contract data...'
+      message: 'Verifying token contracts...'
     });
+    
+    // Add delay to make stage visible
+    await new Promise(resolve => setTimeout(resolve, 400));
     
     // Sort by value descending
     processedTokens.sort((a, b) => (b.value || 0) - (a.value || 0));
@@ -287,6 +299,9 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       message: 'Finalizing data...'
     });
     
+    // Add delay to make stage visible
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     const endTime = Date.now();
     console.log(`Direct balance fetch completed in ${endTime - startTime}ms`);
     console.log(`Found ${processedTokens.length} tokens with non-zero balances`);
@@ -296,7 +311,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       status: 'complete',
       currentBatch: 7,
       totalBatches: 7,
-      message: 'Loading complete'
+      message: 'Processing complete'
     });
     
     return processedTokens;

@@ -132,6 +132,12 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 4, 2025 - Fixed Loading Progress Stage Display Messages
+- **Fixed loading progress stages not displaying** - Updated all progress messages in direct-balance-service.ts to match what loading-progress.tsx component expects
+- **Message mapping fixes** - Changed "Fetching wallet information..." to "Fetching wallet data...", "Scanning X token balances..." to "Loading token balances...", etc.
+- **Complete stage mapping** - All 7 stages now properly highlight as wallet data loads: Connecting → Wallet data → Token balances → Prices → LP analysis → Contract verification → Complete
+- **Smooth stage transitions** - Added appropriate delays between stages to ensure each one is visible during the loading process
+
 ### July 4, 2025 - Direct Blockchain Transaction Fetching & Ultra-Simplified Display
 - **Major architecture change** - Replaced PulseChain Scan API with direct blockchain RPC calls for real-time transaction data
 - **Created fast-blockchain-service.ts** - Optimized service using event logs for faster transaction fetching

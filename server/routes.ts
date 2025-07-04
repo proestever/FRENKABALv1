@@ -141,6 +141,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Fetching direct balances for ${address}`);
       
+      // Reset loading progress at the start
+      updateLoadingProgress({
+        status: 'loading',
+        currentBatch: 0,
+        totalBatches: 7,
+        message: 'Initializing wallet scan...'
+      });
+      
       // Get direct balances from blockchain
       const tokens = await getDirectBalances(address);
       
