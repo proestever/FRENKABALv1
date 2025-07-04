@@ -514,13 +514,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const parsedLimit = Math.min(parseInt(limit as string, 10) || 50, 100);
       const parsedStartBlock = startBlock ? parseInt(startBlock as string, 10) : undefined;
       
-      // Import the blockchain service
-      const { fetchTransactionsFromBlockchain, batchFetchTokenMetadata } = await import('./services/blockchain-transaction-service.js');
+      // Import the fast blockchain service
+      const { fetchTransactionsFast, batchFetchTokenMetadata } = await import('./services/fast-blockchain-service.js');
       
-      console.log(`Fetching blockchain transactions for ${address}, limit: ${parsedLimit}, startBlock: ${parsedStartBlock || 'latest'}`);
+      console.log(`Fast fetching blockchain transactions for ${address}, limit: ${parsedLimit}, startBlock: ${parsedStartBlock || 'latest'}`);
       
-      // Fetch transactions directly from blockchain
-      const result = await fetchTransactionsFromBlockchain(address, parsedLimit, parsedStartBlock);
+      // Fetch transactions using the optimized fast method
+      const result = await fetchTransactionsFast(address, parsedLimit, parsedStartBlock);
       
       // Collect unique token addresses for metadata fetching
       const tokenAddresses = new Set<string>();
