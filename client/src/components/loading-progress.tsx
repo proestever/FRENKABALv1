@@ -17,12 +17,12 @@ interface LoadingProgressProps {
 
 // Define loading stages with weights
 const LOADING_STAGES = [
-  { id: 'connect', label: 'Connecting to blockchain', icon: Activity, weight: 5, duration: 800 },
-  { id: 'wallet', label: 'Fetching wallet information', icon: Wallet, weight: 10, duration: 1500 },
-  { id: 'tokens', label: 'Scanning token balances', icon: Coins, weight: 30, duration: 4000 },
-  { id: 'prices', label: 'Retrieving token prices', icon: TrendingUp, weight: 25, duration: 3000 },
-  { id: 'lp', label: 'Analyzing LP positions', icon: Database, weight: 15, duration: 2000 },
-  { id: 'verify', label: 'Verifying contract data', icon: Shield, weight: 10, duration: 1200 },
+  { id: 'connect', label: 'Connecting to PulseChain', icon: Activity, weight: 5, duration: 800 },
+  { id: 'wallet', label: 'Fetching wallet data', icon: Wallet, weight: 10, duration: 1500 },
+  { id: 'tokens', label: 'Loading token balances', icon: Coins, weight: 30, duration: 4000 },
+  { id: 'prices', label: 'Fetching token prices', icon: TrendingUp, weight: 25, duration: 3000 },
+  { id: 'lp', label: 'Analyzing LP tokens', icon: Database, weight: 15, duration: 2000 },
+  { id: 'verify', label: 'Verifying token contracts', icon: Shield, weight: 10, duration: 1200 },
   { id: 'complete', label: 'Finalizing data', icon: CheckCircle, weight: 5, duration: 500 }
 ];
 
@@ -260,22 +260,22 @@ export function LoadingProgress({ isLoading, walletAddress, customProgress }: Lo
               return (
                 <div 
                   key={stage.id}
-                  className={`flex items-center gap-2 p-2 rounded-md transition-all duration-300 ${
-                    isActive ? 'bg-purple-500/20 border border-purple-500/30' :
-                    isCompleted ? 'bg-green-500/10 border border-green-500/20' :
-                    'bg-white/5 border border-white/10 opacity-50'
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all duration-500 ${
+                    isActive ? 'bg-purple-500/30 border-2 border-purple-400 shadow-lg shadow-purple-500/20 scale-105' :
+                    isCompleted ? 'bg-green-500/20 border border-green-400/40' :
+                    'bg-white/5 border border-white/10 opacity-40'
                   }`}
                 >
                   <Icon 
-                    size={16} 
-                    className={`${
-                      isActive ? 'text-purple-400 animate-pulse' :
+                    size={18} 
+                    className={`transition-all duration-500 ${
+                      isActive ? 'text-purple-300 animate-pulse scale-110' :
                       isCompleted ? 'text-green-400' :
                       'text-gray-500'
                     }`}
                   />
-                  <span className={`text-xs font-medium ${
-                    isActive ? 'text-white' :
+                  <span className={`text-xs font-medium transition-all duration-500 ${
+                    isActive ? 'text-white font-semibold' :
                     isCompleted ? 'text-green-300' :
                     'text-gray-400'
                   }`}>
