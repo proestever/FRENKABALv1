@@ -71,7 +71,8 @@ export function LoadingProgress({ isLoading, walletAddress, customProgress }: Lo
       if (percent < 65) return 3;      // Fetching prices
       if (percent < 80) return 4;      // Analyzing LP
       if (percent < 95) return 5;      // Verifying
-      return 6;                        // Finalizing
+      if (percent < 100) return 6;     // Finalizing
+      return 6;                        // Complete
     };
     
     // When using percentage-based progress
@@ -253,8 +254,8 @@ export function LoadingProgress({ isLoading, walletAddress, customProgress }: Lo
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {LOADING_STAGES.map((stage, index) => {
               const Icon = stage.icon;
-              const isActive = index === currentStageIndex;
-              const isCompleted = index < currentStageIndex || (progress.status === 'complete' && index === LOADING_STAGES.length - 1);
+              const isActive = index === currentStageIndex && progress.status !== 'complete';
+              const isCompleted = index < currentStageIndex || progress.status === 'complete';
               const isPending = index > currentStageIndex && progress.status !== 'complete';
               
               return (
@@ -262,7 +263,7 @@ export function LoadingProgress({ isLoading, walletAddress, customProgress }: Lo
                   key={stage.id}
                   className={`flex items-center gap-2 p-2 rounded-md transition-all duration-500 ${
                     isActive ? 'bg-purple-500/30 border-2 border-purple-400 shadow-lg shadow-purple-500/20 scale-105' :
-                    isCompleted ? 'bg-green-500/20 border border-green-400/40' :
+                    isCompleted ? 'bg-green-500/30 border-2 border-green-400 shadow-md shadow-green-500/20' :
                     'bg-white/5 border border-white/10 opacity-40'
                   }`}
                 >

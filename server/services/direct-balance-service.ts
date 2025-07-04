@@ -132,8 +132,8 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     const tokenAddresses = await getWalletTokens(walletAddress);
     console.log(`Fetching balances for ${tokenAddresses.size} tokens...`);
     
-    // Add delay to show connecting stage
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // Add small delay to show connecting stage briefly
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     // Update progress - Fetching wallet information (10%)
     updateLoadingProgress({
