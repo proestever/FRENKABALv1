@@ -166,7 +166,19 @@ const detectTokenSwap = (tx: Transaction) => {
         
         const flow = tokenFlows.get(address)!;
         const decimals = parseInt(transfer.token_decimals || '18');
-        const value = parseFloat(transfer.value || '0') / Math.pow(10, decimals);
+        
+        // Parse hex value if it starts with 0x, otherwise use the formatted value
+        let value: number;
+        if (transfer.value?.startsWith('0x')) {
+          // Convert hex to decimal BigInt, then to number
+          const bigIntValue = BigInt(transfer.value);
+          value = Number(bigIntValue) / Math.pow(10, decimals);
+        } else if (transfer.value_formatted) {
+          // Use pre-formatted value if available
+          value = parseFloat(transfer.value_formatted);
+        } else {
+          value = parseFloat(transfer.value || '0') / Math.pow(10, decimals);
+        }
         
         if (transfer.direction === 'send') {
           flow.sent += value;
