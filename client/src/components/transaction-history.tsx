@@ -133,13 +133,97 @@ const detectTokenSwap = (tx: Transaction) => {
   
   // A swap typically has tokens going out and different tokens coming in
   if (sentTokens.length > 0 && receivedTokens.length > 0) {
-    // Filter out LP tokens and intermediate transfers
+    // For complex multicalls with many transfers, analyze net token flow
+    if ((sentTokens.length + receivedTokens.length) > 4) {
+      // Group transfers by token to calculate net flow
+      const tokenFlows = new Map<string, { 
+        sent: number, 
+        received: number, 
+        symbol: string, 
+        decimals: string,
+        logo?: string,
+        address?: string 
+      }>();
+      
+      // Process all transfers to calculate net amounts
+      [...sentTokens, ...receivedTokens].forEach(transfer => {
+        const address = transfer.address?.toLowerCase() || '';
+        const symbol = transfer.token_symbol || '';
+        
+        // Skip LP tokens - they're just intermediate steps
+        if (symbol.includes('LP') || symbol.includes('PLP')) return;
+        
+        if (!tokenFlows.has(address)) {
+          tokenFlows.set(address, { 
+            sent: 0, 
+            received: 0, 
+            symbol: symbol,
+            decimals: transfer.token_decimals || '18',
+            logo: transfer.token_logo || undefined,
+            address: transfer.address
+          });
+        }
+        
+        const flow = tokenFlows.get(address)!;
+        const decimals = parseInt(transfer.token_decimals || '18');
+        const value = parseFloat(transfer.value || '0') / Math.pow(10, decimals);
+        
+        if (transfer.direction === 'send') {
+          flow.sent += value;
+        } else {
+          flow.received += value;
+        }
+      });
+      
+      // Find tokens with net outflow and net inflow
+      const netSent: TransactionTransfer[] = [];
+      const netReceived: TransactionTransfer[] = [];
+      
+      tokenFlows.forEach((flow, address) => {
+        const netAmount = flow.received - flow.sent;
+        if (Math.abs(netAmount) > 0.001) { // Only show significant flows
+          const decimals = parseInt(flow.decimals);
+          const transfer: TransactionTransfer = {
+            address: flow.address,
+            token_symbol: flow.symbol,
+            token_name: flow.symbol,
+            token_logo: flow.logo,
+            value: (Math.abs(netAmount) * Math.pow(10, decimals)).toString(),
+            token_decimals: flow.decimals,
+            direction: netAmount > 0 ? 'receive' : 'send',
+            from_address: tx.from_address,
+            to_address: tx.to_address
+          };
+          
+          if (netAmount < 0) {
+            netSent.push(transfer);
+          } else {
+            netReceived.push(transfer);
+          }
+        }
+      });
+      
+      // If we have clear net flows, show those instead of all transfers
+      if (netSent.length > 0 && netReceived.length > 0) {
+        return {
+          type: 'swap',
+          sentTokens: netSent,
+          receivedTokens: netReceived,
+          dexName: tx.to_address_label || (isDexRouter ? 'PulseX' : 'DEX'),
+          isMulticall: true
+        };
+      }
+    }
+    
+    // Filter out LP tokens and intermediate transfers for simpler swaps
     const filteredSent = sentTokens.filter(t => 
       !t.token_symbol?.includes('LP') && 
+      !t.token_symbol?.includes('PLP') &&
       !t.token_symbol?.toLowerCase().includes('pulsex')
     );
     const filteredReceived = receivedTokens.filter(t => 
       !t.token_symbol?.includes('LP') && 
+      !t.token_symbol?.includes('PLP') &&
       !t.token_symbol?.toLowerCase().includes('pulsex')
     );
     
