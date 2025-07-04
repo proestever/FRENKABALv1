@@ -1,8 +1,8 @@
 import { providers, utils } from 'ethers';
 import { Transaction, TransactionTransfer } from '../types';
 
-// Initialize provider
-const provider = new providers.JsonRpcProvider('https://rpc-pulsechain.g4mm4.io');
+// Initialize provider - using the main PulseChain RPC endpoint
+const provider = new providers.JsonRpcProvider('https://rpc.pulsechain.com');
 
 // ERC20 Transfer event signature
 const TRANSFER_EVENT_SIGNATURE = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
@@ -19,6 +19,14 @@ const SWAP_METHODS = [
   'exactOutput', 'swapETH', 'swapPLS', 'trade'
 ];
 
+// Helper function to add timeout to promises
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => 
+    setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
+  );
+  return Promise.race([promise, timeout]);
+}
+
 export async function fetchTransactionsFast(
   walletAddress: string,
   limit: number = 50,
@@ -28,15 +36,23 @@ export async function fetchTransactionsFast(
     const wallet = walletAddress.toLowerCase();
     const transactions: Transaction[] = [];
     
-    // Get current block number
-    const currentBlock = startBlock || await provider.getBlockNumber();
+    // Get current block number with timeout
+    let currentBlock: number;
+    try {
+      currentBlock = startBlock || await withTimeout(provider.getBlockNumber(), 5000);
+    } catch (error) {
+      console.error('Error getting current block number:', error);
+      // Fallback to a recent block number if RPC is having issues
+      currentBlock = startBlock || 24000000; // Approximate recent PulseChain block
+    }
+    
     const fromBlock = Math.max(currentBlock - 50000, 0); // Look back 50k blocks for more history
     
     console.log(`Fast fetching transactions from blocks ${fromBlock} to ${currentBlock}`);
     
     // Use etherscan-style API if available (many nodes support this)
     try {
-      const txListUrl = `https://rpc-pulsechain.g4mm4.io?module=account&action=txlist&address=${walletAddress}&startblock=${fromBlock}&endblock=${currentBlock}&sort=desc`;
+      const txListUrl = `https://rpc.pulsechain.com?module=account&action=txlist&address=${walletAddress}&startblock=${fromBlock}&endblock=${currentBlock}&sort=desc`;
       const response = await fetch(txListUrl);
       if (response.ok) {
         const data = await response.json();
@@ -81,8 +97,8 @@ export async function fetchTransactionsFast(
     
     console.log('Fetching transfer events...');
     const [sentLogs, receivedLogs] = await Promise.all([
-      provider.getLogs(sentFilter),
-      provider.getLogs(receivedFilter)
+      withTimeout(provider.getLogs(sentFilter), 10000),
+      withTimeout(provider.getLogs(receivedFilter), 10000)
     ]);
     const logs = [...sentLogs, ...receivedLogs];
     console.log(`Found ${logs.length} transfer events`);

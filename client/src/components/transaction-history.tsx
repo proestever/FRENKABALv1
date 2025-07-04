@@ -218,10 +218,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Update transactions when data loads
   useEffect(() => {
-    if (data?.result) {
-      setTransactions(data.result);
-      setCursor(data.cursor || null);
-      setHasMore(!!data.cursor);
+    if (data) {
+      // Handle both result array and transactions array
+      const txData = data.result || data.transactions || [];
+      setTransactions(Array.isArray(txData) ? txData : []);
+      setCursor(data.cursor || data.lastBlock || null);
+      setHasMore(!!(data.cursor || data.hasMore));
     }
   }, [data]);
   

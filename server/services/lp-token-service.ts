@@ -55,8 +55,8 @@ const ERC20_ABI = [
   {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"}
 ];
 
-// Store RPC endpoint here - could be moved to env variables
-const RPC_ENDPOINT = 'https://rpc-pulsechain.g4mm4.io';
+// Store RPC endpoint here - using the main PulseChain RPC
+const RPC_ENDPOINT = 'https://rpc.pulsechain.com';
 
 // Initialize ethers provider
 const provider = new ethers.providers.JsonRpcProvider(RPC_ENDPOINT);
