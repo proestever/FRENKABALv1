@@ -511,28 +511,20 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     
                     return (
                       <div className="mb-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                        <div className="flex items-center gap-2 mb-3">
-                          <RefreshCw className="text-purple-400" size={16} />
-                          <span className="font-medium text-purple-400">SWAPPED via {swapInfo.dexName || 'DEX'}</span>
-                        </div>
-                        
-                        {/* Show what we know about the swap */}
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-gray-400">Out:</span>
-                          <span className="text-red-400 font-medium">
-                            {tx.value && tx.value !== '0' ? `${formatTokenValue(tx.value, '18')} ` : ''}
-                            {tokenOut}
-                          </span>
-                          <ArrowRight size={14} className="text-gray-400" />
-                          <span className="text-gray-400">In:</span>
-                          <span className="text-green-400 font-medium">{tokenIn}</span>
-                        </div>
-                        
-                        {tokenOut === 'Unknown' && tokenIn === 'Unknown' && (
-                          <div className="mt-2 text-xs text-gray-400">
-                            Token details not visible in multicall transaction
+                        <div className="flex items-center gap-3">
+                          <RefreshCw className="text-purple-400" size={20} />
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="font-medium text-white">
+                              {tx.value && tx.value !== '0' ? `${formatTokenValue(tx.value, '18')} ` : ''}
+                              {tokenOut}
+                            </span>
+                            <ArrowRight size={16} className="text-purple-400" />
+                            <span className="font-medium text-white">{tokenIn}</span>
+                            {swapInfo.dexName && (
+                              <span className="text-xs text-gray-400 ml-2">via {swapInfo.dexName}</span>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
                     );
                   }
@@ -545,54 +537,38 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     
                     return (
                       <div className="mb-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                        <div className="flex items-center gap-2 mb-3">
-                          <RefreshCw className="text-purple-400" size={16} />
-                          <span className="font-medium text-purple-400">SWAPPED</span>
-                        </div>
-                        
-                        {/* Token Out */}
-                        <div className="flex items-center gap-3 mb-2">
-                          <TokenLogo 
-                            address={primarySent.address || ''}
-                            symbol={primarySent.token_symbol || 'Unknown'}
-                            fallbackLogo={primarySent.token_logo !== null ? primarySent.token_logo : undefined}
-                            size="sm"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <ArrowUpRight size={14} className="text-red-400" />
-                              <span className="text-red-400 font-semibold">
-                                -{formatTokenValue(primarySent.value, primarySent.token_decimals)}
-                              </span>
-                              <span className="text-white font-medium">{primarySent.token_symbol || 'Unknown'}</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Token In */}
                         <div className="flex items-center gap-3">
-                          <TokenLogo 
-                            address={primaryReceived.address || ''}
-                            symbol={primaryReceived.token_symbol || 'Unknown'}
-                            fallbackLogo={primaryReceived.token_logo !== null ? primaryReceived.token_logo : undefined}
-                            size="sm"
-                          />
-                          <div className="flex-1">
+                          <RefreshCw className="text-purple-400" size={20} />
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Token Out */}
                             <div className="flex items-center gap-2">
-                              <ArrowDownLeft size={14} className="text-green-400" />
-                              <span className="text-green-400 font-semibold">
-                                +{formatTokenValue(primaryReceived.value, primaryReceived.token_decimals)}
+                              <TokenLogo 
+                                address={primarySent.address || ''}
+                                symbol={primarySent.token_symbol || ''}
+                                fallbackLogo={primarySent.token_logo || undefined}
+                                size="sm"
+                              />
+                              <span className="font-medium text-white">
+                                {formatTokenValue(primarySent.value, primarySent.token_decimals)} {primarySent.token_symbol || 'UNKNOWN'}
                               </span>
-                              <span className="text-white font-medium">{primaryReceived.token_symbol || 'Unknown'}</span>
+                            </div>
+                            
+                            <ArrowRight size={16} className="text-purple-400" />
+                            
+                            {/* Token In */}
+                            <div className="flex items-center gap-2">
+                              <TokenLogo 
+                                address={primaryReceived.address || ''}
+                                symbol={primaryReceived.token_symbol || ''}
+                                fallbackLogo={primaryReceived.token_logo || undefined}
+                                size="sm"
+                              />
+                              <span className="font-medium text-white">
+                                {formatTokenValue(primaryReceived.value, primaryReceived.token_decimals)} {primaryReceived.token_symbol || 'UNKNOWN'}
+                              </span>
                             </div>
                           </div>
                         </div>
-                        
-                        {swapInfo.dexName && (
-                          <div className="mt-2 text-xs text-gray-400">
-                            via {swapInfo.dexName}
-                          </div>
-                        )}
                       </div>
                     );
                   }

@@ -132,13 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
-### July 4, 2025 - Direct Blockchain Transaction Fetching Implementation
+### July 4, 2025 - Direct Blockchain Transaction Fetching & Simplified Display
 - **Major architecture change** - Replaced PulseChain Scan API with direct blockchain RPC calls for real-time transaction data
-- **Created blockchain-transaction-service.ts** - New service that fetches transactions directly from blockchain nodes
-- **Reverse block scanning** - Starts from the most recent block and scans backwards, loading 100 transactions at a time
-- **Real-time accuracy** - No more delays or dependency on third-party APIs, data comes directly from the blockchain
-- **Smart pagination** - Uses block numbers instead of cursors for efficient pagination through transaction history
-- **Complete control** - Full control over data fetching process with customizable batch sizes and block scan limits
+- **Created fast-blockchain-service.ts** - Optimized service using event logs for faster transaction fetching
+- **Event log scanning** - Uses Transfer event logs instead of scanning every block, dramatically improving performance
+- **Batch processing** - Processes transactions in parallel batches of 20 for optimal speed
+- **Reduced batch size** - Changed from 100 to 50 transactions per page for better user experience
+- **Simplified swap display** - Clean "Token A → Token B" format with logos, removed excessive details
 - **Token metadata fetching** - Directly queries ERC20 contracts for name, symbol, and decimals information
 - **New API endpoint** - `/api/wallet/:address/blockchain-transactions` provides direct blockchain access
 
