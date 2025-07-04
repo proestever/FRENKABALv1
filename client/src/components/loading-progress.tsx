@@ -15,15 +15,26 @@ interface LoadingProgressProps {
   };
 }
 
+// Color mapping for stages
+const STAGE_COLORS = {
+  purple: 'bg-purple-500/30 border-purple-400 shadow-purple-500/20 text-purple-300',
+  blue: 'bg-blue-500/30 border-blue-400 shadow-blue-500/20 text-blue-300',
+  green: 'bg-green-500/30 border-green-400 shadow-green-500/20 text-green-300',
+  yellow: 'bg-yellow-500/30 border-yellow-400 shadow-yellow-500/20 text-yellow-300',
+  pink: 'bg-pink-500/30 border-pink-400 shadow-pink-500/20 text-pink-300',
+  indigo: 'bg-indigo-500/30 border-indigo-400 shadow-indigo-500/20 text-indigo-300',
+  emerald: 'bg-emerald-500/30 border-emerald-400 shadow-emerald-500/20 text-emerald-300'
+};
+
 // Define loading stages with weights
 const LOADING_STAGES = [
-  { id: 'connect', label: 'Connecting to PulseChain', icon: Activity, weight: 5, duration: 800 },
-  { id: 'wallet', label: 'Fetching wallet data', icon: Wallet, weight: 10, duration: 1500 },
-  { id: 'tokens', label: 'Loading token balances', icon: Coins, weight: 30, duration: 4000 },
-  { id: 'prices', label: 'Fetching token prices', icon: TrendingUp, weight: 25, duration: 3000 },
-  { id: 'lp', label: 'Analyzing LP tokens', icon: Database, weight: 15, duration: 2000 },
-  { id: 'verify', label: 'Verifying token contracts', icon: Shield, weight: 10, duration: 1200 },
-  { id: 'complete', label: 'Finalizing data', icon: CheckCircle, weight: 5, duration: 500 }
+  { id: 'connect', label: 'Connecting to PulseChain', icon: Activity, weight: 5, duration: 800, color: 'purple' },
+  { id: 'wallet', label: 'Fetching wallet data', icon: Wallet, weight: 10, duration: 1500, color: 'blue' },
+  { id: 'tokens', label: 'Loading token balances', icon: Coins, weight: 30, duration: 4000, color: 'green' },
+  { id: 'prices', label: 'Fetching token prices', icon: TrendingUp, weight: 25, duration: 3000, color: 'yellow' },
+  { id: 'lp', label: 'Analyzing LP tokens', icon: Database, weight: 15, duration: 2000, color: 'pink' },
+  { id: 'verify', label: 'Verifying token contracts', icon: Shield, weight: 10, duration: 1200, color: 'indigo' },
+  { id: 'complete', label: 'Finalizing data', icon: CheckCircle, weight: 5, duration: 500, color: 'emerald' }
 ];
 
 export function LoadingProgress({ isLoading, walletAddress, customProgress }: LoadingProgressProps) {
@@ -255,35 +266,31 @@ export function LoadingProgress({ isLoading, walletAddress, customProgress }: Lo
             {LOADING_STAGES.map((stage, index) => {
               const Icon = stage.icon;
               const isActive = index === currentStageIndex && progress.status !== 'complete';
-              const isCompleted = index < currentStageIndex || progress.status === 'complete';
-              const isPending = index > currentStageIndex && progress.status !== 'complete';
+              const isCompleted = false; // Don't show completed state
+              const isPending = index !== currentStageIndex || progress.status === 'complete';
               
               return (
                 <div 
                   key={stage.id}
                   className={`flex items-center gap-2 p-2 rounded-md transition-all duration-500 ${
-                    isActive ? 'bg-purple-500/30 border-2 border-purple-400 shadow-lg shadow-purple-500/20 scale-105' :
-                    isCompleted ? 'bg-green-500/30 border-2 border-green-400 shadow-md shadow-green-500/20' :
+                    isActive ? `${STAGE_COLORS[stage.color as keyof typeof STAGE_COLORS]} border-2 shadow-lg scale-105` :
                     'bg-white/5 border border-white/10 opacity-40'
                   }`}
                 >
                   <Icon 
                     size={18} 
                     className={`transition-all duration-500 ${
-                      isActive ? 'text-purple-300 animate-pulse scale-110' :
-                      isCompleted ? 'text-green-400' :
+                      isActive ? 'animate-pulse scale-110' :
                       'text-gray-500'
                     }`}
                   />
                   <span className={`text-xs font-medium transition-all duration-500 ${
                     isActive ? 'text-white font-semibold' :
-                    isCompleted ? 'text-green-300' :
                     'text-gray-400'
                   }`}>
                     {stage.label}
                   </span>
-                  {isCompleted && <CheckCircle size={14} className="ml-auto text-green-400" />}
-                  {isActive && <Loader2 size={14} className="ml-auto text-purple-400 animate-spin" />}
+                  {isActive && <Loader2 size={14} className="ml-auto animate-spin" />}
                 </div>
               );
             })}
