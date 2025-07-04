@@ -30,7 +30,7 @@ export async function fetchTransactionsFast(
     
     // Get current block number
     const currentBlock = startBlock || await provider.getBlockNumber();
-    const fromBlock = Math.max(currentBlock - 5000, 0); // Look back 5k blocks
+    const fromBlock = Math.max(currentBlock - 50000, 0); // Look back 50k blocks for more history
     
     console.log(`Fast fetching transactions from blocks ${fromBlock} to ${currentBlock}`);
     

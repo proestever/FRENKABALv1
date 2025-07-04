@@ -73,9 +73,9 @@ interface TransactionHistoryProps {
 
 type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contract';
 
-const getTransactionType = (tx: Transaction): TransactionType => {
+const getTransactionType = (tx: Transaction, walletAddress: string): TransactionType => {
   // Check for swaps using enhanced detection
-  const swapInfo = detectTokenSwap(tx);
+  const swapInfo = detectTokenSwap(tx, walletAddress);
   if (swapInfo) {
     return 'swap';
   }
@@ -101,7 +101,7 @@ const getTransactionType = (tx: Transaction): TransactionType => {
 };
 
 // Enhanced token swap detection with multicall support
-const detectTokenSwap = (tx: Transaction) => {
+const detectTokenSwap = (tx: Transaction, walletAddress: string) => {
   // First check if method label indicates a swap
   const swapMethodSignatures = ['swap', 'trade', 'multicall', 'exactinput', 'exactoutput', 'swapexact', 'swaptokens'];
   const isSwapMethod = tx.method_label && swapMethodSignatures.some(sig => tx.method_label?.toLowerCase().includes(sig));
@@ -144,6 +144,51 @@ const detectTokenSwap = (tx: Transaction) => {
         logo?: string,
         address?: string 
       }>();
+      
+      // First, process native PLS transfers if any
+      if (tx.native_transfers && tx.native_transfers.length > 0) {
+        tx.native_transfers.forEach(transfer => {
+          const plsKey = 'native-pls';
+          if (!tokenFlows.has(plsKey)) {
+            tokenFlows.set(plsKey, {
+              sent: 0,
+              received: 0,
+              symbol: 'PLS',
+              decimals: '18',
+              logo: '/assets/pls logo trimmed.png',
+              address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+            });
+          }
+          
+          const flow = tokenFlows.get(plsKey)!;
+          const value = parseFloat(transfer.value || '0') / Math.pow(10, 18);
+          
+          if (transfer.direction === 'send') {
+            flow.sent += value;
+          } else if (transfer.direction === 'receive') {
+            flow.received += value;
+          }
+        });
+      }
+      
+      // Also check if the transaction itself sends PLS
+      if (tx.value && tx.value !== '0' && tx.from_address.toLowerCase() === walletAddress.toLowerCase()) {
+        const plsKey = 'native-pls';
+        if (!tokenFlows.has(plsKey)) {
+          tokenFlows.set(plsKey, {
+            sent: 0,
+            received: 0,
+            symbol: 'PLS',
+            decimals: '18',
+            logo: '/assets/pls logo trimmed.png',
+            address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+          });
+        }
+        
+        const flow = tokenFlows.get(plsKey)!;
+        const value = parseFloat(tx.value) / Math.pow(10, 18);
+        flow.sent += value;
+      }
       
       // Process all transfers to calculate net amounts
       [...sentTokens, ...receivedTokens].forEach(transfer => {
@@ -354,7 +399,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   // Filter transactions
   const filteredTransactions = useMemo(() => {
     return transactions.filter(tx => {
-      const matchesType = typeFilter === 'all' || getTransactionType(tx) === typeFilter;
+      const matchesType = typeFilter === 'all' || getTransactionType(tx, walletAddress) === typeFilter;
       const matchesToken = !tokenFilter || 
         tx.erc20_transfers?.some(t => 
           t.token_symbol?.toLowerCase().includes(tokenFilter.toLowerCase()) ||
@@ -565,7 +610,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             {/* Transaction Content */}
             <div className="space-y-2">
               {(() => {
-                const swapInfo = detectTokenSwap(tx);
+                const swapInfo = detectTokenSwap(tx, walletAddress);
                 
                 // If swap is detected, show ONLY the swap summary
                 if (swapInfo) {
