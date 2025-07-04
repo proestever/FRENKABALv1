@@ -74,9 +74,18 @@ interface TransactionHistoryProps {
 type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contract';
 
 const getTransactionType = (tx: Transaction, walletAddress: string): TransactionType => {
-  // Check for swaps using enhanced detection
-  const swapInfo = detectTokenSwap(tx, walletAddress);
-  if (swapInfo) {
+  // Check for swaps - simplified to just check for DEX routers or swap methods
+  const swapMethodSignatures = ['swap', 'trade', 'multicall', 'exactinput', 'exactoutput', 'swapexact', 'swaptokens'];
+  const isSwapMethod = tx.method_label && swapMethodSignatures.some(sig => tx.method_label?.toLowerCase().includes(sig));
+  
+  const dexRouterAddresses = [
+    '0xda9aba4eacf54e0273f56dfffee6b8f1e20b23bba', // PulseX Router
+    '0x165c3410fc91ef562c50559f7d2289febb913d90', // PulseX Router V2
+    '0x98bf93ebf5c380c0e6ae8e192a7e2ae08edacc02', // PulseX Factory
+  ];
+  const isDexRouter = dexRouterAddresses.includes(tx.to_address?.toLowerCase() || '');
+  
+  if (isSwapMethod || isDexRouter) {
     return 'swap';
   }
   
@@ -100,210 +109,7 @@ const getTransactionType = (tx: Transaction, walletAddress: string): Transaction
   return 'all';
 };
 
-// Enhanced token swap detection with multicall support
-const detectTokenSwap = (tx: Transaction, walletAddress: string) => {
-  // First check if method label indicates a swap
-  const swapMethodSignatures = ['swap', 'trade', 'multicall', 'exactinput', 'exactoutput', 'swapexact', 'swaptokens'];
-  const isSwapMethod = tx.method_label && swapMethodSignatures.some(sig => tx.method_label?.toLowerCase().includes(sig));
-  
-  // Check for DEX router contracts
-  const dexRouterAddresses = [
-    '0xda9aba4eacf54e0273f56dfffee6b8f1e20b23bba', // PulseX Router
-    '0x165c3410fc91ef562c50559f7d2289febb913d90', // PulseX Router V2
-    '0x98bf93ebf5c380c0e6ae8e192a7e2ae08edacc02', // PulseX Factory
-  ];
-  const isDexRouter = dexRouterAddresses.includes(tx.to_address?.toLowerCase() || '');
-  
-  if (!tx.erc20_transfers || tx.erc20_transfers.length < 2) {
-    // For multicalls without visible transfers, still show as swap if it's a DEX interaction
-    if ((isSwapMethod || isDexRouter) && tx.to_address_label?.includes('PulseX')) {
-      return {
-        type: 'swap',
-        sentTokens: [],
-        receivedTokens: [],
-        dexName: tx.to_address_label || 'PulseX',
-        isMulticall: true
-      };
-    }
-    return null;
-  }
-  
-  const sentTokens = tx.erc20_transfers.filter(t => t && t.direction === 'send');
-  const receivedTokens = tx.erc20_transfers.filter(t => t && t.direction === 'receive');
-  
-  // A swap typically has tokens going out and different tokens coming in
-  if (sentTokens.length > 0 && receivedTokens.length > 0) {
-    // For ANY DEX router interaction or swap method, always analyze net token flow
-    if (isDexRouter || isSwapMethod || (sentTokens.length + receivedTokens.length) > 2) {
-      // Group transfers by token to calculate net flow
-      const tokenFlows = new Map<string, { 
-        sent: number, 
-        received: number, 
-        symbol: string, 
-        decimals: string,
-        logo?: string,
-        address?: string 
-      }>();
-      
-      // First, process native PLS transfers if any
-      if (tx.native_transfers && tx.native_transfers.length > 0) {
-        tx.native_transfers.forEach(transfer => {
-          const plsKey = 'native-pls';
-          if (!tokenFlows.has(plsKey)) {
-            tokenFlows.set(plsKey, {
-              sent: 0,
-              received: 0,
-              symbol: 'PLS',
-              decimals: '18',
-              logo: '/assets/pls logo trimmed.png',
-              address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
-            });
-          }
-          
-          const flow = tokenFlows.get(plsKey)!;
-          const value = parseFloat(transfer.value || '0') / Math.pow(10, 18);
-          
-          if (transfer.direction === 'send') {
-            flow.sent += value;
-          } else if (transfer.direction === 'receive') {
-            flow.received += value;
-          }
-        });
-      }
-      
-      // Also check if the transaction itself sends PLS
-      if (tx.value && tx.value !== '0' && tx.from_address.toLowerCase() === walletAddress.toLowerCase()) {
-        const plsKey = 'native-pls';
-        if (!tokenFlows.has(plsKey)) {
-          tokenFlows.set(plsKey, {
-            sent: 0,
-            received: 0,
-            symbol: 'PLS',
-            decimals: '18',
-            logo: '/assets/pls logo trimmed.png',
-            address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
-          });
-        }
-        
-        const flow = tokenFlows.get(plsKey)!;
-        const value = parseFloat(tx.value) / Math.pow(10, 18);
-        flow.sent += value;
-      }
-      
-      // Process all transfers to calculate net amounts
-      [...sentTokens, ...receivedTokens].forEach(transfer => {
-        const address = transfer.address?.toLowerCase() || '';
-        const symbol = transfer.token_symbol || '';
-        
-        // Skip LP tokens - they're just intermediate steps
-        if (symbol.includes('LP') || symbol.includes('PLP')) return;
-        
-        if (!tokenFlows.has(address)) {
-          tokenFlows.set(address, { 
-            sent: 0, 
-            received: 0, 
-            symbol: symbol,
-            decimals: transfer.token_decimals || '18',
-            logo: transfer.token_logo || undefined,
-            address: transfer.address
-          });
-        }
-        
-        const flow = tokenFlows.get(address)!;
-        const decimals = parseInt(transfer.token_decimals || '18');
-        
-        // Parse hex value if it starts with 0x, otherwise use the formatted value
-        let value: number;
-        if (transfer.value?.startsWith('0x')) {
-          // Convert hex to decimal BigInt, then to number
-          const bigIntValue = BigInt(transfer.value);
-          value = Number(bigIntValue) / Math.pow(10, decimals);
-        } else if (transfer.value_formatted) {
-          // Use pre-formatted value if available
-          value = parseFloat(transfer.value_formatted);
-        } else {
-          value = parseFloat(transfer.value || '0') / Math.pow(10, decimals);
-        }
-        
-        if (transfer.direction === 'send') {
-          flow.sent += value;
-        } else {
-          flow.received += value;
-        }
-      });
-      
-      // Find tokens with net outflow and net inflow
-      const netSent: TransactionTransfer[] = [];
-      const netReceived: TransactionTransfer[] = [];
-      
-      tokenFlows.forEach((flow, address) => {
-        const netAmount = flow.received - flow.sent;
-        if (Math.abs(netAmount) > 0.001) { // Only show significant flows
-          const decimals = parseInt(flow.decimals);
-          const transfer: TransactionTransfer = {
-            address: flow.address,
-            token_symbol: flow.symbol,
-            token_name: flow.symbol,
-            token_logo: flow.logo,
-            value: (Math.abs(netAmount) * Math.pow(10, decimals)).toString(),
-            token_decimals: flow.decimals,
-            direction: netAmount > 0 ? 'receive' : 'send',
-            from_address: tx.from_address,
-            to_address: tx.to_address
-          };
-          
-          if (netAmount < 0) {
-            netSent.push(transfer);
-          } else {
-            netReceived.push(transfer);
-          }
-        }
-      });
-      
-      // If we have clear net flows, show those instead of all transfers
-      if (netSent.length > 0 && netReceived.length > 0) {
-        return {
-          type: 'swap',
-          sentTokens: netSent,
-          receivedTokens: netReceived,
-          dexName: tx.to_address_label || (isDexRouter ? 'PulseX' : 'DEX'),
-          isMulticall: true
-        };
-      }
-    }
-    
-    // Filter out LP tokens and intermediate transfers for simpler swaps
-    const filteredSent = sentTokens.filter(t => 
-      !t.token_symbol?.includes('LP') && 
-      !t.token_symbol?.includes('PLP') &&
-      !t.token_symbol?.toLowerCase().includes('pulsex')
-    );
-    const filteredReceived = receivedTokens.filter(t => 
-      !t.token_symbol?.includes('LP') && 
-      !t.token_symbol?.includes('PLP') &&
-      !t.token_symbol?.toLowerCase().includes('pulsex')
-    );
-    
-    // Check if tokens are different (not just the same token moving around)
-    const sentAddresses = new Set(filteredSent.map(t => t.address?.toLowerCase()));
-    const receivedAddresses = new Set(filteredReceived.map(t => t.address?.toLowerCase()));
-    
-    // If there are different tokens involved, it's likely a swap
-    const hasOverlap = Array.from(sentAddresses).some(addr => receivedAddresses.has(addr));
-    
-    if (!hasOverlap || sentAddresses.size + receivedAddresses.size > 2 || isSwapMethod || isDexRouter) {
-      return {
-        type: 'swap',
-        sentTokens: filteredSent.length > 0 ? filteredSent : sentTokens,
-        receivedTokens: filteredReceived.length > 0 ? filteredReceived : receivedTokens,
-        dexName: tx.to_address_label || (isDexRouter ? 'PulseX' : 'DEX'),
-        isMulticall: isSwapMethod && tx.method_label?.includes('multicall')
-      };
-    }
-  }
-  
-  return null;
-};
+
 
 // Format date helper
 const formatDate = (timestamp: number): string => {
@@ -526,187 +332,174 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             {/* Transaction Content */}
             <div className="space-y-2">
               {(() => {
-                const swapInfo = detectTokenSwap(tx, walletAddress);
+                // Calculate net token flows for ALL transactions
+                const tokenFlows = new Map<string, {
+                  symbol: string;
+                  name?: string;
+                  logo?: string;
+                  decimals: string;
+                  netAmount: bigint;
+                  address: string;
+                }>();
                 
-                // If swap is detected, show ONLY the swap summary
-                if (swapInfo) {
-                  // Handle multicall swaps without visible transfers
-                  if (swapInfo.isMulticall && swapInfo.sentTokens.length === 0 && swapInfo.receivedTokens.length === 0) {
-                    // Try to extract token information from transaction summary or method
-                    let tokenOut = 'Unknown';
-                    let tokenIn = 'Unknown';
-                    
-                    // If transaction has value, PLS is likely going out
-                    if (tx.value && tx.value !== '0') {
-                      tokenOut = 'PLS';
+                // Add native PLS if transaction has value (sent)
+                if (tx.value && tx.value !== '0' && tx.from_address.toLowerCase() === walletAddress.toLowerCase()) {
+                  const plsAmount = BigInt(tx.value);
+                  tokenFlows.set('native', {
+                    symbol: 'PLS',
+                    name: 'PulseChain',
+                    logo: '/assets/pls logo trimmed.png',
+                    decimals: '18',
+                    netAmount: -plsAmount, // Negative because sent
+                    address: 'native'
+                  });
+                }
+                
+                // Process all transfers to calculate net amounts
+                [...(tx.erc20_transfers || []), ...(tx.native_transfers || [])].forEach(transfer => {
+                  const tokenKey = transfer.address || 'native';
+                  
+                  // Parse the value properly
+                  let amount: bigint;
+                  try {
+                    if (transfer.value?.startsWith('0x')) {
+                      amount = BigInt(transfer.value);
+                    } else {
+                      amount = BigInt(transfer.value || '0');
                     }
-                    
-                    // Try to extract from summary
-                    if (tx.summary) {
-                      // Look for patterns like "Swap 100 PLS for 50 HEX"
-                      const swapMatch = tx.summary.match(/swap\s+[\d.]+\s+(\w+)\s+for\s+[\d.]+\s+(\w+)/i);
-                      if (swapMatch) {
-                        tokenOut = swapMatch[1];
-                        tokenIn = swapMatch[2];
-                      }
-                      // Look for patterns with arrows like "PLS → HEX"
-                      const arrowMatch = tx.summary.match(/(\w+)\s*(?:→|->|›)\s*(\w+)/);
-                      if (arrowMatch) {
-                        tokenOut = arrowMatch[1];
-                        tokenIn = arrowMatch[2];
-                      }
-                    }
-                    
-                    // Check if we have native transfers that might give us clues
-                    if (tx.native_transfers && tx.native_transfers.length > 0) {
-                      const hasSend = tx.native_transfers.some(t => t.direction === 'send');
-                      const hasReceive = tx.native_transfers.some(t => t.direction === 'receive');
-                      if (hasSend && !hasReceive) {
-                        tokenOut = 'PLS';
-                      }
-                    }
-                    
-                    return (
-                      <div className="flex items-center gap-2">
-                        <RefreshCw className="text-purple-400" size={14} />
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium text-white">
-                            {tx.value && tx.value !== '0' ? `${formatTokenValue(tx.value, '18')} ` : ''}
-                            {tokenOut}
-                          </span>
-                          <ArrowRight size={14} className="text-gray-400" />
-                          <span className="font-medium text-white">{tokenIn}</span>
-                        </div>
-                      </div>
-                    );
+                  } catch {
+                    amount = BigInt(0);
                   }
                   
-                  // Handle swaps with visible token transfers
-                  if (swapInfo.sentTokens.length > 0 && swapInfo.receivedTokens.length > 0) {
-                    // Get primary tokens
-                    const primarySent = swapInfo.sentTokens[0];
-                    const primaryReceived = swapInfo.receivedTokens[0];
-                    
+                  const isReceive = transfer.direction === 'receive';
+                  
+                  if (!tokenFlows.has(tokenKey)) {
+                    tokenFlows.set(tokenKey, {
+                      symbol: transfer.token_symbol || (tokenKey === 'native' ? 'PLS' : 'UNKNOWN'),
+                      name: transfer.token_name,
+                      logo: transfer.token_logo || prefetchedLogos[transfer.address?.toLowerCase() || ''] || (tokenKey === 'native' ? '/assets/pls logo trimmed.png' : undefined),
+                      decimals: transfer.token_decimals || '18',
+                      netAmount: BigInt(0),
+                      address: transfer.address || 'native'
+                    });
+                  }
+                  
+                  const token = tokenFlows.get(tokenKey)!;
+                  token.netAmount += isReceive ? amount : -amount;
+                });
+                
+                // Convert to arrays and filter out zero net amounts
+                const sentTokens: Array<{
+                  symbol: string;
+                  name?: string;
+                  logo?: string;
+                  decimals: string;
+                  netAmount: bigint;
+                  address: string;
+                }> = [];
+                const receivedTokens: Array<{
+                  symbol: string;
+                  name?: string;
+                  logo?: string;
+                  decimals: string;
+                  netAmount: bigint;
+                  address: string;
+                }> = [];
+                
+                tokenFlows.forEach((token) => {
+                  if (token.netAmount < BigInt(0)) {
+                    sentTokens.push({ ...token, netAmount: -token.netAmount });
+                  } else if (token.netAmount > BigInt(0)) {
+                    receivedTokens.push(token);
+                  }
+                  // Ignore tokens with net zero flow
+                });
+                
+                // If no net flows, check for simple transfers
+                if (sentTokens.length === 0 && receivedTokens.length === 0) {
+                  // Check if it's just a simple PLS transfer
+                  if (tx.value && tx.value !== '0') {
                     return (
                       <div className="flex items-center gap-2">
-                        <RefreshCw className="text-purple-400" size={14} />
                         <TokenLogo 
-                          address={primarySent.address || ''}
-                          symbol={primarySent.token_symbol || ''}
-                          fallbackLogo={primarySent.token_logo || undefined}
+                          address=""
+                          symbol="PLS"
+                          fallbackLogo="/assets/pls logo trimmed.png"
                           size="sm"
                         />
                         <span className="font-medium text-white">
-                          {formatTokenValue(primarySent.value, primarySent.token_decimals)}
+                          {formatTokenValue(tx.value, '18')}
                         </span>
-                        <span className="text-gray-400">{primarySent.token_symbol || 'UNKNOWN'}</span>
-                        
-                        <ArrowRight size={14} className="text-gray-400" />
-                        
-                        <TokenLogo 
-                          address={primaryReceived.address || ''}
-                          symbol={primaryReceived.token_symbol || ''}
-                          fallbackLogo={primaryReceived.token_logo || undefined}
-                          size="sm"
-                        />
-                        <span className="font-medium text-white">
-                          {formatTokenValue(primaryReceived.value, primaryReceived.token_decimals)}
-                        </span>
-                        <span className="text-gray-400">{primaryReceived.token_symbol || 'UNKNOWN'}</span>
+                        <span className="text-gray-400">PLS</span>
+                        <span className="text-gray-400">sent</span>
                       </div>
                     );
                   }
-                  
-                  // Return here to prevent showing any other transfers
                   return null;
                 }
                 
-                // If no swap detected, show regular transfers in simplified format
-                const allTransfers: Array<{
-                  symbol: string;
-                  amount: string;
-                  logo?: string;
-                  direction: 'send' | 'receive';
-                  address?: string;
-                }> = [];
+                // Show the primary flow (largest sent and received)
+                const primarySent = sentTokens.sort((a, b) => {
+                  // Sort by value size (roughly)
+                  const aVal = Number(a.netAmount / BigInt(10 ** Math.max(0, parseInt(a.decimals) - 6)));
+                  const bVal = Number(b.netAmount / BigInt(10 ** Math.max(0, parseInt(b.decimals) - 6)));
+                  return bVal - aVal;
+                })[0];
                 
-                // Collect ERC20 transfers
-                tx.erc20_transfers?.forEach(transfer => {
-                  if (transfer.token_symbol) {
-                    allTransfers.push({
-                      symbol: transfer.token_symbol,
-                      amount: formatTokenValue(transfer.value, transfer.token_decimals),
-                      logo: transfer.token_logo || prefetchedLogos[transfer.address?.toLowerCase() || ''],
-                      direction: (transfer.direction || 'send') as 'send' | 'receive',
-                      address: transfer.address
-                    });
-                  }
-                });
-                
-                // Collect native transfers
-                tx.native_transfers?.forEach(transfer => {
-                  allTransfers.push({
-                    symbol: 'PLS',
-                    amount: formatTokenValue(transfer.value, '18'),
-                    logo: '/assets/pls logo trimmed.png',
-                    direction: (transfer.direction || 'send') as 'send' | 'receive'
-                  });
-                });
-                
-                // If no transfers but transaction has value, it's a native PLS transfer
-                if (allTransfers.length === 0 && tx.value && tx.value !== '0') {
-                  allTransfers.push({
-                    symbol: 'PLS',
-                    amount: formatTokenValue(tx.value, '18'),
-                    logo: '/assets/pls logo trimmed.png',
-                    direction: 'send'
-                  });
-                }
-                
-                // Group by direction
-                const sent = allTransfers.filter(t => t.direction === 'send');
-                const received = allTransfers.filter(t => t.direction === 'receive');
+                const primaryReceived = receivedTokens.sort((a, b) => {
+                  const aVal = Number(a.netAmount / BigInt(10 ** Math.max(0, parseInt(a.decimals) - 6)));
+                  const bVal = Number(b.netAmount / BigInt(10 ** Math.max(0, parseInt(b.decimals) - 6)));
+                  return bVal - aVal;
+                })[0];
                 
                 return (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {/* Show sent tokens */}
-                    {sent.map((transfer, idx) => (
-                      <div key={`sent-${idx}`} className="flex items-center gap-1">
-                        {idx > 0 && <span className="text-gray-400">+</span>}
-                        <RefreshCw className="text-red-400" size={14} />
+                  <div className="flex items-center gap-2">
+                    {primarySent && primaryReceived && (
+                      <RefreshCw className="text-purple-400" size={14} />
+                    )}
+                    {primarySent && (
+                      <>
                         <TokenLogo 
-                          address={transfer.address || ''}
-                          symbol={transfer.symbol}
-                          fallbackLogo={transfer.logo}
+                          address={primarySent.address === 'native' ? '' : primarySent.address}
+                          symbol={primarySent.symbol}
+                          fallbackLogo={primarySent.logo}
                           size="sm"
                         />
-                        <span className="font-medium text-white">{transfer.amount}</span>
-                        <span className="text-gray-400">{transfer.symbol}</span>
-                      </div>
-                    ))}
+                        <span className="font-medium text-white">
+                          {formatTokenValue(primarySent.netAmount.toString(), primarySent.decimals)}
+                        </span>
+                        <span className="text-gray-400">{primarySent.symbol}</span>
+                      </>
+                    )}
                     
-                    {/* Arrow between sent and received */}
-                    {sent.length > 0 && received.length > 0 && (
+                    {primarySent && primaryReceived && (
                       <ArrowRight size={14} className="text-gray-400" />
                     )}
                     
-                    {/* Show received tokens */}
-                    {received.map((transfer, idx) => (
-                      <div key={`received-${idx}`} className="flex items-center gap-1">
-                        {idx > 0 && <span className="text-gray-400">+</span>}
-                        <RefreshCw className="text-green-400" size={14} />
+                    {primaryReceived && (
+                      <>
                         <TokenLogo 
-                          address={transfer.address || ''}
-                          symbol={transfer.symbol}
-                          fallbackLogo={transfer.logo}
+                          address={primaryReceived.address === 'native' ? '' : primaryReceived.address}
+                          symbol={primaryReceived.symbol}
+                          fallbackLogo={primaryReceived.logo}
                           size="sm"
                         />
-                        <span className="font-medium text-white">{transfer.amount}</span>
-                        <span className="text-gray-400">{transfer.symbol}</span>
-                      </div>
-                    ))}
+                        <span className="font-medium text-white">
+                          {formatTokenValue(primaryReceived.netAmount.toString(), primaryReceived.decimals)}
+                        </span>
+                        <span className="text-gray-400">{primaryReceived.symbol}</span>
+                      </>
+                    )}
+                    
+                    {!primaryReceived && primarySent && (
+                      <span className="text-gray-400">sent</span>
+                    )}
+                    {!primarySent && primaryReceived && (
+                      <span className="text-gray-400">received</span>
+                    )}
                   </div>
                 );
+
               })()}
               
               {/* Transaction Details - Only show if failed */}
