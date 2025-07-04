@@ -206,6 +206,11 @@ function parseTransfers(receipt: any, wallet: string): TransactionTransfer[] {
         const to = utils.getAddress('0x' + log.topics[2].slice(26));
         const value = log.data;
         
+        // Only include transfers that involve the wallet address
+        if (from.toLowerCase() !== wallet.toLowerCase() && to.toLowerCase() !== wallet.toLowerCase()) {
+          continue; // Skip transfers that don't involve our wallet
+        }
+        
         // Determine direction based on wallet address
         let direction: 'send' | 'receive' | 'self' | undefined;
         if (from.toLowerCase() === wallet.toLowerCase() && to.toLowerCase() === wallet.toLowerCase()) {
