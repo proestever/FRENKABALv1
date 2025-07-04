@@ -16,7 +16,8 @@ export async function isLiquidityPoolToken(tokenAddress: string): Promise<boolea
     
     // If both token0 and token1 return valid addresses, it's likely an LP token
     if (token0Address && token1Address && 
-        token0Address.startsWith('0x') && token1Address.startsWith('0x') &&
+        ethers.utils.isAddress(token0Address) && 
+        ethers.utils.isAddress(token1Address) &&
         token0Address !== token1Address) {
       return true;
     }
@@ -73,11 +74,24 @@ async function callContractFunction<T>(
     // Create a contract instance
     const contract = new ethers.Contract(contractAddress, abi, provider);
     
-    // Call the function
-    const result = await contract[functionName](...params) as T;
+    // Add timeout to prevent hanging on bad contracts
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Contract call timeout')), 3000)
+    );
+    
+    // Call the function with timeout
+    const result = await Promise.race([
+      contract[functionName](...params),
+      timeoutPromise
+    ]) as T;
+    
     return result;
-  } catch (error) {
-    console.error(`Error calling ${functionName} on ${contractAddress}:`, error);
+  } catch (error: any) {
+    // Only log errors that aren't expected (execution reverted is expected for non-LP tokens)
+    if (!error.message?.includes('execution reverted') && 
+        !error.message?.includes('Contract call timeout')) {
+      console.error(`Error calling ${functionName} on ${contractAddress}:`, error.message);
+    }
     return null;
   }
 }

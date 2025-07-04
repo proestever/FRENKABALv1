@@ -132,6 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 4, 2025 - Error Cleanup & Deployment Preparation
+- **Fixed LP token execution reverted errors** - Added proper timeout and error handling to callContractFunction
+- **Improved error handling** - Contract calls that revert no longer cause unhandled promise rejections
+- **Simplified loading stages to 4 blocks** - Fetching tokens, Fetching LPs, Fetching HEX stakes, Fetching prices
+- **Enhanced contract call reliability** - Added 3-second timeout for contract calls to prevent hanging
+- **Suppressed expected errors** - Execution reverted errors for non-LP tokens are now silently handled
+
 ### July 4, 2025 - Percentage-Based Loading Progress System
 - **Major loading system overhaul** - Changed from 7-stage system to percentage-based progress (0-100%)
 - **Percentage distribution** - Connecting (0-10%), Wallet data (10-20%), Token balances (20-50%), Prices (50-65%), LP analysis (65-80%), Verification (80-95%), Finalizing (95-100%)
