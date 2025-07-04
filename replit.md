@@ -132,6 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 4, 2025 - Enhanced Loading Progress with Dynamic Token Counting & Improved Polling
+- **Increased polling frequency** - Changed from 5 second polling to 200ms polling during loading to catch all stage transitions
+- **Extended stage delays** - Increased delays between stages: 800ms for connecting, 1000ms for most stages, ensuring each stage is visible
+- **Dynamic token progress** - Loading stage now shows "Loading token balances... (X/Y)" to display actual progress
+- **Smooth stage transitions** - Each stage now has sufficient delay to be visible: connecting (800ms), wallet data (1000ms), token loading (400ms per batch), prices (1000ms), LP analysis (1200ms), verification (1000ms), finalizing (800ms)
+- **Fixed rapid stage skipping** - Loading progress no longer jumps from "Connecting" directly to 99%, all stages now display properly
+
 ### July 4, 2025 - Fixed Loading Progress Stage Display Messages
 - **Fixed loading progress stages not displaying** - Updated all progress messages in direct-balance-service.ts to match what loading-progress.tsx component expects
 - **Message mapping fixes** - Changed "Fetching wallet information..." to "Fetching wallet data...", "Scanning X token balances..." to "Loading token balances...", etc.

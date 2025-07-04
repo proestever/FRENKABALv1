@@ -85,38 +85,16 @@ export function useLoadingProgress(isLoading: boolean): LoadingProgress {
       }
     });
 
-    // Set up polling with progressive messages - reduced frequency
+    // Set up rapid polling during loading to catch all stage transitions
     pollingIntervalRef.current = setInterval(async () => {
       if (isCancelled) return;
       
-      // Every 3rd interval, try to fetch real progress from server (every 15 seconds)
-      if (artificialProgress % 3 === 0) {
-        const serverProgress = await fetchProgress();
-        if (serverProgress && !isCancelled && isLoading) {
-          // If server has real progress updates, use them
-          if (serverProgress.currentBatch > 0 || serverProgress.message !== '') {
-            setProgress(serverProgress);
-            return;
-          }
-        }
+      // Always fetch real progress from server during loading
+      const serverProgress = await fetchProgress();
+      if (serverProgress && !isCancelled && isLoading) {
+        setProgress(serverProgress);
       }
-      
-      // Otherwise show artificial progress with staged messages
-      artificialProgress++;
-      progressStageIndex = (progressStageIndex + 1) % progressStagesRef.current.length;
-      
-      setProgress(prev => {
-        // Calculate a smooth artificial progress that never quite reaches 100%
-        // until we get real completion data from server
-        const artificialBatch = Math.min(prev.currentBatch + 0.1, prev.totalBatches * 0.9);
-        
-        return {
-          ...prev,
-          currentBatch: artificialBatch,
-          message: progressStagesRef.current[progressStageIndex]
-        };
-      });
-    }, 5000); // Poll every 5 seconds - much more reasonable frequency
+    }, 200); // Poll every 200ms during loading to catch all stage transitions
 
     // Cleanup
     return () => {

@@ -132,6 +132,9 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     const tokenAddresses = await getWalletTokens(walletAddress);
     console.log(`Fetching balances for ${tokenAddresses.size} tokens...`);
     
+    // Add delay to show connecting stage
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
     // Update progress - Fetching wallet information
     updateLoadingProgress({
       status: 'loading',
@@ -139,6 +142,9 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       totalBatches: 7,
       message: 'Fetching wallet data...'
     });
+    
+    // Add delay to show wallet data stage
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Add delay to make stage visible
     await new Promise(resolve => setTimeout(resolve, 600));
@@ -227,9 +233,9 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
         });
       }));
       
-      // Small delay between batches
+      // Small delay between batches to show progress
       if (i + BATCH_SIZE < tokenArray.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 400));
       }
     }
     
@@ -242,7 +248,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     });
     
     // Add small delay to show price fetching progress
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Update progress - Analyzing LP positions
     updateLoadingProgress({
@@ -253,7 +259,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     });
     
     // Add delay to make stage visible
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1200));
     
     // Detect LP tokens
     console.log(`Checking ${processedTokens.length} tokens for LP interface`);
@@ -286,7 +292,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     });
     
     // Add delay to make stage visible
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Sort by value descending
     processedTokens.sort((a, b) => (b.value || 0) - (a.value || 0));
@@ -300,7 +306,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     });
     
     // Add delay to make stage visible
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     const endTime = Date.now();
     console.log(`Direct balance fetch completed in ${endTime - startTime}ms`);
