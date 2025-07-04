@@ -464,19 +464,62 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 if (swapInfo) {
                   // Handle multicall swaps without visible transfers
                   if (swapInfo.isMulticall && swapInfo.sentTokens.length === 0 && swapInfo.receivedTokens.length === 0) {
+                    // Try to extract token information from transaction summary or method
+                    let tokenOut = 'Unknown';
+                    let tokenIn = 'Unknown';
+                    
+                    // If transaction has value, PLS is likely going out
+                    if (tx.value && tx.value !== '0') {
+                      tokenOut = 'PLS';
+                    }
+                    
+                    // Try to extract from summary
+                    if (tx.summary) {
+                      // Look for patterns like "Swap 100 PLS for 50 HEX"
+                      const swapMatch = tx.summary.match(/swap\s+[\d.]+\s+(\w+)\s+for\s+[\d.]+\s+(\w+)/i);
+                      if (swapMatch) {
+                        tokenOut = swapMatch[1];
+                        tokenIn = swapMatch[2];
+                      }
+                      // Look for patterns with arrows like "PLS → HEX"
+                      const arrowMatch = tx.summary.match(/(\w+)\s*[→->]\s*(\w+)/);
+                      if (arrowMatch) {
+                        tokenOut = arrowMatch[1];
+                        tokenIn = arrowMatch[2];
+                      }
+                    }
+                    
+                    // Check if we have native transfers that might give us clues
+                    if (tx.native_transfers && tx.native_transfers.length > 0) {
+                      const hasSend = tx.native_transfers.some(t => t.direction === 'send');
+                      const hasReceive = tx.native_transfers.some(t => t.direction === 'receive');
+                      if (hasSend && !hasReceive) {
+                        tokenOut = 'PLS';
+                      }
+                    }
+                    
                     return (
                       <div className="mb-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-3">
                           <RefreshCw className="text-purple-400" size={16} />
-                          <span className="font-medium text-purple-400">SWAP via {swapInfo.dexName || 'DEX'}</span>
+                          <span className="font-medium text-purple-400">SWAPPED via {swapInfo.dexName || 'DEX'}</span>
                         </div>
-                        <div className="text-sm text-gray-300">
-                          Multicall transaction - Check transaction details on explorer
+                        
+                        {/* Show what we know about the swap */}
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-gray-400">Out:</span>
+                          <span className="text-red-400 font-medium">
+                            {tx.value && tx.value !== '0' ? `${formatTokenValue(tx.value, '18')} ` : ''}
+                            {tokenOut}
+                          </span>
+                          <ArrowRight size={14} className="text-gray-400" />
+                          <span className="text-gray-400">In:</span>
+                          <span className="text-green-400 font-medium">{tokenIn}</span>
                         </div>
-                        {tx.value && tx.value !== '0' && (
-                          <div className="mt-2 text-sm">
-                            <span className="text-gray-400">Value:</span>
-                            <span className="ml-2 text-white font-medium">{formatTokenValue(tx.value, '18')} PLS</span>
+                        
+                        {tokenOut === 'Unknown' && tokenIn === 'Unknown' && (
+                          <div className="mt-2 text-xs text-gray-400">
+                            Token details not visible in multicall transaction
                           </div>
                         )}
                       </div>
