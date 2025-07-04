@@ -206,6 +206,16 @@ function parseTransfers(receipt: any, wallet: string): TransactionTransfer[] {
         const to = utils.getAddress('0x' + log.topics[2].slice(26));
         const value = log.data;
         
+        // Determine direction based on wallet address
+        let direction: 'send' | 'receive' | 'self' | undefined;
+        if (from.toLowerCase() === wallet.toLowerCase() && to.toLowerCase() === wallet.toLowerCase()) {
+          direction = 'self';
+        } else if (from.toLowerCase() === wallet.toLowerCase()) {
+          direction = 'send';
+        } else if (to.toLowerCase() === wallet.toLowerCase()) {
+          direction = 'receive';
+        }
+        
         transfers.push({
           from_address: from,
           to_address: to,
@@ -215,7 +225,8 @@ function parseTransfers(receipt: any, wallet: string): TransactionTransfer[] {
           token_name: undefined,
           token_symbol: undefined,
           token_logo: undefined,
-          token_decimals: undefined
+          token_decimals: undefined,
+          direction: direction
         });
       } catch (error) {
         // Skip invalid transfers

@@ -133,8 +133,8 @@ const detectTokenSwap = (tx: Transaction) => {
   
   // A swap typically has tokens going out and different tokens coming in
   if (sentTokens.length > 0 && receivedTokens.length > 0) {
-    // For complex multicalls with many transfers, analyze net token flow
-    if ((sentTokens.length + receivedTokens.length) > 4) {
+    // For ANY DEX router interaction or swap method, always analyze net token flow
+    if (isDexRouter || isSwapMethod || (sentTokens.length + receivedTokens.length) > 2) {
       // Group transfers by token to calculate net flow
       const tokenFlows = new Map<string, { 
         sent: number, 
@@ -552,10 +552,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
             
             {/* Transaction Content */}
             <div className="space-y-2">
-              {/* Swap Detection */}
               {(() => {
                 const swapInfo = detectTokenSwap(tx);
                 
+                // If swap is detected, show ONLY the swap summary
                 if (swapInfo) {
                   // Handle multicall swaps without visible transfers
                   if (swapInfo.isMulticall && swapInfo.sentTokens.length === 0 && swapInfo.receivedTokens.length === 0) {
@@ -656,43 +656,43 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                       </div>
                     );
                   }
-                }
-                return null;
-              })()}
-              
-              {/* ERC20 Transfers */}
-              {(() => {
-                const swapInfo = detectTokenSwap(tx);
-                if (swapInfo && swapInfo.sentTokens.length > 0 && swapInfo.receivedTokens.length > 0) {
-                  return null; // Don't show individual transfers if swap is detected
+                  
+                  // Return here to prevent showing any other transfers
+                  return null;
                 }
                 
-                return tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
-                  <TokenTransferDisplay key={`${tx.hash}-erc20-${i}`} transfer={transfer} index={i} />
-                ));
+                // If no swap detected, show regular transfers
+                return (
+                  <>
+                    {/* ERC20 Transfers */}
+                    {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
+                      <TokenTransferDisplay key={`${tx.hash}-erc20-${i}`} transfer={transfer} index={i} />
+                    ))}
+                    
+                    {/* Native Transfers */}
+                    {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
+                      <div key={`${tx.hash}-native-${i}`} className="flex items-center gap-3 p-2 rounded-lg bg-black/10">
+                        <img 
+                          src="/assets/pls-logo-trimmed.png"
+                          alt="PLS"
+                          className="w-6 h-6 rounded-full"
+                        />
+                        <div className="flex items-center gap-2">
+                          {transfer.direction === 'receive' ? (
+                            <ArrowDownLeft size={14} className="text-green-400" />
+                          ) : (
+                            <ArrowUpRight size={14} className="text-red-400" />
+                          )}
+                          <span className={`font-semibold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
+                            {transfer.direction === 'receive' ? '+' : '-'}
+                            {formatTokenValue(transfer.value)} PLS
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                );
               })()}
-              
-              {/* Native Transfers */}
-              {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
-                <div key={`${tx.hash}-native-${i}`} className="flex items-center gap-3 p-2 rounded-lg bg-black/10">
-                  <img 
-                    src="/assets/pls-logo-trimmed.png"
-                    alt="PLS"
-                    className="w-6 h-6 rounded-full"
-                  />
-                  <div className="flex items-center gap-2">
-                    {transfer.direction === 'receive' ? (
-                      <ArrowDownLeft size={14} className="text-green-400" />
-                    ) : (
-                      <ArrowUpRight size={14} className="text-red-400" />
-                    )}
-                    <span className={`font-semibold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
-                      {transfer.direction === 'receive' ? '+' : '-'}
-                      {formatTokenValue(transfer.value)} PLS
-                    </span>
-                  </div>
-                </div>
-              ))}
               
               {/* Transaction Details - Only show if failed */}
               {tx.receipt_status === '0' && (

@@ -141,6 +141,9 @@ Required environment variables:
 - **Simplified swap display** - Clean "Token A → Token B" format with logos, removed excessive details
 - **Token metadata fetching** - Directly queries ERC20 contracts for name, symbol, and decimals information
 - **New API endpoint** - `/api/wallet/:address/blockchain-transactions` provides direct blockchain access
+- **Enhanced net flow calculation** - Complex multicall swaps with 11+ transfers now display as simple 2-token swaps
+- **Direction field added** - Transfer objects now include proper 'send'/'receive' direction for accurate net flow
+- **Swap-only display** - When swap is detected, ONLY the swap summary is shown, hiding all individual transfers
 
 ### July 3, 2025 - Enhanced Transaction History Swap Detection & Display
 - **Fixed swap detection** - Replaced simplified detectTokenSwap function with sophisticated multi-method detection
