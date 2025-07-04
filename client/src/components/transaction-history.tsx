@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TokenLogo } from '@/components/token-logo';
-import { Loader2, ArrowUpRight, ArrowDownLeft, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownLeft, ArrowRight, ExternalLink, ChevronDown, DollarSign, Wallet, RefreshCw, Filter, Plus, Copy, Check } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTransactionHistory, fetchWalletData, TransactionResponse } from '@/lib/api';
 import { shortenAddress } from '@/lib/utils';
@@ -482,7 +482,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         tokenIn = swapMatch[2];
                       }
                       // Look for patterns with arrows like "PLS → HEX"
-                      const arrowMatch = tx.summary.match(/(\w+)\s*[→->]\s*(\w+)/);
+                      const arrowMatch = tx.summary.match(/(\w+)\s*(?:→|->|›)\s*(\w+)/);
                       if (arrowMatch) {
                         tokenOut = arrowMatch[1];
                         tokenIn = arrowMatch[2];
