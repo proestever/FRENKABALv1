@@ -132,18 +132,21 @@ Required environment variables:
 
 ## Recent Changes
 
-### July 4, 2025 - Direct Blockchain Transaction Fetching & Simplified Display
+### July 4, 2025 - Direct Blockchain Transaction Fetching & Ultra-Simplified Display
 - **Major architecture change** - Replaced PulseChain Scan API with direct blockchain RPC calls for real-time transaction data
 - **Created fast-blockchain-service.ts** - Optimized service using event logs for faster transaction fetching
 - **Event log scanning** - Uses Transfer event logs instead of scanning every block, dramatically improving performance
 - **Batch processing** - Processes transactions in parallel batches of 20 for optimal speed
-- **Reduced batch size** - Changed from 100 to 50 transactions per page for better user experience
-- **Simplified swap display** - Clean "Token A → Token B" format with logos, removed excessive details
+- **Increased block lookback** - Now scanning 50,000 blocks instead of 5,000 for more transaction history
+- **Ultra-simplified display** - ALL transactions now show in compact "Token A → Token B" format with logos
+- **Removed verbose details** - Eliminated contract addresses, block numbers, gas info, and other "useless data"
+- **Consistent transaction display** - Swaps, transfers, and all token movements use same minimal format
 - **Token metadata fetching** - Directly queries ERC20 contracts for name, symbol, and decimals information
 - **New API endpoint** - `/api/wallet/:address/blockchain-transactions` provides direct blockchain access
 - **Enhanced net flow calculation** - Complex multicall swaps with 11+ transfers now display as simple 2-token swaps
 - **Direction field added** - Transfer objects now include proper 'send'/'receive' direction for accurate net flow
-- **Swap-only display** - When swap is detected, ONLY the swap summary is shown, hiding all individual transfers
+- **Native PLS support** - PLS transfers now properly detected and included in net flow calculations
+- **Hex value parsing fixed** - Transaction amounts now display correctly instead of showing "<0.01"
 
 ### July 3, 2025 - Enhanced Transaction History Swap Detection & Display
 - **Fixed swap detection** - Replaced simplified detectTokenSwap function with sophisticated multi-method detection

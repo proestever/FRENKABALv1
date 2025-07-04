@@ -419,91 +419,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
     }
   }, [data]);
   
-  // Enhanced token display component
-  const TokenTransferDisplay = ({ transfer, index }: { transfer: TransactionTransfer; index: number }) => (
-    <div className="flex items-start mt-3 p-3 rounded-lg bg-black/20 border border-white/5">
-      <TokenLogo 
-        address={transfer.address || ''}
-        symbol={transfer.token_symbol || ''}
-        fallbackLogo={transfer.token_logo || prefetchedLogos[transfer.address?.toLowerCase() || '']}
-        size="md"
-      />
-      <div className="ml-3 flex-1">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {transfer.direction === 'receive' ? (
-              <ArrowDownLeft size={16} className="text-green-400" />
-            ) : (
-              <ArrowUpRight size={16} className="text-red-400" />
-            )}
-            <span className={`font-semibold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
-              {transfer.direction === 'receive' ? '+' : '-'}
-              {formatTokenValue(transfer.value, transfer.token_decimals)}
-            </span>
-          </div>
-          {/* USD Value */}
-          {(() => {
-            const usdValue = calculateUsdValue(transfer.value, transfer.token_decimals, transfer.address || '');
-            return usdValue ? (
-              <span className={`text-sm ${transfer.direction === 'receive' ? 'text-green-300/70' : 'text-red-300/70'}`}>
-                {transfer.direction === 'receive' ? '+' : '-'}{formatCurrency(usdValue)}
-              </span>
-            ) : null;
-          })()}
-        </div>
-        
-        {/* Enhanced Token Details */}
-        <div className="mt-2 space-y-1">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-400">Token:</span>
-            <span className="text-white font-medium">{transfer.token_name || 'Unknown Token'}</span>
-            <span className="text-gray-300">({transfer.token_symbol || 'UNKNOWN'})</span>
-          </div>
-          
-          {/* Contract Address with Copy */}
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-400">Contract:</span>
-            <div className="flex items-center gap-1">
-              <span className="text-gray-300 font-mono text-xs">
-                {shortenAddress(transfer.address || '')}
-              </span>
-              <button
-                onClick={() => copyToClipboard(transfer.address || '', `token-${index}`)}
-                className="text-gray-400 hover:text-white transition-colors"
-                title="Copy contract address"
-              >
-                {copiedAddresses[`token-${index}`] ? (
-                  <Check size={12} className="text-green-400" />
-                ) : (
-                  <Copy size={12} />
-                )}
-              </button>
-              <a
-                href={`https://scan.pulsechain.com/token/${transfer.address}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-white transition-colors"
-                title="View on PulseScan"
-              >
-                <ExternalLink size={12} />
-              </a>
-            </div>
-          </div>
-          
-          {/* From/To Address */}
-          <div className="text-xs text-muted-foreground">
-            {transfer.direction === 'receive' ? 'From: ' : 'To: '}
-            <Link 
-              to={`/${transfer.direction === 'receive' ? transfer.from_address : transfer.to_address}`} 
-              className="text-white hover:text-gray-300"
-            >
-              {shortenAddress(transfer.direction === 'receive' ? transfer.from_address : transfer.to_address)}
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+
   
   if (isLoading) {
     return (
@@ -651,20 +567,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     }
                     
                     return (
-                      <div className="mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-md">
-                        <div className="flex items-center gap-2">
-                          <RefreshCw className="text-purple-400" size={16} />
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="font-medium text-white">
-                              {tx.value && tx.value !== '0' ? `${formatTokenValue(tx.value, '18')} ` : ''}
-                              {tokenOut}
-                            </span>
-                            <ArrowRight size={14} className="text-purple-400" />
-                            <span className="font-medium text-white">{tokenIn}</span>
-                            {swapInfo.dexName && (
-                              <span className="text-xs text-gray-400 ml-2">via {swapInfo.dexName}</span>
-                            )}
-                          </div>
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="text-purple-400" size={14} />
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-white">
+                            {tx.value && tx.value !== '0' ? `${formatTokenValue(tx.value, '18')} ` : ''}
+                            {tokenOut}
+                          </span>
+                          <ArrowRight size={14} className="text-gray-400" />
+                          <span className="font-medium text-white">{tokenIn}</span>
                         </div>
                       </div>
                     );
@@ -677,39 +588,31 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     const primaryReceived = swapInfo.receivedTokens[0];
                     
                     return (
-                      <div className="mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-md">
-                        <div className="flex items-center gap-2">
-                          <RefreshCw className="text-purple-400" size={16} />
-                          <div className="flex items-center gap-2 flex-wrap text-sm">
-                            {/* Token Out */}
-                            <div className="flex items-center gap-1">
-                              <TokenLogo 
-                                address={primarySent.address || ''}
-                                symbol={primarySent.token_symbol || ''}
-                                fallbackLogo={primarySent.token_logo || undefined}
-                                size="xs"
-                              />
-                              <span className="font-medium text-white">
-                                {formatTokenValue(primarySent.value, primarySent.token_decimals)} {primarySent.token_symbol || 'UNKNOWN'}
-                              </span>
-                            </div>
-                            
-                            <ArrowRight size={14} className="text-purple-400" />
-                            
-                            {/* Token In */}
-                            <div className="flex items-center gap-1">
-                              <TokenLogo 
-                                address={primaryReceived.address || ''}
-                                symbol={primaryReceived.token_symbol || ''}
-                                fallbackLogo={primaryReceived.token_logo || undefined}
-                                size="xs"
-                              />
-                              <span className="font-medium text-white">
-                                {formatTokenValue(primaryReceived.value, primaryReceived.token_decimals)} {primaryReceived.token_symbol || 'UNKNOWN'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="text-purple-400" size={14} />
+                        <TokenLogo 
+                          address={primarySent.address || ''}
+                          symbol={primarySent.token_symbol || ''}
+                          fallbackLogo={primarySent.token_logo || undefined}
+                          size="sm"
+                        />
+                        <span className="font-medium text-white">
+                          {formatTokenValue(primarySent.value, primarySent.token_decimals)}
+                        </span>
+                        <span className="text-gray-400">{primarySent.token_symbol || 'UNKNOWN'}</span>
+                        
+                        <ArrowRight size={14} className="text-gray-400" />
+                        
+                        <TokenLogo 
+                          address={primaryReceived.address || ''}
+                          symbol={primaryReceived.token_symbol || ''}
+                          fallbackLogo={primaryReceived.token_logo || undefined}
+                          size="sm"
+                        />
+                        <span className="font-medium text-white">
+                          {formatTokenValue(primaryReceived.value, primaryReceived.token_decimals)}
+                        </span>
+                        <span className="text-gray-400">{primaryReceived.token_symbol || 'UNKNOWN'}</span>
                       </div>
                     );
                   }
@@ -718,36 +621,91 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   return null;
                 }
                 
-                // If no swap detected, show regular transfers
+                // If no swap detected, show regular transfers in simplified format
+                const allTransfers: Array<{
+                  symbol: string;
+                  amount: string;
+                  logo?: string;
+                  direction: 'send' | 'receive';
+                  address?: string;
+                }> = [];
+                
+                // Collect ERC20 transfers
+                tx.erc20_transfers?.forEach(transfer => {
+                  if (transfer.token_symbol) {
+                    allTransfers.push({
+                      symbol: transfer.token_symbol,
+                      amount: formatTokenValue(transfer.value, transfer.token_decimals),
+                      logo: transfer.token_logo || prefetchedLogos[transfer.address?.toLowerCase() || ''],
+                      direction: (transfer.direction || 'send') as 'send' | 'receive',
+                      address: transfer.address
+                    });
+                  }
+                });
+                
+                // Collect native transfers
+                tx.native_transfers?.forEach(transfer => {
+                  allTransfers.push({
+                    symbol: 'PLS',
+                    amount: formatTokenValue(transfer.value, '18'),
+                    logo: '/assets/pls logo trimmed.png',
+                    direction: (transfer.direction || 'send') as 'send' | 'receive'
+                  });
+                });
+                
+                // If no transfers but transaction has value, it's a native PLS transfer
+                if (allTransfers.length === 0 && tx.value && tx.value !== '0') {
+                  allTransfers.push({
+                    symbol: 'PLS',
+                    amount: formatTokenValue(tx.value, '18'),
+                    logo: '/assets/pls logo trimmed.png',
+                    direction: 'send'
+                  });
+                }
+                
+                // Group by direction
+                const sent = allTransfers.filter(t => t.direction === 'send');
+                const received = allTransfers.filter(t => t.direction === 'receive');
+                
                 return (
-                  <>
-                    {/* ERC20 Transfers */}
-                    {tx.erc20_transfers && tx.erc20_transfers.map((transfer, i) => (
-                      <TokenTransferDisplay key={`${tx.hash}-erc20-${i}`} transfer={transfer} index={i} />
-                    ))}
-                    
-                    {/* Native Transfers */}
-                    {tx.native_transfers && tx.native_transfers.map((transfer, i) => (
-                      <div key={`${tx.hash}-native-${i}`} className="flex items-center gap-3 p-2 rounded-lg bg-black/10">
-                        <img 
-                          src="/assets/pls-logo-trimmed.png"
-                          alt="PLS"
-                          className="w-6 h-6 rounded-full"
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Show sent tokens */}
+                    {sent.map((transfer, idx) => (
+                      <div key={`sent-${idx}`} className="flex items-center gap-1">
+                        {idx > 0 && <span className="text-gray-400">+</span>}
+                        <RefreshCw className="text-red-400" size={14} />
+                        <TokenLogo 
+                          address={transfer.address || ''}
+                          symbol={transfer.symbol}
+                          fallbackLogo={transfer.logo}
+                          size="sm"
                         />
-                        <div className="flex items-center gap-2">
-                          {transfer.direction === 'receive' ? (
-                            <ArrowDownLeft size={14} className="text-green-400" />
-                          ) : (
-                            <ArrowUpRight size={14} className="text-red-400" />
-                          )}
-                          <span className={`font-semibold ${transfer.direction === 'receive' ? 'text-green-400' : 'text-red-400'}`}>
-                            {transfer.direction === 'receive' ? '+' : '-'}
-                            {formatTokenValue(transfer.value)} PLS
-                          </span>
-                        </div>
+                        <span className="font-medium text-white">{transfer.amount}</span>
+                        <span className="text-gray-400">{transfer.symbol}</span>
                       </div>
                     ))}
-                  </>
+                    
+                    {/* Arrow between sent and received */}
+                    {sent.length > 0 && received.length > 0 && (
+                      <ArrowRight size={14} className="text-gray-400" />
+                    )}
+                    
+                    {/* Show received tokens */}
+                    {received.map((transfer, idx) => (
+                      <div key={`received-${idx}`} className="flex items-center gap-1">
+                        {idx > 0 && <span className="text-gray-400">+</span>}
+                        <RefreshCw className="text-green-400" size={14} />
+                        <TokenLogo 
+                          address={transfer.address || ''}
+                          symbol={transfer.symbol}
+                          fallbackLogo={transfer.logo}
+                          size="sm"
+                        />
+                        <span className="font-medium text-white">{transfer.amount}</span>
+                        <span className="text-gray-400">{transfer.symbol}</span>
+                      </div>
+                    ))}
+                  </div>
                 );
               })()}
               
