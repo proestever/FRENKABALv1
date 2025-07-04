@@ -197,9 +197,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Fetch initial transactions using blockchain endpoint
   const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/wallet/${walletAddress}/blockchain-transactions`, { limit: 100 }],
+    queryKey: [`/api/wallet/${walletAddress}/blockchain-transactions`, { limit: 50 }],
     queryFn: async () => {
-      const url = `/api/wallet/${walletAddress}/blockchain-transactions?limit=100`;
+      const url = `/api/wallet/${walletAddress}/blockchain-transactions?limit=50`;
       console.log(`Fetching blockchain transactions: ${url}`);
       const response = await fetch(url);
       
@@ -659,7 +659,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               
               setIsLoadingMore(true);
               try {
-                const url = `/api/wallet/${walletAddress}/blockchain-transactions?limit=100${cursor ? `&startBlock=${cursor}` : ''}`;
+                const url = `/api/wallet/${walletAddress}/blockchain-transactions?limit=50${cursor ? `&startBlock=${cursor}` : ''}`;
                 console.log(`Loading more blockchain transactions: ${url}`);
                 const response = await fetch(url);
                 

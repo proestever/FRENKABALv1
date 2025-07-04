@@ -499,7 +499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/wallet/:address/blockchain-transactions", async (req, res) => {
     try {
       const { address } = req.params;
-      const { limit = '100', startBlock } = req.query;
+      const { limit = '50', startBlock } = req.query;
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -511,7 +511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid wallet address format" });
       }
       
-      const parsedLimit = Math.min(parseInt(limit as string, 10) || 100, 200);
+      const parsedLimit = Math.min(parseInt(limit as string, 10) || 50, 100);
       const parsedStartBlock = startBlock ? parseInt(startBlock as string, 10) : undefined;
       
       // Import the blockchain service
