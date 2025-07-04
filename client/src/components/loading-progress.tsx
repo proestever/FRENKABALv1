@@ -61,34 +61,58 @@ export function LoadingProgress({ isLoading, walletAddress, customProgress }: Lo
     return Math.min(Math.round((completedWeight / totalWeight) * 100), 99);
   };
   
-  // Update stage based on progress message
+  // Update stage based on progress percentage
   useEffect(() => {
-    const messageToStage: Record<string, number> = {
-      'Connecting to PulseChain network...': 0,
-      'Fetching wallet data...': 1,
-      'Loading token balances...': 2,
-      'Fetching token prices...': 3,
-      'Analyzing LP tokens...': 4,
-      'Verifying token contracts...': 5,
-      'Processing complete': 6
+    // Map percentage ranges to stages
+    const percentageToStage = (percent: number): number => {
+      if (percent < 10) return 0;      // Connecting
+      if (percent < 20) return 1;      // Fetching wallet
+      if (percent < 50) return 2;      // Loading tokens
+      if (percent < 65) return 3;      // Fetching prices
+      if (percent < 80) return 4;      // Analyzing LP
+      if (percent < 95) return 5;      // Verifying
+      return 6;                        // Finalizing
     };
     
-    // Check if message matches any stage
-    for (const [msg, stageIdx] of Object.entries(messageToStage)) {
-      if (progress.message.includes(msg.substring(0, 20))) {
-        if (stageIdx !== currentStageIndex) {
-          setCurrentStageIndex(stageIdx);
-          setStageStartTime(Date.now());
+    // When using percentage-based progress
+    if (progress.totalBatches === 100) {
+      const newStageIndex = percentageToStage(progress.currentBatch);
+      if (newStageIndex !== currentStageIndex) {
+        setCurrentStageIndex(newStageIndex);
+        setStageStartTime(Date.now());
+      }
+    } else {
+      // Fallback to message-based stage detection
+      const messageToStage: Record<string, number> = {
+        'Connecting to PulseChain network...': 0,
+        'Fetching wallet data...': 1,
+        'Loading token balances...': 2,
+        'Fetching token prices...': 3,
+        'Analyzing LP tokens...': 4,
+        'Verifying token contracts...': 5,
+        'Processing complete': 6
+      };
+      
+      for (const [msg, stageIdx] of Object.entries(messageToStage)) {
+        if (progress.message.includes(msg.substring(0, 20))) {
+          if (stageIdx !== currentStageIndex) {
+            setCurrentStageIndex(stageIdx);
+            setStageStartTime(Date.now());
+          }
+          break;
         }
-        break;
       }
     }
-  }, [progress.message, currentStageIndex]);
+  }, [progress.message, progress.currentBatch, progress.totalBatches, currentStageIndex]);
   
-  // Calculate the progress percentage based on stages or batches
-  const progressPercent = progress.totalBatches > 0 
-    ? Math.min(Math.round((progress.currentBatch / progress.totalBatches) * 100), 99)
-    : calculateProgressFromStages();
+  // Calculate the progress percentage
+  const progressPercent = progress.status === 'complete' 
+    ? 100  // Always show 100% when complete
+    : progress.totalBatches === 100 
+      ? Math.min(progress.currentBatch, 99)  // Cap at 99% until complete
+      : progress.totalBatches > 0 
+        ? Math.min(Math.round((progress.currentBatch / progress.totalBatches) * 100), 99)
+        : calculateProgressFromStages();
   
   // Handle message transitions with animation
   useEffect(() => {

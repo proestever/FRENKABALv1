@@ -124,7 +124,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     updateLoadingProgress({
       status: 'loading',
       currentBatch: 0,
-      totalBatches: 7,
+      totalBatches: 100, // Use percentage
       message: 'Connecting to PulseChain network...'
     });
     
@@ -135,11 +135,11 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     // Add delay to show connecting stage
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Update progress - Fetching wallet information
+    // Update progress - Fetching wallet information (10%)
     updateLoadingProgress({
       status: 'loading',
-      currentBatch: 1,
-      totalBatches: 7,
+      currentBatch: 10,
+      totalBatches: 100,
       message: 'Fetching wallet data...'
     });
     
@@ -173,11 +173,11 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       });
     }
     
-    // Update progress - Scanning token balances
+    // Update progress - Scanning token balances (20%)
     updateLoadingProgress({
       status: 'loading',
-      currentBatch: 2,
-      totalBatches: 7,
+      currentBatch: 20,
+      totalBatches: 100,
       message: 'Loading token balances...'
     });
     
@@ -187,18 +187,20 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     // Process tokens in batches
     const BATCH_SIZE = 5;
     const tokenArray = Array.from(tokenAddresses);
+    const totalTokens = tokenArray.length;
     
     for (let i = 0; i < tokenArray.length; i += BATCH_SIZE) {
       const batch = tokenArray.slice(i, i + BATCH_SIZE);
       
-      // Update progress with current batch
-      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-      const totalBatches = Math.ceil(tokenArray.length / BATCH_SIZE);
+      // Calculate progress: 20% to 50% for token loading
+      const tokenProgress = (i / totalTokens) * 30; // 30% range for tokens
+      const currentProgress = Math.floor(20 + tokenProgress);
+      
       updateLoadingProgress({
         status: 'loading',
-        currentBatch: 2,
-        totalBatches: 7,
-        message: `Scanning token balances (${Math.min(i + BATCH_SIZE, tokenArray.length)}/${tokenArray.length})...`
+        currentBatch: currentProgress,
+        totalBatches: 100,
+        message: `Loading token balances... (${Math.min(i + BATCH_SIZE, totalTokens)}/${totalTokens})`
       });
       
       await Promise.all(batch.map(async (tokenAddress) => {
@@ -239,22 +241,22 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       }
     }
     
-    // Update progress - Retrieving token prices (step 3 is already handled in the batch loop)
+    // Update progress - Retrieving token prices (50%)
     updateLoadingProgress({
       status: 'loading',
-      currentBatch: 3,
-      totalBatches: 7,
+      currentBatch: 50,
+      totalBatches: 100,
       message: 'Fetching token prices...'
     });
     
     // Add small delay to show price fetching progress
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Update progress - Analyzing LP positions
+    // Update progress - Analyzing LP positions (65%)
     updateLoadingProgress({
       status: 'loading',
-      currentBatch: 4,
-      totalBatches: 7,
+      currentBatch: 65,
+      totalBatches: 100,
       message: 'Analyzing LP tokens...'
     });
     
@@ -283,11 +285,11 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       processedTokens = processedTokensWithLp;
     }
     
-    // Update progress - Verifying contract data
+    // Update progress - Verifying contract data (80%)
     updateLoadingProgress({
       status: 'loading',
-      currentBatch: 5,
-      totalBatches: 7,
+      currentBatch: 80,
+      totalBatches: 100,
       message: 'Verifying token contracts...'
     });
     
@@ -297,11 +299,11 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     // Sort by value descending
     processedTokens.sort((a, b) => (b.value || 0) - (a.value || 0));
     
-    // Update progress - Finalizing data
+    // Update progress - Finalizing data (95%)
     updateLoadingProgress({
       status: 'loading',
-      currentBatch: 6,
-      totalBatches: 7,
+      currentBatch: 95,
+      totalBatches: 100,
       message: 'Finalizing data...'
     });
     
@@ -312,11 +314,11 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     console.log(`Direct balance fetch completed in ${endTime - startTime}ms`);
     console.log(`Found ${processedTokens.length} tokens with non-zero balances`);
     
-    // Update progress - Complete
+    // Update progress - Complete (100%)
     updateLoadingProgress({
       status: 'complete',
-      currentBatch: 7,
-      totalBatches: 7,
+      currentBatch: 100,
+      totalBatches: 100,
       message: 'Processing complete'
     });
     

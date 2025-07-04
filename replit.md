@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 4, 2025 - Percentage-Based Loading Progress System
+- **Major loading system overhaul** - Changed from 7-stage system to percentage-based progress (0-100%)
+- **Percentage distribution** - Connecting (0-10%), Wallet data (10-20%), Token balances (20-50%), Prices (50-65%), LP analysis (65-80%), Verification (80-95%), Finalizing (95-100%)
+- **Dynamic token progress calculation** - Progress within token loading stage (20-50%) calculated based on actual tokens processed
+- **Fixed 99% jump issue** - Progress now smoothly transitions through all percentages, stages highlight sequentially based on percentage ranges
+- **Enhanced stage detection** - Loading progress component now detects stages based on percentage ranges rather than message matching
+- **Smooth completion transition** - Progress properly shows 100% when complete before dialog closes
+
 ### July 4, 2025 - Enhanced Loading Progress with Dynamic Token Counting & Improved Polling
 - **Increased polling frequency** - Changed from 5 second polling to 200ms polling during loading to catch all stage transitions
 - **Extended stage delays** - Increased delays between stages: 800ms for connecting, 1000ms for most stages, ensuring each stage is visible
