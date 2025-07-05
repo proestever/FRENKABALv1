@@ -118,7 +118,14 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
     const response = await fetch(`${DEX_SCREENER_API_BASE}/tokens/${addressToUse}`);
     
     if (!response.ok) {
-      console.error(`Error fetching price from DexScreener: ${response.status} ${response.statusText}`);
+      // If rate limited, add a small delay and log
+      if (response.status === 429) {
+        console.warn(`DexScreener rate limit hit for ${addressToUse}, will retry later`);
+        // Add a small delay to slow down requests
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } else {
+        console.error(`Error fetching price from DexScreener: ${response.status} ${response.statusText}`);
+      }
       return null;
     }
     
@@ -384,6 +391,48 @@ export async function getWalletBalancesFromPulseChainScan(walletAddress: string)
   } catch (error) {
     console.error(`Error fetching wallet balances from PulseChain Scan:`, error);
     throw error;
+  }
+}
+
+/**
+ * Get token logo from DexScreener even if no price data is available
+ */
+export async function getTokenLogoFromDexScreener(tokenAddress: string): Promise<string | null> {
+  try {
+    const normalizedAddress = tokenAddress.toLowerCase();
+    
+    // Check cache first for logo
+    const cached = priceCache[normalizedAddress];
+    if (cached && cached.logo) {
+      return cached.logo;
+    }
+    
+    console.log(`Fetching logo for ${tokenAddress} from DexScreener`);
+    const response = await fetch(`${DEX_SCREENER_API_BASE}/tokens/${normalizedAddress}`);
+    
+    if (!response.ok) {
+      if (response.status === 429) {
+        console.warn(`DexScreener rate limit hit when fetching logo for ${tokenAddress}`);
+      }
+      return null;
+    }
+    
+    const data = await response.json() as DexScreenerResponse;
+    
+    // Look for logo in any pair's info
+    if (data.pairs && data.pairs.length > 0) {
+      for (const pair of data.pairs) {
+        if (pair.info?.imageUrl) {
+          console.log(`Found logo for ${tokenAddress}: ${pair.info.imageUrl}`);
+          return pair.info.imageUrl;
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Error fetching logo from DexScreener for ${tokenAddress}:`, error);
+    return null;
   }
 }
 

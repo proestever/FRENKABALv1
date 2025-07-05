@@ -786,6 +786,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch token info" });
     }
   });
+  
+  // Test endpoint for DexScreener logo fetching
+  app.get("/api/token/:address/logo-test", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid token address" });
+      }
+      
+      // Import the functions we need
+      const { getTokenPriceDataFromDexScreener, getTokenLogoFromDexScreener } = await import('./services/dexscreener');
+      
+      // Try to get price data first (which includes logo)
+      const priceData = await getTokenPriceDataFromDexScreener(address);
+      
+      // Also try the direct logo fetch
+      const directLogo = await getTokenLogoFromDexScreener(address);
+      
+      res.json({
+        address,
+        priceData,
+        directLogo,
+        hasLogo: !!(priceData?.logo || directLogo)
+      });
+    } catch (error) {
+      console.error('Error testing logo fetch:', error);
+      res.status(500).json({ message: "Error testing logo fetch", error: error.message });
+    }
+  });
 
   app.get("/api/token-logo/:address", async (req, res) => {
     try {
