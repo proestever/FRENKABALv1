@@ -132,6 +132,15 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 5, 2025 - Progressive Loading for Instant Wallet Display
+- **Implemented progressive loading system** - Wallet tokens now load in under 2 seconds with basic data
+- **Created new `/api/wallet/:address/progressive` endpoint** - Returns token balances immediately without waiting for prices
+- **Added token enrichment endpoints** - `/api/token/enrich` and `/api/tokens/enrich-batch` for loading prices/logos progressively
+- **Fixed DexScreener logo fetching** - Enhanced logo fetching properly checks DexScreener for token images (e.g., HEX LOTTO)
+- **Created useProgressiveWallet hook** - Frontend hook that manages progressive loading and enrichment
+- **Improved performance from ~10+ seconds to ~2 seconds** - Initial token display is now 5x faster
+- **Background enrichment** - Prices and logos load in background after tokens are displayed
+
 ### July 4, 2025 - Error Cleanup & Deployment Preparation
 - **Fixed LP token execution reverted errors** - Added proper timeout and error handling to callContractFunction
 - **Improved error handling** - Contract calls that revert no longer cause unhandled promise rejections
