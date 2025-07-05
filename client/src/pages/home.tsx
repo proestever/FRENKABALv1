@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { saveRecentAddress, ProcessedToken, fetchWalletData, fetchAllWalletTokens, forceRefreshWalletData } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
-
+import { useClientSideWallet } from '@/hooks/use-client-side-wallet'; // Client-side wallet hook
 import { useDirectBalance } from '@/hooks/use-direct-balance';
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
@@ -454,18 +454,7 @@ export default function Home() {
     }
   }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
 
-  // Use our new hook for loading all wallet tokens without pagination
-  const { 
-    walletData: standardWalletData, 
-    isLoading: standardIsLoading, 
-    isError: standardIsError, 
-    error: standardError, 
-    refetch: standardRefetch,
-    isFetching: standardIsFetching,
-    progress
-  } = useAllWalletTokens(searchedAddress)
-  
-  // Use direct balance hook
+  // Use client-side wallet hook to avoid server rate limits
   const {
     walletData,
     isLoading,
@@ -473,7 +462,8 @@ export default function Home() {
     error,
     refetch,
     isFetching,
-  } = useDirectBalance(searchedAddress, { enabled: true })
+    progress
+  } = useClientSideWallet(searchedAddress)
   
   // Debug wallet data
   useEffect(() => {

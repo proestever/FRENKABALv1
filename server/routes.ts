@@ -14,6 +14,7 @@ import { getTokenPricesFromDexScreener, getTokenPriceFromDexScreener } from "./s
 import { getDirectTokenBalances } from "./services/blockchain-service";
 import { calculateBalancesFromTransferHistory, getTransferHistoryWithBalances } from "./services/transfer-history-service";
 import { getDirectTokenBalances as getDirectBalances } from "./services/direct-balance-service";
+import { getDirectTokenBalancesNoPrices } from "./services/direct-balance-no-prices";
 import { getProviderHealth, switchToProvider, resetFailedProviders } from "./services/rpc-provider";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
@@ -177,6 +178,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ 
         message: "Failed to fetch direct balances",
         error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // API route to get direct token balances WITHOUT prices (for client-side price fetching)
+  app.get("/api/wallet/:address/balances-no-prices", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      // Validate address
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      console.log(`Getting balances without prices for wallet: ${address}`);
+      
+      const startTime = Date.now();
+      
+      // Get balances without prices
+      const tokens = await getDirectTokenBalancesNoPrices(address);
+      
+      const endTime = Date.now();
+      console.log(`Balances (no prices) fetch completed for ${address} in ${endTime - startTime}ms`);
+      
+      // Find PLS balance
+      const plsToken = tokens.find(t => t.isNative);
+      const plsBalance = plsToken ? plsToken.balanceFormatted : 0;
+      
+      return res.json({
+        address,
+        tokens,
+        totalValue: 0, // Will be calculated client-side
+        tokenCount: tokens.length,
+        plsBalance,
+        plsPriceChange: null,
+        networkCount: 1,
+        pricesNeeded: true // Indicates client needs to fetch prices
+      });
+    } catch (error) {
+      console.error("Error getting balances without prices:", error);
+      
+      return res.status(500).json({ 
+        message: "Failed to get balances",
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
@@ -594,6 +640,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching token logos:", error);
       return res.status(500).json({ 
         message: "Failed to fetch token logos",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Endpoint to save logos fetched by clients from DexScreener
+  app.post("/api/token-logos/save-from-client", async (req, res) => {
+    try {
+      const { tokenAddress, logoUrl, symbol, name } = req.body;
+      
+      // Validate input
+      if (!tokenAddress || !logoUrl) {
+        return res.status(400).json({ message: "tokenAddress and logoUrl are required" });
+      }
+      
+      // Save logo to database
+      const savedLogo = await storage.saveTokenLogo({
+        tokenAddress: tokenAddress.toLowerCase(),
+        logoUrl,
+        symbol: symbol || "",
+        name: name || "",
+        lastUpdated: new Date().toISOString()
+      });
+      
+      console.log(`Client-side logo saved for ${tokenAddress}: ${logoUrl}`);
+      return res.json(savedLogo);
+    } catch (error) {
+      console.error("Error saving client-side logo:", error);
+      return res.status(500).json({ 
+        message: "Failed to save logo",
         error: error instanceof Error ? error.message : "Unknown error"
       });
     }

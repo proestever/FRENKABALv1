@@ -132,6 +132,15 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 5, 2025 - Client-Side DexScreener API Integration
+- **Moved DexScreener API calls to client-side** - Prevents server rate limits by distributing API calls across users' browsers
+- **Created `/api/wallet/:address/balances-no-prices` endpoint** - Returns token balances without prices, reducing server load
+- **Built `useClientSideWallet` hook** - Fetches wallet data with client-side DexScreener price and logo fetching
+- **Eliminated circular dependencies** - Fixed "require is not defined" errors by removing circular imports
+- **Type safety improvements** - Aligned `plsBalance` and `plsPriceChange` types to use `undefined` instead of `null`
+- **Zero server-side rate limits** - Each user's browser makes its own DexScreener API calls independently
+- **Logo caching maintained** - Client-fetched logos are still saved to server for future use
+
 ### July 5, 2025 - Token Logo Collection from DexScreener
 - **Integrated logo collection during price fetching** - When fetching token prices from DexScreener, logos are now automatically collected and saved
 - **Automatic logo storage** - DexScreener logos are saved to database when found during price fetching

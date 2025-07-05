@@ -62,13 +62,14 @@ interface DexScreenerResponse {
   pairs: DexScreenerPair[];
 }
 
-interface TokenPriceData {
+export interface TokenPriceData {
   price: number;
   priceChange24h: number;
   liquidityUsd: number;
   volumeUsd24h: number;
   dexId: string;
   pairAddress: string;
+  logo?: string;
 }
 
 // Client-side cache
@@ -176,13 +177,22 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
       return null;
     }
 
+    // Try to get logo from the token info
+    let logo: string | undefined;
+    if (bestPair.baseToken.address.toLowerCase() === normalizedAddress) {
+      // Check if DexScreener provides a logo URL (they might add this in future)
+      // For now, we'll leave it undefined and let the server provide stored logos
+      logo = undefined;
+    }
+
     const result: TokenPriceData = {
       price: parseFloat(bestPair.priceUsd!),
       priceChange24h: bestPair.priceChange?.h24 || 0,
       liquidityUsd: bestPair.liquidity!.usd,
       volumeUsd24h: bestPair.volume?.h24 || 0,
       dexId: bestPair.dexId,
-      pairAddress: bestPair.pairAddress
+      pairAddress: bestPair.pairAddress,
+      logo
     };
 
     // Cache the result
