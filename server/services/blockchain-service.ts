@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import { ProcessedToken } from '../types';
 import { getTokenPrice } from './api';
+import { getProvider, executeWithFailover } from './rpc-provider';
 
 
 // Standard ERC20 ABI
@@ -15,15 +16,9 @@ const ERC20_ABI = [
   {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"}
 ];
 
-// Store RPC endpoint here - could be moved to env variables
-const RPC_ENDPOINT = 'https://rpc-pulsechain.g4mm4.io';
-
 // Native PLS constants
 const PLS_DECIMALS = 18;
 const PLS_TOKEN_ADDRESS = '0x0000000000000000000000000000000000000000';
-
-// Initialize ethers provider
-const provider = new ethers.providers.JsonRpcProvider(RPC_ENDPOINT);
 
 /**
  * Get default token logo for common tokens
@@ -49,7 +44,7 @@ export function getDefaultLogo(symbol: string | null | undefined): string {
 }
 
 /**
- * Call a contract function using ethers.js
+ * Call a contract function using ethers.js with failover support
  */
 async function callContractFunction<T>(
   contractAddress: string,
@@ -58,14 +53,29 @@ async function callContractFunction<T>(
   params: any[] = []
 ): Promise<T | null> {
   try {
-    // Create a contract instance
-    const contract = new ethers.Contract(contractAddress, abi, provider);
-    
-    // Call the function
-    const result = await contract[functionName](...params) as T;
-    return result;
-  } catch (error) {
-    console.error(`Error calling ${functionName} on ${contractAddress}:`, error);
+    return await executeWithFailover(async (provider) => {
+      // Create a contract instance
+      const contract = new ethers.Contract(contractAddress, abi, provider);
+      
+      // Add timeout to prevent hanging on bad contracts
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Contract call timeout')), 5000)
+      );
+      
+      // Call the function with timeout
+      const result = await Promise.race([
+        contract[functionName](...params),
+        timeoutPromise
+      ]) as T;
+      
+      return result;
+    });
+  } catch (error: any) {
+    // Only log errors that aren't expected (execution reverted is expected for non-LP tokens)
+    if (!error.message?.includes('execution reverted') && 
+        !error.message?.includes('Contract call timeout')) {
+      console.error(`Error calling ${functionName} on ${contractAddress}:`, error.message);
+    }
     return null;
   }
 }

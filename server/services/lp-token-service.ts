@@ -55,11 +55,8 @@ const ERC20_ABI = [
   {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"}
 ];
 
-// Store RPC endpoint here - using the main PulseChain RPC
-const RPC_ENDPOINT = 'https://rpc.pulsechain.com';
-
-// Initialize ethers provider
-const provider = new ethers.providers.JsonRpcProvider(RPC_ENDPOINT);
+// Import the new RPC provider system
+import { getProvider, executeWithFailover } from './rpc-provider';
 
 /**
  * Call a contract function using ethers.js
@@ -71,21 +68,23 @@ async function callContractFunction<T>(
   params: any[] = []
 ): Promise<T | null> {
   try {
-    // Create a contract instance
-    const contract = new ethers.Contract(contractAddress, abi, provider);
-    
-    // Add timeout to prevent hanging on bad contracts
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Contract call timeout')), 3000)
-    );
-    
-    // Call the function with timeout
-    const result = await Promise.race([
-      contract[functionName](...params),
-      timeoutPromise
-    ]) as T;
-    
-    return result;
+    return await executeWithFailover(async (provider) => {
+      // Create a contract instance
+      const contract = new ethers.Contract(contractAddress, abi, provider);
+      
+      // Add timeout to prevent hanging on bad contracts
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Contract call timeout')), 3000)
+      );
+      
+      // Call the function with timeout
+      const result = await Promise.race([
+        contract[functionName](...params),
+        timeoutPromise
+      ]) as T;
+      
+      return result;
+    });
   } catch (error: any) {
     // Only log errors that aren't expected (execution reverted is expected for non-LP tokens)
     if (!error.message?.includes('execution reverted') && 

@@ -14,6 +14,7 @@ import { getTokenPricesFromDexScreener, getTokenPriceFromDexScreener } from "./s
 import { getDirectTokenBalances } from "./services/blockchain-service";
 import { calculateBalancesFromTransferHistory, getTransferHistoryWithBalances } from "./services/transfer-history-service";
 import { getDirectTokenBalances as getDirectBalances } from "./services/direct-balance-service";
+import { getProviderHealth, switchToProvider, resetFailedProviders } from "./services/rpc-provider";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
@@ -1898,6 +1899,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ 
         message: "Failed to remove token from DexScreener preferred list",
         error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // RPC provider health monitoring
+  app.get('/api/rpc-health', async (_req, res) => {
+    try {
+      const health = await getProviderHealth();
+      res.json(health);
+    } catch (error) {
+      console.error('Error getting RPC provider health:', error);
+      res.status(500).json({ 
+        error: 'Failed to get RPC provider health',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Switch RPC provider endpoint (for debugging/admin use)
+  app.post('/api/rpc-switch/:index', async (req, res) => {
+    try {
+      const index = parseInt(req.params.index);
+      if (isNaN(index) || index < 0) {
+        return res.status(400).json({ error: 'Invalid provider index' });
+      }
+      
+      switchToProvider(index);
+      const health = await getProviderHealth();
+      
+      res.json({ 
+        message: `Switched to provider ${index}`,
+        health 
+      });
+    } catch (error) {
+      console.error('Error switching RPC provider:', error);
+      res.status(500).json({ 
+        error: 'Failed to switch RPC provider',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Reset failed providers endpoint
+  app.post('/api/rpc-reset', async (_req, res) => {
+    try {
+      resetFailedProviders();
+      const health = await getProviderHealth();
+      
+      res.json({ 
+        message: 'Reset all failed providers',
+        health 
+      });
+    } catch (error) {
+      console.error('Error resetting RPC providers:', error);
+      res.status(500).json({ 
+        error: 'Failed to reset RPC providers',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });

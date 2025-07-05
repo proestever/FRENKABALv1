@@ -5,10 +5,7 @@ import { getTokenPriceFromDexScreener } from './dexscreener';
 import { storage } from '../storage';
 import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
 import { updateLoadingProgress } from '../routes';
-
-// Initialize ethers provider
-const RPC_ENDPOINT = 'https://rpc-pulsechain.g4mm4.io';
-const provider = new ethers.providers.JsonRpcProvider(RPC_ENDPOINT);
+import { getProvider, executeWithFailover } from './rpc-provider';
 
 // Constants
 const TRANSFER_EVENT_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
@@ -36,20 +33,26 @@ async function getWalletTokens(walletAddress: string): Promise<Set<string>> {
     const normalizedAddress = walletAddress.toLowerCase();
     const paddedAddress = ethers.utils.hexZeroPad(normalizedAddress, 32);
     
-    // Get current block
-    const currentBlock = await provider.getBlockNumber();
+    // Get current block with failover
+    const currentBlock = await executeWithFailover(async (provider) => {
+      return await provider.getBlockNumber();
+    });
     
     // Fetch all transfer events where wallet is sender or receiver
     const [incomingLogs, outgoingLogs] = await Promise.all([
-      provider.getLogs({
-        fromBlock: 0,
-        toBlock: currentBlock,
-        topics: [TRANSFER_EVENT_TOPIC, null, paddedAddress]
+      executeWithFailover(async (provider) => {
+        return await provider.getLogs({
+          fromBlock: 0,
+          toBlock: currentBlock,
+          topics: [TRANSFER_EVENT_TOPIC, null, paddedAddress]
+        });
       }),
-      provider.getLogs({
-        fromBlock: 0,
-        toBlock: currentBlock,
-        topics: [TRANSFER_EVENT_TOPIC, paddedAddress, null]
+      executeWithFailover(async (provider) => {
+        return await provider.getLogs({
+          fromBlock: 0,
+          toBlock: currentBlock,
+          topics: [TRANSFER_EVENT_TOPIC, paddedAddress, null]
+        });
       })
     ]);
     
@@ -81,31 +84,33 @@ async function getTokenInfo(tokenAddress: string, walletAddress: string): Promis
   balanceFormatted: number;
 } | null> {
   try {
-    const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+    return await executeWithFailover(async (provider) => {
+      const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+      
+      // Get metadata and balance in parallel
+      const [decimals, symbol, name, balance] = await Promise.all([
+        contract.decimals().catch(() => 18),
+        contract.symbol().catch(() => 'UNKNOWN'),
+        contract.name().catch(() => 'Unknown Token'),
+        contract.balanceOf(walletAddress).catch(() => ethers.BigNumber.from(0))
+      ]);
     
-    // Get metadata and balance in parallel
-    const [decimals, symbol, name, balance] = await Promise.all([
-      contract.decimals().catch(() => 18),
-      contract.symbol().catch(() => 'UNKNOWN'),
-      contract.name().catch(() => 'Unknown Token'),
-      contract.balanceOf(walletAddress).catch(() => ethers.BigNumber.from(0))
-    ]);
-    
-    const balanceFormatted = parseFloat(ethers.utils.formatUnits(balance, decimals));
-    
-    // Skip if balance is essentially zero
-    if (balanceFormatted < 0.000001) {
-      return null;
-    }
-    
-    return {
-      address: tokenAddress,
-      symbol,
-      name,
-      decimals,
-      balance: balance.toString(),
-      balanceFormatted
-    };
+      const balanceFormatted = parseFloat(ethers.utils.formatUnits(balance, decimals));
+      
+      // Skip if balance is essentially zero
+      if (balanceFormatted < 0.000001) {
+        return null;
+      }
+      
+      return {
+        address: tokenAddress,
+        symbol,
+        name,
+        decimals,
+        balance: balance.toString(),
+        balanceFormatted
+      };
+    });
   } catch (error) {
     console.error(`Error getting info for token ${tokenAddress}:`, error);
     return null;
@@ -132,11 +137,10 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     const tokenAddresses = await getWalletTokens(walletAddress);
     console.log(`Fetching balances for ${tokenAddresses.size} tokens...`);
     
-    // Add delay to show fetching tokens stage
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Get native PLS balance first
-    const plsBalance = await provider.getBalance(walletAddress);
+    // Get native PLS balance first with failover
+    const plsBalance = await executeWithFailover(async (provider) => {
+      return await provider.getBalance(walletAddress);
+    });
     const plsBalanceFormatted = parseFloat(ethers.utils.formatUnits(plsBalance, PLS_DECIMALS));
     const plsPrice = await getTokenPriceFromDexScreener(WPLS_CONTRACT_ADDRESS) || 0;
     
