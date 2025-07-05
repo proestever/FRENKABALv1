@@ -149,7 +149,7 @@ export async function fetchWalletDataClientSide(
           }
           
           processedCount++;
-          const progress = 30 + (processedCount / totalTokens) * 60; // 30% to 90%
+          const progress = Math.round(30 + (processedCount / totalTokens) * 60); // 30% to 90%
           if (onProgress) onProgress(`Fetching prices... (${processedCount}/${totalTokens})`, progress);
         })
       );

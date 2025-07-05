@@ -140,6 +140,7 @@ Required environment variables:
 - **Type safety improvements** - Aligned `plsBalance` and `plsPriceChange` types to use `undefined` instead of `null`
 - **Zero server-side rate limits** - Each user's browser makes its own DexScreener API calls independently
 - **Logo caching maintained** - Client-fetched logos are still saved to server for future use
+- **Fixed loading percentage display** - Loading percentages now show as whole numbers (24%) instead of decimals (24.5%)
 
 ### July 5, 2025 - Token Logo Collection from DexScreener
 - **Integrated logo collection during price fetching** - When fetching token prices from DexScreener, logos are now automatically collected and saved
