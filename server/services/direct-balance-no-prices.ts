@@ -243,8 +243,24 @@ export async function getDirectTokenBalancesNoPrices(walletAddress: string): Pro
     console.log('Fetching LPs...');
 
     // Check for LP tokens but don't fetch prices
-    const lpTokens = processedTokens.filter(token => isLiquidityPoolToken(token.symbol));
+    console.log(`Checking ${processedTokens.length} tokens for LP interface`);
+    const lpCheckPromises = processedTokens.map(async (token) => {
+      try {
+        const isLp = await isLiquidityPoolToken(token.address);
+        if (isLp) {
+          console.log(`Detected LP token: ${token.symbol} (${token.address})`);
+          token.isLp = true;
+        }
+      } catch (error) {
+        // Skip if can't determine LP status
+      }
+    });
     
+    // Wait for all LP checks to complete
+    await Promise.all(lpCheckPromises);
+    
+    // Process LP tokens to get pooled amounts
+    const lpTokens = processedTokens.filter(t => t.isLp);
     if (lpTokens.length > 0) {
       console.log(`Processing ${lpTokens.length} LP tokens for pooled amounts`);
       const processedTokensWithLp = await processLpTokens(processedTokens, walletAddress);
