@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 5, 2025 - Token Logo Collection from DexScreener
+- **Integrated logo collection during price fetching** - When fetching token prices from DexScreener, logos are now automatically collected and saved
+- **Automatic logo storage** - DexScreener logos are saved to database when found during price fetching
+- **FrenKabal placeholder fallback** - When DexScreener doesn't provide a logo, the system saves and uses `/assets/100xfrenlogo.png` placeholder
+- **Reduced API calls** - Logos are cached in database, preventing repeated logo fetch requests
+- **Updated direct-balance-service** - Modified to use `getTokenPriceDataFromDexScreener` which returns both price and logo data
+- **Persistent logo storage** - All tokens now have either a DexScreener logo or FrenKabal placeholder stored in database
+
 ### July 5, 2025 - Major Performance Optimization for Large Wallets
 - **10x faster batch processing** - Increased batch size from 5 to 50 tokens for parallel processing
 - **Optimized block scanning** - Limited lookback to 1M blocks (~3 months) instead of scanning from genesis block

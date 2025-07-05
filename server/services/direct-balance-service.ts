@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { ProcessedToken } from '../types';
 import { getDefaultLogo } from './blockchain-service';
-import { getTokenPriceFromDexScreener } from './dexscreener';
+import { getTokenPriceFromDexScreener, getTokenPriceDataFromDexScreener } from './dexscreener';
 import { storage } from '../storage';
 import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
 import { updateLoadingProgress } from '../routes';
@@ -212,23 +212,54 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       const batchResults = await Promise.all(
         batch.map(async (tokenAddress) => {
           try {
-            // Get token info and price in parallel
-            const [tokenInfo, price] = await Promise.all([
+            // Get token info and price data in parallel
+            const [tokenInfo, priceData] = await Promise.all([
               getTokenInfo(tokenAddress, walletAddress),
-              getTokenPriceFromDexScreener(tokenAddress).catch(() => 0)
+              getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null)
             ]);
             
             if (!tokenInfo) return null;
             
-            // Get logo (fast lookup)
+            // Initialize logo URL with default
             let logoUrl = getDefaultLogo(tokenInfo.symbol);
-            try {
-              const storedLogo = await storage.getTokenLogo(tokenAddress);
-              if (storedLogo?.logoUrl) {
-                logoUrl = storedLogo.logoUrl;
+            
+            // Check if DexScreener provided a logo
+            if (priceData && priceData.logo) {
+              logoUrl = priceData.logo;
+              
+              // Save the DexScreener logo to database
+              try {
+                await storage.saveTokenLogo({
+                  tokenAddress: tokenAddress.toLowerCase(),
+                  logoUrl: priceData.logo,
+                  symbol: tokenInfo.symbol,
+                  name: tokenInfo.name,
+                  lastUpdated: new Date().toISOString()
+                });
+              } catch (error) {
+                console.error(`Failed to save DexScreener logo for ${tokenAddress}:`, error);
               }
-            } catch (error) {
-              // Use default logo
+            } else {
+              // No DexScreener logo, check if we have a stored logo
+              try {
+                const storedLogo = await storage.getTokenLogo(tokenAddress);
+                if (storedLogo?.logoUrl) {
+                  logoUrl = storedLogo.logoUrl;
+                } else {
+                  // Save the FrenKabal placeholder logo
+                  await storage.saveTokenLogo({
+                    tokenAddress: tokenAddress.toLowerCase(),
+                    logoUrl: '/assets/100xfrenlogo.png',
+                    symbol: tokenInfo.symbol,
+                    name: tokenInfo.name,
+                    lastUpdated: new Date().toISOString()
+                  });
+                  logoUrl = '/assets/100xfrenlogo.png';
+                }
+              } catch (error) {
+                // Use FrenKabal placeholder
+                logoUrl = '/assets/100xfrenlogo.png';
+              }
             }
             
             return {
@@ -238,8 +269,8 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
               decimals: tokenInfo.decimals,
               balance: tokenInfo.balance,
               balanceFormatted: tokenInfo.balanceFormatted,
-              price: price || 0,
-              value: tokenInfo.balanceFormatted * (price || 0),
+              price: priceData?.price || 0,
+              value: tokenInfo.balanceFormatted * (priceData?.price || 0),
               logo: logoUrl,
               verified: false
             };
