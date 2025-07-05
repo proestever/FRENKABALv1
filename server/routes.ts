@@ -847,7 +847,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Try to get logo from known sources based on token info
               let logoUrl = '/assets/100xfrenlogo.png'; // Default fallback
               
-              if (tokenInfo.symbol) {
+              // First, check if DexScreener provides a logo in the info field
+              if (pair.info && pair.info.imageUrl) {
+                logoUrl = pair.info.imageUrl;
+                console.log(`Found DexScreener logo for ${address}: ${logoUrl}`);
+              } else if (tokenInfo.symbol) {
                 const symbol = tokenInfo.symbol.toLowerCase();
                 
                 // Check if it's a known token with a specific logo

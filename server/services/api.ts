@@ -184,11 +184,15 @@ export async function getWalletTransactionHistory(
             try {
               const dexData = await getDexScreenerTokenData(address);
               if (dexData && dexData.pairs && dexData.pairs.length > 0) {
-                const tokenInfo = dexData.pairs[0].baseToken.address.toLowerCase() === address 
-                  ? dexData.pairs[0].baseToken 
-                  : dexData.pairs[0].quoteToken;
+                const pair = dexData.pairs[0];
+                const tokenInfo = pair.baseToken.address.toLowerCase() === address 
+                  ? pair.baseToken 
+                  : pair.quoteToken;
                 
-                if (tokenInfo.info?.imageUrl) {
+                // Check for logo in info field first
+                if (pair.info && pair.info.imageUrl) {
+                  tokenLogos[address] = pair.info.imageUrl;
+                } else if (tokenInfo.info?.imageUrl) {
                   tokenLogos[address] = tokenInfo.info.imageUrl;
                 }
               }
@@ -456,7 +460,11 @@ export async function getWalletDataFull(
                   
                   let newLogoUrl = getDefaultLogo(tokenBalance.symbol || '');
                   
-                  if (tokenInfo.symbol) {
+                  // First, check if DexScreener provides a logo in the info field
+                  if (pair.info && pair.info.imageUrl) {
+                    newLogoUrl = pair.info.imageUrl;
+                    console.log(`Found DexScreener logo for ${tokenBalance.address}: ${newLogoUrl}`);
+                  } else if (tokenInfo.symbol) {
                     const symbol = tokenInfo.symbol.toLowerCase();
                     
                     const knownLogos: Record<string, string> = {
