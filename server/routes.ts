@@ -829,25 +829,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
         console.log("Detected request for native PLS token logo, using special handling");
         
-        // Check if we already have this logo saved
-        let logo = await storage.getTokenLogo(address);
-        
-        if (!logo) {
-          // Store our custom PLS logo for the native token
-          const newLogo = {
-            tokenAddress: address,
-            logoUrl: '/assets/pls-logo-trimmed.png', // Reference to static asset we're serving
-            symbol: "PLS",
-            name: "PulseChain",
-            lastUpdated: new Date().toISOString()
-          };
-          
-          console.log(`Saving logo for token ${address}: ${newLogo.logoUrl}`);
-          logo = await storage.saveTokenLogo(newLogo);
-          console.log(`Saved new token logo for ${address}: ${newLogo.logoUrl}`);
-        }
-        
-        return res.json(logo);
+        // Always return PLS logo directly
+        return res.json({
+          tokenAddress: address,
+          logoUrl: '/assets/pls-logo-trimmed.png',
+          symbol: "PLS",
+          name: "PulseChain",
+          lastUpdated: new Date().toISOString()
+        });
       }
       
       // For other tokens, validate the address format
@@ -856,142 +845,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid token address format" });
       }
 
-      // Check if logo exists in our database
-      let logo = await storage.getTokenLogo(address);
+      // Always use direct DexScreener CDN URL - no API calls needed!
+      let logoUrl = `https://dd.dexscreener.com/ds-data/tokens/pulsechain/${address.toLowerCase()}.png`;
+      console.log(`Using direct DexScreener CDN URL for ${address}: ${logoUrl}`);
       
-      // If not found in database, try to fetch from DexScreener first
-      if (!logo) {
-        try {
-          console.log(`Fetching token info from DexScreener for ${address}`);
-          const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
-          
-          if (response.ok) {
-            const data = await response.json() as any;
-            
-            if (data.pairs && data.pairs.length > 0) {
-              const pair = data.pairs[0];
-              const tokenInfo = pair.baseToken.address.toLowerCase() === address.toLowerCase() 
-                ? pair.baseToken 
-                : pair.quoteToken;
-              
-              // Try to get logo from known sources based on token info
-              let logoUrl = '/assets/100xfrenlogo.png'; // Default fallback
-              
-              // First, check if DexScreener provides a logo in the info field
-              if (pair.info && pair.info.imageUrl) {
-                logoUrl = pair.info.imageUrl;
-                console.log(`Found DexScreener logo for ${address}: ${logoUrl}`);
-              } else if (tokenInfo.symbol) {
-                const symbol = tokenInfo.symbol.toLowerCase();
-                
-                // Check if it's a known token with a specific logo
-                const knownLogos: Record<string, string> = {
-                  'pls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
-                  'wpls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
-                  'plsx': 'https://tokens.app.pulsex.com/images/tokens/0x15D38573d2feeb82e7ad5187aB8c5D52810B6f40.png',
-                  'hex': 'https://tokens.app.pulsex.com/images/tokens/0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39.png',
-                  'weth': 'https://tokens.app.pulsex.com/images/tokens/0x02DcdD04e3F455D838cd1249292C58f3B79e3C3C.png',
-                  'usdc': 'https://tokens.app.pulsex.com/images/tokens/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48.png',
-                  'usdt': 'https://tokens.app.pulsex.com/images/tokens/0xdAC17F958D2ee523a2206206994597C13D831ec7.png',
-                  'inc': 'https://tokens.app.pulsex.com/images/tokens/0x6c203a555824ec90a215f37916cf8db58ebe2fa3.png'
-                };
-                
-                if (knownLogos[symbol]) {
-                  logoUrl = knownLogos[symbol];
-                } else {
-                  // Try PulseX token images by address first
-                  logoUrl = `https://tokens.app.pulsex.com/images/tokens/${address}.png`;
-                }
-              }
-              
-              const newLogo = {
-                tokenAddress: address,
-                logoUrl: logoUrl,
-                symbol: tokenInfo.symbol || "",
-                name: tokenInfo.name || "",
-                lastUpdated: new Date().toISOString()
-              };
-              
-              logo = await storage.saveTokenLogo(newLogo);
-              console.log(`Saved DexScreener-based logo for token ${address}: ${logoUrl}`);
-            } else {
-              console.log(`No DexScreener pairs found for ${address}, using default logo`);
-              // No pairs found, save default logo
-              const defaultLogo = {
-                tokenAddress: address,
-                logoUrl: '/assets/100xfrenlogo.png',
-                symbol: "",
-                name: "",
-                lastUpdated: new Date().toISOString()
-              };
-              
-              logo = await storage.saveTokenLogo(defaultLogo);
-              console.log(`Saved default logo for token ${address} - no DexScreener data`);
-            }
-          } else {
-            console.log(`DexScreener API error for ${address}: ${response.status}`);
-            // DexScreener API error, save default logo
-            const defaultLogo = {
-              tokenAddress: address,
-              logoUrl: '/assets/100xfrenlogo.png',
-              symbol: "",
-              name: "",
-              lastUpdated: new Date().toISOString()
-            };
-            
-            logo = await storage.saveTokenLogo(defaultLogo);
-            console.log(`Saved default logo for token ${address} after DexScreener API error`);
-          }
-        } catch (err) {
-          console.error(`Error fetching token data from DexScreener: ${err}`);
-          
-          // Even on error, store a default logo to prevent future API calls
-          const defaultLogo = {
-            tokenAddress: address,
-            logoUrl: '/assets/100xfrenlogo.png',
-            symbol: "",
-            name: "",
-            lastUpdated: new Date().toISOString()
-          };
-          
-          logo = await storage.saveTokenLogo(defaultLogo);
-          console.log(`Saved fallback logo for token ${address} after DexScreener error`);
+      // For specific known tokens that should use different logos
+      const knownFallbacks: Record<string, { url: string, symbol: string, name: string }> = {
+        '0xa1077a294dde1b09bb078844df40758a5d0f9a27': { 
+          url: 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
+          symbol: 'WPLS',
+          name: 'Wrapped Pulse'
+        },
+        '0x15d38573d2feeb82e7ad5187ab8c5d52810b6f40': {
+          url: 'https://tokens.app.pulsex.com/images/tokens/0x15D38573d2feeb82e7ad5187aB8c5D52810B6f40.png',
+          symbol: 'PLSX',
+          name: 'PulseX'
         }
+      };
+      
+      const addressLower = address.toLowerCase();
+      let symbol = '';
+      let name = '';
+      
+      if (knownFallbacks[addressLower]) {
+        logoUrl = knownFallbacks[addressLower].url;
+        symbol = knownFallbacks[addressLower].symbol;
+        name = knownFallbacks[addressLower].name;
+        console.log(`Using known fallback logo for ${symbol}: ${logoUrl}`);
       }
       
-      // By this point, we should always have a logo - either a real one or a fallback
-      // But as a final safety check, create a default logo if somehow we still don't have one
-      if (!logo) {
-        // Create default fallback logo as absolute last resort
-        const fallbackLogo = {
-          tokenAddress: address,
-          logoUrl: '/assets/100xfrenlogo.png',
-          symbol: null,
-          name: null,
-          lastUpdated: new Date().toISOString()
-        };
-        
-        try {
-          logo = await storage.saveTokenLogo(fallbackLogo);
-          console.log(`Created final fallback logo for ${address}`);
-        } catch (err) {
-          console.error(`Failed to save final fallback logo: ${err}`);
-          
-          // If we still somehow don't have a logo at this point,
-          // create a final error response instead of returning 404
-          return res.json({
-            id: -1,
-            tokenAddress: address,
-            logoUrl: '/assets/100xfrenlogo.png',
-            symbol: null,
-            name: null,
-            lastUpdated: new Date().toISOString()
-          });
-        }
-      }
+      // Return the logo URL directly without saving to database
+      return res.json({
+        tokenAddress: address,
+        logoUrl: logoUrl,
+        symbol: symbol,
+        name: name,
+        lastUpdated: new Date().toISOString()
+      });
       
-      // At this point we should definitely have a logo to return
-      return res.json(logo);
     } catch (error) {
       console.error("Error fetching token logo:", error);
       return res.status(500).json({ 
