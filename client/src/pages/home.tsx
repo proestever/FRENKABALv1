@@ -14,8 +14,8 @@ import { Button } from '@/components/ui/button';
 import { saveRecentAddress, ProcessedToken, fetchWalletData, fetchAllWalletTokens, forceRefreshWalletData } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
+
 import { useDirectBalance } from '@/hooks/use-direct-balance';
-import { useProgressiveWallet } from '@/hooks/use-progressive-wallet';
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
 import { combineWalletData } from '@/lib/utils';
@@ -454,22 +454,32 @@ export default function Home() {
     }
   }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
 
-  // Use progressive loading for much faster initial display
+  // Use our new hook for loading all wallet tokens without pagination
+  const { 
+    walletData: standardWalletData, 
+    isLoading: standardIsLoading, 
+    isError: standardIsError, 
+    error: standardError, 
+    refetch: standardRefetch,
+    isFetching: standardIsFetching,
+    progress
+  } = useAllWalletTokens(searchedAddress)
+  
+  // Use direct balance hook
   const {
     walletData,
     isLoading,
     isError,
     error,
     refetch,
-    enrichmentProgress,
-    isEnriching
-  } = useProgressiveWallet(searchedAddress)
+    isFetching,
+  } = useDirectBalance(searchedAddress, { enabled: true })
   
   // Debug wallet data
   useEffect(() => {
     console.log('Wallet data changed:', walletData);
-    console.log('isLoading:', isLoading, 'isEnriching:', isEnriching, 'isError:', isError);
-  }, [walletData, isLoading, isEnriching, isError]);
+    console.log('isLoading:', isLoading, 'isFetching:', isFetching, 'isError:', isError);
+  }, [walletData, isLoading, isFetching, isError]);
 
   // Handle errors
   useEffect(() => {
@@ -592,9 +602,9 @@ export default function Home() {
       
       {/* Loading Progress Bar - shows during loading */}
       <LoadingProgress 
-        isLoading={isLoading || isEnriching || isMultiWalletLoading} 
+        isLoading={isLoading || isFetching || isMultiWalletLoading} 
         walletAddress={searchedAddress || (multiWalletData ? 'Multiple wallets' : undefined)}
-        customProgress={isMultiWalletLoading ? multiWalletProgress : undefined}
+        customProgress={isMultiWalletLoading ? multiWalletProgress : progress}
       />
       
       {/* Multi-wallet results section */}
@@ -736,7 +746,7 @@ export default function Home() {
       )}
       
       {/* Single wallet view - only show wallet data when not loading */}
-      {searchedAddress && !isError && !(isLoading || isEnriching) && !multiWalletData && (
+      {searchedAddress && !isError && !(isLoading || isFetching) && !multiWalletData && (
         <>
           <div className="mt-4">
             {/* Two-column layout: Wallet overview (1/3) on left, Token list (2/3) on right */}
