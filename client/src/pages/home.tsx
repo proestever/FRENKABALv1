@@ -90,18 +90,6 @@ export default function Home() {
     // Always invalidate cache to ensure fresh data, even when searching for the same address
     console.log('Searching wallet address, clearing cache to ensure fresh data:', address);
     
-    // Preload HEX stakes data immediately when searching
-    console.log('Preloading HEX stakes data for wallet:', address);
-    fetchHexStakesSummary(address)
-      .then(hexData => {
-        console.log(`Preloaded HEX stakes for wallet ${address}:`, hexData);
-        setSingleWalletHexStakes(hexData);
-      })
-      .catch(err => {
-        console.error('Error preloading HEX stakes:', err);
-        setSingleWalletHexStakes(null);
-      });
-    
     // Clear any existing wallet cache
     if (searchedAddress) {
       // Invalidate the previous wallet's cache
@@ -480,12 +468,20 @@ export default function Home() {
   // Fetch HEX stakes for single wallet
   const [singleWalletHexStakes, setSingleWalletHexStakes] = useState<HexStakeSummary | null>(null);
   
-  // Clear HEX stakes when switching to multi-wallet mode
   useEffect(() => {
-    if (multiWalletData) {
-      setSingleWalletHexStakes(null);
+    if (searchedAddress && !multiWalletData) {
+      // Fetch HEX stakes for single wallet
+      fetchHexStakesSummary(searchedAddress)
+        .then(hexData => {
+          console.log(`Fetched HEX stakes for single wallet ${searchedAddress}:`, hexData);
+          setSingleWalletHexStakes(hexData);
+        })
+        .catch(err => {
+          console.error('Error fetching HEX stakes for single wallet:', err);
+          setSingleWalletHexStakes(null);
+        });
     }
-  }, [multiWalletData]);
+  }, [searchedAddress, multiWalletData]);
   
   // Debug wallet data
   useEffect(() => {

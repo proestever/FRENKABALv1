@@ -52,20 +52,16 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
   
   // Update the manual summary when either the prop or hook data changes
   useEffect(() => {
-    console.log('WalletOverview HEX stakes update - prop:', hexStakesSummary, 'hook:', hexStakesFromHook);
-    
-    // If we have provided summary data from prop (single wallet passed from home), use that
+    // If we have provided summary data from prop (multi-wallet mode), use that
     if (hexStakesSummary && hexStakesSummary.stakeCount > 0) {
-      console.log('Using HEX stakes from prop:', hexStakesSummary);
       setManualHexSummary(hexStakesSummary);
     } 
     // Otherwise, if we have hook data (single wallet mode), use that
     else if (hexStakesFromHook && hexStakesFromHook.stakeCount > 0) {
-      console.log('Using HEX stakes from hook:', hexStakesFromHook);
       setManualHexSummary(hexStakesFromHook);
     }
     // In all other cases, fetch directly
-    else if (wallet?.address && !hexStakesSummary) {
+    else if (wallet?.address) {
       // For all wallets, fetch fresh data normally
       console.log('Manually fetching HEX stakes for wallet overview card:', wallet.address);
       fetchHexStakesSummary(wallet.address)
