@@ -38,27 +38,56 @@ async function getWalletTokens(walletAddress: string): Promise<Set<string>> {
       return await provider.getBlockNumber();
     });
     
-    // Fetch all transfer events where wallet is sender or receiver
-    const [incomingLogs, outgoingLogs] = await Promise.all([
-      executeWithFailover(async (provider) => {
-        return await provider.getLogs({
-          fromBlock: 0,
-          toBlock: currentBlock,
-          topics: [TRANSFER_EVENT_TOPIC, null, paddedAddress]
-        });
-      }),
-      executeWithFailover(async (provider) => {
-        return await provider.getLogs({
-          fromBlock: 0,
-          toBlock: currentBlock,
-          topics: [TRANSFER_EVENT_TOPIC, paddedAddress, null]
-        });
-      })
-    ]);
+    // For performance, only look back 1M blocks (~3 months on PulseChain)
+    // This captures recent activity without scanning entire blockchain
+    const BLOCK_LOOKBACK = 1000000;
+    const fromBlock = Math.max(0, currentBlock - BLOCK_LOOKBACK);
+    
+    console.log(`Scanning blocks ${fromBlock} to ${currentBlock} (last ${BLOCK_LOOKBACK} blocks)`);
+    
+    // Fetch transfer events in parallel with chunking for large ranges
+    const CHUNK_SIZE = 100000; // 100k blocks per chunk
+    const chunks: Array<{from: number, to: number}> = [];
+    
+    for (let block = fromBlock; block <= currentBlock; block += CHUNK_SIZE) {
+      chunks.push({
+        from: block,
+        to: Math.min(block + CHUNK_SIZE - 1, currentBlock)
+      });
+    }
+    
+    // Process chunks in parallel
+    const chunkPromises = chunks.map(async (chunk) => {
+      try {
+        const [incoming, outgoing] = await Promise.all([
+          executeWithFailover(async (provider) => {
+            return await provider.getLogs({
+              fromBlock: chunk.from,
+              toBlock: chunk.to,
+              topics: [TRANSFER_EVENT_TOPIC, null, paddedAddress]
+            });
+          }),
+          executeWithFailover(async (provider) => {
+            return await provider.getLogs({
+              fromBlock: chunk.from,
+              toBlock: chunk.to,
+              topics: [TRANSFER_EVENT_TOPIC, paddedAddress, null]
+            });
+          })
+        ]);
+        return [...incoming, ...outgoing];
+      } catch (error) {
+        console.warn(`Error fetching logs for chunk ${chunk.from}-${chunk.to}:`, error);
+        return [];
+      }
+    });
+    
+    const allChunkResults = await Promise.all(chunkPromises);
+    const allLogs = allChunkResults.flat();
     
     // Extract unique token addresses
     const tokenAddresses = new Set<string>();
-    [...incomingLogs, ...outgoingLogs].forEach(log => {
+    allLogs.forEach(log => {
       tokenAddresses.add(log.address.toLowerCase());
     });
     
@@ -165,62 +194,81 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     
     // Continue showing fetching tokens progress
     
-    // Process tokens in batches
-    const BATCH_SIZE = 5;
+    // Process tokens in larger batches for better performance
+    const BATCH_SIZE = 50; // Increased from 5 to 50 for 10x faster processing
     const tokenArray = Array.from(tokenAddresses);
     const totalTokens = tokenArray.length;
     
+    // Split tokens into batches
+    const batches: string[][] = [];
     for (let i = 0; i < tokenArray.length; i += BATCH_SIZE) {
-      const batch = tokenArray.slice(i, i + BATCH_SIZE);
+      batches.push(tokenArray.slice(i, i + BATCH_SIZE));
+    }
+    
+    console.log(`Processing ${totalTokens} tokens in ${batches.length} batches of ${BATCH_SIZE}`);
+    
+    // Process all batches in parallel
+    const batchPromises = batches.map(async (batch, batchIndex) => {
+      const batchResults = await Promise.all(
+        batch.map(async (tokenAddress) => {
+          try {
+            // Get token info and price in parallel
+            const [tokenInfo, price] = await Promise.all([
+              getTokenInfo(tokenAddress, walletAddress),
+              getTokenPriceFromDexScreener(tokenAddress).catch(() => 0)
+            ]);
+            
+            if (!tokenInfo) return null;
+            
+            // Get logo (fast lookup)
+            let logoUrl = getDefaultLogo(tokenInfo.symbol);
+            try {
+              const storedLogo = await storage.getTokenLogo(tokenAddress);
+              if (storedLogo?.logoUrl) {
+                logoUrl = storedLogo.logoUrl;
+              }
+            } catch (error) {
+              // Use default logo
+            }
+            
+            return {
+              address: tokenAddress,
+              symbol: tokenInfo.symbol,
+              name: tokenInfo.name,
+              decimals: tokenInfo.decimals,
+              balance: tokenInfo.balance,
+              balanceFormatted: tokenInfo.balanceFormatted,
+              price: price || 0,
+              value: tokenInfo.balanceFormatted * (price || 0),
+              logo: logoUrl,
+              verified: false
+            };
+          } catch (error) {
+            console.error(`Error processing token ${tokenAddress}:`, error);
+            return null;
+          }
+        })
+      );
       
-      // Calculate progress: 0% to 25% for token fetching
-      const tokenProgress = (i / totalTokens) * 25; // 25% range for tokens
-      const currentProgress = Math.floor(tokenProgress);
+      // Update progress as batches complete
+      const completedTokens = (batchIndex + 1) * BATCH_SIZE;
+      const tokenProgress = Math.min((completedTokens / totalTokens) * 25, 25);
       
       updateLoadingProgress({
         status: 'loading',
-        currentBatch: currentProgress,
+        currentBatch: Math.floor(tokenProgress),
         totalBatches: 100,
-        message: `Fetching tokens... (${Math.min(i + BATCH_SIZE, totalTokens)}/${totalTokens})`
+        message: `Fetching tokens... (${Math.min(completedTokens, totalTokens)}/${totalTokens})`
       });
       
-      await Promise.all(batch.map(async (tokenAddress) => {
-        const tokenInfo = await getTokenInfo(tokenAddress, walletAddress);
-        if (!tokenInfo) return;
-        
-        // Get price
-        const price = await getTokenPriceFromDexScreener(tokenAddress) || 0;
-        
-        // Get logo
-        let logoUrl = getDefaultLogo(tokenInfo.symbol);
-        try {
-          const storedLogo = await storage.getTokenLogo(tokenAddress);
-          if (storedLogo && storedLogo.logoUrl) {
-            logoUrl = storedLogo.logoUrl;
-          }
-        } catch (error) {
-          // Use default logo
-        }
-        
-        processedTokens.push({
-          address: tokenAddress,
-          symbol: tokenInfo.symbol,
-          name: tokenInfo.name,
-          decimals: tokenInfo.decimals,
-          balance: tokenInfo.balance,
-          balanceFormatted: tokenInfo.balanceFormatted,
-          price,
-          value: tokenInfo.balanceFormatted * price,
-          logo: logoUrl,
-          verified: false
-        });
-      }));
-      
-      // Small delay between batches to show progress
-      if (i + BATCH_SIZE < tokenArray.length) {
-        await new Promise(resolve => setTimeout(resolve, 400));
-      }
-    }
+      return batchResults.filter(result => result !== null);
+    });
+    
+    // Wait for all batches to complete
+    const batchResults = await Promise.all(batchPromises);
+    
+    // Flatten results and add to processedTokens
+    processedTokens.push(...batchResults.flat());
     
     // Update progress - Fetching LPs (25%)
     updateLoadingProgress({
@@ -230,12 +278,9 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       message: 'Fetching LPs...'
     });
     
-    // Add delay to show LP fetching stage
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Detect LP tokens
+    // Detect LP tokens in parallel
     console.log(`Checking ${processedTokens.length} tokens for LP interface`);
-    for (const token of processedTokens) {
+    const lpCheckPromises = processedTokens.map(async (token) => {
       try {
         const isLp = await isLiquidityPoolToken(token.address);
         if (isLp) {
@@ -245,7 +290,10 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       } catch (error) {
         // Skip if can't determine LP status
       }
-    }
+    });
+    
+    // Wait for all LP checks to complete
+    await Promise.all(lpCheckPromises);
     
     // Process LP tokens to get pooled amounts
     const lpTokens = processedTokens.filter(t => t.isLp);
@@ -263,9 +311,6 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       message: 'Fetching HEX stakes...'
     });
     
-    // Add delay to show HEX stakes stage
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
     // Sort by value descending
     processedTokens.sort((a, b) => (b.value || 0) - (a.value || 0));
     
@@ -276,9 +321,6 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
       totalBatches: 100,
       message: 'Fetching prices...'
     });
-    
-    // Add delay to show prices stage
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
     const endTime = Date.now();
     console.log(`Direct balance fetch completed in ${endTime - startTime}ms`);

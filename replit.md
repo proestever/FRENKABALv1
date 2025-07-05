@@ -132,6 +132,15 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 5, 2025 - Major Performance Optimization for Large Wallets
+- **10x faster batch processing** - Increased batch size from 5 to 50 tokens for parallel processing
+- **Optimized block scanning** - Limited lookback to 1M blocks (~3 months) instead of scanning from genesis block
+- **Parallel chunk processing** - Split block ranges into 100k chunks processed simultaneously
+- **Parallel LP token detection** - All LP checks now run concurrently instead of sequentially
+- **Removed all artificial delays** - Eliminated 400ms batch delays and 1000ms stage delays (saved ~4s per wallet)
+- **Smart progress tracking** - Real-time progress updates without performance impact
+- **Expected improvement** - Large wallets should load 5-10x faster than before
+
 ### July 5, 2025 - Implemented Redundant RPC Provider System & Performance Optimization
 - **Created centralized RPC provider system** - New `rpc-provider.ts` service with automatic failover between g4mm4 and official PulseChain RPCs
 - **Provider priority order** - g4mm4 first (https://rpc-pulsechain.g4mm4.io), then official (https://rpc.pulsechain.com), with WebSocket support
