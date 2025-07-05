@@ -453,21 +453,29 @@ export async function getWalletDataFull(
             logoUrl = dexScreenerLogo;
             console.log(`Using DexScreener logo (without price) for ${tokenBalance.address}`);
           } else {
-            // Fallback to known logos if DexScreener doesn't have one
-            const symbol = (tokenBalance.symbol || '').toLowerCase();
-            const knownLogos: Record<string, string> = {
-              'pls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
-              'wpls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
-              'plsx': 'https://tokens.app.pulsex.com/images/tokens/0x15D38573d2feeb82e7ad5187aB8c5D52810B6f40.png',
-              'hex': 'https://tokens.app.pulsex.com/images/tokens/0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39.png',
-              'weth': 'https://tokens.app.pulsex.com/images/tokens/0x02DcdD04e3F455D838cd1249292C58f3B79e3C3C.png',
-              'usdc': 'https://tokens.app.pulsex.com/images/tokens/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48.png',
-              'usdt': 'https://tokens.app.pulsex.com/images/tokens/0xdAC17F958D2ee523a2206206994597C13D831ec7.png',
-              'inc': 'https://tokens.app.pulsex.com/images/tokens/0x6c203a555824ec90a215f37916cf8db58ebe2fa3.png'
-            };
-          
-            if (knownLogos[symbol]) {
-              logoUrl = knownLogos[symbol];
+            // Check specific addresses first for known logos
+            const addressLower = tokenBalance.address.toLowerCase();
+            if (addressLower === '0x7b39712ef45f7dced2bbdf11f3d5046ba61da719') {
+              logoUrl = 'https://dd.dexscreener.com/ds-data/tokens/pulsechain/0x7b39712ef45f7dced2bbdf11f3d5046ba61da719.png?key=991175';
+              console.log(`Using hardcoded logo for 9MM token: ${tokenBalance.address}`);
+            } else {
+              // Fallback to known logos by symbol if DexScreener doesn't have one
+              const symbol = (tokenBalance.symbol || '').toLowerCase();
+              const knownLogos: Record<string, string> = {
+                'pls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
+                'wpls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
+                'plsx': 'https://tokens.app.pulsex.com/images/tokens/0x15D38573d2feeb82e7ad5187aB8c5D52810B6f40.png',
+                'hex': 'https://tokens.app.pulsex.com/images/tokens/0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39.png',
+                'weth': 'https://tokens.app.pulsex.com/images/tokens/0x02DcdD04e3F455D838cd1249292C58f3B79e3C3C.png',
+                'usdc': 'https://tokens.app.pulsex.com/images/tokens/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48.png',
+                'usdt': 'https://tokens.app.pulsex.com/images/tokens/0xdAC17F958D2ee523a2206206994597C13D831ec7.png',
+                'inc': 'https://tokens.app.pulsex.com/images/tokens/0x6c203a555824ec90a215f37916cf8db58ebe2fa3.png',
+                '9mm': 'https://dd.dexscreener.com/ds-data/tokens/pulsechain/0x7b39712ef45f7dced2bbdf11f3d5046ba61da719.png?key=991175'
+              };
+            
+              if (knownLogos[symbol]) {
+                logoUrl = knownLogos[symbol];
+              }
             }
           }
         }
