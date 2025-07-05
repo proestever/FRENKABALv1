@@ -128,8 +128,14 @@ export async function fetchWalletDataClientSide(
             // Skip if already has price (shouldn't happen with no-prices endpoint)
             if (token.price && token.price > 0) return;
             
+            // For PLS native token, use WPLS price
+            let tokenAddressForPrice = token.address;
+            if (token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+              tokenAddressForPrice = '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
+            }
+            
             // Fetch price from DexScreener
-            const priceData = await getTokenPriceFromDexScreener(token.address);
+            const priceData = await getTokenPriceFromDexScreener(tokenAddressForPrice);
             
             if (priceData) {
               token.price = priceData.price;

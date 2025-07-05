@@ -135,7 +135,19 @@ export async function getDirectTokenBalancesNoPrices(walletAddress: string): Pro
       tokenAddresses.add(log.address.toLowerCase());
     });
 
-    console.log(`Found ${tokenAddresses.size} unique tokens`);
+    // Always check these important tokens regardless of Transfer events
+    const IMPORTANT_TOKENS = [
+      '0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39', // HEX
+      '0x95b303987a60c71504d99aa1b13b4da07b0790ab', // PLSX
+      '0x832396a5e87eab53e5cac200f563b7cee6032582', // INC
+      '0xa1077a294dde1b09bb078844df40758a5d0f9a27', // WPLS
+    ];
+
+    IMPORTANT_TOKENS.forEach(token => {
+      tokenAddresses.add(token.toLowerCase());
+    });
+
+    console.log(`Found ${tokenAddresses.size} unique tokens (including important tokens)`);
 
     const processedTokens: ProcessedToken[] = [];
 
