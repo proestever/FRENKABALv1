@@ -426,7 +426,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         <TokenLogo 
                           address=""
                           symbol="PLS"
-                          fallbackLogo="/assets/pls logo trimmed.png"
+                          logo="/assets/pls logo trimmed.png"
                           size="sm"
                         />
                         <span className="font-medium text-white">
@@ -464,7 +464,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         <TokenLogo 
                           address={primarySent.address === 'native' ? '' : primarySent.address}
                           symbol={primarySent.symbol}
-                          fallbackLogo={primarySent.logo}
+                          logo={primarySent.logo}
                           size="sm"
                         />
                         <span className="font-medium text-white">
@@ -483,7 +483,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         <TokenLogo 
                           address={primaryReceived.address === 'native' ? '' : primaryReceived.address}
                           symbol={primaryReceived.symbol}
-                          fallbackLogo={primaryReceived.logo}
+                          logo={primaryReceived.logo}
                           size="sm"
                         />
                         <span className="font-medium text-white">

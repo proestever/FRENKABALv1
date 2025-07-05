@@ -8,9 +8,10 @@ interface TokenLogoProps {
   symbol?: string;
   fallbackLogo?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg';
+  logo?: string; // Direct logo URL from token data
 }
 
-export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenLogoProps) {
+export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', logo }: TokenLogoProps) {
   // Disable debugging logs
   const DEBUG_LOGGING = false;
   
@@ -38,6 +39,15 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
     
     // Normalize address for consistency
     const normalizedAddress = address.toLowerCase();
+    
+    // If we have a logo prop from token data, use it immediately
+    if (logo) {
+      setLogoUrl(logo);
+      setIsLoading(false);
+      // Also cache it for future use
+      logoCache[normalizedAddress] = logo;
+      return;
+    }
     
     // If we have a direct fallback logo, use it immediately
     if (fallbackLogo) {
@@ -129,7 +139,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md' }: TokenL
     };
 
     fetchLogo();
-  }, [address, fallbackLogo]);
+  }, [address, fallbackLogo, logo]);
 
   // Generate the fallback logo/text
   const getFallbackLogo = () => {

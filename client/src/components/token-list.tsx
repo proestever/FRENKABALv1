@@ -394,7 +394,7 @@ export function TokenList({
                             <TokenLogo 
                               address={token.address}
                               symbol={token.symbol}
-                              fallbackLogo={token.logo}
+                              logo={token.logo}
                               size="md"
                             />
                           )}

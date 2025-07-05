@@ -47,6 +47,13 @@ interface DexScreenerPair {
   };
   fdv: number;
   marketCap: number;
+  info?: {
+    imageUrl?: string;
+    header?: string;
+    openGraph?: string;
+    websites?: Array<{ label: string; url: string }>;
+    socials?: Array<{ type: string; url: string }>;
+  };
 }
 
 interface DexScreenerResponse {
@@ -54,7 +61,7 @@ interface DexScreenerResponse {
 }
 
 // Cache to avoid excessive API calls
-const priceCache: Record<string, { price: number; priceChange24h: number; timestamp: number }> = {};
+const priceCache: Record<string, { price: number; priceChange24h: number; logo?: string; timestamp: number }> = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
@@ -65,6 +72,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 export interface TokenPriceData {
   price: number;
   priceChange24h: number;
+  logo?: string;
 }
 
 export async function getTokenPriceFromDexScreener(tokenAddress: string): Promise<number | null> {
@@ -93,7 +101,8 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
     console.log(`Using cached price data for ${normalizedAddress}: $${priceCache[normalizedAddress].price}, ${priceCache[normalizedAddress].priceChange24h}%`);
     return {
       price: priceCache[normalizedAddress].price,
-      priceChange24h: priceCache[normalizedAddress].priceChange24h
+      priceChange24h: priceCache[normalizedAddress].priceChange24h,
+      logo: priceCache[normalizedAddress].logo
     };
   }
   
@@ -209,21 +218,23 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
     
     const price = parseFloat(bestPair.priceUsd);
     const priceChange24h = bestPair.priceChange?.h24 || 0;
+    const logo = bestPair.info?.imageUrl || undefined;
     
     if (isNaN(price)) {
       console.log(`Invalid price for token ${addressToUse}`);
       return null;
     }
     
-    // Cache the price and price change
+    // Cache the price, price change, and logo
     priceCache[normalizedAddress] = {
       price,
       priceChange24h,
+      logo,
       timestamp: now
     };
     
-    console.log(`Got price data for ${normalizedAddress} from DexScreener: $${price}, 24h change: ${priceChange24h}%`);
-    return { price, priceChange24h };
+    console.log(`Got price data for ${normalizedAddress} from DexScreener: $${price}, 24h change: ${priceChange24h}%${logo ? ', has logo' : ''}`);
+    return { price, priceChange24h, logo };
   } catch (error) {
     console.error(`Error fetching price from DexScreener:`, error);
     return null;
