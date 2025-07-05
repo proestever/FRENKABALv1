@@ -465,6 +465,24 @@ export default function Home() {
     progress
   } = useClientSideWallet(searchedAddress)
   
+  // Fetch HEX stakes for single wallet
+  const [singleWalletHexStakes, setSingleWalletHexStakes] = useState<HexStakeSummary | null>(null);
+  
+  useEffect(() => {
+    if (searchedAddress && !multiWalletData) {
+      // Fetch HEX stakes for single wallet
+      fetchHexStakesSummary(searchedAddress)
+        .then(hexData => {
+          console.log(`Fetched HEX stakes for single wallet ${searchedAddress}:`, hexData);
+          setSingleWalletHexStakes(hexData);
+        })
+        .catch(err => {
+          console.error('Error fetching HEX stakes for single wallet:', err);
+          setSingleWalletHexStakes(null);
+        });
+    }
+  }, [searchedAddress, multiWalletData]);
+  
   // Debug wallet data
   useEffect(() => {
     console.log('Wallet data changed:', walletData);
@@ -749,6 +767,7 @@ export default function Home() {
                   <WalletOverview 
                     wallet={walletData} 
                     isLoading={false} 
+                    hexStakesSummary={singleWalletHexStakes}
                     onRefresh={handleRefresh}
                   />
                 )}
