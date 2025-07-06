@@ -400,57 +400,22 @@ const PortfoliosPage = () => {
     },
   });
 
-  // Handler for portfolio search - load all addresses in portfolio and show combined view
-  const handlePortfolioSearch = async (portfolioId: number, portfolioName: string) => {
-    try {
-      // Show loading toast
+  // Handler for portfolio search - navigate directly to public URL
+  const handlePortfolioSearch = async (portfolio: Portfolio) => {
+    // If portfolio has a public code, navigate directly to the public URL
+    if (portfolio.publicCode) {
+      setLocation(`/p/${portfolio.publicCode}`);
+      
+      // Show navigation toast
       toast({
-        title: "Loading portfolio data",
-        description: "Fetching data for all wallet addresses in this portfolio...",
+        title: "Opening portfolio",
+        description: `Navigating to ${portfolio.name} Portfolio...`,
       });
-      
-      // Get all wallet addresses in the portfolio
-      const response = await apiRequest({
-        url: `/api/portfolios/${portfolioId}/wallet-addresses`,
-        method: 'GET'
-      });
-      
-      const result = await response.json() as { 
-        portfolioId: number;
-        portfolioName: string;
-        walletAddresses: string[] 
-      };
-      
-      if (result && result.walletAddresses && result.walletAddresses.length > 0) {
-        // Store portfolio data in session storage
-        sessionStorage.setItem(`portfolio_${portfolioId}`, JSON.stringify({
-          addresses: result.walletAddresses,
-          name: portfolioName
-        }));
-        
-        // Log the portfolio search to help debugging
-        console.log(`Searching portfolio: ${portfolioName} (ID: ${portfolioId}) with ${result.walletAddresses.length} addresses`);
-        
-        // Use the new clean URL format with the portfolio ID
-        setLocation(`/portfolio/${portfolioId}`);
-        
-        // Show success toast
-        toast({
-          title: "Portfolio loaded",
-          description: `Combined view of ${result.walletAddresses.length} wallet addresses`,
-        });
-      } else {
-        toast({
-          title: "No addresses found",
-          description: "This portfolio doesn't have any wallet addresses to search.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error("Error searching portfolio:", error);
+    } else {
+      // Fallback to old behavior if no public code
       toast({
-        title: "Error searching portfolio",
-        description: "Unable to search wallet addresses in this portfolio.",
+        title: "Error",
+        description: "This portfolio doesn't have a public code.",
         variant: "destructive"
       });
     }
@@ -637,11 +602,11 @@ const PortfoliosPage = () => {
                           size="sm"
                           onClick={() => {
                             setSelectedPortfolio(portfolio);
-                            handlePortfolioSearch(portfolio.id, portfolio.name);
+                            handlePortfolioSearch(portfolio);
                           }}
                         >
                           <ExternalLink className="h-4 w-4 mr-1" />
-                          Search
+                          Load Bundle
                         </Button>
                         <Button
                           className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
