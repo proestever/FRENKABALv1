@@ -221,19 +221,18 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
               <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-white glass-card hover:bg-black/20 p-0.5 flex-shrink-0">
                 <Copy className="h-4 w-4" />
               </Button>
+              <a 
+                href={`https://scan.pulsechain.com/address/${wallet.address}`}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="h-6 w-6 text-white glass-card hover:bg-black/20 p-0.5 flex-shrink-0 inline-flex items-center justify-center rounded-md transition-all"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
             </div>
           </div>
           
           <div className="flex flex-wrap items-center gap-2">
-            <a 
-              href={`https://scan.pulsechain.com/address/${wallet.address}`}
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-white glass-card hover:bg-black/20 transition-all text-sm flex items-center h-8 px-3 rounded-md border border-white/15"
-            >
-              <ExternalLink className="h-4 w-4 mr-1" />
-              PulseScan
-            </a>
             {isConnected && (
               <Button
                 variant="outline"
@@ -408,20 +407,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
             </div>
           )}
           
-          {/* Token Count Card */}
-          <div className="glass-card rounded-lg p-4 border-white/15">
-            <div className="text-sm text-muted-foreground mb-1">Token Count (Visible)</div>
-            <div className="text-xl md:text-2xl font-bold text-white">
-              {visibleTokenCount || 0}
-            </div>
-            <div className="text-sm mt-2 flex items-center">
-              {hiddenTokens.length > 0 && (
-                <span className="text-purple-400 border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 rounded-md font-medium">
-                  ({hiddenTokens.length} hidden)
-                </span>
-              )}
-            </div>
-          </div>
+
         </div>
       </Card>
     </section>
