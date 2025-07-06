@@ -7,6 +7,12 @@ const provider = new providers.JsonRpcProvider('https://rpc.pulsechain.com');
 // ERC20 Transfer event signature
 const TRANSFER_EVENT_SIGNATURE = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
+// WPLS Withdrawal event signature - Withdrawal(address indexed src, uint256 wad)
+const WITHDRAWAL_EVENT_SIGNATURE = '0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65';
+
+// WPLS contract address
+const WPLS_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'.toLowerCase();
+
 // Known DEX routers on PulseChain
 const DEX_ROUTERS = [
   '0x165C3410fC91EF562C50559f7d2289fEbed552d9', // PulseX Router V1
@@ -151,7 +157,29 @@ export async function fetchTransactionsFast(
           if (!block) return null;
           
           // Parse transfers quickly
-          const transfers = parseTransfers(receipt, wallet);
+          const allTransfers = parseTransfers(receipt, wallet);
+          
+          // Separate native and ERC20 transfers
+          const erc20Transfers = allTransfers.filter(t => t.address !== 'native');
+          const nativeTransfers = allTransfers.filter(t => t.address === 'native');
+          
+          // Add native PLS transfer if transaction has value
+          if (tx.value && tx.value.toString() !== '0') {
+            const direction = tx.from.toLowerCase() === wallet ? 'send' : 'receive';
+            nativeTransfers.push({
+              from_address: tx.from,
+              to_address: tx.to || '',
+              address: 'native',
+              value: tx.value.toString(),
+              log_index: -1, // No log index for direct transfers
+              token_name: 'PulseChain',
+              token_symbol: 'PLS',
+              token_logo: '/assets/pls logo trimmed.png',
+              token_decimals: '18',
+              direction: direction,
+              internal_transaction: false
+            });
+          }
           
           return {
             hash: tx.hash,
@@ -169,9 +197,9 @@ export async function fetchTransactionsFast(
             block_timestamp: new Date(block.timestamp * 1000).toISOString(),
             block_number: tx.blockNumber!.toString(),
             transaction_fee: receipt.gasUsed.mul(tx.gasPrice || 0).toString(),
-            method_label: getMethodLabel(tx, receipt, transfers),
-            erc20_transfers: transfers,
-            native_transfers: [],
+            method_label: getMethodLabel(tx, receipt, allTransfers),
+            erc20_transfers: erc20Transfers,
+            native_transfers: nativeTransfers,
             nft_transfers: [],
             summary: undefined,
             category: getCategory(tx),
@@ -214,8 +242,10 @@ export async function fetchTransactionsFast(
 
 function parseTransfers(receipt: any, wallet: string): TransactionTransfer[] {
   const transfers: TransactionTransfer[] = [];
+  const nativeTransfers: TransactionTransfer[] = [];
   
   for (const log of receipt.logs) {
+    // Handle ERC20 Transfer events
     if (log.topics[0] === TRANSFER_EVENT_SIGNATURE && log.topics.length === 3) {
       try {
         const from = utils.getAddress('0x' + log.topics[1].slice(26));
@@ -253,9 +283,57 @@ function parseTransfers(receipt: any, wallet: string): TransactionTransfer[] {
         // Skip invalid transfers
       }
     }
+    
+    // Handle WPLS Withdrawal events - these represent native PLS received
+    if (log.topics[0] === WITHDRAWAL_EVENT_SIGNATURE && log.address.toLowerCase() === WPLS_ADDRESS) {
+      try {
+        // For Withdrawal event, topics[1] contains the source address (who withdrew)
+        const src = utils.getAddress('0x' + log.topics[1].slice(26));
+        const value = log.data; // The amount of WPLS withdrawn (same as PLS received)
+        
+        // Check if this withdrawal is TO the wallet (usually from router contracts)
+        // In the context of a swap, the router withdraws WPLS and sends PLS to the user
+        // We need to check the transaction to see if the user received PLS
+        if (receipt.to && receipt.to.toLowerCase() === wallet.toLowerCase()) {
+          // Direct withdrawal by the wallet
+          nativeTransfers.push({
+            from_address: WPLS_ADDRESS,
+            to_address: wallet,
+            address: 'native', // Mark as native PLS
+            value: value,
+            log_index: log.logIndex,
+            token_name: 'PulseChain',
+            token_symbol: 'PLS',
+            token_logo: '/assets/pls logo trimmed.png',
+            token_decimals: '18',
+            direction: 'receive',
+            internal_transaction: true
+          });
+        } else if (src.toLowerCase() !== wallet.toLowerCase()) {
+          // Withdrawal by another contract (like router) - check if user received value
+          // This handles the case where router withdraws WPLS and sends PLS to user
+          nativeTransfers.push({
+            from_address: src,
+            to_address: wallet,
+            address: 'native', // Mark as native PLS
+            value: value,
+            log_index: log.logIndex,
+            token_name: 'PulseChain',
+            token_symbol: 'PLS',
+            token_logo: '/assets/pls logo trimmed.png',
+            token_decimals: '18',
+            direction: 'receive',
+            internal_transaction: true
+          });
+        }
+      } catch (error) {
+        console.error('Error parsing WPLS withdrawal event:', error);
+      }
+    }
   }
   
-  return transfers;
+  // Merge native transfers into the transfers array
+  return [...transfers, ...nativeTransfers];
 }
 
 function getMethodLabel(tx: any, receipt: any, transfers: TransactionTransfer[]): string {
