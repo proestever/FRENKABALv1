@@ -109,6 +109,30 @@ const getTransactionType = (tx: Transaction, walletAddress: string): Transaction
   return 'all';
 };
 
+// Helper function to detect if a transaction is a swap
+const isSwapTransaction = (tx: Transaction): boolean => {
+  // Check method label for swap indicators
+  const swapMethodSignatures = ['swap', 'trade', 'multicall', 'exactinput', 'exactoutput', 'swapexact', 'swaptokens'];
+  if (tx.method_label && swapMethodSignatures.some(sig => tx.method_label?.toLowerCase().includes(sig))) {
+    return true;
+  }
+  
+  // Check if it's a DEX router contract
+  const dexRouterAddresses = [
+    '0xda9aba4eacf54e0273f56dfffee6b8f1e20b23bba', // PulseX Router
+    '0x165c3410fc91ef562c50559f7d2289febb913d90', // PulseX Router V2
+    '0x98bf93ebf5c380c0e6ae8e192a7e2ae08edacc02', // PulseX Factory
+  ];
+  if (dexRouterAddresses.includes(tx.to_address?.toLowerCase() || '')) {
+    return true;
+  }
+  
+  // Check if we have both send and receive transfers (typical swap pattern)
+  const hasSend = tx.erc20_transfers?.some(t => t.direction === 'send');
+  const hasReceive = tx.erc20_transfers?.some(t => t.direction === 'receive');
+  return hasSend && hasReceive;
+};
+
 
 
 // Format date helper
@@ -317,8 +341,198 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
         </div>
       </div>
       
-      {/* Transactions List */}
-      <div className="divide-y divide-border max-h-[80vh] overflow-y-auto">
+      {/* Desktop View - Table */}
+      <div className="hidden md:block overflow-x-auto max-h-[70vh]">
+        <table className="w-full">
+          <thead className="bg-black/40 border-b border-white/20 sticky top-0 z-10">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                Transaction
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                Details
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-bold text-white uppercase tracking-wider">
+                Block
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {filteredTransactions.map((tx, index) => {
+              const isSwap = isSwapTransaction(tx);
+              
+              return (
+                <tr key={`${tx.hash}-${index}`} className="hover:bg-white/5 transition-colors">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex flex-col gap-1">
+                      <a 
+                        href={`https://otter.pulsechain.com/tx/${tx.hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-mono text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+                      >
+                        {shortenAddress(tx.hash)}
+                        <ExternalLink size={10} />
+                      </a>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(new Date(tx.block_timestamp).getTime())}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="space-y-1">
+                      {(() => {
+                        // If it's a swap, display swap format
+                        if (isSwap) {
+                          const tokenFlows = new Map<string, {
+                            symbol: string;
+                            name?: string;
+                            logo?: string;
+                            decimals: string;
+                            netAmount: bigint;
+                            address: string;
+                          }>();
+                          
+                          // Process all transfers to calculate net amounts
+                          [...(tx.erc20_transfers || []), ...(tx.native_transfers || [])].forEach(transfer => {
+                            const tokenKey = transfer.address || 'native';
+                            
+                            // Parse the value properly
+                            let amount: bigint;
+                            try {
+                              if (transfer.value?.startsWith('0x')) {
+                                amount = BigInt(transfer.value);
+                              } else {
+                                amount = BigInt(transfer.value || '0');
+                              }
+                            } catch (e) {
+                              console.error('Error parsing value:', transfer.value, e);
+                              amount = BigInt(0);
+                            }
+                            
+                            const isReceive = transfer.direction === 'receive' || 
+                              transfer.to_address?.toLowerCase() === walletAddress.toLowerCase();
+                            
+                            if (!tokenFlows.has(tokenKey)) {
+                              tokenFlows.set(tokenKey, {
+                                symbol: transfer.token_symbol || 'Unknown',
+                                name: transfer.token_name,
+                                logo: transfer.token_logo || null,
+                                decimals: transfer.token_decimals || '18',
+                                netAmount: BigInt(0),
+                                address: tokenKey
+                              });
+                            }
+                            
+                            const token = tokenFlows.get(tokenKey)!;
+                            token.netAmount += isReceive ? amount : -amount;
+                          });
+                          
+                          // Convert to arrays
+                          const sentTokens: Array<any> = [];
+                          const receivedTokens: Array<any> = [];
+                          
+                          tokenFlows.forEach((token) => {
+                            if (token.netAmount < BigInt(0)) {
+                              sentTokens.push({ ...token, netAmount: -token.netAmount });
+                            } else if (token.netAmount > BigInt(0)) {
+                              receivedTokens.push(token);
+                            }
+                          });
+                          
+                          // Get primary tokens
+                          const primarySent = sentTokens[0];
+                          const primaryReceived = receivedTokens[0];
+                          
+                          return (
+                            <div className="flex items-center gap-2">
+                              <span className="text-purple-400 font-medium">SWAP</span>
+                              {primarySent && (
+                                <>
+                                  <TokenLogo 
+                                    address={primarySent.address === 'native' ? '' : primarySent.address}
+                                    symbol={primarySent.symbol}
+                                    logo={primarySent.logo}
+                                    size="sm"
+                                  />
+                                  <span className="text-white font-medium">
+                                    {formatTokenValue(primarySent.netAmount.toString(), primarySent.decimals)}
+                                  </span>
+                                  <span className="text-gray-400">{primarySent.symbol}</span>
+                                </>
+                              )}
+                              {primarySent && primaryReceived && (
+                                <ArrowRight className="text-gray-500" size={14} />
+                              )}
+                              {primaryReceived && (
+                                <>
+                                  <TokenLogo 
+                                    address={primaryReceived.address === 'native' ? '' : primaryReceived.address}
+                                    symbol={primaryReceived.symbol}
+                                    logo={primaryReceived.logo}
+                                    size="sm"
+                                  />
+                                  <span className="text-white font-medium">
+                                    {formatTokenValue(primaryReceived.netAmount.toString(), primaryReceived.decimals)}
+                                  </span>
+                                  <span className="text-gray-400">{primaryReceived.symbol}</span>
+                                </>
+                              )}
+                              {!primarySent && !primaryReceived && (
+                                <span className="text-gray-500">via {tx.to_address_label || 'DEX'}</span>
+                              )}
+                            </div>
+                          );
+                        }
+                        
+                        // For non-swap transactions, show method label
+                        return (
+                          <div className="text-sm">
+                            <span className="text-gray-400">{tx.method_label || 'Transfer'}</span>
+                            {tx.erc20_transfers?.map((transfer, idx) => (
+                              <div key={idx} className="flex items-center gap-2 mt-1">
+                                <TokenLogo 
+                                  address={transfer.address || ''}
+                                  symbol={transfer.token_symbol || ''}
+                                  logo={transfer.token_logo || null}
+                                  size="sm"
+                                />
+                                <span className="text-white">
+                                  {formatTokenValue(transfer.value, transfer.token_decimals)}
+                                </span>
+                                <span className="text-gray-400">{transfer.token_symbol}</span>
+                                <span className="text-gray-500 text-xs">
+                                  {transfer.direction === 'send' ? 'sent to' : 'received from'}
+                                </span>
+                                <span className="text-gray-400 font-mono text-xs">
+                                  {shortenAddress(
+                                    transfer.direction === 'send' ? transfer.to_address : transfer.from_address
+                                  )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                      {tx.receipt_status === '0' && (
+                        <div className="text-xs text-red-400">Transaction Failed</div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <div className="text-xs text-gray-400">
+                      Block #{parseInt(tx.block_number).toLocaleString()}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Mobile View - Cards */}
+      <div className="md:hidden divide-y divide-border max-h-[80vh] overflow-y-auto">
         {filteredTransactions.map((tx, index) => (
           <div key={`${tx.hash}-${index}`} className="p-3 hover:bg-white/5 transition-colors">
             {/* Transaction Header */}
