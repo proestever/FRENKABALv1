@@ -447,14 +447,19 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         {(() => {
                           const usdValue = calculateUsdValue(tx.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
                           if (usdValue !== null && usdValue >= 0.01) {
-                            return <span className="text-xs text-gray-500">(${formatCurrency(usdValue)})</span>;
+                            return <span className="text-xs text-gray-500">({formatCurrency(usdValue)})</span>;
                           }
                           return null;
                         })()}
                         <span className="text-gray-400">sent to</span>
-                        <span className="text-gray-400 font-mono text-xs">
+                        <a
+                          href={`https://otter.pulsechain.com/address/${tx.to_address}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-gray-300 font-mono text-xs"
+                        >
                           {tx.to_address.slice(0, 6)}...{tx.to_address.slice(-4)}
-                        </span>
+                        </a>
                       </div>
                     );
                   }
@@ -496,7 +501,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           const tokenAddr = primarySent.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : primarySent.address;
                           const usdValue = calculateUsdValue(primarySent.netAmount.toString(), primarySent.decimals, tokenAddr);
                           if (usdValue !== null && usdValue >= 0.01) {
-                            return <span className="text-xs text-gray-500">(${formatCurrency(usdValue)})</span>;
+                            return <span className="text-xs text-gray-500">({formatCurrency(usdValue)})</span>;
                           }
                           return null;
                         })()}
@@ -523,7 +528,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           const tokenAddr = primaryReceived.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : primaryReceived.address;
                           const usdValue = calculateUsdValue(primaryReceived.netAmount.toString(), primaryReceived.decimals, tokenAddr);
                           if (usdValue !== null && usdValue >= 0.01) {
-                            return <span className="text-xs text-gray-500">(${formatCurrency(usdValue)})</span>;
+                            return <span className="text-xs text-gray-500">({formatCurrency(usdValue)})</span>;
                           }
                           return null;
                         })()}
@@ -533,9 +538,14 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     {!primaryReceived && primarySent && (
                       <>
                         <span className="text-gray-400">sent to</span>
-                        <span className="text-gray-400 font-mono text-xs">
+                        <a
+                          href={`https://otter.pulsechain.com/address/${tx.to_address}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-gray-300 font-mono text-xs"
+                        >
                           {tx.to_address.slice(0, 6)}...{tx.to_address.slice(-4)}
-                        </span>
+                        </a>
                       </>
                     )}
                     {!primarySent && primaryReceived && (
