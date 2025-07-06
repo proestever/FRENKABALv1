@@ -318,14 +318,32 @@ export function useWallet(): UseWalletReturn {
       try {
         // Use direct window.ethereum request instead of ethers
         console.log("Directly requesting accounts from wallet...");
-        accounts = await ethereumProvider.request({ method: 'eth_requestAccounts' });
+        
+        // Add a more specific timeout for the wallet request
+        const requestPromise = ethereumProvider.request({ method: 'eth_requestAccounts' });
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Wallet request timeout')), 15000)
+        );
+        
+        accounts = await Promise.race([requestPromise, timeoutPromise]);
         console.log("Accounts received:", accounts);
-      } catch (requestError) {
+      } catch (requestError: any) {
         console.error("Error requesting accounts:", requestError);
-        // Don't throw an error, just show toast and continue with null accounts
+        
+        // More specific error messages
+        let errorMessage = "Unable to connect to your wallet. Please try again.";
+        
+        if (requestError.message?.includes('timeout')) {
+          errorMessage = "Connection timed out. Please check your wallet for pending requests.";
+        } else if (requestError.code === 4001 || requestError.message?.includes('rejected')) {
+          errorMessage = "Connection rejected. Please approve the connection in your wallet.";
+        } else if (requestError.code === -32002) {
+          errorMessage = "Connection already pending. Please check your wallet.";
+        }
+        
         toast({
           title: "Wallet connection error",
-          description: "Unable to connect to your wallet. Please try again.",
+          description: errorMessage,
           variant: "destructive",
         });
         clearTimeout(connectionTimeout);
