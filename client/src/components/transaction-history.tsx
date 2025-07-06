@@ -366,6 +366,23 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     (tx.method_label && tx.method_label.toLowerCase().includes('swap'))
                   );
                   
+                  // Debug logging
+                  if (isSwapTx) {
+                    const originalPLS = Number(plsAmount) / 1e18;
+                    const adjustedPLS = Number(plsAmount / BigInt(2)) / 1e18;
+                    console.log(`Swap transaction detected:`, {
+                      hash: tx.hash,
+                      to: tx.to_address,
+                      originalPLS: originalPLS.toFixed(2),
+                      adjustedPLS: adjustedPLS.toFixed(2),
+                      rawValue: tx.value
+                    });
+                    
+                    // Check for additional PLS transfers that might be adding to the total
+                    const nativeTransfers = tx.native_transfers?.filter(t => t.address === 'native') || [];
+                    console.log(`Native transfers found: ${nativeTransfers.length}`, nativeTransfers);
+                  }
+                  
                   // If it's a swap, divide by 2 to account for the double counting
                   if (isSwapTx) {
                     plsAmount = plsAmount / BigInt(2);
