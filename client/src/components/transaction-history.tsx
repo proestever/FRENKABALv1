@@ -323,7 +323,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   <ExternalLink size={10} />
                 </a>
                 <span className="text-xs text-muted-foreground">
-                  {formatDate(parseInt(tx.block_timestamp) * 1000)}
+                  {formatDate(new Date(tx.block_timestamp).getTime())}
                 </span>
               </div>
               <div className="text-xs text-gray-400">
@@ -434,6 +434,13 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         </span>
                         <span className="text-gray-400">PLS</span>
                         <span className="text-gray-400">sent</span>
+                        {(() => {
+                          const usdValue = calculateUsdValue(tx.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
+                          if (usdValue !== null && usdValue >= 0.01) {
+                            return <span className="text-xs text-gray-500">($${formatCurrency(usdValue)})</span>;
+                          }
+                          return null;
+                        })()}
                       </div>
                     );
                   }
@@ -471,6 +478,14 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           {formatTokenValue(primarySent.netAmount.toString(), primarySent.decimals)}
                         </span>
                         <span className="text-gray-400">{primarySent.symbol}</span>
+                        {(() => {
+                          const tokenAddr = primarySent.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : primarySent.address;
+                          const usdValue = calculateUsdValue(primarySent.netAmount.toString(), primarySent.decimals, tokenAddr);
+                          if (usdValue !== null && usdValue >= 0.01) {
+                            return <span className="text-xs text-gray-500">($${formatCurrency(usdValue)})</span>;
+                          }
+                          return null;
+                        })()}
                       </>
                     )}
                     
@@ -490,6 +505,14 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           {formatTokenValue(primaryReceived.netAmount.toString(), primaryReceived.decimals)}
                         </span>
                         <span className="text-gray-400">{primaryReceived.symbol}</span>
+                        {(() => {
+                          const tokenAddr = primaryReceived.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : primaryReceived.address;
+                          const usdValue = calculateUsdValue(primaryReceived.netAmount.toString(), primaryReceived.decimals, tokenAddr);
+                          if (usdValue !== null && usdValue >= 0.01) {
+                            return <span className="text-xs text-gray-500">($${formatCurrency(usdValue)})</span>;
+                          }
+                          return null;
+                        })()}
                       </>
                     )}
                     
