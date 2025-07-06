@@ -157,15 +157,15 @@ export async function fetchTransactionsFast(
           if (!block) return null;
           
           // Check if this is a swap transaction
-          const isSwapTransaction = tx.to && (
+          const isSwapTransaction = !!(tx.to && (
             DEX_ROUTERS.includes(tx.to.toLowerCase()) ||
             (tx.data && tx.data.length >= 10 && SWAP_METHODS.some(method => 
               tx.data.toLowerCase().includes(method.toLowerCase())
             ))
-          );
+          ));
           
           // Parse transfers quickly
-          const allTransfers = parseTransfers(receipt, wallet, isSwapTransaction);
+          const allTransfers = parseTransfers(receipt, wallet, !!isSwapTransaction);
           
           // Separate native and ERC20 transfers
           const erc20Transfers = allTransfers.filter(t => t.address !== 'native');

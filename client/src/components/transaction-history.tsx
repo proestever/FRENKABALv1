@@ -368,9 +368,34 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   });
                 }
                 
+                // Check if this is a swap transaction
+                const isSwapTx = tx.to_address && (
+                  tx.to_address.toLowerCase() === '0xda9aba4eacf54e0273f56dfffee6b8f1e20b23bba' || // PulseX Router
+                  tx.to_address.toLowerCase() === '0x165c3410fc91ef562c50559f7d2289febb913d90' || // PulseX Router V2
+                  (tx.method_label && tx.method_label.toLowerCase().includes('swap'))
+                );
+                
                 // Process all transfers to calculate net amounts
                 [...(tx.erc20_transfers || []), ...(tx.native_transfers || [])].forEach(transfer => {
                   const tokenKey = transfer.address || 'native';
+                  const isWPLS = transfer.address?.toLowerCase() === '0xa1077a294dde1b09bb078844df40758a5d0f9a27';
+                  
+                  // Skip WPLS transfers in swap transactions when native PLS was sent
+                  // This prevents double-counting PLS->WPLS->Token swaps
+                  if (isSwapTx && isWPLS && tx.value && tx.value !== '0' && tx.from_address.toLowerCase() === walletAddress.toLowerCase()) {
+                    console.log('Skipping WPLS transfer in swap to prevent double-counting');
+                    return;
+                  }
+                  
+                  // Skip WPLS withdrawals that are already counted as native PLS sends
+                  // This prevents double-counting in swap transactions
+                  if (transfer.internal_transaction && 
+                      transfer.address === 'native' && 
+                      transfer.from_address?.toLowerCase() === '0xa1077a294dde1b09bb078844df40758a5d0f9a27' &&
+                      tx.value && tx.value !== '0') {
+                    console.log('Skipping WPLS withdrawal to prevent double-counting');
+                    return;
+                  }
                   
                   // Parse the value properly
                   let amount: bigint;
