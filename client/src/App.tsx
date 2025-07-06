@@ -13,7 +13,6 @@ import PortfoliosPage from "@/pages/portfolios";
 import AdminPage from "@/pages/admin";
 import ApiUsagePage from "@/pages/api-usage";
 import SystemHealthPage from "@/pages/system-health";
-import TransactionsPage from "@/pages/transactions";
 import { FrenKabalLogo } from "@/components/frenklabal-logo";
 import { useAuth } from "@/providers/auth-provider";
 import { AuthProvider } from "@/providers/auth-provider";
@@ -408,7 +407,6 @@ function Router() {
           <Route path="/admin" component={AdminPage} />
           <Route path="/admin/api-usage" component={ApiUsagePage} />
           <Route path="/system-health" component={SystemHealthPage} />
-          <Route path="/:address/transactions" component={TransactionsPage} />
           <Route path="/:walletAddress" component={Home} />
           <Route component={NotFound} />
         </Switch>
