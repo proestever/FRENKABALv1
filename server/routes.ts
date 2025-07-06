@@ -1170,21 +1170,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       } 
-      // For read-only operations or user lookup without sensitive actions,
-      // we can still return user info without signature if the user exists
-      else if (user) {
-        console.log(`Returning existing user ${user.id} for wallet ${walletAddress} without signature verification`);
-        return res.json({ 
-          id: user.id,
-          username: user.username
-        });
-      } 
-      // But for creating a new user, we require signature verification
-      else if (!signatureVerified) {
-        console.log(`Attempt to create new user for wallet ${walletAddress} without signature verification`);
-        return res.status(401).json({
-          message: "Signature verification required to create a new account."
-        });
+      
+      // Always require signature verification for authentication
+      if (!signatureVerified) {
+        if (user) {
+          console.log(`Authentication attempt for existing user ${user.id} wallet ${walletAddress} without signature verification`);
+          return res.status(401).json({
+            message: "Signature verification required. Please sign the message to prove wallet ownership."
+          });
+        } else {
+          console.log(`Attempt to create new user for wallet ${walletAddress} without signature verification`);
+          return res.status(401).json({
+            message: "Signature verification required to create a new account."
+          });
+        }
       }
       
       // If verification passed and user exists, return the user

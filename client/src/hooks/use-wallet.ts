@@ -60,57 +60,84 @@ export function useWallet(): UseWalletReturn {
           
           // If the saved address is in the available accounts, restore the connection
           if (accounts.includes(savedAddress)) {
-            setAccount(savedAddress);
+            // We found the saved address in the available accounts
+            // But we need to verify ownership with a signature
+            console.log("Found saved wallet connection, requesting signature to verify ownership:", savedAddress);
             
-            // Get chain ID
-            const network = await provider.getNetwork();
-            setChainId(network.chainId);
-            
-            console.log("Restored wallet connection from localStorage:", savedAddress);
-            
-            // Since signature verification is failing when restoring from localStorage,
-            // we'll use a non-signature approach for reconnecting existing wallets
-            console.log('Getting user ID without signature verification for existing connected wallet');
-            const user = await getUserFromWallet(savedAddress);
-            
-            // Check if the auth token in localStorage is still valid
-            const loginTimestamp = localStorage.getItem('lastLoginTimestamp');
-            if (loginTimestamp) {
-              const loginTime = parseInt(loginTimestamp);
-              const currentTime = Date.now();
-              const daysSinceLogin = (currentTime - loginTime) / (1000 * 60 * 60 * 24);
+            try {
+              // Request signature to verify wallet ownership
+              const signer = provider.getSigner(savedAddress);
+              const timestamp = Date.now();
+              const message = `Sign this message to verify you own this wallet.\n\nTimestamp: ${timestamp}`;
               
-              if (daysSinceLogin <= 7) {
-                // Token is still valid (within 7 days)
-                console.log(`Login token valid for ${Math.floor(7 - daysSinceLogin)} days and ${Math.floor((7 - daysSinceLogin) % 1 * 24)} hours`);
+              // Show toast about signature requirement
+              toast({
+                title: "Wallet Verification Required",
+                description: "Please sign the message to verify you still own this wallet.",
+              });
+              
+              const signature = await signer.signMessage(message);
+              console.log("Signature received for reconnection");
+              
+              // Now verify with the backend
+              const userId = await getUserFromWallet(savedAddress, {
+                signature: signature,
+                message: message,
+                timestamp: timestamp,
+                walletAddress: savedAddress
+              });
+              
+              if (userId) {
+                // Verification successful, restore connection
+                setAccount(savedAddress);
+                setUserId(userId);
+                localStorage.setItem('userId', String(userId));
+                
+                // Update timestamp
+                localStorage.setItem('lastLoginTimestamp', Date.now().toString());
+                localStorage.setItem('walletSignature', signature);
+                localStorage.setItem('signatureTimestamp', timestamp.toString());
+                
+                // Get chain ID
+                const network = await provider.getNetwork();
+                setChainId(network.chainId);
+                
+                console.log("Wallet connection restored after verification:", savedAddress);
               } else {
-                // Token expired, should prompt for re-verification
-                console.log('Auth token expired, should prompt for re-verification');
-                // We'll still use the basic user ID for now
+                // Verification failed, clear localStorage
+                console.log("Wallet verification failed, clearing stored connection");
+                localStorage.removeItem('walletConnected');
+                localStorage.removeItem('walletAddress');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('lastLoginTimestamp');
+                localStorage.removeItem('walletSignature');
+                localStorage.removeItem('signatureTimestamp');
               }
-            }
-            
-            if (user) {
-              setUserId(user);
-              localStorage.setItem('userId', String(user));
-            }
+            } catch (error) {
+              console.log("User rejected signature or error occurred:", error);
+              // Clear localStorage if signature is rejected
+              localStorage.removeItem('walletConnected');
+              localStorage.removeItem('walletAddress');
+              localStorage.removeItem('userId');
+              localStorage.removeItem('lastLoginTimestamp');
+              localStorage.removeItem('walletSignature');
+              localStorage.removeItem('signatureTimestamp');
+              }
           } else if (accounts.length > 0) {
-            // Fallback: If the saved address is not available but others are
-            setAccount(accounts[0]);
+            // The saved address is not available but other accounts are
+            // This likely means the user switched wallets
+            console.log(`Saved wallet ${savedAddress} not found, but found ${accounts[0]}`);
             
-            // Update localStorage with new address
-            localStorage.setItem('walletAddress', accounts[0]);
+            // Clear the old connection data
+            localStorage.removeItem('walletConnected');
+            localStorage.removeItem('walletAddress');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('lastLoginTimestamp');
+            localStorage.removeItem('walletSignature');
+            localStorage.removeItem('signatureTimestamp');
             
-            // Get chain ID
-            const network = await provider.getNetwork();
-            setChainId(network.chainId);
-            
-            // Get or create user ID for this wallet
-            const user = await getUserFromWallet(accounts[0]);
-            if (user) {
-              setUserId(user);
-              localStorage.setItem('userId', String(user));
-            }
+            // Don't automatically connect to the new wallet
+            // User must explicitly connect with the new wallet
           } else {
             // No accounts available, clear localStorage
             localStorage.removeItem('walletConnected');
