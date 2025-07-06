@@ -54,89 +54,29 @@ export async function fetchTransactionsFast(
     
     const fromBlock = Math.max(currentBlock - 50000, 0); // Look back 50k blocks for more history
     
-    console.log(`Fast fetching transactions for ${walletAddress}`);
+    console.log(`Fast fetching transactions from blocks ${fromBlock} to ${currentBlock}`);
     
-    // Use PulseChain Scan API v2 to get ALL transactions (including approvals, contract interactions, etc)
+    // Use etherscan-style API if available (many nodes support this)
     try {
-      const apiUrl = `https://api.scan.pulsechain.com/api/v2/addresses/${walletAddress}/transactions?filter=to%20%7C%20from`;
-      console.log('Fetching ALL transactions from PulseChain Scan API v2...');
-      const response = await fetch(apiUrl);
-      
+      const txListUrl = `https://rpc.pulsechain.com?module=account&action=txlist&address=${walletAddress}&startblock=${fromBlock}&endblock=${currentBlock}&sort=desc`;
+      const response = await fetch(txListUrl);
       if (response.ok) {
         const data = await response.json();
-        if (data.items && Array.isArray(data.items)) {
-          console.log(`Found ${data.items.length} transactions via PulseChain Scan API v2`);
-          
-          // Convert PulseChain Scan v2 format to our format
-          for (const tx of data.items.slice(0, limit)) {
-            const transaction: Transaction = {
-              hash: tx.hash,
-              nonce: tx.nonce?.toString() || '0',
-              transaction_index: tx.position?.toString() || '0',
-              from_address: tx.from?.hash || '',
-              from_address_label: tx.from?.name || null,
-              to_address: tx.to?.hash || '',
-              to_address_label: tx.to?.name || null,
-              value: tx.value || '0',
-              gas: tx.gas_limit?.toString() || '0',
-              gas_price: tx.gas_price?.toString() || '0',
-              receipt_gas_used: tx.gas_used?.toString() || '0',
-              receipt_status: tx.status === 'ok' ? '1' : '0',
-              block_timestamp: tx.timestamp || new Date().toISOString(),
-              block_number: tx.block?.toString() || '0',
-              transaction_fee: tx.fee?.value || '0',
-              method_label: tx.method || (tx.tx_types?.includes('contract_creation') ? 'Contract Creation' : 
-                             tx.tx_types?.includes('token_transfer') ? 'Token Transfer' : 
-                             tx.tx_types?.includes('contract_call') ? 'Contract Interaction' : 'Transfer'),
-              erc20_transfers: [],
-              native_transfers: [],
-              nft_transfers: [],
-              summary: tx.method || undefined,
-              category: tx.tx_types?.includes('token_transfer') ? 'transfer' : 
-                       tx.tx_types?.includes('contract_call') ? 'contract' : 
-                       tx.tx_types?.includes('contract_creation') ? 'contract' : 'transfer',
-              possible_spam: false
-            };
-            
-            // Add token transfers if available
-            if (tx.token_transfers && Array.isArray(tx.token_transfers)) {
-              for (const transfer of tx.token_transfers) {
-                if (transfer.type === 'ERC-20' || transfer.type === 'ERC-721' || transfer.type === 'ERC-1155') {
-                  const tokenTransfer: TransactionTransfer = {
-                    token_name: transfer.token?.name || '',
-                    token_symbol: transfer.token?.symbol || '',
-                    token_logo: null,
-                    token_decimals: transfer.token?.decimals || '18',
-                    from_address: transfer.from?.hash || '',
-                    from_address_label: transfer.from?.name || null,
-                    to_address: transfer.to?.hash || '',
-                    to_address_label: transfer.to?.name || null,
-                    address: transfer.token?.address || '',
-                    value: transfer.total?.value || transfer.value || '0',
-                    direction: transfer.from?.hash?.toLowerCase() === wallet ? 'send' : 'receive'
-                  };
-                  
-                  if (transfer.type === 'ERC-20') {
-                    transaction.erc20_transfers?.push(tokenTransfer);
-                  } else {
-                    transaction.nft_transfers?.push(tokenTransfer);
-                  }
-                }
-              }
-            }
-            
-            transactions.push(transaction);
+        if (data.result && Array.isArray(data.result)) {
+          console.log(`Found ${data.result.length} transactions via API`);
+          // Process API results
+          for (const tx of data.result.slice(0, limit)) {
+            transactions.push(convertApiTransaction(tx));
           }
-          
           return {
             transactions,
             lastBlock: fromBlock - 1,
-            hasMore: data.next_page_params !== null
+            hasMore: data.result.length > limit
           };
         }
       }
     } catch (error) {
-      console.log('PulseChain Scan API not available, falling back to event logs');
+      console.log('API method not available, falling back to event logs');
     }
     
     // Fallback: Use event logs for ERC20 transfers (sent)
