@@ -357,7 +357,20 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 
                 // Add native PLS if transaction has value (sent)
                 if (tx.value && tx.value !== '0' && tx.from_address.toLowerCase() === walletAddress.toLowerCase()) {
-                  const plsAmount = BigInt(tx.value);
+                  let plsAmount = BigInt(tx.value);
+                  
+                  // Check if this is a swap transaction
+                  const isSwapTx = tx.to_address && (
+                    tx.to_address.toLowerCase() === '0xda9aba4eacf54e0273f56dfffee6b8f1e20b23bba' || // PulseX Router
+                    tx.to_address.toLowerCase() === '0x165c3410fc91ef562c50559f7d2289febb913d90' || // PulseX Router V2
+                    (tx.method_label && tx.method_label.toLowerCase().includes('swap'))
+                  );
+                  
+                  // If it's a swap, divide by 2 to account for the double counting
+                  if (isSwapTx) {
+                    plsAmount = plsAmount / BigInt(2);
+                  }
+                  
                   tokenFlows.set('native', {
                     symbol: 'PLS',
                     name: 'PulseChain',
