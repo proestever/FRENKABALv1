@@ -410,6 +410,17 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   const tokenKey = transfer.address || 'native';
                   const isWPLS = transfer.address?.toLowerCase() === '0xa1077a294dde1b09bb078844df40758a5d0f9a27';
                   
+                  // Skip native PLS transfers when we already counted tx.value
+                  // This prevents double-counting in swap transactions
+                  if (transfer.address === 'native' && 
+                      tx.value && tx.value !== '0' && 
+                      tx.from_address.toLowerCase() === walletAddress.toLowerCase() &&
+                      transfer.from_address?.toLowerCase() === walletAddress.toLowerCase() &&
+                      transfer.value === tx.value) {
+                    console.log('Skipping native transfer that matches tx.value to prevent double-counting');
+                    return;
+                  }
+                  
                   // Skip WPLS transfers in swap transactions when native PLS was sent
                   // This prevents double-counting PLS->WPLS->Token swaps
                   if (isSwapTx && isWPLS && tx.value && tx.value !== '0' && tx.from_address.toLowerCase() === walletAddress.toLowerCase()) {
