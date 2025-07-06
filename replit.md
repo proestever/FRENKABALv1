@@ -132,13 +132,12 @@ Required environment variables:
 
 ## Recent Changes
 
-### July 6, 2025 - Pragmatic Fix for PLS Double-Counting in Swap Transactions
-- **Simple division approach** - When a swap transaction is detected, PLS amounts are divided by 2
-- **Swap detection** - Identifies PulseX router addresses and swap method labels
-- **Immediate resolution** - Directly addresses the double-counting without complex filtering
-- **Works for all swaps** - PLS→Token swaps now show the correct amount spent
-- **User-requested solution** - Implemented the straightforward fix suggested by user
-- **Compensates for wrapping** - Accounts for PLS→WPLS→Token flow by halving the displayed amount
+### July 6, 2025 - Fixed PLS Display in Swap Transactions
+- **Shows only initial PLS transfer** - Swap transactions now display only the PLS amount sent, not WPLS conversions
+- **Skip duplicate transfers** - Native transfers that match tx.value are skipped to prevent double-counting
+- **Skip all WPLS in swaps** - WPLS transfers are completely hidden in swap transactions
+- **Accurate amounts** - Transaction history now matches blockchain explorer values (e.g., 90M PLS, not 135M or 180M)
+- **Clean display** - Shows PLS → Token swaps with correct amounts without intermediate wrapping steps
 
 ### January 7, 2025 - Fixed Double-Counting PLS in Swap Transactions
 - **Fixed PLS amount display issue** - Swaps no longer show double the actual PLS amount (e.g., showing 180M instead of 90M)

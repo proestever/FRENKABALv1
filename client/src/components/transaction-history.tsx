@@ -357,36 +357,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 
                 // Add native PLS if transaction has value (sent)
                 if (tx.value && tx.value !== '0' && tx.from_address.toLowerCase() === walletAddress.toLowerCase()) {
-                  let plsAmount = BigInt(tx.value);
-                  
-                  // Check if this is a swap transaction
-                  const isSwapTx = tx.to_address && (
-                    tx.to_address.toLowerCase() === '0xda9aba4eacf54e0273f56dfffee6b8f1e20b23bba' || // PulseX Router
-                    tx.to_address.toLowerCase() === '0x165c3410fc91ef562c50559f7d2289febb913d90' || // PulseX Router V2
-                    (tx.method_label && tx.method_label.toLowerCase().includes('swap'))
-                  );
-                  
-                  // Debug logging
-                  if (isSwapTx) {
-                    const originalPLS = Number(plsAmount) / 1e18;
-                    const adjustedPLS = Number(plsAmount / BigInt(2)) / 1e18;
-                    console.log(`Swap transaction detected:`, {
-                      hash: tx.hash,
-                      to: tx.to_address,
-                      originalPLS: originalPLS.toFixed(2),
-                      adjustedPLS: adjustedPLS.toFixed(2),
-                      rawValue: tx.value
-                    });
-                    
-                    // Check for additional PLS transfers that might be adding to the total
-                    const nativeTransfers = tx.native_transfers?.filter(t => t.address === 'native') || [];
-                    console.log(`Native transfers found: ${nativeTransfers.length}`, nativeTransfers);
-                  }
-                  
-                  // If it's a swap, divide by 2 to account for the double counting
-                  if (isSwapTx) {
-                    plsAmount = plsAmount / BigInt(2);
-                  }
+                  const plsAmount = BigInt(tx.value);
                   
                   tokenFlows.set('native', {
                     symbol: 'PLS',
@@ -421,10 +392,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     return;
                   }
                   
-                  // Skip WPLS transfers in swap transactions when native PLS was sent
-                  // This prevents double-counting PLS->WPLS->Token swaps
-                  if (isSwapTx && isWPLS && tx.value && tx.value !== '0' && tx.from_address.toLowerCase() === walletAddress.toLowerCase()) {
-                    console.log('Skipping WPLS transfer in swap to prevent double-counting');
+                  // Skip ALL WPLS transfers in swap transactions
+                  // We only want to show the initial PLS transfer, not the WPLS conversion
+                  if (isSwapTx && isWPLS) {
+                    console.log('Skipping WPLS transfer in swap - only showing initial PLS');
                     return;
                   }
                   
