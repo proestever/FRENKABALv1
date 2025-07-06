@@ -62,61 +62,103 @@ export function useWallet(): UseWalletReturn {
           // Compare addresses case-insensitively
           const foundAccount = accounts.find(acc => acc.toLowerCase() === savedAddress.toLowerCase());
           if (foundAccount) {
-            // We found the saved address in the available accounts
-            // But we need to verify ownership with a signature
-            console.log("Found saved wallet connection, requesting signature to verify ownership:", savedAddress);
+            // Check if we have a stored signature and timestamp that's still valid
+            const storedSignature = localStorage.getItem('walletSignature');
+            const storedSignatureTimestamp = localStorage.getItem('signatureTimestamp');
+            const storedUserId = localStorage.getItem('userId');
             
-            try {
-              // Request signature to verify wallet ownership
-              const signer = provider.getSigner(savedAddress);
-              const timestamp = Date.now();
-              const message = `Sign this message to verify you own this wallet.\n\nTimestamp: ${timestamp}`;
+            if (storedSignature && storedSignatureTimestamp && storedUserId && isLoginValid) {
+              // We have valid stored authentication data, restore the session without requiring a new signature
+              console.log("Found valid stored session, restoring connection without new signature");
               
-              // Show toast about signature requirement
+              // Restore connection using stored data
+              setAccount(foundAccount);
+              setUserId(parseInt(storedUserId, 10));
+              // Update the saved address with the correct case
+              localStorage.setItem('walletAddress', foundAccount);
+              
+              // Get chain ID
+              const network = await provider.getNetwork();
+              setChainId(network.chainId);
+              
+              console.log("Wallet connection restored from stored session:", foundAccount);
+              
+              // Fetch user profile data
+              const userProfile = await getUserProfile(parseInt(storedUserId, 10));
+              if (userProfile) {
+                setUser(userProfile);
+              }
+              
+              // Show a subtle toast that session was restored
               toast({
-                title: "Wallet Verification Required",
-                description: "Please sign the message to verify you still own this wallet.",
+                title: "Welcome back! 👋",
+                description: `Connected as ${foundAccount.substring(0, 6)}...${foundAccount.substring(foundAccount.length - 4)}`,
               });
+            } else {
+              // No valid stored authentication, request new signature
+              console.log("No valid stored session, requesting new signature for:", savedAddress);
               
-              const signature = await signer.signMessage(message);
-              console.log("Signature received for reconnection");
-              
-              // Now verify with the backend
-              const userId = await getUserFromWallet(savedAddress, {
-                signature: signature,
-                message: message,
-                timestamp: timestamp,
-                walletAddress: savedAddress
-              });
-              
-              if (userId) {
-                // Verification successful, restore connection
-                // Use the actual account address from provider to avoid case issues
-                setAccount(foundAccount);
-                setUserId(userId);
-                localStorage.setItem('userId', String(userId));
-                // Update the saved address with the correct case
-                localStorage.setItem('walletAddress', foundAccount);
+              try {
+                // Request signature to verify wallet ownership
+                const signer = provider.getSigner(savedAddress);
+                const timestamp = Date.now();
+                const message = `Sign this message to verify you own this wallet.\n\nTimestamp: ${timestamp}`;
                 
-                // Update timestamp
-                localStorage.setItem('lastLoginTimestamp', Date.now().toString());
-                localStorage.setItem('walletSignature', signature);
-                localStorage.setItem('signatureTimestamp', timestamp.toString());
+                // Show toast about signature requirement
+                toast({
+                  title: "Wallet Verification Required",
+                  description: "Please sign the message to verify you still own this wallet.",
+                });
                 
-                // Get chain ID
-                const network = await provider.getNetwork();
-                setChainId(network.chainId);
+                const signature = await signer.signMessage(message);
+                console.log("Signature received for new session");
                 
-                console.log("Wallet connection restored after verification:", foundAccount);
+                // Now verify with the backend
+                const userId = await getUserFromWallet(savedAddress, {
+                  signature: signature,
+                  message: message,
+                  timestamp: timestamp,
+                  walletAddress: savedAddress
+                });
                 
-                // Fetch user profile data
-                const userProfile = await getUserProfile(userId);
-                if (userProfile) {
-                  setUser(userProfile);
+                if (userId) {
+                  // Verification successful, restore connection
+                  // Use the actual account address from provider to avoid case issues
+                  setAccount(foundAccount);
+                  setUserId(userId);
+                  localStorage.setItem('userId', String(userId));
+                  // Update the saved address with the correct case
+                  localStorage.setItem('walletAddress', foundAccount);
+                  
+                  // Update timestamp
+                  localStorage.setItem('lastLoginTimestamp', Date.now().toString());
+                  localStorage.setItem('walletSignature', signature);
+                  localStorage.setItem('signatureTimestamp', timestamp.toString());
+                  
+                  // Get chain ID
+                  const network = await provider.getNetwork();
+                  setChainId(network.chainId);
+                  
+                  console.log("Wallet connection restored after verification:", foundAccount);
+                  
+                  // Fetch user profile data
+                  const userProfile = await getUserProfile(userId);
+                  if (userProfile) {
+                    setUser(userProfile);
+                  }
+                } else {
+                  // Verification failed, clear localStorage
+                  console.log("Wallet verification failed, clearing stored connection");
+                  localStorage.removeItem('walletConnected');
+                  localStorage.removeItem('walletAddress');
+                  localStorage.removeItem('userId');
+                  localStorage.removeItem('lastLoginTimestamp');
+                  localStorage.removeItem('walletSignature');
+                  localStorage.removeItem('signatureTimestamp');
                 }
-              } else {
-                // Verification failed, clear localStorage
-                console.log("Wallet verification failed, clearing stored connection");
+              } catch (error) {
+                console.log("User rejected signature or error occurred:", error);
+                // Clear localStorage if signature is rejected
                 localStorage.removeItem('walletConnected');
                 localStorage.removeItem('walletAddress');
                 localStorage.removeItem('userId');
@@ -124,16 +166,7 @@ export function useWallet(): UseWalletReturn {
                 localStorage.removeItem('walletSignature');
                 localStorage.removeItem('signatureTimestamp');
               }
-            } catch (error) {
-              console.log("User rejected signature or error occurred:", error);
-              // Clear localStorage if signature is rejected
-              localStorage.removeItem('walletConnected');
-              localStorage.removeItem('walletAddress');
-              localStorage.removeItem('userId');
-              localStorage.removeItem('lastLoginTimestamp');
-              localStorage.removeItem('walletSignature');
-              localStorage.removeItem('signatureTimestamp');
-              }
+            }
           } else if (accounts.length > 0) {
             // The saved address is not available but other accounts are
             // This likely means the user switched wallets

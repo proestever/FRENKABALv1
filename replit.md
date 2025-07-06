@@ -132,6 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 6, 2025 - Implemented Persistent Wallet Sessions
+- **Added 7-day session persistence** - Users no longer need to sign messages repeatedly after initial authentication
+- **Smart session restoration** - System checks for valid stored authentication data and restores sessions automatically
+- **Signature caching** - Wallet signatures are stored locally and reused within the 7-day validity period
+- **Seamless reconnection** - On page refresh or navigation, sessions restore without user interaction
+- **Welcome back notification** - Users see a subtle toast confirming their session was restored
+
 ### July 6, 2025 - Fixed Portfolio Tab Authentication Issue
 - **Fixed case sensitivity bug** - Wallet addresses from provider (mixed case) now properly match saved addresses (lowercase)
 - **Updated wallet restoration logic** - Connection restoration now compares addresses case-insensitively 
