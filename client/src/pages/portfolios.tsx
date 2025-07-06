@@ -35,7 +35,10 @@ interface Portfolio {
   id: number;
   userId: number;
   name: string;
+  slug: string | null;
+  publicCode: string | null;
   description: string | null;
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -620,10 +623,8 @@ const PortfoliosPage = () => {
                         )}
                       </Button>
                       <div>
-                        <CardTitle className="text-lg">{portfolio.name}</CardTitle>
-                        {portfolio.description && (
-                          <CardDescription className="text-xs">{portfolio.description}</CardDescription>
-                        )}
+                        <CardTitle className="text-lg">{portfolio.name} Portfolio</CardTitle>
+                        <CardDescription className="text-xs">Saved Bundle</CardDescription>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -646,15 +647,15 @@ const PortfoliosPage = () => {
                           className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
                           size="sm"
                           onClick={() => {
-                            // Create the shareable URL with the origin and pathname using slug
-                            const portfolioUrl = portfolio.slug 
-                              ? `${window.location.origin}/portfolio/${portfolio.slug}`
+                            // Create the shareable URL using the public code
+                            const portfolioUrl = portfolio.publicCode 
+                              ? `${window.location.origin}/p/${portfolio.publicCode}`
                               : `${window.location.origin}/portfolio/${portfolio.id}`;
                             // Copy to clipboard
                             navigator.clipboard.writeText(portfolioUrl).then(() => {
                               toast({
                                 title: "URL copied",
-                                description: "Portfolio URL has been copied to clipboard",
+                                description: `Portfolio URL (${portfolio.publicCode || `ID: ${portfolio.id}`}) has been copied to clipboard`,
                               });
                             }).catch(err => {
                               console.error("Could not copy URL: ", err);

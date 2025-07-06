@@ -404,6 +404,7 @@ function Router() {
           <Route path="/saved" component={Profile} />
           <Route path="/portfolios" component={PortfoliosPage} />
           <Route path="/portfolio/:portfolioId" component={Home} />
+          <Route path="/p/:publicCode" component={Home} />
           <Route path="/donations" component={Donations} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/admin/api-usage" component={ApiUsagePage} />

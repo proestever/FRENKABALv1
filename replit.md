@@ -132,6 +132,15 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 6, 2025 - Implemented Public Portfolio Sharing with 6-Character Codes
+- **Added publicCode field to portfolios table** - Portfolios now have unique 6-character alphanumeric codes for easy sharing
+- **Automatic code generation** - System generates unique codes like "PCVPA7" when creating portfolios
+- **Short URL sharing** - Portfolios can be shared using short URLs like `/p/PCVPA7` instead of long slugs
+- **Simplified portfolio display** - Portfolios now show as "Portfolio Name Portfolio" with "Saved Bundle" subtitle
+- **API support for public codes** - Added `/api/portfolios/public/:code` endpoint for fetching portfolios by code
+- **Migration completed** - All 44 existing portfolios now have unique public codes generated
+- **Persistent bundle view** - Public portfolio URLs maintain the bundle view without refreshing to first address
+
 ### July 6, 2025 - Implemented Slug-Based Portfolio URLs
 - **Added slug field to portfolios table** - Portfolios now have URL-friendly slugs generated from their names
 - **Automatic slug generation** - When creating or updating portfolio names, slugs are automatically generated

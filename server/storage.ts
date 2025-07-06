@@ -8,6 +8,7 @@ import {
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import { generateSlug, generateUniqueSlug } from "./utils/slug";
+import { generatePublicCode } from "./utils/public-code";
 
 // Storage interface for database access
 export interface IStorage {
@@ -32,6 +33,7 @@ export interface IStorage {
   getPortfolios(userId: number): Promise<Portfolio[]>;
   getPortfolio(id: number): Promise<Portfolio | undefined>;
   getPortfolioBySlug(slug: string): Promise<Portfolio | undefined>;
+  getPortfolioByPublicCode(publicCode: string): Promise<Portfolio | undefined>;
   createPortfolio(portfolio: InsertPortfolio): Promise<Portfolio>;
   updatePortfolio(id: number, data: Partial<InsertPortfolio>): Promise<Portfolio>;
   deletePortfolio(id: number): Promise<boolean>;
@@ -276,6 +278,15 @@ export class DatabaseStorage implements IStorage {
     return portfolio || undefined;
   }
   
+  async getPortfolioByPublicCode(publicCode: string): Promise<Portfolio | undefined> {
+    const [portfolio] = await db
+      .select()
+      .from(portfolios)
+      .where(eq(portfolios.publicCode, publicCode));
+      
+    return portfolio || undefined;
+  }
+  
   async createPortfolio(portfolio: InsertPortfolio): Promise<Portfolio> {
     try {
       // Generate a slug from the portfolio name
@@ -288,14 +299,25 @@ export class DatabaseStorage implements IStorage {
         slug = generateUniqueSlug(slug);
       }
       
-      const portfolioWithSlug = {
+      // Generate a unique public code
+      let publicCode = generatePublicCode();
+      let existingCode = await this.getPortfolioByPublicCode(publicCode);
+      
+      // Keep generating until we find a unique code
+      while (existingCode) {
+        publicCode = generatePublicCode();
+        existingCode = await this.getPortfolioByPublicCode(publicCode);
+      }
+      
+      const portfolioWithSlugAndCode = {
         ...portfolio,
-        slug
+        slug,
+        publicCode
       };
       
       const [newPortfolio] = await db
         .insert(portfolios)
-        .values(portfolioWithSlug)
+        .values(portfolioWithSlugAndCode)
         .returning();
         
       return newPortfolio;

@@ -41,6 +41,26 @@ router.get("/portfolios/slug/:slug", async (req: Request, res: Response) => {
   }
 });
 
+// Get a specific portfolio by public code
+router.get("/portfolios/public/:code", async (req: Request, res: Response) => {
+  try {
+    const { code } = req.params;
+    if (!code || typeof code !== 'string' || code.length !== 6) {
+      return res.status(400).json({ message: "Invalid portfolio code" });
+    }
+    
+    const portfolio = await storage.getPortfolioByPublicCode(code.toUpperCase());
+    if (!portfolio) {
+      return res.status(404).json({ message: "Portfolio not found" });
+    }
+    
+    return res.json(portfolio);
+  } catch (error) {
+    console.error("Error fetching portfolio by public code:", error);
+    return res.status(500).json({ message: "Failed to fetch portfolio" });
+  }
+});
+
 // Get a specific portfolio by ID
 router.get("/portfolios/:id", async (req: Request, res: Response) => {
   try {

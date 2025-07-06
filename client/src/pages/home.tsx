@@ -44,7 +44,7 @@ export default function Home() {
     status: 'idle',
     message: ''
   });
-  const params = useParams<{ walletAddress?: string; portfolioId?: string }>();
+  const params = useParams<{ walletAddress?: string; portfolioId?: string; publicCode?: string }>();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -330,6 +330,51 @@ export default function Home() {
         console.log(`Detected wallet address in URL params: ${params.walletAddress}`);
         handleSearch(params.walletAddress);
       }
+      return;
+    }
+    
+    // Check if we have a public portfolio code (/p/:publicCode)
+    if (params.publicCode) {
+      console.log(`Loading portfolio with public code: ${params.publicCode}`);
+      
+      const fetchPortfolioByCode = async () => {
+        try {
+          // Fetch portfolio by public code
+          const portfolioResponse = await fetch(`/api/portfolios/public/${params.publicCode}`);
+          if (!portfolioResponse.ok) {
+            throw new Error('Portfolio not found');
+          }
+          const portfolio = await portfolioResponse.json();
+          
+          // Then fetch the wallet addresses
+          const addressesResponse = await fetch(`/api/portfolios/${portfolio.id}/addresses`);
+          const addresses = await addressesResponse.json();
+          
+          if (addresses && addresses.length > 0) {
+            setPortfolioName(portfolio.name);
+            setPortfolioUrlId(params.publicCode);
+            console.log(`Portfolio name from API: ${portfolio.name}`);
+            
+            // Filter out any invalid addresses and get wallet addresses
+            const validAddresses = addresses
+              .map((addr: any) => addr.walletAddress)
+              .filter((addr: string) => addr.startsWith('0x'));
+              
+            if (validAddresses.length > 0) {
+              handleMultiSearch(validAddresses);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading portfolio by public code:', error);
+          toast({
+            title: "Portfolio not found",
+            description: "The portfolio code is invalid or the portfolio does not exist.",
+            variant: "destructive"
+          });
+        }
+      };
+      
+      fetchPortfolioByCode();
       return;
     }
     

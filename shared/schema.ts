@@ -158,6 +158,7 @@ export const portfolios = pgTable("portfolios", {
   userId: integer("user_id").references(() => users.id),
   name: text("name").notNull(),
   slug: text("slug").unique(),
+  publicCode: text("public_code").unique(),
   description: text("description"),
   isPublic: boolean("is_public").default(false).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
