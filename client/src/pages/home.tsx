@@ -141,15 +141,19 @@ export default function Home() {
     // Reset single wallet view
     setSearchedAddress(null);
     
-    // Update URL to show we're in multi-wallet mode
-    const firstAddress = addresses[0];
-    const currentPath = `/${firstAddress}`;
-    if (location !== currentPath) {
-      setLocation(currentPath);
+    // Only update URL if we're not already on a portfolio URL
+    // This preserves the /p/{code} URL when loading portfolio bundles
+    if (!location.startsWith('/p/') && !location.startsWith('/portfolio/')) {
+      // Update URL to show we're in multi-wallet mode
+      const firstAddress = addresses[0];
+      const currentPath = `/${firstAddress}`;
+      if (location !== currentPath) {
+        setLocation(currentPath);
+      }
     }
     
     // Save the first address to recent addresses
-    saveRecentAddress(firstAddress);
+    saveRecentAddress(addresses[0]);
     
     setIsMultiWalletLoading(true);
     setMultiWalletData(null);
