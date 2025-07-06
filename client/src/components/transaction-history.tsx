@@ -173,6 +173,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
           addresses.add(transfer.address.toLowerCase());
         }
       });
+      // Add WPLS for native PLS transactions
+      if (tx.value !== '0' || tx.native_transfers?.length) {
+        addresses.add('0xa1077a294dde1b09bb078844df40758a5d0f9a27'); // WPLS
+      }
     });
     return Array.from(addresses);
   }, [transactions]);
@@ -193,9 +197,16 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   
   // Calculate USD value
   const calculateUsdValue = (value: string, decimals?: string, tokenAddress?: string): number | null => {
-    if (!tokenAddress || !batchPrices || !batchPrices[tokenAddress.toLowerCase()]) return null;
+    if (!tokenAddress || !batchPrices) return null;
     
-    const price = batchPrices[tokenAddress.toLowerCase()];
+    // For native PLS, use WPLS price
+    const lookupAddress = tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' 
+      ? '0xa1077a294dde1b09bb078844df40758a5d0f9a27' // Use WPLS price for native PLS
+      : tokenAddress.toLowerCase();
+    
+    if (!batchPrices[lookupAddress]) return null;
+    
+    const price = batchPrices[lookupAddress];
     const decimalCount = parseInt(decimals || '18');
     const numValue = parseFloat(value) / Math.pow(10, decimalCount);
     
@@ -433,14 +444,17 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           {formatTokenValue(tx.value, '18')}
                         </span>
                         <span className="text-gray-400">PLS</span>
-                        <span className="text-gray-400">sent</span>
                         {(() => {
                           const usdValue = calculateUsdValue(tx.value, '18', '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee');
                           if (usdValue !== null && usdValue >= 0.01) {
-                            return <span className="text-xs text-gray-500">($${formatCurrency(usdValue)})</span>;
+                            return <span className="text-xs text-gray-500">(${formatCurrency(usdValue)})</span>;
                           }
                           return null;
                         })()}
+                        <span className="text-gray-400">sent to</span>
+                        <span className="text-gray-400 font-mono text-xs">
+                          {tx.to_address.slice(0, 6)}...{tx.to_address.slice(-4)}
+                        </span>
                       </div>
                     );
                   }
@@ -482,7 +496,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           const tokenAddr = primarySent.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : primarySent.address;
                           const usdValue = calculateUsdValue(primarySent.netAmount.toString(), primarySent.decimals, tokenAddr);
                           if (usdValue !== null && usdValue >= 0.01) {
-                            return <span className="text-xs text-gray-500">($${formatCurrency(usdValue)})</span>;
+                            return <span className="text-xs text-gray-500">(${formatCurrency(usdValue)})</span>;
                           }
                           return null;
                         })()}
@@ -509,7 +523,7 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           const tokenAddr = primaryReceived.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : primaryReceived.address;
                           const usdValue = calculateUsdValue(primaryReceived.netAmount.toString(), primaryReceived.decimals, tokenAddr);
                           if (usdValue !== null && usdValue >= 0.01) {
-                            return <span className="text-xs text-gray-500">($${formatCurrency(usdValue)})</span>;
+                            return <span className="text-xs text-gray-500">(${formatCurrency(usdValue)})</span>;
                           }
                           return null;
                         })()}
@@ -517,7 +531,12 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                     )}
                     
                     {!primaryReceived && primarySent && (
-                      <span className="text-gray-400">sent</span>
+                      <>
+                        <span className="text-gray-400">sent to</span>
+                        <span className="text-gray-400 font-mono text-xs">
+                          {tx.to_address.slice(0, 6)}...{tx.to_address.slice(-4)}
+                        </span>
+                      </>
                     )}
                     {!primarySent && primaryReceived && (
                       <span className="text-gray-400">received</span>
