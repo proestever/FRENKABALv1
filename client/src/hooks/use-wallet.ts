@@ -152,35 +152,9 @@ export function useWallet(): UseWalletReturn {
           localStorage.removeItem('userId');
           localStorage.removeItem('lastLoginTimestamp');
         }
-      } else if (window.ethereum) {
-        // No localStorage data, check if wallet is connected
-        try {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          const accounts = await provider.listAccounts();
-          
-          if (accounts.length > 0) {
-            setAccount(accounts[0]);
-            
-            // Store in localStorage for persistence
-            localStorage.setItem('walletConnected', 'true');
-            localStorage.setItem('walletAddress', accounts[0]);
-            localStorage.setItem('lastLoginTimestamp', Date.now().toString());
-            
-            // Get chain ID
-            const network = await provider.getNetwork();
-            setChainId(network.chainId);
-            
-            // Get or create user ID for this wallet
-            const user = await getUserFromWallet(accounts[0]);
-            if (user) {
-              setUserId(user);
-              localStorage.setItem('userId', String(user));
-            }
-          }
-        } catch (error) {
-          console.error("Error checking connection:", error);
-        }
-      }
+      } 
+      // If no localStorage data, do not automatically connect
+      // User must explicitly connect with signature verification
     };
     
     checkConnection();
