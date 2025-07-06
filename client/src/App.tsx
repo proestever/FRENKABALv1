@@ -151,21 +151,6 @@ function Header() {
           <FrenKabalLogo size="md" className="mr-3 transition-transform duration-200 group-hover:scale-105" />
           <div className="flex items-center">
             <h1 className="text-xl md:text-2xl font-bold text-white group-hover:text-white/90 transition-colors duration-200">FrenKabal</h1>
-            <span className="ml-2 text-[0.6rem] font-bold px-1.5 py-0.5 rounded-[4px] uppercase tracking-wider relative bg-black"
-                  style={{
-                    background: 'linear-gradient(45deg, #00faff, #0088ff, #5500ff, #aa00ff, #ff00aa, #ff0055)',
-                    backgroundSize: '200% 200%',
-                    WebkitBackgroundClip: 'text',
-                    backgroundClip: 'text',
-                    color: 'transparent',
-                    filter: 'brightness(1.3) contrast(1.3) saturate(1.2)',
-                    textShadow: '0 0 2px rgba(255,255,255,0.5)',
-                    border: 'none',
-                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.15), 0 0 4px rgba(85,0,255,0.5)',
-                    animation: 'gradient-x 4s ease infinite, beta-glow 2s ease-in-out infinite'
-                  }}>
-                Beta
-            </span>
           </div>
         </a>
         
