@@ -21,6 +21,26 @@ router.get("/users/:userId/portfolios", async (req: Request, res: Response) => {
   }
 });
 
+// Get a specific portfolio by slug (must be defined before :id route)
+router.get("/portfolios/slug/:slug", async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    if (!slug || typeof slug !== 'string') {
+      return res.status(400).json({ message: "Invalid portfolio slug" });
+    }
+    
+    const portfolio = await storage.getPortfolioBySlug(slug);
+    if (!portfolio) {
+      return res.status(404).json({ message: "Portfolio not found" });
+    }
+    
+    return res.json(portfolio);
+  } catch (error) {
+    console.error("Error fetching portfolio by slug:", error);
+    return res.status(500).json({ message: "Failed to fetch portfolio" });
+  }
+});
+
 // Get a specific portfolio by ID
 router.get("/portfolios/:id", async (req: Request, res: Response) => {
   try {
@@ -116,6 +136,27 @@ router.get("/portfolios/:id/addresses", async (req: Request, res: Response) => {
     }
     
     const addresses = await storage.getPortfolioAddresses(portfolioId);
+    return res.json(addresses);
+  } catch (error) {
+    console.error("Error fetching portfolio addresses:", error);
+    return res.status(500).json({ message: "Failed to fetch portfolio addresses" });
+  }
+});
+
+// Get all addresses in a portfolio by slug
+router.get("/portfolios/slug/:slug/addresses", async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    if (!slug || typeof slug !== 'string') {
+      return res.status(400).json({ message: "Invalid portfolio slug" });
+    }
+    
+    const portfolio = await storage.getPortfolioBySlug(slug);
+    if (!portfolio) {
+      return res.status(404).json({ message: "Portfolio not found" });
+    }
+    
+    const addresses = await storage.getPortfolioAddresses(portfolio.id);
     return res.json(addresses);
   } catch (error) {
     console.error("Error fetching portfolio addresses:", error);

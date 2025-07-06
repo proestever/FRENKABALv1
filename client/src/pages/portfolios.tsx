@@ -646,8 +646,10 @@ const PortfoliosPage = () => {
                           className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
                           size="sm"
                           onClick={() => {
-                            // Create the shareable URL with the origin and pathname
-                            const portfolioUrl = `${window.location.origin}/portfolio/${portfolio.id}`;
+                            // Create the shareable URL with the origin and pathname using slug
+                            const portfolioUrl = portfolio.slug 
+                              ? `${window.location.origin}/portfolio/${portfolio.slug}`
+                              : `${window.location.origin}/portfolio/${portfolio.id}`;
                             // Copy to clipboard
                             navigator.clipboard.writeText(portfolioUrl).then(() => {
                               toast({

@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 6, 2025 - Implemented Slug-Based Portfolio URLs
+- **Added slug field to portfolios table** - Portfolios now have URL-friendly slugs generated from their names
+- **Automatic slug generation** - When creating or updating portfolio names, slugs are automatically generated
+- **Dual access support** - Portfolios can be accessed by both numeric ID and slug (e.g., `/portfolio/my-wallet`)
+- **Smart slug detection** - Frontend automatically detects whether URL contains ID or slug and uses appropriate API
+- **Conflict prevention** - System ensures unique slugs by appending random suffixes when needed
+- **Migration completed** - All 44 existing portfolios now have slugs populated
+
 ### July 6, 2025 - Implemented Persistent Wallet Sessions
 - **Added 7-day session persistence** - Users no longer need to sign messages repeatedly after initial authentication
 - **Smart session restoration** - System checks for valid stored authentication data and restores sessions automatically

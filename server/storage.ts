@@ -7,6 +7,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
+import { generateSlug, generateUniqueSlug } from "./utils/slug";
 
 // Storage interface for database access
 export interface IStorage {
@@ -30,6 +31,7 @@ export interface IStorage {
   // Portfolio methods
   getPortfolios(userId: number): Promise<Portfolio[]>;
   getPortfolio(id: number): Promise<Portfolio | undefined>;
+  getPortfolioBySlug(slug: string): Promise<Portfolio | undefined>;
   createPortfolio(portfolio: InsertPortfolio): Promise<Portfolio>;
   updatePortfolio(id: number, data: Partial<InsertPortfolio>): Promise<Portfolio>;
   deletePortfolio(id: number): Promise<boolean>;
@@ -265,11 +267,35 @@ export class DatabaseStorage implements IStorage {
     return portfolio || undefined;
   }
   
+  async getPortfolioBySlug(slug: string): Promise<Portfolio | undefined> {
+    const [portfolio] = await db
+      .select()
+      .from(portfolios)
+      .where(eq(portfolios.slug, slug));
+      
+    return portfolio || undefined;
+  }
+  
   async createPortfolio(portfolio: InsertPortfolio): Promise<Portfolio> {
     try {
+      // Generate a slug from the portfolio name
+      let slug = generateSlug(portfolio.name);
+      
+      // Check if slug already exists
+      const existingPortfolio = await this.getPortfolioBySlug(slug);
+      if (existingPortfolio) {
+        // Generate unique slug if it already exists
+        slug = generateUniqueSlug(slug);
+      }
+      
+      const portfolioWithSlug = {
+        ...portfolio,
+        slug
+      };
+      
       const [newPortfolio] = await db
         .insert(portfolios)
-        .values(portfolio)
+        .values(portfolioWithSlug)
         .returning();
         
       return newPortfolio;
@@ -281,12 +307,25 @@ export class DatabaseStorage implements IStorage {
   
   async updatePortfolio(id: number, data: Partial<InsertPortfolio>): Promise<Portfolio> {
     try {
+      let updateData: any = { ...data, updatedAt: new Date() };
+      
+      // If name is being updated, regenerate slug
+      if (data.name) {
+        let slug = generateSlug(data.name);
+        
+        // Check if slug already exists (excluding current portfolio)
+        const existingPortfolio = await this.getPortfolioBySlug(slug);
+        if (existingPortfolio && existingPortfolio.id !== id) {
+          // Generate unique slug if it already exists
+          slug = generateUniqueSlug(slug);
+        }
+        
+        updateData.slug = slug;
+      }
+      
       const [updatedPortfolio] = await db
         .update(portfolios)
-        .set({
-          ...data,
-          updatedAt: new Date()
-        })
+        .set(updateData)
         .where(eq(portfolios.id, id))
         .returning();
         

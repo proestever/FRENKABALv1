@@ -367,15 +367,38 @@ export default function Home() {
       // If we can't find portfolio data in session storage, try to fetch it from the API
       const fetchPortfolioData = async () => {
         try {
-          const response = await fetch(`/api/portfolios/${portfolioId}/wallet-addresses`);
-          const result = await response.json();
+          // Check if portfolioId is numeric (ID) or not (slug)
+          const isNumericId = /^\d+$/.test(portfolioId);
           
-          if (result && result.walletAddresses && result.walletAddresses.length > 0) {
-            setPortfolioName(result.portfolioName);
-            console.log(`Portfolio name from API: ${result.portfolioName}`);
+          let portfolioData;
+          if (isNumericId) {
+            // Fetch by ID
+            const response = await fetch(`/api/portfolios/${portfolioId}/wallet-addresses`);
+            portfolioData = await response.json();
+          } else {
+            // Fetch by slug - first get the portfolio details
+            const portfolioResponse = await fetch(`/api/portfolios/slug/${portfolioId}`);
+            if (!portfolioResponse.ok) {
+              throw new Error('Portfolio not found');
+            }
+            const portfolio = await portfolioResponse.json();
+            
+            // Then fetch the wallet addresses
+            const addressesResponse = await fetch(`/api/portfolios/slug/${portfolioId}/addresses`);
+            const addresses = await addressesResponse.json();
+            
+            portfolioData = {
+              portfolioName: portfolio.name,
+              walletAddresses: addresses.map((addr: any) => addr.walletAddress)
+            };
+          }
+          
+          if (portfolioData && portfolioData.walletAddresses && portfolioData.walletAddresses.length > 0) {
+            setPortfolioName(portfolioData.portfolioName);
+            console.log(`Portfolio name from API: ${portfolioData.portfolioName}`);
             
             // Filter out any invalid addresses
-            const validAddresses = result.walletAddresses.filter((addr: string) => addr.startsWith('0x'));
+            const validAddresses = portfolioData.walletAddresses.filter((addr: string) => addr.startsWith('0x'));
             if (validAddresses.length > 0) {
               handleMultiSearch(validAddresses);
             }
@@ -654,12 +677,6 @@ export default function Home() {
               <div className="flex flex-col lg:flex-row gap-6">
                 {/* Left column - Combined Wallet Overview */}
                 <div className="w-full lg:w-1/3 flex flex-col gap-6">
-                  {/* Debug portfolio name - remove in production */}
-                  {portfolioName && (
-                    <div className="mb-2 p-2 bg-purple-500/20 border border-purple-500/40 rounded text-xs">
-                      Debug: Portfolio name = "{portfolioName}"
-                    </div>
-                  )}
                   <WalletOverview 
                     wallet={combinedWallet} 
                     isLoading={false}
