@@ -308,10 +308,17 @@ export function useWallet(): UseWalletReturn {
           description: "Please install MetaMask or another compatible wallet",
           variant: "destructive",
         });
+        clearTimeout(connectionTimeout);
+        setIsConnecting(false);
         return;
       }
       
       console.log("Ethereum object found:", typeof ethereumProvider);
+      console.log("Ethereum provider details:", {
+        isMetaMask: ethereumProvider.isMetaMask,
+        selectedAddress: ethereumProvider.selectedAddress,
+        chainId: ethereumProvider.chainId,
+      });
       
       // Safely call request method with error handling
       let accounts;
@@ -319,26 +326,29 @@ export function useWallet(): UseWalletReturn {
         // Use direct window.ethereum request instead of ethers
         console.log("Directly requesting accounts from wallet...");
         
-        // Add a more specific timeout for the wallet request
-        const requestPromise = ethereumProvider.request({ method: 'eth_requestAccounts' });
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Wallet request timeout')), 15000)
-        );
-        
-        accounts = await Promise.race([requestPromise, timeoutPromise]);
+        // Try direct request
+        accounts = await ethereumProvider.request({ method: 'eth_requestAccounts' });
         console.log("Accounts received:", accounts);
+        
+        // If accounts is null or undefined, throw an error
+        if (!accounts || accounts.length === 0) {
+          throw new Error("No accounts returned from wallet");
+        }
       } catch (requestError: any) {
-        console.error("Error requesting accounts:", requestError);
+        console.error("Error requesting accounts:", requestError, requestError?.message, requestError?.code);
         
         // More specific error messages
         let errorMessage = "Unable to connect to your wallet. Please try again.";
         
-        if (requestError.message?.includes('timeout')) {
+        if (requestError?.message?.includes('timeout')) {
           errorMessage = "Connection timed out. Please check your wallet for pending requests.";
-        } else if (requestError.code === 4001 || requestError.message?.includes('rejected')) {
+        } else if (requestError?.code === 4001 || requestError?.message?.includes('rejected')) {
           errorMessage = "Connection rejected. Please approve the connection in your wallet.";
-        } else if (requestError.code === -32002) {
+        } else if (requestError?.code === -32002) {
           errorMessage = "Connection already pending. Please check your wallet.";
+        } else if (requestError?.message) {
+          // If we have a message, show it
+          errorMessage = requestError.message;
         }
         
         toast({
