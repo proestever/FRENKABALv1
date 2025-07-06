@@ -285,17 +285,17 @@ function parseTransfers(receipt: any, wallet: string): TransactionTransfer[] {
     }
     
     // Handle WPLS Withdrawal events - these represent native PLS received
+    // IMPORTANT: Only count withdrawals initiated BY the wallet to avoid double-counting
     if (log.topics[0] === WITHDRAWAL_EVENT_SIGNATURE && log.address.toLowerCase() === WPLS_ADDRESS) {
       try {
         // For Withdrawal event, topics[1] contains the source address (who withdrew)
         const src = utils.getAddress('0x' + log.topics[1].slice(26));
         const value = log.data; // The amount of WPLS withdrawn (same as PLS received)
         
-        // Check if this withdrawal is TO the wallet (usually from router contracts)
-        // In the context of a swap, the router withdraws WPLS and sends PLS to the user
-        // We need to check the transaction to see if the user received PLS
-        if (receipt.to && receipt.to.toLowerCase() === wallet.toLowerCase()) {
-          // Direct withdrawal by the wallet
+        // Only count if the wallet itself initiated the withdrawal
+        // This prevents double-counting when routers handle WPLS internally during swaps
+        if (src.toLowerCase() === wallet.toLowerCase()) {
+          // Direct withdrawal by the wallet - they're unwrapping WPLS to PLS
           nativeTransfers.push({
             from_address: WPLS_ADDRESS,
             to_address: wallet,
@@ -309,23 +309,9 @@ function parseTransfers(receipt: any, wallet: string): TransactionTransfer[] {
             direction: 'receive',
             internal_transaction: true
           });
-        } else if (src.toLowerCase() !== wallet.toLowerCase()) {
-          // Withdrawal by another contract (like router) - check if user received value
-          // This handles the case where router withdraws WPLS and sends PLS to user
-          nativeTransfers.push({
-            from_address: src,
-            to_address: wallet,
-            address: 'native', // Mark as native PLS
-            value: value,
-            log_index: log.logIndex,
-            token_name: 'PulseChain',
-            token_symbol: 'PLS',
-            token_logo: '/assets/pls logo trimmed.png',
-            token_decimals: '18',
-            direction: 'receive',
-            internal_transaction: true
-          });
         }
+        // Skip router withdrawals - the native PLS transfer is already counted
+        // when the user sends PLS to the router at the beginning of the swap
       } catch (error) {
         console.error('Error parsing WPLS withdrawal event:', error);
       }

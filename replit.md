@@ -132,6 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
+### January 7, 2025 - Fixed Double-Counting PLS in Swap Transactions
+- **Fixed PLS amount display issue** - Swaps no longer show double the actual PLS amount (e.g., showing 180M instead of 90M)
+- **Root cause identified** - WPLS withdrawal events from routers were incorrectly counted as additional PLS transfers
+- **Updated transaction parsing logic** - WPLS withdrawals now only count when initiated by the wallet itself, not by routers
+- **Prevents double-counting in swaps** - When swapping PLS through PulseX, only the initial PLS transfer is counted
+- **Accurate transaction history** - Swap amounts now correctly reflect the actual tokens exchanged
+
 ### July 6, 2025 - Implemented Public Portfolio Sharing with 6-Character Codes
 - **Added publicCode field to portfolios table** - Portfolios now have unique 6-character alphanumeric codes for easy sharing
 - **Automatic code generation** - System generates unique codes like "PCVPA7" when creating portfolios
