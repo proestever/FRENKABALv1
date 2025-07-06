@@ -132,6 +132,12 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 6, 2025 - Removed Dedicated Transaction Page
+- **Removed standalone transaction page** - Eliminated the separate `/transactions` route for better UX
+- **Simplified navigation** - Transaction history is now only accessible through wallet tabs as a modal
+- **Removed "View all transactions" link** - Cleaner interface with transaction history integrated into main wallet view
+- **Improved user flow** - Users stay on the wallet page while viewing transactions, maintaining context
+
 ### July 5, 2025 - Client-Side DexScreener API Integration
 - **Moved DexScreener API calls to client-side** - Prevents server rate limits by distributing API calls across users' browsers
 - **Created `/api/wallet/:address/balances-no-prices` endpoint** - Returns token balances without prices, reducing server load

@@ -274,18 +274,9 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 {transactions.length} transactions
               </span>
             </h2>
-            <div className="flex items-center gap-4 mt-1">
-              <span className="text-xs text-gray-400">
-                Detailed transaction history with comprehensive token metadata
-                {hasMore && <span className="ml-2">• More available</span>}
-              </span>
-              <Link 
-                href={`/${walletAddress}/transactions`}
-                className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
-              >
-                View all transactions
-                <ExternalLink size={10} />
-              </Link>
+            <div className="text-xs text-gray-400 mt-1">
+              Detailed transaction history with comprehensive token metadata
+              {hasMore && <span className="ml-2">• More available</span>}
             </div>
           </div>
           
