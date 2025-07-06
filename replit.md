@@ -132,6 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 6, 2025 - Enhanced Fix for PLS Double-Counting in Swap Transactions
+- **Improved swap detection** - System now identifies swap transactions before parsing transfers
+- **Complete WPLS withdrawal exclusion** - ALL WPLS withdrawals are now ignored in swap transactions, not just router-initiated ones
+- **Updated parseTransfers function** - Added `isSwapTransaction` parameter to completely skip WPLS withdrawals during swaps
+- **More robust fix** - Prevents any possible double-counting scenarios in DEX transactions
+- **Original fix enhanced** - Built upon January 7 fix with more comprehensive detection
+
 ### January 7, 2025 - Fixed Double-Counting PLS in Swap Transactions
 - **Fixed PLS amount display issue** - Swaps no longer show double the actual PLS amount (e.g., showing 180M instead of 90M)
 - **Root cause identified** - WPLS withdrawal events from routers were incorrectly counted as additional PLS transfers

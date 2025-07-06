@@ -156,8 +156,16 @@ export async function fetchTransactionsFast(
           const block = await provider.getBlock(tx.blockNumber!);
           if (!block) return null;
           
+          // Check if this is a swap transaction
+          const isSwapTransaction = tx.to && (
+            DEX_ROUTERS.includes(tx.to.toLowerCase()) ||
+            (tx.data && tx.data.length >= 10 && SWAP_METHODS.some(method => 
+              tx.data.toLowerCase().includes(method.toLowerCase())
+            ))
+          );
+          
           // Parse transfers quickly
-          const allTransfers = parseTransfers(receipt, wallet);
+          const allTransfers = parseTransfers(receipt, wallet, isSwapTransaction);
           
           // Separate native and ERC20 transfers
           const erc20Transfers = allTransfers.filter(t => t.address !== 'native');
@@ -240,7 +248,7 @@ export async function fetchTransactionsFast(
   }
 }
 
-function parseTransfers(receipt: any, wallet: string): TransactionTransfer[] {
+function parseTransfers(receipt: any, wallet: string, isSwapTransaction: boolean = false): TransactionTransfer[] {
   const transfers: TransactionTransfer[] = [];
   const nativeTransfers: TransactionTransfer[] = [];
   
@@ -285,8 +293,8 @@ function parseTransfers(receipt: any, wallet: string): TransactionTransfer[] {
     }
     
     // Handle WPLS Withdrawal events - these represent native PLS received
-    // IMPORTANT: Only count withdrawals initiated BY the wallet to avoid double-counting
-    if (log.topics[0] === WITHDRAWAL_EVENT_SIGNATURE && log.address.toLowerCase() === WPLS_ADDRESS) {
+    // IMPORTANT: Skip ALL WPLS withdrawals in swap transactions to avoid double-counting
+    if (log.topics[0] === WITHDRAWAL_EVENT_SIGNATURE && log.address.toLowerCase() === WPLS_ADDRESS && !isSwapTransaction) {
       try {
         // For Withdrawal event, topics[1] contains the source address (who withdrew)
         const src = utils.getAddress('0x' + log.topics[1].slice(26));
