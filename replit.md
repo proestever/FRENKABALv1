@@ -132,6 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 6, 2025 - Fixed Portfolio Tab Authentication Issue
+- **Fixed case sensitivity bug** - Wallet addresses from provider (mixed case) now properly match saved addresses (lowercase)
+- **Updated wallet restoration logic** - Connection restoration now compares addresses case-insensitively 
+- **Added user profile fetching** - User profile data is now properly loaded after authentication and connection restoration
+- **Fixed userId persistence** - Portfolio tab now correctly recognizes connected wallet and shows user's saved portfolios
+- **Improved wallet address storage** - System now stores wallet addresses with correct case from provider to prevent future mismatches
+
 ### July 6, 2025 - Removed Dedicated Transaction Page
 - **Removed standalone transaction page** - Eliminated the separate `/transactions` route for better UX
 - **Simplified navigation** - Transaction history is now only accessible through wallet tabs as a modal

@@ -59,7 +59,9 @@ export function useWallet(): UseWalletReturn {
           const accounts = await provider.listAccounts();
           
           // If the saved address is in the available accounts, restore the connection
-          if (accounts.includes(savedAddress)) {
+          // Compare addresses case-insensitively
+          const foundAccount = accounts.find(acc => acc.toLowerCase() === savedAddress.toLowerCase());
+          if (foundAccount) {
             // We found the saved address in the available accounts
             // But we need to verify ownership with a signature
             console.log("Found saved wallet connection, requesting signature to verify ownership:", savedAddress);
@@ -89,9 +91,12 @@ export function useWallet(): UseWalletReturn {
               
               if (userId) {
                 // Verification successful, restore connection
-                setAccount(savedAddress);
+                // Use the actual account address from provider to avoid case issues
+                setAccount(foundAccount);
                 setUserId(userId);
                 localStorage.setItem('userId', String(userId));
+                // Update the saved address with the correct case
+                localStorage.setItem('walletAddress', foundAccount);
                 
                 // Update timestamp
                 localStorage.setItem('lastLoginTimestamp', Date.now().toString());
@@ -102,7 +107,13 @@ export function useWallet(): UseWalletReturn {
                 const network = await provider.getNetwork();
                 setChainId(network.chainId);
                 
-                console.log("Wallet connection restored after verification:", savedAddress);
+                console.log("Wallet connection restored after verification:", foundAccount);
+                
+                // Fetch user profile data
+                const userProfile = await getUserProfile(userId);
+                if (userProfile) {
+                  setUser(userProfile);
+                }
               } else {
                 // Verification failed, clear localStorage
                 console.log("Wallet verification failed, clearing stored connection");
@@ -345,6 +356,12 @@ export function useWallet(): UseWalletReturn {
           if (user) {
             setUserId(user);
             localStorage.setItem('userId', String(user));
+            
+            // Fetch user profile data
+            const userProfile = await getUserProfile(user);
+            if (userProfile) {
+              setUser(userProfile);
+            }
           }
         } catch (signError) {
           console.error("Signature request was rejected:", signError);
