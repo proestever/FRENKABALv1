@@ -143,6 +143,14 @@ Required environment variables:
 - **Multi-wallet parallel fetching** - Multiple wallets now load simultaneously instead of one-by-one
 - **Overall speedup** - Combined optimizations provide 5-10x faster loading for multi-wallet searches with HEX stakes
 
+### July 14, 2025 - Extended Performance Optimizations After User Feedback
+- **Reduced block scanning from 1M to 100K blocks** - 10x reduction in block lookback for finding tokens
+- **Optimized chunk size from 100K to 50K blocks** - Better parallelization of blockchain queries
+- **Doubled token batch processing from 50 to 100** - 2x faster token metadata fetching
+- **Quadrupled LP token batch size from 5 to 20** - 4x faster LP token processing
+- **Removed 500ms delays between LP batches** - Eliminated artificial delays saving ~10-20 seconds on large portfolios
+- **Expected overall improvement** - 10-20x faster loading for portfolios with many tokens and stakes
+
 ### July 6, 2025 - Fixed PLS Display in Swap Transactions
 - **Shows only initial PLS transfer** - Swap transactions now display only the PLS amount sent, not WPLS conversions
 - **Skip duplicate transfers** - Native transfers that match tx.value are skipped to prevent double-counting

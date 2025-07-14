@@ -38,15 +38,15 @@ async function getWalletTokens(walletAddress: string): Promise<Set<string>> {
       return await provider.getBlockNumber();
     });
     
-    // For performance, only look back 1M blocks (~3 months on PulseChain)
-    // This captures recent activity without scanning entire blockchain
-    const BLOCK_LOOKBACK = 1000000;
+    // For much better performance, only look back 100k blocks (~10 days on PulseChain)
+    // This captures recent activity without taking forever to scan
+    const BLOCK_LOOKBACK = 100000;
     const fromBlock = Math.max(0, currentBlock - BLOCK_LOOKBACK);
     
     console.log(`Scanning blocks ${fromBlock} to ${currentBlock} (last ${BLOCK_LOOKBACK} blocks)`);
     
     // Fetch transfer events in parallel with chunking for large ranges
-    const CHUNK_SIZE = 100000; // 100k blocks per chunk
+    const CHUNK_SIZE = 50000; // 50k blocks per chunk for faster processing
     const chunks: Array<{from: number, to: number}> = [];
     
     for (let block = fromBlock; block <= currentBlock; block += CHUNK_SIZE) {
@@ -195,7 +195,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     // Continue showing fetching tokens progress
     
     // Process tokens in larger batches for better performance
-    const BATCH_SIZE = 50; // Increased from 5 to 50 for 10x faster processing
+    const BATCH_SIZE = 100; // Increased to 100 for even faster processing
     const tokenArray = Array.from(tokenAddresses);
     const totalTokens = tokenArray.length;
     

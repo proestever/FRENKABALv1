@@ -281,8 +281,8 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
 export async function processLpTokens(
   tokens: ProcessedToken[], 
   walletAddress: string,
-  batchSize = 5,
-  delayMs = 500
+  batchSize = 20,
+  delayMs = 0
 ): Promise<ProcessedToken[]> {
   // Find LP tokens
   const lpTokens = tokens.filter(token => token.isLp);
