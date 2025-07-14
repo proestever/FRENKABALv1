@@ -187,34 +187,34 @@ export default function Home() {
         return null;
       });
       
-      // Process each wallet address sequentially for better progress tracking
-      for (let i = 0; i < addresses.length; i++) {
-        const address = addresses[i];
-        
-        // Update progress for this wallet
-        setMultiWalletProgress({
-          currentBatch: i + 1,
-          totalBatches: addresses.length,
-          status: 'loading',
-          message: `Loading wallet ${i + 1}/${addresses.length}: ${address.substring(0, 6)}...${address.substring(address.length - 4)}`
-        });
-        
+      // Process all wallet addresses in parallel for much faster loading
+      setMultiWalletProgress({
+        currentBatch: addresses.length,
+        totalBatches: addresses.length,
+        status: 'loading',
+        message: `Loading ${addresses.length} wallets in parallel...`
+      });
+      
+      const walletPromises = addresses.map(async (address) => {
         try {
           // Fetch wallet data
           const response = await fetch(`/api/wallet/${address}/all`);
           
           if (!response.ok) {
             console.warn(`Failed to fetch wallet ${address}`);
-            walletResults.push(null);
+            return null;
           } else {
             const data = await response.json();
-            walletResults.push({ [address]: data });
+            return { [address]: data };
           }
         } catch (error) {
           console.error(`Error fetching wallet ${address}:`, error);
-          walletResults.push(null);
+          return null;
         }
-      }
+      });
+      
+      // Wait for all wallets to be fetched in parallel
+      walletResults.push(...await Promise.all(walletPromises));
       
       // Wait for the hex stakes data to complete
       const hexStakesData = await hexStakesPromise;
@@ -227,7 +227,7 @@ export default function Home() {
         message: 'Fetching individual HEX stakes data...'
       });
       
-      // Fetch individual HEX stakes data for each wallet
+      // Fetch individual HEX stakes data for each wallet in parallel (already optimized with Promise.all)
       const individualHexStakesPromises = addresses.map(address => 
         fetchHexStakesSummary(address)
           .then(data => ({ [address]: data }))

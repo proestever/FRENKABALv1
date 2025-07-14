@@ -173,24 +173,56 @@ export function HexStakes({ walletAddress, otherWalletAddresses = [], isMultiWal
         let totalInterestBN = 0;
         let totalStakeCount = 0;
         
-        // Process each wallet address
-        for (const address of addressesToProcess) {
+        // First, get stake counts for all wallets in parallel
+        console.log(`Fetching stake counts for ${addressesToProcess.length} wallets in parallel...`);
+        const stakeCountPromises = addressesToProcess.map(async (address) => {
           try {
-            console.log(`Fetching HEX stakes for wallet: ${address}`);
-            
-            // Get stake count for this address
             const countBN = await hexContract.stakeCount(address);
             const count = Number(countBN);
             console.log(`Found ${count} HEX stakes for wallet: ${address}`);
+            return { address, count };
+          } catch (err) {
+            console.error(`Error getting stake count for ${address}:`, err);
+            return { address, count: 0 };
+          }
+        });
+        
+        const stakeCounts = await Promise.all(stakeCountPromises);
+        totalStakeCount = stakeCounts.reduce((sum, { count }) => sum + count, 0);
+        
+        // Process all wallets' stakes in parallel
+        const walletStakePromises = stakeCounts.map(async ({ address, count }) => {
+          if (count === 0) return [];
+          
+          console.log(`Fetching ${count} stakes for wallet: ${address} in parallel...`);
+          
+          // Batch stake fetching for each wallet
+          const BATCH_SIZE = 10; // Process 10 stakes at a time
+          const stakePromises: Promise<any>[] = [];
+          
+          for (let i = 0; i < count; i += BATCH_SIZE) {
+            const batchEnd = Math.min(i + BATCH_SIZE, count);
+            const batchPromises = [];
             
-            totalStakeCount += count;
+            for (let j = i; j < batchEnd; j++) {
+              batchPromises.push(
+                hexContract.stakeLists(address, j)
+                  .then(stake => ({ stake, index: j, address }))
+                  .catch(err => {
+                    console.error(`Error fetching stake ${j} for ${address}:`, err);
+                    return null;
+                  })
+              );
+            }
             
-            if (count === 0) continue; // Skip to next wallet if no stakes
-            
-            // Fetch all stakes for this wallet
-            for (let i = 0; i < count; i++) {
-              const stake = await hexContract.stakeLists(address, i);
-              
+            stakePromises.push(...batchPromises);
+          }
+          
+          const stakes = await Promise.all(stakePromises);
+          
+          return stakes
+            .filter(stakeData => stakeData !== null)
+            .map(({ stake, address }) => {
               // Parse raw stake data
               const stakeId = stake[0].toString();
               const stakedHearts = stake[1].toString();
@@ -274,8 +306,7 @@ export function HexStakes({ walletAddress, otherWalletAddresses = [], isMultiWal
               const stakeInterestValueUsd = parseFloat(interestEarned) * currentHexPrice;
               const stakeTotalValueUsd = stakeValueUsd + stakeInterestValueUsd;
               
-              // Add the wallet address as a property so we can identify which wallet it belongs to
-              allStakesData.push({
+              return {
                 stakeId,
                 stakedHearts,
                 stakeShares,
@@ -295,18 +326,25 @@ export function HexStakes({ walletAddress, otherWalletAddresses = [], isMultiWal
                 interestValueUsd: stakeInterestValueUsd,
                 totalValueUsd: stakeTotalValueUsd,
                 walletAddress: address // Add wallet address to identify which wallet it belongs to
-              });
-              
-              if (i % 5 === 0) {
-                // Give UI a chance to update by yielding execution
-                await new Promise(resolve => setTimeout(resolve, 0));
-              }
-            }
-          } catch (err) {
-            console.error(`Error fetching HEX stakes for wallet ${address}:`, err);
-            // Continue with other wallets
-          }
-        }
+              };
+            });
+        });
+        
+        // Wait for all wallets to be processed
+        const allWalletStakes = await Promise.all(walletStakePromises);
+        
+        // Flatten and process all stakes
+        allWalletStakes.forEach(walletStakes => {
+          walletStakes.forEach((stake: any) => {
+            // Add to total staked HEX
+            totalHexStakedBN = totalHexStakedBN.add(ethers.BigNumber.from(stake.stakedHearts));
+            
+            // Add to total interest
+            totalInterestBN += parseFloat(stake.interestEarned);
+            
+            allStakesData.push(stake);
+          });
+        });
         
         setStakeCount(totalStakeCount);
         

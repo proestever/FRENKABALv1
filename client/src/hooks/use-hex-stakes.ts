@@ -314,7 +314,7 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       };
     }
     
-    // Fetch actual data for all stakes
+    // Fetch actual data for all stakes in parallel
     let totalStaked = 0;
     let totalInterest = 0;
     
@@ -323,79 +323,97 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
       const currentDayBN = await hexContract.currentDay();
       const currentDay = Number(currentDayBN);
       
-      // Use the same exact approach that's working in hex-stakes.tsx
-      for (let i = 0; i < Math.min(count, 50); i++) { // Limit to 50 stakes max to prevent overloading
-        try {
-          // Use stakeLists instead of stakeDataFetch (same approach as hex-stakes.tsx)
-          const stake = await hexContract.stakeLists(address, i);
-          
-          if (stake) {
-            // Parse raw stake data
-            const stakeId = stake[0].toString();
-            const stakedHearts = stake[1].toString();
-            const stakeShares = stake[2].toString();
-            const lockedDay = Number(stake[3]);
-            const stakedDays = Number(stake[4]);
-            const unlockedDay = Number(stake[5]);
-            const isAutoStake = stake[6];
-            
-            // Format HEX amount (8 decimals)
-            const hexAmount = ethers.utils.formatUnits(stakedHearts, 8);
-            const stakedHex = parseFloat(hexAmount);
-            
-            // Add to total
-            totalStaked += stakedHex;
-            
-            // Calculate progress percentage
-            let progressPercentage = 0;
-            const endDay = lockedDay + stakedDays;
-            const isActive = unlockedDay === 0;
-            
-            if (isActive && currentDay >= lockedDay) {
-              // If stake is active and we're past the lock day
-              const daysPassed = currentDay - lockedDay;
-              progressPercentage = Math.min(100, Math.floor((daysPassed / stakedDays) * 100));
-            } else if (!isActive) {
-              // Stake is ended
-              progressPercentage = 100;
-            }
-            
-            // Adjusted HEX stake reward estimation for ~18k target
-            let interestHex = 0;
-            if (progressPercentage > 0) {
-              const stakedHexAmount = parseFloat(ethers.utils.formatUnits(stakedHearts, 8));
-              
-              const daysElapsed = Math.floor((stakedDays * progressPercentage) / 100);
-              const yearsElapsed = daysElapsed / 365;
-              
-              // Realistic HEX APY rates based on historical performance (~41% average)
-              let annualReturn = 0.30; // Base 30% APY for shorter stakes
-              
-              // Higher returns for longer stakes (big paydays get better returns)
-              if (stakedDays >= 5555) { // Big payday stakes (15 years)
-                annualReturn = 0.50; // 50% APY for max length stakes
-              } else if (stakedDays >= 3000) { // Long stakes (8+ years)
-                annualReturn = 0.45; // 45% APY for long stakes
-              } else if (stakedDays >= 1000) { // Medium stakes (3+ years)
-                annualReturn = 0.38; // 38% APY for medium stakes
-              }
-              
-              // Simple interest: principal * rate * time
-              interestHex = stakedHexAmount * annualReturn * yearsElapsed;
-              
-              // Cap maximum interest at 4x principal for big paydays
-              interestHex = Math.min(interestHex, stakedHexAmount * 4);
-              
-              // Add to total interest
-              totalInterest += interestHex;
-            }
-            
-            console.log(`Found stake ${i} with ${(typeof stakedHex === 'number' && !isNaN(stakedHex) ? stakedHex : 0).toFixed(2)} HEX, interest: ${(typeof interestHex === 'number' && !isNaN(interestHex) ? interestHex : 0).toFixed(2)} HEX`);
-          }
-        } catch (stakeErr) {
-          console.error(`Error fetching stake ${i}:`, stakeErr);
+      // Limit to 50 stakes max to prevent overloading
+      const maxStakes = Math.min(count, 50);
+      
+      // Create batches for parallel processing
+      const BATCH_SIZE = 10;
+      const stakePromises: Promise<any>[] = [];
+      
+      for (let i = 0; i < maxStakes; i += BATCH_SIZE) {
+        const batchEnd = Math.min(i + BATCH_SIZE, maxStakes);
+        const batchPromises = [];
+        
+        for (let j = i; j < batchEnd; j++) {
+          batchPromises.push(
+            hexContract.stakeLists(address, j)
+              .then(stake => {
+                if (!stake) return null;
+                
+                // Parse raw stake data
+                const stakedHearts = stake[1].toString();
+                const lockedDay = Number(stake[3]);
+                const stakedDays = Number(stake[4]);
+                const unlockedDay = Number(stake[5]);
+                
+                // Format HEX amount (8 decimals)
+                const hexAmount = ethers.utils.formatUnits(stakedHearts, 8);
+                const stakedHex = parseFloat(hexAmount);
+                
+                // Calculate progress percentage
+                let progressPercentage = 0;
+                const endDay = lockedDay + stakedDays;
+                const isActive = unlockedDay === 0;
+                
+                if (isActive && currentDay >= lockedDay) {
+                  // If stake is active and we're past the lock day
+                  const daysPassed = currentDay - lockedDay;
+                  progressPercentage = Math.min(100, Math.floor((daysPassed / stakedDays) * 100));
+                } else if (!isActive) {
+                  // Stake is ended
+                  progressPercentage = 100;
+                }
+                
+                // Adjusted HEX stake reward estimation for ~18k target
+                let interestHex = 0;
+                if (progressPercentage > 0) {
+                  const stakedHexAmount = parseFloat(ethers.utils.formatUnits(stakedHearts, 8));
+                  
+                  const daysElapsed = Math.floor((stakedDays * progressPercentage) / 100);
+                  const yearsElapsed = daysElapsed / 365;
+                  
+                  // Realistic HEX APY rates based on historical performance (~41% average)
+                  let annualReturn = 0.30; // Base 30% APY for shorter stakes
+                  
+                  // Higher returns for longer stakes (big paydays get better returns)
+                  if (stakedDays >= 5555) { // Big payday stakes (15 years)
+                    annualReturn = 0.50; // 50% APY for max length stakes
+                  } else if (stakedDays >= 3000) { // Long stakes (8+ years)
+                    annualReturn = 0.45; // 45% APY for long stakes
+                  } else if (stakedDays >= 1000) { // Medium stakes (3+ years)
+                    annualReturn = 0.38; // 38% APY for medium stakes
+                  }
+                  
+                  // Simple interest: principal * rate * time
+                  interestHex = stakedHexAmount * annualReturn * yearsElapsed;
+                  
+                  // Cap maximum interest at 4x principal for big paydays
+                  interestHex = Math.min(interestHex, stakedHexAmount * 4);
+                }
+                
+                return { stakedHex, interestHex, index: j };
+              })
+              .catch(err => {
+                console.error(`Error fetching stake ${j}:`, err);
+                return null;
+              })
+          );
         }
+        
+        stakePromises.push(...batchPromises);
       }
+      
+      // Wait for all stakes to be fetched
+      const stakeResults = await Promise.all(stakePromises);
+      
+      // Process results
+      stakeResults.forEach(result => {
+        if (result) {
+          totalStaked += result.stakedHex;
+          totalInterest += result.interestHex;
+          console.log(`Found stake ${result.index} with ${result.stakedHex.toFixed(2)} HEX, interest: ${result.interestHex.toFixed(2)} HEX`);
+        }
+      });
     } catch (fetchErr) {
       console.error('Error fetching stake details:', fetchErr);
     }
