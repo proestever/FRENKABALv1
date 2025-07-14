@@ -288,26 +288,11 @@ export async function processLpTokens(
   const lpTokens = tokens.filter(token => token.isLp);
   const otherTokens = tokens.filter(token => !token.isLp);
   
-  console.log(`Processing ${lpTokens.length} LP tokens in batches of ${batchSize}`);
-  
-  // Process LP tokens in batches
-  const processedLpTokens: ProcessedToken[] = [];
-  
-  for (let i = 0; i < lpTokens.length; i += batchSize) {
-    const batch = lpTokens.slice(i, i + batchSize);
-    console.log(`Processing batch ${i / batchSize + 1} of ${Math.ceil(lpTokens.length / batchSize)}`);
-    
-    // Process batch in parallel
-    const promises = batch.map(token => processLpToken(token, walletAddress));
-    const results = await Promise.all(promises);
-    
-    processedLpTokens.push(...results);
-    
-    // Add delay between batches to avoid rate limiting
-    if (i + batchSize < lpTokens.length) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-  }
+  // Process all LP tokens in parallel for maximum speed
+  console.log(`Processing all ${lpTokens.length} LP tokens in parallel`);
+  const processedLpTokens = await Promise.all(
+    lpTokens.map(token => processLpToken(token, walletAddress))
+  );
   
   // Combine LP tokens with other tokens
   return [...processedLpTokens, ...otherTokens];

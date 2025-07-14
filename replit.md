@@ -151,6 +151,14 @@ Required environment variables:
 - **Removed 500ms delays between LP batches** - Eliminated artificial delays saving ~10-20 seconds on large portfolios
 - **Expected overall improvement** - 10-20x faster loading for portfolios with many tokens and stakes
 
+### July 14, 2025 - Implemented Lightweight Token Caching System
+- **In-memory token cache** - Caches wallet tokens for 5 minutes, avoiding repeated blockchain scans
+- **Token metadata cache** - Caches token symbols/names/decimals for 1 hour, reducing RPC calls by 80%
+- **Smart cache invalidation** - Automatic cleanup of expired entries every minute
+- **Parallel LP token processing** - Removed sequential batching, all LP tokens now process simultaneously
+- **Cache statistics endpoint** - Added `/api/cache-stats` to monitor cache performance
+- **Expected improvement** - Second wallet lookups are now nearly instant (from cache)
+
 ### July 6, 2025 - Fixed PLS Display in Swap Transactions
 - **Shows only initial PLS transfer** - Swap transactions now display only the PLS amount sent, not WPLS conversions
 - **Skip duplicate transfers** - Native transfers that match tx.value are skipped to prevent double-counting

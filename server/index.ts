@@ -152,6 +152,25 @@ app.use((req, res, next) => {
       environment: process.env.NODE_ENV || 'development'
     });
   });
+  
+  // Cache statistics endpoint
+  app.get('/api/cache-stats', async (_req, res) => {
+    try {
+      const { tokenCache } = await import('./services/token-cache.js');
+      const stats = tokenCache.getStats();
+      
+      res.json({
+        status: 'ok',
+        cacheStats: stats,
+        message: `Caching ${stats.walletCacheSize} wallets and ${stats.metadataCacheSize} token metadata entries`
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        status: 'error',
+        message: 'Failed to get cache statistics'
+      });
+    }
+  });
 
   const server = await registerRoutes(app);
 
