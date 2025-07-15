@@ -400,212 +400,54 @@ export async function getWalletDataFull(
     
     console.log(`Starting comprehensive wallet data fetch for ${walletAddress}`);
     
-    console.log(`Fetching fresh wallet data for ${walletAddress}`);
+    // Use the new scanner API for ultra-fast token fetching
+    const { getScannerTokenBalances } = await import('./scanner-balance-service');
+    console.log(`Using Scanner API for ultra-fast token fetching for ${walletAddress}`);
 
     // Silent loading - no progress updates
 
-    const walletBalances = await getWalletBalancesFromPulseChainScan(walletAddress);
+    const tokens = await getScannerTokenBalances(walletAddress);
     
     // Silent loading - no progress updates
-
-    const nativeBalance = parseFloat(walletBalances.nativeBalance) / Math.pow(10, PLS_DECIMALS);
     
-    const plsPriceData = await getTokenPriceFromDexScreener(WPLS_CONTRACT_ADDRESS);
-    const plsPrice = plsPriceData || 0;
-
-    // Silent loading - no progress updates
-
-    const processedTokens: ProcessedToken[] = [];
-
-    processedTokens.push({
-      address: PLS_TOKEN_ADDRESS,
-      symbol: 'PLS',
-      name: 'PulseChain',
-      decimals: PLS_DECIMALS,
-      balance: walletBalances.nativeBalance,
-      balanceFormatted: nativeBalance,
-      price: plsPrice,
-      value: nativeBalance * plsPrice,
-      logo: getDefaultLogo('PLS'),
-      isNative: true,
-      verified: true
-    });
-
-    // Silent loading - no progress updates
-
-    for (const tokenBalance of walletBalances.tokenBalances) {
-      const decimals = parseInt(tokenBalance.decimals || '18');
-      const balance = parseFloat(tokenBalance.balance) / Math.pow(10, decimals);
-      
-      if (balance > 0 || includeZeroBalances) {
-        const tokenPriceData = await getTokenPriceDataFromDexScreener(tokenBalance.address);
-        
-        // Get logo directly from DexScreener price data or use default
-        let logoUrl = getDefaultLogo(tokenBalance.symbol || '');
-        
-        if (tokenPriceData && tokenPriceData.logo) {
-          logoUrl = tokenPriceData.logo;
-          console.log(`Using DexScreener logo for ${tokenBalance.address}`);
-        } else {
-          // Try to fetch logo directly even if no price data
-          const dexScreenerLogo = await getTokenLogoFromDexScreener(tokenBalance.address);
-          if (dexScreenerLogo) {
-            logoUrl = dexScreenerLogo;
-            console.log(`Using DexScreener logo (without price) for ${tokenBalance.address}`);
-          } else {
-            // Check specific addresses first for known logos
-            const addressLower = tokenBalance.address.toLowerCase();
-            if (addressLower === '0x7b39712ef45f7dced2bbdf11f3d5046ba61da719') {
-              logoUrl = 'https://dd.dexscreener.com/ds-data/tokens/pulsechain/0x7b39712ef45f7dced2bbdf11f3d5046ba61da719.png?key=991175';
-              console.log(`Using hardcoded logo for 9MM token: ${tokenBalance.address}`);
-            } else {
-              // Fallback to known logos by symbol if DexScreener doesn't have one
-              const symbol = (tokenBalance.symbol || '').toLowerCase();
-              const knownLogos: Record<string, string> = {
-                'pls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
-                'wpls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
-                'plsx': 'https://tokens.app.pulsex.com/images/tokens/0x15D38573d2feeb82e7ad5187aB8c5D52810B6f40.png',
-                'hex': 'https://tokens.app.pulsex.com/images/tokens/0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39.png',
-                'weth': 'https://tokens.app.pulsex.com/images/tokens/0x02DcdD04e3F455D838cd1249292C58f3B79e3C3C.png',
-                'usdc': 'https://tokens.app.pulsex.com/images/tokens/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48.png',
-                'usdt': 'https://tokens.app.pulsex.com/images/tokens/0xdAC17F958D2ee523a2206206994597C13D831ec7.png',
-                'inc': 'https://tokens.app.pulsex.com/images/tokens/0x6c203a555824ec90a215f37916cf8db58ebe2fa3.png',
-                '9mm': 'https://dd.dexscreener.com/ds-data/tokens/pulsechain/0x7b39712ef45f7dced2bbdf11f3d5046ba61da719.png?key=991175'
-              };
-            
-              if (knownLogos[symbol]) {
-                logoUrl = knownLogos[symbol];
-              }
-            }
-          }
-        }
-        
-        processedTokens.push({
-          address: tokenBalance.address,
-          symbol: tokenBalance.symbol || 'UNKNOWN',
-          name: tokenBalance.name || 'Unknown Token',
-          decimals,
-          balance: tokenBalance.balance,
-          balanceFormatted: balance,
-          price: tokenPriceData?.price || 0,
-          value: balance * (tokenPriceData?.price || 0),
-          logo: logoUrl,
-          verified: false
-        });
-      }
-    }
-
-    // Silent loading - no progress updates
-
-    // Detect actual LP tokens by checking if they implement LP interface
-    const potentialLpTokens = processedTokens.filter(token => 
-      token.balanceFormatted && token.balanceFormatted > 0 && 
-      !token.isNative && // Skip native token
-      token.decimals === 18 // Most LP tokens have 18 decimals
-    );
+    console.log(`Scanner data fetch completed for ${walletAddress} in ${Date.now() - startTime}ms`);
+    console.log(`Tokens received:`, Array.isArray(tokens) ? `${tokens.length} tokens` : 'not an array');
     
-    console.log(`Checking ${potentialLpTokens.length} tokens for LP interface`);
-    
-    // Check tokens in batches to avoid overwhelming the RPC
-    const detectedLpTokens: ProcessedToken[] = [];
-    const batchSize = 3;
-    
-    for (let i = 0; i < potentialLpTokens.length; i += batchSize) {
-      const batch = potentialLpTokens.slice(i, i + batchSize);
-      const batchResults = await Promise.allSettled(
-        batch.map(async (token) => {
-          const isLpToken = await isLiquidityPoolToken(token.address);
-          return { token, isLpToken };
-        })
-      );
-      
-      for (const result of batchResults) {
-        if (result.status === 'fulfilled' && result.value.isLpToken) {
-          const { token } = result.value;
-          console.log(`Detected LP token: ${token.symbol} (${token.address})`);
-          token.isLp = true;
-          detectedLpTokens.push(token);
-        }
-      }
-      
-      // Small delay between batches
-      if (i + batchSize < potentialLpTokens.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+    if (!tokens || !Array.isArray(tokens)) {
+      throw new Error('Scanner returned invalid data');
     }
     
-    if (detectedLpTokens.length > 0) {
-      console.log(`Processing ${detectedLpTokens.length} detected LP tokens`);
-      try {
-        const processedTokensWithLp = await processLpTokens(processedTokens, walletAddress);
-        // Update processedTokens with LP-enhanced data
-        processedTokens.splice(0, processedTokens.length, ...processedTokensWithLp);
-      } catch (lpError) {
-        console.error('Error processing LP tokens:', lpError);
-      }
-    }
-
-    // Silent loading - no progress updates
-
-    processedTokens.sort((a, b) => (b.value || 0) - (a.value || 0));
-
-    const totalValue = processedTokens.reduce((sum, token) => sum + (token.value || 0), 0);
-
-    // Identify tokens without prices for background fetching
-    const tokensWithoutPrices = processedTokens.filter(token => !token.price).map(token => token.address);
+    // Calculate total value
+    const totalValue = tokens.reduce((sum, token) => sum + (token.value || 0), 0);
     
-    // Trigger background batch fetch for missing prices if any
-    if (tokensWithoutPrices.length > 0) {
-      console.log(`${tokensWithoutPrices.length} tokens missing prices - starting background fetch`);
-      
-      // Call background batch endpoint asynchronously
-      setImmediate(async () => {
-        try {
-          await fetch('http://localhost:5000/api/token-prices/background-batch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              addresses: tokensWithoutPrices,
-              walletAddress 
-            })
-          });
-        } catch (error) {
-          console.error('Error triggering background batch fetch:', error);
-        }
-      });
-    }
-
-    const startIndex = (page - 1) * limit;
-    const paginatedTokens = processedTokens.slice(startIndex, startIndex + limit);
-
-    const result: WalletData = {
+    // Get PLS balance and price change
+    const plsToken = tokens.find(t => t.isNative);
+    const plsBalance = plsToken?.balanceFormatted || null;
+    const plsPriceChange = plsToken?.priceChange24h || null;
+    
+    // Apply pagination if needed
+    const paginatedTokens = tokens.slice((page - 1) * limit, page * limit);
+    
+    return {
       address: walletAddress,
       tokens: paginatedTokens,
       totalValue,
-      tokenCount: processedTokens.length,
-      plsBalance: nativeBalance,
-      plsPriceChange: null,
+      tokenCount: tokens.length,
+      plsBalance,
+      plsPriceChange,
       networkCount: 1,
       pagination: {
         page,
         limit,
-        totalItems: processedTokens.length,
-        totalPages: Math.ceil(processedTokens.length / limit)
+        totalItems: tokens.length,
+        totalPages: Math.ceil(tokens.length / limit)
       },
-      backgroundFetchTriggered: tokensWithoutPrices.length > 0,
-      missingPriceCount: tokensWithoutPrices.length
+      backgroundFetchTriggered: false,
+      missingPriceCount: 0,
+      fetchMethod: 'scanner' // Add this to identify the method used
     };
-
-
-    
-    // Silent loading - no progress updates
-
-    console.log(`Wallet data fetch completed for ${walletAddress} in ${Date.now() - startTime}ms`);
-    return result;
-
   } catch (error) {
     console.error(`Error fetching wallet data for ${walletAddress}:`, error);
-    // Silent loading - no progress updates
     throw error;
   }
 }
