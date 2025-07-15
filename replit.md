@@ -132,6 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 15, 2025 - Transaction History Now Uses Scanner API for Immediate Loading
+- **Updated transaction history component** - Transaction history now uses `/api/wallet/:address/scanner-transactions` endpoint for instant loading
+- **No more "load more" delays** - Transactions appear immediately when opening transaction history, no need to click multiple times
+- **Increased initial load limit** - Now loads 200 transactions initially (up from 50) to provide comprehensive history
+- **Seamless pagination** - "Load more" button properly uses scanner API cursor for fetching additional transactions
+- **Scanner API benefits** - Transaction history inherits all performance improvements from scanner API integration
+
 ### July 15, 2025 - Completed Full Scanner API Integration Across All Features
 - **Fully integrated scanner API into main getWalletDataFull function** - All wallet searches now use ultra-fast scanner API by default
 - **Performance metrics** - Consistent 2-4 second load times across all wallet sizes (previously 12-30+ seconds)

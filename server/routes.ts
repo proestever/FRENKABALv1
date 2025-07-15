@@ -643,7 +643,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // New direct blockchain transaction history endpoint
+  // Scanner-based transaction history endpoint for ultra-fast loading
+  app.get("/api/wallet/:address/scanner-transactions", async (req, res) => {
+    try {
+      const { address } = req.params;
+      const { limit = '200', cursor } = req.query; // Increased default limit to 200
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      const parsedLimit = Math.min(parseInt(limit as string, 10) || 200, 500);
+      
+      // Import the scanner transaction service
+      const { getScannerTransactionHistory } = await import('./services/scanner-transaction-service.js');
+      
+      console.log(`Fetching transaction history using Scanner API for ${address}, limit: ${parsedLimit}`);
+      
+      // Fetch transactions using scanner API
+      const result = await getScannerTransactionHistory(address, parsedLimit, cursor as string | undefined);
+      
+      return res.json(result);
+    } catch (error) {
+      console.error("Error fetching scanner transactions:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch transaction history",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Legacy direct blockchain transaction history endpoint
   app.get("/api/wallet/:address/blockchain-transactions", async (req, res) => {
     try {
       const { address } = req.params;

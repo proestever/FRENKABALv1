@@ -142,17 +142,17 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
   const [typeFilter, setTypeFilter] = useState<TransactionType>('all');
   const [copiedAddresses, setCopiedAddresses] = useState<Record<string, boolean>>({});
   
-  // Fetch initial transactions using blockchain endpoint
+  // Fetch initial transactions using scanner endpoint for instant loading
   const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/wallet/${walletAddress}/blockchain-transactions`, { limit: 50 }],
+    queryKey: [`/api/wallet/${walletAddress}/scanner-transactions`, { limit: 200 }],
     queryFn: async () => {
-      const url = `/api/wallet/${walletAddress}/blockchain-transactions?limit=50`;
-      console.log(`Fetching blockchain transactions: ${url}`);
+      const url = `/api/wallet/${walletAddress}/scanner-transactions?limit=200`;
+      console.log(`Fetching scanner transactions: ${url}`);
       const response = await fetch(url);
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch blockchain transactions');
+        throw new Error(errorData.message || 'Failed to fetch scanner transactions');
       }
       
       return response.json();
@@ -233,8 +233,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
       // Handle both result array and transactions array
       const txData = data.result || data.transactions || [];
       setTransactions(Array.isArray(txData) ? txData : []);
-      setCursor(data.cursor || data.lastBlock || null);
-      setHasMore(!!(data.cursor || data.hasMore));
+      setCursor(data.cursor || data.nextCursor || data.lastBlock || null);
+      setHasMore(!!(data.cursor || data.nextCursor || data.hasMore));
     }
   }, [data]);
   
@@ -616,8 +616,8 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               
               setIsLoadingMore(true);
               try {
-                const url = `/api/wallet/${walletAddress}/blockchain-transactions?limit=50${cursor ? `&startBlock=${cursor}` : ''}`;
-                console.log(`Loading more blockchain transactions: ${url}`);
+                const url = `/api/wallet/${walletAddress}/scanner-transactions?limit=200${cursor ? `&cursor=${cursor}` : ''}`;
+                console.log(`Loading more scanner transactions: ${url}`);
                 const response = await fetch(url);
                 
                 if (!response.ok) {
@@ -625,10 +625,10 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 }
                 
                 const data = await response.json();
-                if (data.result) {
-                  setTransactions([...transactions, ...data.result]);
-                  setCursor(data.cursor || null);
-                  setHasMore(!!data.cursor);
+                if (data.transactions) {
+                  setTransactions([...transactions, ...data.transactions]);
+                  setCursor(data.nextCursor || null);
+                  setHasMore(!!data.nextCursor);
                 }
               } catch (error) {
                 console.error('Failed to load more transactions:', error);
