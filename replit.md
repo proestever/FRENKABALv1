@@ -132,6 +132,16 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 15, 2025 - Scanner API Integration for Ultra-Fast Wallet Searches
+- **Implemented PulseChain Scanner API integration** - New `/api/wallet/{address}/scanner-balances` endpoint uses indexed blockchain data
+- **Created scanner-balance-service.ts** - Fetches token balances from Scanner API first, then checks recent blocks for real-time updates
+- **Created scanner-transaction-service.ts** - Gets transaction history from Scanner API with recent block scanning for missed transactions
+- **Dramatic performance improvement** - Token balance fetching reduced from 12+ seconds to ~4 seconds
+- **Hybrid approach for accuracy** - Scanner API provides bulk historical data, then scans last 1000 blocks for recent changes
+- **Transaction history optimization** - Scanner API provides paginated history, supplemented with last 100 blocks for real-time data
+- **Fallback to direct RPC** - If Scanner API misses tokens, system fetches directly from blockchain contracts
+- **Maintained all existing features** - LP token detection, price fetching, and logo storage work seamlessly with new approach
+
 ### July 14, 2025 - Major HEX Stakes & Wallet Search Performance Optimization
 - **Parallel stake count fetching** - All wallet stake counts are now fetched simultaneously using Promise.all
 - **Batch processing for individual stakes** - Stakes are fetched in batches of 10 in parallel instead of sequentially

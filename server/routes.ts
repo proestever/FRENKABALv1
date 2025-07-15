@@ -16,6 +16,8 @@ import { calculateBalancesFromTransferHistory, getTransferHistoryWithBalances } 
 import { getDirectTokenBalances as getDirectBalances } from "./services/direct-balance-service";
 import { getDirectTokenBalancesNoPrices } from "./services/direct-balance-no-prices";
 import { getProviderHealth, switchToProvider, resetFailedProviders } from "./services/rpc-provider";
+import { getScannerTokenBalances } from "./services/scanner-balance-service";
+import { getScannerTransactionHistory, getFullScannerTransactionHistory } from "./services/scanner-transaction-service";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
@@ -280,6 +282,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error calculating balances from transfer history:", error);
       return res.status(500).json({ 
         message: "Failed to calculate balances from transfer history",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // API route to get wallet balances using PulseChain Scanner API + recent blocks
+  app.get("/api/wallet/:address/scanner-balances", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      console.log(`Getting balances using Scanner API for ${address}`);
+      
+      const startTime = Date.now();
+      const tokens = await getScannerTokenBalances(address);
+      const endTime = Date.now();
+      
+      console.log(`Scanner balance fetch completed in ${endTime - startTime}ms`);
+      
+      // Calculate total value
+      const totalValue = tokens.reduce((sum, token) => sum + (token.value || 0), 0);
+      
+      // Find PLS balance
+      const plsToken = tokens.find(t => t.isNative);
+      const plsBalance = plsToken ? plsToken.balanceFormatted : 0;
+      const plsPriceChange = plsToken ? plsToken.priceChange24h : null;
+      
+      return res.json({
+        address,
+        tokens,
+        totalValue,
+        tokenCount: tokens.length,
+        plsBalance,
+        plsPriceChange,
+        networkCount: 1,
+        fetchMethod: 'scanner'
+      });
+    } catch (error) {
+      console.error("Error fetching scanner balances:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch scanner balances",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // API route to get transaction history using PulseChain Scanner API + recent blocks
+  app.get("/api/wallet/:address/scanner-transactions", async (req, res) => {
+    try {
+      const { address } = req.params;
+      const { limit = '100', cursor } = req.query;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      const limitNum = Math.min(parseInt(limit as string) || 100, 500);
+      
+      console.log(`Getting transaction history using Scanner API for ${address}`);
+      
+      const { transactions, nextCursor } = await getScannerTransactionHistory(
+        address,
+        limitNum,
+        cursor as string | undefined
+      );
+      
+      return res.json({
+        result: transactions,
+        cursor: nextCursor,
+        page: 1,
+        page_size: limitNum
+      });
+    } catch (error) {
+      console.error("Error fetching scanner transactions:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch scanner transactions",
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }
