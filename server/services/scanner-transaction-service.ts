@@ -119,23 +119,28 @@ async function fetchTransactionsFromScanner(
     // Convert scanner format to our Transaction format
     const transactions: Transaction[] = await Promise.all(
       items.map(async (item: ScannerTransaction) => {
+        // Skip if essential fields are missing
+        if (!item || !item.hash || !item.from) {
+          return null;
+        }
+        
         const tx: Transaction = {
           hash: item.hash,
           nonce: '0', // Not provided by scanner API
           transaction_index: '0', // Not provided by scanner API
           from_address: item.from.hash,
           from_address_label: item.from.name || null,
-          to_address: item.to.hash,
-          to_address_label: item.to.name || null,
-          value: item.value,
-          gas: item.gas_used,
-          gas_price: item.gas_price,
-          receipt_gas_used: item.gas_used,
+          to_address: item.to ? item.to.hash : '0x0000000000000000000000000000000000000000', // Contract creation
+          to_address_label: item.to ? (item.to.name || null) : null,
+          value: item.value || '0',
+          gas: item.gas_used || '0',
+          gas_price: item.gas_price || '0',
+          receipt_gas_used: item.gas_used || '0',
           receipt_status: item.status === 'ok' ? '1' : '0',
           block_timestamp: item.timestamp,
-          block_number: item.block.toString(),
-          transaction_fee: item.fee.value,
-          method_label: item.method,
+          block_number: item.block ? item.block.toString() : '0',
+          transaction_fee: item.fee ? item.fee.value : '0',
+          method_label: item.method || null,
           erc20_transfers: [],
           native_transfers: []
         };
@@ -143,18 +148,23 @@ async function fetchTransactionsFromScanner(
         // Process token transfers
         if (item.token_transfers) {
           for (const transfer of item.token_transfers) {
+            // Skip if transfer is missing essential data
+            if (!transfer || !transfer.token || !transfer.from || !transfer.to) {
+              continue;
+            }
+            
             const tokenTransfer: TransactionTransfer = {
-              token_name: transfer.token.name,
-              token_symbol: transfer.token.symbol,
+              token_name: transfer.token.name || 'Unknown',
+              token_symbol: transfer.token.symbol || 'UNKNOWN',
               token_decimals: transfer.token.decimals || '18',
               from_address: transfer.from.hash,
               from_address_label: transfer.from.name || null,
               to_address: transfer.to.hash,
               to_address_label: transfer.to.name || null,
               address: transfer.token.address,
-              value: transfer.total.value,
+              value: transfer.total ? transfer.total.value : '0',
               value_formatted: ethers.utils.formatUnits(
-                transfer.total.value,
+                transfer.total ? transfer.total.value : '0',
                 parseInt(transfer.token.decimals || '18')
               )
             };
@@ -167,10 +177,13 @@ async function fetchTransactionsFromScanner(
       })
     );
     
-    console.log(`Fetched ${transactions.length} transactions from scanner`);
+    // Filter out null transactions
+    const validTransactions = transactions.filter(tx => tx !== null) as Transaction[];
+    
+    console.log(`Fetched ${validTransactions.length} transactions from scanner`);
     
     return {
-      transactions,
+      transactions: validTransactions,
       nextCursor: data.next_page_params?.cursor
     };
   } catch (error) {
