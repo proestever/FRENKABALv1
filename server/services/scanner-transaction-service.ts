@@ -119,31 +119,33 @@ async function fetchTransactionsFromScanner(
     // Convert scanner format to our Transaction format
     const transactions: Transaction[] = await Promise.all(
       items.map(async (item: ScannerTransaction) => {
-        // Skip if essential fields are missing
-        if (!item || !item.hash || !item.from) {
-          return null;
-        }
-        
-        const tx: Transaction = {
-          hash: item.hash,
-          nonce: '0', // Not provided by scanner API
-          transaction_index: '0', // Not provided by scanner API
-          from_address: item.from.hash,
-          from_address_label: item.from.name || null,
-          to_address: item.to ? item.to.hash : '0x0000000000000000000000000000000000000000', // Contract creation
-          to_address_label: item.to ? (item.to.name || null) : null,
-          value: item.value || '0',
-          gas: item.gas_used || '0',
-          gas_price: item.gas_price || '0',
-          receipt_gas_used: item.gas_used || '0',
-          receipt_status: item.status === 'ok' ? '1' : '0',
-          block_timestamp: item.timestamp,
-          block_number: item.block ? item.block.toString() : '0',
-          transaction_fee: item.fee ? item.fee.value : '0',
-          method_label: item.method || null,
-          erc20_transfers: [],
-          native_transfers: []
-        };
+        try {
+          // Skip if essential fields are missing
+          if (!item || !item.hash) {
+            return null;
+          }
+          
+          // Create basic transaction with fallback values
+          const tx: Transaction = {
+            hash: item.hash,
+            nonce: '0', // Not provided by scanner API
+            transaction_index: '0', // Not provided by scanner API
+            from_address: item.from?.hash || '0x0000000000000000000000000000000000000000',
+            from_address_label: item.from?.name || null,
+            to_address: item.to?.hash || '0x0000000000000000000000000000000000000000', // Contract creation
+            to_address_label: item.to?.name || null,
+            value: item.value || '0',
+            gas: item.gas_used || '0',
+            gas_price: item.gas_price || '0',
+            receipt_gas_used: item.gas_used || '0',
+            receipt_status: item.status === 'ok' ? '1' : '0',
+            block_timestamp: item.timestamp || new Date().toISOString(),
+            block_number: item.block ? item.block.toString() : '0',
+            transaction_fee: item.fee?.value || '0',
+            method_label: item.method || 'Transaction',
+            erc20_transfers: [],
+            native_transfers: []
+          };
         
         // Process token transfers
         if (item.token_transfers) {
@@ -174,6 +176,30 @@ async function fetchTransactionsFromScanner(
         }
         
         return tx;
+        } catch (error) {
+          console.error(`Error parsing transaction ${item?.hash || 'unknown'}:`, error);
+          // Return a basic transaction even if parsing fails
+          return {
+            hash: item?.hash || `error-${Date.now()}`,
+            nonce: '0',
+            transaction_index: '0',
+            from_address: item?.from?.hash || '0x0000000000000000000000000000000000000000',
+            from_address_label: null,
+            to_address: item?.to?.hash || '0x0000000000000000000000000000000000000000',
+            to_address_label: null,
+            value: '0',
+            gas: '0',
+            gas_price: '0',
+            receipt_gas_used: '0',
+            receipt_status: '0',
+            block_timestamp: new Date().toISOString(),
+            block_number: '0',
+            transaction_fee: '0',
+            method_label: 'Unknown Transaction',
+            erc20_transfers: [],
+            native_transfers: []
+          };
+        }
       })
     );
     
