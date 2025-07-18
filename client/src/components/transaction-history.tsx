@@ -691,6 +691,151 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   );
                 }
                 
+                // For approvals - show token being approved
+                if (txType === 'approval') {
+                  // Try to decode approval data from transaction
+                  const approvalToken = (() => {
+                    // First check if this is a token contract that's being interacted with
+                    // In most cases, the to_address is the token being approved
+                    const tokenAddress = tx.from_address; // The token contract address for approve calls
+                    
+                    // Look for any transfers in this transaction
+                    const recentTransfer = tx.erc20_transfers?.find(t => t);
+                    if (recentTransfer) {
+                      return {
+                        address: recentTransfer.address || '',
+                        symbol: recentTransfer.token_symbol || 'Unknown',
+                        logo: recentTransfer.token_logo || prefetchedLogos[recentTransfer.address?.toLowerCase() || '']
+                      };
+                    }
+                    
+                    // If no transfers, try to find token info from prefetched logos
+                    if (tokenAddress && prefetchedLogos[tokenAddress.toLowerCase()]) {
+                      return {
+                        address: tokenAddress,
+                        symbol: 'Token',
+                        logo: prefetchedLogos[tokenAddress.toLowerCase()]
+                      };
+                    }
+                    
+                    return null;
+                  })();
+                  
+                  return (
+                    <div className="space-y-2 bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="text-yellow-400" size={16} />
+                        <span className="font-semibold text-yellow-400">APPROVAL</span>
+                      </div>
+                      {approvalToken && (
+                        <div className="flex items-center gap-2">
+                          <TokenLogo 
+                            address={approvalToken.address}
+                            symbol={approvalToken.symbol}
+                            logo={approvalToken.logo}
+                            size="sm"
+                          />
+                          <span className="text-white font-medium">{approvalToken.symbol}</span>
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-400 space-y-1">
+                        <div className="flex items-center gap-1">
+                          <span>Approved to:</span>
+                          <button
+                            onClick={() => copyToClipboard(tx.to_address)}
+                            className="flex items-center gap-1 hover:text-gray-300 transition-colors"
+                          >
+                            <span className="font-mono">
+                              {tx.to_address_label || shortenAddress(tx.to_address)}
+                            </span>
+                            {copiedAddresses[tx.to_address] ? (
+                              <Check size={12} className="text-green-400" />
+                            ) : (
+                              <Copy size={12} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // For multicalls - show the full route
+                if (tx.method_label?.toLowerCase().includes('multicall') && sentTokens.length > 0 && receivedTokens.length > 0) {
+                  return (
+                    <div className="space-y-2 bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <RefreshCw className="text-purple-400" size={16} />
+                        <span className="font-semibold text-purple-400">MULTICALL ROUTE</span>
+                      </div>
+                      
+                      {/* Show all sent tokens */}
+                      {sentTokens.length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-xs text-gray-400">Sent:</span>
+                          {sentTokens.map((token, idx) => (
+                            <div key={`sent-${idx}`} className="flex items-center gap-2 ml-4">
+                              <TokenLogo 
+                                address={token.address === 'native' ? '' : token.address}
+                                symbol={token.symbol}
+                                logo={token.logo}
+                                size="sm"
+                              />
+                              <div>
+                                <div className="font-medium text-white text-sm">
+                                  {formatTokenValue(token.netAmount.toString(), token.decimals)} {token.symbol}
+                                </div>
+                                {(() => {
+                                  const tokenAddr = token.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : token.address;
+                                  const usdValue = calculateUsdValue(token.netAmount.toString(), token.decimals, tokenAddr);
+                                  if (usdValue !== null && usdValue >= 0.01) {
+                                    return <div className="text-xs text-gray-400">{formatCurrency(usdValue)}</div>;
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {sentTokens.length > 0 && receivedTokens.length > 0 && (
+                        <ArrowDownLeft size={14} className="text-gray-400 ml-4" />
+                      )}
+                      
+                      {/* Show all received tokens */}
+                      {receivedTokens.length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-xs text-gray-400">Received:</span>
+                          {receivedTokens.map((token, idx) => (
+                            <div key={`received-${idx}`} className="flex items-center gap-2 ml-4">
+                              <TokenLogo 
+                                address={token.address === 'native' ? '' : token.address}
+                                symbol={token.symbol}
+                                logo={token.logo}
+                                size="sm"
+                              />
+                              <div>
+                                <div className="font-medium text-white text-sm">
+                                  {formatTokenValue(token.netAmount.toString(), token.decimals)} {token.symbol}
+                                </div>
+                                {(() => {
+                                  const tokenAddr = token.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : token.address;
+                                  const usdValue = calculateUsdValue(token.netAmount.toString(), token.decimals, tokenAddr);
+                                  if (usdValue !== null && usdValue >= 0.01) {
+                                    return <div className="text-xs text-gray-400">{formatCurrency(usdValue)}</div>;
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                
                 // For contract interactions without token transfers
                 if (txType === 'contract' && !primarySent && !primaryReceived) {
                   return (

@@ -148,14 +148,16 @@ Required environment variables:
 - **Maintained data accuracy** - Hybrid approach ensures real-time accuracy while leveraging scanner speed
 
 ### July 18, 2025 - Enhanced Transaction History with Robust Activity Visualization
-- **Clear transaction categorization** - Transactions now display as distinct activity types: SWAP, SENT, RECEIVED, CONTRACT INTERACTION
+- **Clear transaction categorization** - Transactions now display as distinct activity types: SWAP, SENT, RECEIVED, CONTRACT INTERACTION, APPROVAL
 - **Enhanced swap display** - Swaps show both tokens with USD values in purple-themed cards (e.g., "100K PLS → 50K HEX" with USD values)
 - **Detailed transfer information** - Transfers show clear from/to addresses with copy-to-clipboard functionality
 - **Contract interaction details** - Method labels prominently displayed for all contract interactions
 - **Improved transaction detection** - Enhanced logic to better identify swaps, including complex DEX interactions
 - **USD value prominence** - All token amounts now show USD values when available
 - **Portfolio bundle support** - Fixed scanner-transactions endpoint to handle portfolio addresses
-- **Visual hierarchy** - Color-coded transaction types: purple for swaps, red/green for sends/receives, blue for contract interactions
+- **Visual hierarchy** - Color-coded transaction types: purple for swaps, red/green for sends/receives, blue for contract interactions, yellow for approvals
+- **Enhanced approval display** - Token approvals show the token logo and symbol being approved along with the contract address
+- **Multicall route visualization** - Complex multicall transactions display the full token route with all sent and received tokens
 
 ### July 15, 2025 - Scanner API Integration for Ultra-Fast Wallet Searches
 - **Implemented PulseChain Scanner API integration** - New `/api/wallet/{address}/scanner-balances` endpoint uses indexed blockchain data
