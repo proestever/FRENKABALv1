@@ -760,80 +760,255 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   );
                 }
                 
-                // For multicalls - show the full route
-                if (tx.method_label?.toLowerCase().includes('multicall') && sentTokens.length > 0 && receivedTokens.length > 0) {
-                  return (
-                    <div className="space-y-2 bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
-                      <div className="flex items-center gap-2 text-sm">
-                        <RefreshCw className="text-purple-400" size={16} />
-                        <span className="font-semibold text-purple-400">MULTICALL ROUTE</span>
+                // For multicalls - show tokens sent from user and received by user
+                if (tx.method_label?.toLowerCase().includes('multicall')) {
+                  // For multicalls, we need to filter transfers more carefully
+                  // Only count tokens that actually left/entered the user's wallet
+                  const userSentTokens: typeof sentTokens = [];
+                  const userReceivedTokens: typeof receivedTokens = [];
+                  
+                  // Process transfers to identify what the user actually sent/received
+                  tx.erc20_transfers?.forEach(transfer => {
+                    // Skip internal/intermediate transfers that are part of the routing
+                    // We only care about transfers directly from or to the user
+                    if (transfer.from_address?.toLowerCase() === walletAddress.toLowerCase()) {
+                      // User sent this token
+                      const tokenKey = transfer.address || 'native';
+                      const existingToken = userSentTokens.find(t => t.address === tokenKey);
+                      
+                      let amount: bigint;
+                      try {
+                        amount = BigInt(transfer.value || '0');
+                      } catch {
+                        amount = BigInt(0);
+                      }
+                      
+                      if (existingToken) {
+                        existingToken.netAmount += amount;
+                      } else {
+                        userSentTokens.push({
+                          symbol: transfer.token_symbol || 'Unknown',
+                          name: transfer.token_name,
+                          logo: transfer.token_logo || prefetchedLogos[transfer.address?.toLowerCase() || ''],
+                          decimals: transfer.token_decimals || '18',
+                          netAmount: amount,
+                          address: tokenKey
+                        });
+                      }
+                    } else if (transfer.to_address?.toLowerCase() === walletAddress.toLowerCase()) {
+                      // User received this token
+                      const tokenKey = transfer.address || 'native';
+                      const existingToken = userReceivedTokens.find(t => t.address === tokenKey);
+                      
+                      let amount: bigint;
+                      try {
+                        amount = BigInt(transfer.value || '0');
+                      } catch {
+                        amount = BigInt(0);
+                      }
+                      
+                      if (existingToken) {
+                        existingToken.netAmount += amount;
+                      } else {
+                        userReceivedTokens.push({
+                          symbol: transfer.token_symbol || 'Unknown',
+                          name: transfer.token_name,
+                          logo: transfer.token_logo || prefetchedLogos[transfer.address?.toLowerCase() || ''],
+                          decimals: transfer.token_decimals || '18',
+                          netAmount: amount,
+                          address: tokenKey
+                        });
+                      }
+                    }
+                  });
+                  
+                  // Also check native transfers
+                  tx.native_transfers?.forEach(transfer => {
+                    if (transfer.from_address?.toLowerCase() === walletAddress.toLowerCase()) {
+                      // User sent native PLS
+                      const existingToken = userSentTokens.find(t => t.address === 'native');
+                      
+                      let amount: bigint;
+                      try {
+                        amount = BigInt(transfer.value || '0');
+                      } catch {
+                        amount = BigInt(0);
+                      }
+                      
+                      if (existingToken) {
+                        existingToken.netAmount += amount;
+                      } else {
+                        userSentTokens.push({
+                          symbol: 'PLS',
+                          name: 'PulseChain',
+                          logo: '/assets/pls logo trimmed.png',
+                          decimals: '18',
+                          netAmount: amount,
+                          address: 'native'
+                        });
+                      }
+                    } else if (transfer.to_address?.toLowerCase() === walletAddress.toLowerCase()) {
+                      // User received native PLS
+                      const existingToken = userReceivedTokens.find(t => t.address === 'native');
+                      
+                      let amount: bigint;
+                      try {
+                        amount = BigInt(transfer.value || '0');
+                      } catch {
+                        amount = BigInt(0);
+                      }
+                      
+                      if (existingToken) {
+                        existingToken.netAmount += amount;
+                      } else {
+                        userReceivedTokens.push({
+                          symbol: 'PLS',
+                          name: 'PulseChain',
+                          logo: '/assets/pls logo trimmed.png',
+                          decimals: '18',
+                          netAmount: amount,
+                          address: 'native'
+                        });
+                      }
+                    }
+                  });
+                  
+                  // If we found clear user transfers, display them
+                  if (userSentTokens.length > 0 || userReceivedTokens.length > 0) {
+                    return (
+                      <div className="space-y-2 bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <RefreshCw className="text-purple-400" size={16} />
+                          <span className="font-semibold text-purple-400">MULTICALL SWAP</span>
+                        </div>
+                        
+                        {/* Show what user sent */}
+                        {userSentTokens.length > 0 && (
+                          <div className="space-y-1">
+                            <span className="text-xs text-gray-400">You sent:</span>
+                            {userSentTokens.map((token, idx) => (
+                              <div key={`sent-${idx}`} className="flex items-center gap-2 ml-4">
+                                <TokenLogo 
+                                  address={token.address === 'native' ? '' : token.address}
+                                  symbol={token.symbol}
+                                  logo={token.logo}
+                                  size="sm"
+                                />
+                                <div>
+                                  <div className="font-medium text-white text-sm">
+                                    {formatTokenValue(token.netAmount.toString(), token.decimals)} {token.symbol}
+                                  </div>
+                                  {(() => {
+                                    const tokenAddr = token.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : token.address;
+                                    const usdValue = calculateUsdValue(token.netAmount.toString(), token.decimals, tokenAddr);
+                                    if (usdValue !== null && usdValue >= 0.01) {
+                                      return <div className="text-xs text-gray-400">{formatCurrency(usdValue)}</div>;
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {userSentTokens.length > 0 && userReceivedTokens.length > 0 && (
+                          <ArrowRight size={14} className="text-gray-400 ml-4" />
+                        )}
+                        
+                        {/* Show what user received */}
+                        {userReceivedTokens.length > 0 && (
+                          <div className="space-y-1">
+                            <span className="text-xs text-gray-400">You received:</span>
+                            {userReceivedTokens.map((token, idx) => (
+                              <div key={`received-${idx}`} className="flex items-center gap-2 ml-4">
+                                <TokenLogo 
+                                  address={token.address === 'native' ? '' : token.address}
+                                  symbol={token.symbol}
+                                  logo={token.logo}
+                                  size="sm"
+                                />
+                                <div>
+                                  <div className="font-medium text-white text-sm">
+                                    {formatTokenValue(token.netAmount.toString(), token.decimals)} {token.symbol}
+                                  </div>
+                                  {(() => {
+                                    const tokenAddr = token.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : token.address;
+                                    const usdValue = calculateUsdValue(token.netAmount.toString(), token.decimals, tokenAddr);
+                                    if (usdValue !== null && usdValue >= 0.01) {
+                                      return <div className="text-xs text-gray-400">{formatCurrency(usdValue)}</div>;
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      
-                      {/* Show all sent tokens */}
-                      {sentTokens.length > 0 && (
-                        <div className="space-y-1">
-                          <span className="text-xs text-gray-400">Sent:</span>
-                          {sentTokens.map((token, idx) => (
-                            <div key={`sent-${idx}`} className="flex items-center gap-2 ml-4">
-                              <TokenLogo 
-                                address={token.address === 'native' ? '' : token.address}
-                                symbol={token.symbol}
-                                logo={token.logo}
-                                size="sm"
-                              />
-                              <div>
-                                <div className="font-medium text-white text-sm">
-                                  {formatTokenValue(token.netAmount.toString(), token.decimals)} {token.symbol}
-                                </div>
-                                {(() => {
-                                  const tokenAddr = token.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : token.address;
-                                  const usdValue = calculateUsdValue(token.netAmount.toString(), token.decimals, tokenAddr);
-                                  if (usdValue !== null && usdValue >= 0.01) {
-                                    return <div className="text-xs text-gray-400">{formatCurrency(usdValue)}</div>;
-                                  }
-                                  return null;
-                                })()}
-                              </div>
-                            </div>
-                          ))}
+                    );
+                  }
+                  
+                  // Fall back to showing as a regular swap if we have the data
+                  if (sentTokens.length > 0 && receivedTokens.length > 0) {
+                    return (
+                      <div className="space-y-2 bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <RefreshCw className="text-purple-400" size={16} />
+                          <span className="font-semibold text-purple-400">MULTICALL SWAP</span>
                         </div>
-                      )}
-                      
-                      {sentTokens.length > 0 && receivedTokens.length > 0 && (
-                        <ArrowDownLeft size={14} className="text-gray-400 ml-4" />
-                      )}
-                      
-                      {/* Show all received tokens */}
-                      {receivedTokens.length > 0 && (
-                        <div className="space-y-1">
-                          <span className="text-xs text-gray-400">Received:</span>
-                          {receivedTokens.map((token, idx) => (
-                            <div key={`received-${idx}`} className="flex items-center gap-2 ml-4">
-                              <TokenLogo 
-                                address={token.address === 'native' ? '' : token.address}
-                                symbol={token.symbol}
-                                logo={token.logo}
-                                size="sm"
-                              />
-                              <div>
-                                <div className="font-medium text-white text-sm">
-                                  {formatTokenValue(token.netAmount.toString(), token.decimals)} {token.symbol}
-                                </div>
-                                {(() => {
-                                  const tokenAddr = token.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : token.address;
-                                  const usdValue = calculateUsdValue(token.netAmount.toString(), token.decimals, tokenAddr);
-                                  if (usdValue !== null && usdValue >= 0.01) {
-                                    return <div className="text-xs text-gray-400">{formatCurrency(usdValue)}</div>;
-                                  }
-                                  return null;
-                                })()}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                          {/* From Token */}
+                          <div className="flex items-center gap-2">
+                            <TokenLogo 
+                              address={primarySent.address === 'native' ? '' : primarySent.address}
+                              symbol={primarySent.symbol}
+                              logo={primarySent.logo}
+                              size="sm"
+                            />
+                            <div>
+                              <div className="font-medium text-white">
+                                {formatTokenValue(primarySent.netAmount.toString(), primarySent.decimals)} {primarySent.symbol}
                               </div>
+                              {(() => {
+                                const tokenAddr = primarySent.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : primarySent.address;
+                                const usdValue = calculateUsdValue(primarySent.netAmount.toString(), primarySent.decimals, tokenAddr);
+                                if (usdValue !== null && usdValue >= 0.01) {
+                                  return <div className="text-xs text-gray-400">{formatCurrency(usdValue)}</div>;
+                                }
+                                return null;
+                              })()}
                             </div>
-                          ))}
+                          </div>
+                          
+                          <ArrowRight size={16} className="text-gray-400 hidden sm:block" />
+                          
+                          {/* To Token */}
+                          <div className="flex items-center gap-2">
+                            <TokenLogo 
+                              address={primaryReceived.address === 'native' ? '' : primaryReceived.address}
+                              symbol={primaryReceived.symbol}
+                              logo={primaryReceived.logo}
+                              size="sm"
+                            />
+                            <div>
+                              <div className="font-medium text-white">
+                                {formatTokenValue(primaryReceived.netAmount.toString(), primaryReceived.decimals)} {primaryReceived.symbol}
+                              </div>
+                              {(() => {
+                                const tokenAddr = primaryReceived.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : primaryReceived.address;
+                                const usdValue = calculateUsdValue(primaryReceived.netAmount.toString(), primaryReceived.decimals, tokenAddr);
+                                if (usdValue !== null && usdValue >= 0.01) {
+                                  return <div className="text-xs text-gray-400">{formatCurrency(usdValue)}</div>;
+                                }
+                                return null;
+                              })()}
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  );
+                      </div>
+                    );
+                  }
                 }
                 
                 // For contract interactions without token transfers
