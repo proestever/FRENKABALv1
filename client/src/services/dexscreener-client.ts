@@ -76,10 +76,48 @@ export interface TokenPriceData {
 const priceCache = new Map<string, { data: TokenPriceData; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Known stablecoin addresses on PulseChain (from Ethereum bridge)
+const STABLECOINS: Record<string, { name: string; logo: string }> = {
+  '0xefd766ccb38eaf1dfd701853bfce31359239f305': {
+    name: 'DAI from Ethereum',
+    logo: 'https://tokens.1inch.io/0x6b175474e89094c44da98b954eedeac495271d0f.png' // DAI logo
+  },
+  '0x0cb6f5a34ad42ec934882a05265a7d5f59b51a2f': {
+    name: 'USDT from Ethereum',
+    logo: 'https://tokens.1inch.io/0xdac17f958d2ee523a2206206994597c13d831ec7.png' // USDT logo
+  },
+  '0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07': {
+    name: 'USDC from Ethereum',
+    logo: 'https://tokens.1inch.io/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.png' // USDC logo
+  }
+};
+
 export async function getTokenPriceFromDexScreener(tokenAddress: string): Promise<TokenPriceData | null> {
   const normalizedAddress = tokenAddress.toLowerCase();
   
-  // Check cache first
+  // Check if it's a known stablecoin first
+  if (STABLECOINS[normalizedAddress]) {
+    const stablecoinData: TokenPriceData = {
+      price: 1.0,
+      priceChange24h: 0,
+      liquidityUsd: 0,
+      volumeUsd24h: 0,
+      dexId: 'stablecoin',
+      pairAddress: '',
+      logo: STABLECOINS[normalizedAddress].logo
+    };
+    
+    // Cache the stablecoin data
+    priceCache.set(normalizedAddress, {
+      data: stablecoinData,
+      timestamp: Date.now()
+    });
+    
+    console.log(`Returning stablecoin price for ${STABLECOINS[normalizedAddress].name}: $1.00`);
+    return stablecoinData;
+  }
+  
+  // Check cache for non-stablecoins
   const cached = priceCache.get(normalizedAddress);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.data;

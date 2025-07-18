@@ -429,6 +429,7 @@ Required environment variables:
 - **Background batch fetching** - Implemented automatic background price fetching for large wallets that exceed initial API limits
 - **Rate limit handling** - Smart detection of missing token prices with background DexScreener batch processing
 - **Progressive loading** - Initial fast load followed by background completion for comprehensive price coverage
+- **Stablecoin Support** - Added fallback pricing and logos for bridged stablecoins (DAI, USDT, USDC from Ethereum) that maintain $1.00 value
 
 ## User Preferences
 
