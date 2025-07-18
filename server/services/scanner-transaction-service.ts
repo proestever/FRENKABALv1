@@ -155,6 +155,11 @@ async function fetchTransactionsFromScanner(
               continue;
             }
             
+            // Determine transfer direction relative to the wallet
+            const direction = transfer.from.hash.toLowerCase() === walletAddress.toLowerCase() ? 'send' : 
+                            transfer.to.hash.toLowerCase() === walletAddress.toLowerCase() ? 'receive' : 
+                            'internal';
+            
             const tokenTransfer: TransactionTransfer = {
               token_name: transfer.token.name || 'Unknown',
               token_symbol: transfer.token.symbol || 'UNKNOWN',
@@ -168,7 +173,8 @@ async function fetchTransactionsFromScanner(
               value_formatted: ethers.utils.formatUnits(
                 transfer.total ? transfer.total.value : '0',
                 parseInt(transfer.token.decimals || '18')
-              )
+              ),
+              direction: direction as 'send' | 'receive' | 'internal'
             };
             
             tx.erc20_transfers!.push(tokenTransfer);

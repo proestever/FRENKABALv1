@@ -761,7 +761,21 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                 }
                 
                 // For multicalls - show tokens sent from user and received by user
-                if (tx.method_label?.toLowerCase().includes('multicall')) {
+                // Also check if it's a router transaction even without multicall label
+                const isRouterTransaction = tx.to_address && (
+                  tx.to_address.toLowerCase() === '0xda9aba4eacf54e0273f56dfffee6b8f1e20b23bba' || // PulseX Router
+                  tx.to_address.toLowerCase() === '0x165c3410fc91ef562c50559f7d2289febb913d90' // PulseX Router V2
+                );
+                
+                if (tx.method_label?.toLowerCase().includes('multicall') || (isRouterTransaction && sentTokens.length > 0 && receivedTokens.length > 0)) {
+                  // Debug logging for multicall transactions
+                  if (tx.method_label?.toLowerCase().includes('multicall')) {
+                    console.log('Multicall transaction detected:', tx.hash, tx.method_label);
+                    console.log('ERC20 transfers count:', tx.erc20_transfers?.length || 0);
+                    console.log('Sent tokens:', sentTokens.length);
+                    console.log('Received tokens:', receivedTokens.length);
+                  }
+                  
                   // For multicalls, we need to filter transfers more carefully
                   // Only count tokens that actually left/entered the user's wallet
                   const userSentTokens: typeof sentTokens = [];

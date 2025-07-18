@@ -166,7 +166,7 @@ export interface TransactionTransfer {
   possible_spam?: boolean;
   verified_contract?: boolean;
   security_score?: number;
-  direction?: string;
+  direction?: 'send' | 'receive' | 'internal';
   internal_transaction?: boolean;
 }
 
