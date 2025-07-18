@@ -653,6 +653,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid wallet address" });
       }
       
+      // Check if this is a portfolio bundle
+      if (address.toLowerCase().startsWith('portfolio:')) {
+        // For portfolio bundles, we need to aggregate transactions from all addresses
+        const portfolioCode = address.substring(10);
+        console.log(`Getting portfolio transactions for: ${portfolioCode}`);
+        
+        try {
+          // Find the portfolio by share code
+          const portfolio = await storage.getPortfolioByShareCode(portfolioCode);
+          if (!portfolio) {
+            return res.status(404).json({ message: "Portfolio not found" });
+          }
+          
+          // Get all addresses in the portfolio
+          const addresses = await storage.getPortfolioAddresses(portfolio.id);
+          if (!addresses || addresses.length === 0) {
+            return res.json({ result: [], page: 1, page_size: parseInt(limit as string, 10) });
+          }
+          
+          // For now, return transactions from the first address
+          // In a future enhancement, we could aggregate transactions from all addresses
+          const primaryAddress = addresses[0].walletAddress;
+          
+          // Import the scanner transaction service
+          const { getScannerTransactionHistory } = await import('./services/scanner-transaction-service.js');
+          
+          const parsedLimit = Math.min(parseInt(limit as string, 10) || 200, 500);
+          const result = await getScannerTransactionHistory(primaryAddress, parsedLimit, cursor as string | undefined);
+          
+          return res.json(result);
+        } catch (error) {
+          console.error("Error fetching portfolio transactions:", error);
+          return res.status(500).json({ 
+            message: "Failed to fetch portfolio transactions",
+            error: error instanceof Error ? error.message : "Unknown error" 
+          });
+        }
+      }
+      
       // Validate ethereum address format
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {

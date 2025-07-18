@@ -74,23 +74,30 @@ interface TransactionHistoryProps {
 type TransactionType = 'all' | 'swap' | 'send' | 'receive' | 'approval' | 'contract';
 
 const getTransactionType = (tx: Transaction, walletAddress: string): TransactionType => {
-  // Check for swaps - simplified to just check for DEX routers or swap methods
-  const swapMethodSignatures = ['swap', 'trade', 'multicall', 'exactinput', 'exactoutput', 'swapexact', 'swaptokens'];
-  const isSwapMethod = tx.method_label && swapMethodSignatures.some(sig => tx.method_label?.toLowerCase().includes(sig));
+  // Check for swaps - enhanced detection
+  const swapMethodSignatures = [
+    'swap', 'trade', 'multicall', 'exactinput', 'exactoutput', 'swapexact', 'swaptokens',
+    'swapETHForExactTokens', 'swapExactETHForTokens', 'swapTokensForExactETH', 'swapExactTokensForETH',
+    'swapTokensForExactTokens', 'swapExactTokensForTokens', 'addLiquidity', 'removeLiquidity'
+  ];
+  const isSwapMethod = tx.method_label && swapMethodSignatures.some(sig => tx.method_label?.toLowerCase().includes(sig.toLowerCase()));
   
   const dexRouterAddresses = [
     '0xda9aba4eacf54e0273f56dfffee6b8f1e20b23bba', // PulseX Router
     '0x165c3410fc91ef562c50559f7d2289febb913d90', // PulseX Router V2
     '0x98bf93ebf5c380c0e6ae8e192a7e2ae08edacc02', // PulseX Factory
+    '0x7a250d5630b4cf539739df2c5dacb4c659f2488d', // Uniswap V2 Router
+    '0xE592427A0AEce92De3Edee1F18E0157C05861564', // Uniswap V3 Router
   ];
   const isDexRouter = dexRouterAddresses.includes(tx.to_address?.toLowerCase() || '');
   
-  if (isSwapMethod || isDexRouter) {
-    return 'swap';
-  }
-  
   const hasSendTransfers = tx.erc20_transfers?.some(t => t && t.direction === 'send');
   const hasReceiveTransfers = tx.erc20_transfers?.some(t => t && t.direction === 'receive');
+  
+  // Enhanced swap detection - if we have both sends and receives, it's likely a swap
+  if ((isSwapMethod || isDexRouter) || (hasSendTransfers && hasReceiveTransfers)) {
+    return 'swap';
+  }
   
   // Check for approvals
   if (tx.method_label?.toLowerCase().includes('approve')) {
@@ -98,12 +105,17 @@ const getTransactionType = (tx: Transaction, walletAddress: string): Transaction
   }
   
   // Check for sends/receives
-  if (hasSendTransfers) return 'send';
-  if (hasReceiveTransfers) return 'receive';
+  if (hasSendTransfers && !hasReceiveTransfers) return 'send';
+  if (hasReceiveTransfers && !hasSendTransfers) return 'receive';
   
   // Check for contract interactions
-  if (tx.to_address && tx.value === '0' && !tx.erc20_transfers?.length) {
+  if (tx.to_address && (tx.value === '0' || tx.value === '') && !tx.erc20_transfers?.length) {
     return 'contract';
+  }
+  
+  // Native PLS transfers
+  if (tx.value && tx.value !== '0' && !tx.erc20_transfers?.length) {
+    return tx.from_address.toLowerCase() === walletAddress.toLowerCase() ? 'send' : 'receive';
   }
   
   return 'all';
@@ -342,6 +354,15 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
               </div>
             </div>
             
+            {/* Transaction Method Label */}
+            {tx.method_label && (
+              <div className="mb-2">
+                <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-1 rounded-md">
+                  {tx.method_label}
+                </span>
+              </div>
+            )}
+            
             {/* Transaction Content */}
             <div className="space-y-2">
               {(() => {
@@ -517,11 +538,192 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                   return bVal - aVal;
                 })[0];
                 
+                // Determine transaction type and display accordingly
+                const txType = getTransactionType(tx, walletAddress);
+                
+                // For swaps - show both tokens with USD values
+                if (txType === 'swap' && primarySent && primaryReceived) {
+                  return (
+                    <div className="space-y-2 bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <RefreshCw className="text-purple-400" size={16} />
+                        <span className="font-semibold text-purple-400">SWAP</span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        {/* From Token */}
+                        <div className="flex items-center gap-2">
+                          <TokenLogo 
+                            address={primarySent.address === 'native' ? '' : primarySent.address}
+                            symbol={primarySent.symbol}
+                            logo={primarySent.logo}
+                            size="sm"
+                          />
+                          <div>
+                            <div className="font-medium text-white">
+                              {formatTokenValue(primarySent.netAmount.toString(), primarySent.decimals)} {primarySent.symbol}
+                            </div>
+                            {(() => {
+                              const tokenAddr = primarySent.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : primarySent.address;
+                              const usdValue = calculateUsdValue(primarySent.netAmount.toString(), primarySent.decimals, tokenAddr);
+                              if (usdValue !== null && usdValue >= 0.01) {
+                                return <div className="text-xs text-gray-400">{formatCurrency(usdValue)}</div>;
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        </div>
+                        
+                        <ArrowRight size={16} className="text-gray-400 hidden sm:block" />
+                        
+                        {/* To Token */}
+                        <div className="flex items-center gap-2">
+                          <TokenLogo 
+                            address={primaryReceived.address === 'native' ? '' : primaryReceived.address}
+                            symbol={primaryReceived.symbol}
+                            logo={primaryReceived.logo}
+                            size="sm"
+                          />
+                          <div>
+                            <div className="font-medium text-white">
+                              {formatTokenValue(primaryReceived.netAmount.toString(), primaryReceived.decimals)} {primaryReceived.symbol}
+                            </div>
+                            {(() => {
+                              const tokenAddr = primaryReceived.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : primaryReceived.address;
+                              const usdValue = calculateUsdValue(primaryReceived.netAmount.toString(), primaryReceived.decimals, tokenAddr);
+                              if (usdValue !== null && usdValue >= 0.01) {
+                                return <div className="text-xs text-gray-400">{formatCurrency(usdValue)}</div>;
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // For transfers - show clear from/to addresses
+                if ((txType === 'send' || txType === 'receive') && (primarySent || primaryReceived)) {
+                  const token = primarySent || primaryReceived;
+                  const isSend = !!primarySent;
+                  const relevantTransfer = tx.erc20_transfers?.find(t => 
+                    t.address?.toLowerCase() === token?.address?.toLowerCase() ||
+                    (token?.address === 'native' && !t.address)
+                  );
+                  
+                  return (
+                    <div className="space-y-2 bg-gray-500/5 border border-gray-500/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        {isSend ? (
+                          <>
+                            <ArrowUpRight className="text-red-400" size={16} />
+                            <span className="font-semibold text-red-400">SENT</span>
+                          </>
+                        ) : (
+                          <>
+                            <ArrowDownLeft className="text-green-400" size={16} />
+                            <span className="font-semibold text-green-400">RECEIVED</span>
+                          </>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <TokenLogo 
+                          address={token.address === 'native' ? '' : token.address}
+                          symbol={token.symbol}
+                          logo={token.logo}
+                          size="sm"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-white">
+                            {formatTokenValue(token.netAmount.toString(), token.decimals)} {token.symbol}
+                          </div>
+                          {(() => {
+                            const tokenAddr = token.address === 'native' ? '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' : token.address;
+                            const usdValue = calculateUsdValue(token.netAmount.toString(), token.decimals, tokenAddr);
+                            if (usdValue !== null && usdValue >= 0.01) {
+                              return <div className="text-xs text-gray-400">{formatCurrency(usdValue)}</div>;
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      </div>
+                      
+                      {/* Show from/to addresses */}
+                      <div className="text-xs text-gray-400 space-y-1">
+                        {isSend ? (
+                          <div className="flex items-center gap-1">
+                            <span>To:</span>
+                            <button
+                              onClick={() => copyToClipboard(relevantTransfer?.to_address || tx.to_address)}
+                              className="flex items-center gap-1 hover:text-gray-300 transition-colors"
+                            >
+                              <span className="font-mono">
+                                {relevantTransfer?.to_address_label || shortenAddress(relevantTransfer?.to_address || tx.to_address)}
+                              </span>
+                              {copiedAddresses[relevantTransfer?.to_address || tx.to_address] ? (
+                                <Check size={12} className="text-green-400" />
+                              ) : (
+                                <Copy size={12} />
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <span>From:</span>
+                            <button
+                              onClick={() => copyToClipboard(relevantTransfer?.from_address || tx.from_address)}
+                              className="flex items-center gap-1 hover:text-gray-300 transition-colors"
+                            >
+                              <span className="font-mono">
+                                {relevantTransfer?.from_address_label || shortenAddress(relevantTransfer?.from_address || tx.from_address)}
+                              </span>
+                              {copiedAddresses[relevantTransfer?.from_address || tx.from_address] ? (
+                                <Check size={12} className="text-green-400" />
+                              ) : (
+                                <Copy size={12} />
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // For contract interactions without token transfers
+                if (txType === 'contract' && !primarySent && !primaryReceived) {
+                  return (
+                    <div className="space-y-2 bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Wallet className="text-blue-400" size={16} />
+                        <span className="font-semibold text-blue-400">CONTRACT INTERACTION</span>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        <div className="flex items-center gap-1">
+                          <span>Contract:</span>
+                          <button
+                            onClick={() => copyToClipboard(tx.to_address)}
+                            className="flex items-center gap-1 hover:text-gray-300 transition-colors"
+                          >
+                            <span className="font-mono">
+                              {tx.to_address_label || shortenAddress(tx.to_address)}
+                            </span>
+                            {copiedAddresses[tx.to_address] ? (
+                              <Check size={12} className="text-green-400" />
+                            ) : (
+                              <Copy size={12} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // Fallback for other transaction types
                 return (
                   <div className="flex items-center gap-2">
-                    {primarySent && primaryReceived && (
-                      <RefreshCw className="text-purple-400" size={14} />
-                    )}
                     {primarySent && (
                       <>
                         <TokenLogo 
@@ -544,11 +746,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                         })()}
                       </>
                     )}
-                    
-                    {primarySent && primaryReceived && (
-                      <ArrowRight size={14} className="text-gray-400" />
-                    )}
-                    
                     {primaryReceived && (
                       <>
                         <TokenLogo 
@@ -570,23 +767,6 @@ export function TransactionHistory({ walletAddress, onClose }: TransactionHistor
                           return null;
                         })()}
                       </>
-                    )}
-                    
-                    {!primaryReceived && primarySent && (
-                      <>
-                        <span className="text-gray-400">sent to</span>
-                        <a
-                          href={`https://otter.pulsechain.com/address/${tx.to_address}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-gray-400 hover:text-gray-300 font-mono text-xs"
-                        >
-                          {tx.to_address.slice(0, 6)}...{tx.to_address.slice(-4)}
-                        </a>
-                      </>
-                    )}
-                    {!primarySent && primaryReceived && (
-                      <span className="text-gray-400">received</span>
                     )}
                   </div>
                 );

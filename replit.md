@@ -147,6 +147,16 @@ Required environment variables:
 - **Production-ready implementation** - All features including individual wallets, portfolio bundles, and transaction history use scanner API
 - **Maintained data accuracy** - Hybrid approach ensures real-time accuracy while leveraging scanner speed
 
+### July 18, 2025 - Enhanced Transaction History with Robust Activity Visualization
+- **Clear transaction categorization** - Transactions now display as distinct activity types: SWAP, SENT, RECEIVED, CONTRACT INTERACTION
+- **Enhanced swap display** - Swaps show both tokens with USD values in purple-themed cards (e.g., "100K PLS → 50K HEX" with USD values)
+- **Detailed transfer information** - Transfers show clear from/to addresses with copy-to-clipboard functionality
+- **Contract interaction details** - Method labels prominently displayed for all contract interactions
+- **Improved transaction detection** - Enhanced logic to better identify swaps, including complex DEX interactions
+- **USD value prominence** - All token amounts now show USD values when available
+- **Portfolio bundle support** - Fixed scanner-transactions endpoint to handle portfolio addresses
+- **Visual hierarchy** - Color-coded transaction types: purple for swaps, red/green for sends/receives, blue for contract interactions
+
 ### July 15, 2025 - Scanner API Integration for Ultra-Fast Wallet Searches
 - **Implemented PulseChain Scanner API integration** - New `/api/wallet/{address}/scanner-balances` endpoint uses indexed blockchain data
 - **Created scanner-balance-service.ts** - Fetches token balances from Scanner API first, then checks recent blocks for real-time updates
