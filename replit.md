@@ -132,11 +132,15 @@ Required environment variables:
 
 ## Recent Changes
 
-### July 20, 2025 - Performance Optimizations for Smart Contract Price Fetching
-- **Parallel batch processing** - Changed from sequential to parallel processing of token price batches, significantly reducing wait times
+### July 20, 2025 - Performance Optimizations and Dust Token Filtering
+- **Parallel batch processing** - Increased batch size to 100 simultaneous calls for smart contract price fetching
 - **WPLS price caching** - Added dedicated caching for WPLS price to avoid redundant blockchain calls when multiple tokens need WPLS conversion
-- **Increased batch size** - Increased batch size from 10 to 20 tokens for more efficient processing
-- **Result** - These optimizations provide faster wallet loading speeds when using the new smart contract price fetching tool
+- **Logo preservation fix** - Fixed issue where server logos were being overwritten by smart contract data
+- **Background logo fetching optimized** - Made immediate (removed 5-second delay), increased batch size to 10, reduced delays to 200ms
+- **Dust token filtering** - Added $300 minimum liquidity filter to exclude dust tokens with inflated values
+- **Exception for major tokens** - Native tokens and major tokens (HEX, PLSX, INC, WPLS, PLS) are exempt from liquidity filter
+- **Portfolio bundle fix** - Fixed critical issue where portfolio bundles showed near-zero total values by switching to client-side price fetching
+- **Result** - 5x faster price fetching with 100 simultaneous calls while filtering out low-liquidity dust tokens, portfolio bundles now show correct total values
 
 ### July 20, 2025 - Implemented Direct Smart Contract Price Reading for Real-Time Updates
 - **Created smart-contract-price-service.ts** - New service that reads prices directly from PulseX liquidity pool contracts

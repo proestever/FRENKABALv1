@@ -166,6 +166,7 @@ export function combineWalletData(wallets: Record<string, any>): any {
   Object.values(wallets).forEach(wallet => {
     // Add to the total value
     totalValue += wallet.totalValue || 0;
+    console.log('Processing wallet:', wallet.address, 'with totalValue:', wallet.totalValue);
     
     // Process each token
     wallet.tokens.forEach((token: any) => {

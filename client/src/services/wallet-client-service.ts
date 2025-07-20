@@ -237,18 +237,29 @@ export async function fetchWalletDataWithContractPrices(
       const priceData = priceMap.get(addressForPrice.toLowerCase());
       
       if (priceData) {
-        token.price = priceData.price;
-        token.value = token.balanceFormatted * priceData.price;
-        // Store minimal price data for UI (keep existing logo)
-        token.priceData = {
-          price: priceData.price,
-          priceChange24h: 0, // Contract method doesn't provide 24h change
-          liquidityUsd: priceData.liquidity,
-          volumeUsd24h: 0, // Contract method doesn't provide volume
-          dexId: 'pulsex',
-          pairAddress: priceData.pairAddress,
-          logo: token.logo // Preserve logo from server
-        };
+        // Filter out dust tokens with less than $300 liquidity
+        // Exception: Don't filter out native tokens or major tokens
+        const isNativeToken = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+        const isMajorToken = ['HEX', 'PLSX', 'INC', 'WPLS', 'PLS'].includes(token.symbol?.toUpperCase());
+        
+        if (priceData.liquidity < 300 && !isNativeToken && !isMajorToken) {
+          token.price = 0; // Set price to 0 for dust tokens
+          token.value = 0;
+          token.priceData = undefined;
+        } else {
+          token.price = priceData.price;
+          token.value = token.balanceFormatted * priceData.price;
+          // Store minimal price data for UI (keep existing logo)
+          token.priceData = {
+            price: priceData.price,
+            priceChange24h: 0, // Contract method doesn't provide 24h change
+            liquidityUsd: priceData.liquidity,
+            volumeUsd24h: 0, // Contract method doesn't provide volume
+            dexId: 'pulsex',
+            pairAddress: priceData.pairAddress,
+            logo: token.logo // Preserve logo from server
+          };
+        }
       }
       
       processedCount++;

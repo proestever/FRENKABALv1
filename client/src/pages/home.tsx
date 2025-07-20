@@ -197,16 +197,11 @@ export default function Home() {
       
       const walletPromises = addresses.map(async (address) => {
         try {
-          // Fetch wallet data
-          const response = await fetch(`/api/wallet/${address}/all`);
+          // Fetch wallet data with smart contract prices
+          const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
+          const dataWithPrices = await fetchWalletDataWithContractPrices(address);
           
-          if (!response.ok) {
-            console.warn(`Failed to fetch wallet ${address}`);
-            return null;
-          } else {
-            const data = await response.json();
-            return { [address]: data };
-          }
+          return { [address]: dataWithPrices };
         } catch (error) {
           console.error(`Error fetching wallet ${address}:`, error);
           return null;
