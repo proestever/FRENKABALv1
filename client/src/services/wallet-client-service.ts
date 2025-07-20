@@ -237,12 +237,17 @@ export async function fetchWalletDataWithContractPrices(
       const priceData = priceMap.get(addressForPrice.toLowerCase());
       
       if (priceData) {
-        // Filter out dust tokens with less than $100 liquidity
+        // Filter out dust tokens based on liquidity
         // Exception: Don't filter out native tokens or major tokens
         const isNativeToken = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
         const isMajorToken = ['HEX', 'PLSX', 'INC', 'WPLS', 'PLS'].includes(token.symbol?.toUpperCase());
         
-        if (priceData.liquidity < 100 && !isNativeToken && !isMajorToken) {
+        // For WPLS pairs, require at least 1,000,000 WPLS liquidity
+        // For other pairs, require at least $100 USD liquidity
+        const isWPLSPair = priceData.pairedTokenSymbol === 'WPLS';
+        const liquidityThreshold = isWPLSPair ? 1000000 : 100;
+        
+        if (priceData.liquidity < liquidityThreshold && !isNativeToken && !isMajorToken) {
           token.price = 0; // Set price to 0 for dust tokens
           token.value = 0;
           token.priceData = undefined;

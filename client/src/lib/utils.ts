@@ -234,7 +234,16 @@ export function combineWalletData(wallets: Record<string, any>): any {
       const isMajorToken = ['HEX', 'PLSX', 'INC', 'WPLS', 'PLS'].includes(token.symbol?.toUpperCase());
       const isNativeToken = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
       
-      // Include if: major token, native token, or value >= $100
+      // For tokens with price data, check liquidity thresholds
+      if (token.priceData) {
+        const isWPLSPair = token.priceData.pairedTokenSymbol === 'WPLS';
+        const liquidityThreshold = isWPLSPair ? 1000000 : 100;
+        
+        // Include if: major token, native token, or meets liquidity threshold
+        return isMajorToken || isNativeToken || (token.priceData.liquidity || 0) >= liquidityThreshold;
+      }
+      
+      // If no price data, filter by value as fallback
       return isMajorToken || isNativeToken || (token.value || 0) >= 100;
     })
     .sort((a, b) => (b.value || 0) - (a.value || 0));
