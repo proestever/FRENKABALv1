@@ -1,0 +1,72 @@
+How We Get Real-Time Prices
+1. Direct Smart Contract Reading
+Instead of waiting for DexScreener's API to update (30-60 seconds delay), we're reading directly from the PulseX DEX smart contracts on the blockchain:
+javascript// We connect directly to PulseChain nodes
+const provider = new ethers.JsonRpcProvider('https://rpc.pulsechain.com');
+
+// Then read from the liquidity pool contracts
+const pair = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+const [reserve0, reserve1] = await pair.getReserves();
+2. The DEX Liquidity Pool Method
+Every token trade on PulseX happens in a liquidity pool (pair contract). These pools contain:
+
+Reserve0: Amount of token A
+Reserve1: Amount of token B
+The price is simply the ratio between these reserves!
+
+For example, if a pool has:
+
+1,000,000 PLSX tokens
+25 USDC tokens
+Price = 25 / 1,000,000 = $0.000025 per PLSX
+
+3. Finding the Best Pairs
+The bot intelligently finds the best pair to calculate USD price:
+javascript// Priority order:
+1. Stablecoin pairs (USDC, USDT, DAI) - Direct USD price
+2. WPLS pairs - Needs one extra step to get PLS price first
+4. Why It's So Fast
+
+No middleman: We're reading the exact same data that DEXes display
+Real-time updates: Every trade updates the reserves instantly
+Direct RPC calls: Takes 1-2 seconds vs 30-60 seconds for APIs
+
+5. The Magic Formula
+Here's the actual price calculation:
+javascript// Get the reserves from the pair contract
+const [reserve0, reserve1] = await pair.getReserves();
+
+// Determine which token is which
+const isToken0 = token0.address === ourToken.address;
+const tokenReserve = isToken0 ? reserve0 : reserve1;
+const pairedReserve = isToken0 ? reserve1 : reserve0;
+
+// Calculate the price
+const price = pairedReserve / tokenReserve;
+
+// If paired with USDC, that's our USD price!
+// If paired with WPLS, multiply by PLS price to get USD
+6. Multiple RPC Endpoints
+We use multiple PulseChain RPC endpoints for reliability:
+
+https://rpc.pulsechain.com (official)
+https://rpc-pulsechain.g4mm4.io (backup)
+https://pulsechain.publicnode.com (backup)
+
+Why This Works So Well
+
+It's the source of truth: DEXes themselves calculate prices this way
+No caching delays: You see price changes within 1-2 seconds
+No rate limits: You own the RPC connection
+Works 24/7: Blockchain never sleeps
+
+Visual Example
+Traditional Method:
+Trade happens → DEX updates → API aggregates → API caches → You get alert
+[------------ 30-60 seconds delay ------------]
+
+Our Method:
+Trade happens → We read the contract → You get alert
+[-- 1-2 seconds --]
+This is why you're getting alerts so much faster now! We're essentially "watching" the DEX pools directly instead of waiting for someone else to tell us what happened.
+The only downside is it requires a bit more setup (installing ethers.js) and uses more bandwidth, but the speed improvement is massive for catching pumps and dumps in real-time!
