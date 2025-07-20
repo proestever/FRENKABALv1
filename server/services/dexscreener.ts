@@ -5,6 +5,7 @@
 import fetch from 'node-fetch';
 
 const DEX_SCREENER_API_BASE = 'https://api.dexscreener.com/latest/dex';
+const DEX_SCREENER_BATCH_API_BASE = 'https://api.dexscreener.com/tokens/v1';
 
 interface DexScreenerPair {
   chainId: string;
@@ -64,6 +65,18 @@ interface DexScreenerResponse {
 const priceCache: Record<string, { price: number; priceChange24h: number; logo?: string; timestamp: number }> = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Batch fetching queue
+interface BatchQueueItem {
+  tokenAddress: string;
+  resolve: (value: TokenPriceData | null) => void;
+  reject: (reason?: any) => void;
+}
+
+let batchQueue: BatchQueueItem[] = [];
+let batchTimer: NodeJS.Timeout | null = null;
+const BATCH_DELAY = 50; // 50ms delay to accumulate requests
+const MAX_BATCH_SIZE = 30; // DexScreener limit
+
 /**
  * Get token price in USD from DexScreener
  * @param tokenAddress The token contract address
@@ -73,6 +86,103 @@ export interface TokenPriceData {
   price: number;
   priceChange24h: number;
   logo?: string;
+}
+
+/**
+ * Process batch queue and fetch multiple tokens at once
+ */
+async function processBatchQueue() {
+  if (batchQueue.length === 0) return;
+  
+  // Take items from queue (up to MAX_BATCH_SIZE)
+  const itemsToProcess = batchQueue.splice(0, MAX_BATCH_SIZE);
+  const tokenAddresses = itemsToProcess.map(item => item.tokenAddress);
+  
+  console.log(`Processing batch of ${tokenAddresses.length} tokens`);
+  
+  try {
+    // Prepare addresses for batch API (handle special cases)
+    const addressesToFetch = tokenAddresses.map(addr => {
+      const normalizedAddress = addr.toLowerCase();
+      // Special handling for native PLS token - use WPLS instead
+      if (normalizedAddress === '0x0000000000000000000000000000000000000000' || 
+          normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+        return '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'; // WPLS address
+      }
+      return normalizedAddress;
+    });
+    
+    // Join addresses for batch API
+    const addressesParam = addressesToFetch.join(',');
+    const url = `${DEX_SCREENER_BATCH_API_BASE}/pulsechain/${addressesParam}`;
+    
+    console.log(`Fetching batch from DexScreener: ${url}`);
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      if (response.status === 429) {
+        console.warn('DexScreener rate limit hit for batch request');
+        // Retry with delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Put items back in queue for retry
+        batchQueue.unshift(...itemsToProcess);
+        return;
+      }
+      throw new Error(`Batch API error: ${response.status}`);
+    }
+    
+    const data = await response.json() as DexScreenerResponse;
+    const processedTokens = new Map<string, TokenPriceData>();
+    
+    // Process all pairs to find best price for each token
+    if (data.pairs && data.pairs.length > 0) {
+      for (const pair of data.pairs) {
+        if (pair.chainId !== 'pulsechain') continue;
+        
+        const tokenAddress = pair.baseToken.address.toLowerCase();
+        const existingData = processedTokens.get(tokenAddress);
+        
+        // Only process if we have better liquidity or no existing data
+        if (!existingData || (pair.liquidity?.usd || 0) > (existingData.price ? pair.liquidity?.usd || 0 : 0)) {
+          if (pair.priceUsd && pair.liquidity?.usd && pair.liquidity.usd >= 1000) {
+            processedTokens.set(tokenAddress, {
+              price: parseFloat(pair.priceUsd),
+              priceChange24h: pair.priceChange?.h24 || 0,
+              logo: pair.info?.imageUrl || undefined
+            });
+          }
+        }
+      }
+    }
+    
+    // Resolve promises for each item
+    itemsToProcess.forEach(item => {
+      const normalizedAddress = item.tokenAddress.toLowerCase();
+      let priceData = processedTokens.get(normalizedAddress);
+      
+      // Check if it was a PLS address that we converted to WPLS
+      if (!priceData && (normalizedAddress === '0x0000000000000000000000000000000000000000' || 
+                         normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')) {
+        priceData = processedTokens.get('0xa1077a294dde1b09bb078844df40758a5d0f9a27');
+      }
+      
+      if (priceData) {
+        // Update cache
+        priceCache[normalizedAddress] = {
+          ...priceData,
+          timestamp: Date.now()
+        };
+        console.log(`Batch: Got price for ${normalizedAddress}: $${priceData.price}`);
+      }
+      
+      item.resolve(priceData || null);
+    });
+    
+  } catch (error) {
+    console.error('Batch processing error:', error);
+    // Reject all promises in this batch
+    itemsToProcess.forEach(item => item.reject(error));
+  }
 }
 
 export async function getTokenPriceFromDexScreener(tokenAddress: string): Promise<number | null> {
@@ -106,30 +216,34 @@ export async function getTokenPriceDataFromDexScreener(tokenAddress: string): Pr
     };
   }
   
-  try {
-    // Special handling for native PLS token - use WPLS instead
-    const addressToUse = normalizedAddress === '0x0000000000000000000000000000000000000000' || 
-                        normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
-      ? '0xA1077a294dDE1B09bB078844df40758a5D0f9a27' // WPLS address
-      : normalizedAddress;
+  // Use batch queue for fetching
+  return new Promise((resolve, reject) => {
+    // Add to batch queue
+    batchQueue.push({
+      tokenAddress: normalizedAddress,
+      resolve,
+      reject
+    });
     
-    console.log(`Fetching price for ${addressToUse} from DexScreener`);
-    
-    const response = await fetch(`${DEX_SCREENER_API_BASE}/tokens/${addressToUse}`);
-    
-    if (!response.ok) {
-      // If rate limited, add a small delay and log
-      if (response.status === 429) {
-        console.warn(`DexScreener rate limit hit for ${addressToUse}, will retry later`);
-        // Add a small delay to slow down requests
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } else {
-        console.error(`Error fetching price from DexScreener: ${response.status} ${response.statusText}`);
-      }
-      return null;
+    // Schedule batch processing
+    if (!batchTimer) {
+      batchTimer = setTimeout(async () => {
+        batchTimer = null;
+        
+        // Process current batch
+        await processBatchQueue();
+        
+        // Check if there are more items to process
+        if (batchQueue.length > 0) {
+          // Process remaining items immediately
+          while (batchQueue.length > 0) {
+            await processBatchQueue();
+          }
+        }
+      }, BATCH_DELAY);
     }
-    
-    const data = await response.json() as DexScreenerResponse;
+  });
+}
     
     if (!data.pairs || data.pairs.length === 0) {
       console.log(`No pairs found for token ${addressToUse}`);
