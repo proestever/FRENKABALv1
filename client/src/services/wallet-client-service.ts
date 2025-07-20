@@ -242,10 +242,10 @@ export async function fetchWalletDataWithContractPrices(
         const isNativeToken = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
         const isMajorToken = ['HEX', 'PLSX', 'INC', 'WPLS', 'PLS'].includes(token.symbol?.toUpperCase());
         
-        // For WPLS pairs, require at least 1,000,000 WPLS liquidity
+        // For WPLS pairs, require at least 250,000 WPLS liquidity
         // For other pairs, require at least $100 USD liquidity
         const isWPLSPair = priceData.pairedTokenSymbol === 'WPLS';
-        const liquidityThreshold = isWPLSPair ? 1000000 : 100;
+        const liquidityThreshold = isWPLSPair ? 250000 : 100;
         
         if (priceData.liquidity < liquidityThreshold && !isNativeToken && !isMajorToken) {
           token.price = 0; // Set price to 0 for dust tokens

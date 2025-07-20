@@ -237,7 +237,7 @@ export function combineWalletData(wallets: Record<string, any>): any {
       // For tokens with price data, check liquidity thresholds
       if (token.priceData) {
         const isWPLSPair = token.priceData.pairedTokenSymbol === 'WPLS';
-        const liquidityThreshold = isWPLSPair ? 1000000 : 100;
+        const liquidityThreshold = isWPLSPair ? 250000 : 100;
         
         // Include if: major token, native token, or meets liquidity threshold
         return isMajorToken || isNativeToken || (token.priceData.liquidity || 0) >= liquidityThreshold;
