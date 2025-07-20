@@ -47,10 +47,10 @@ interface TokenWithPrice extends ProcessedToken {
 }
 
 /**
- * Fetch wallet balances without prices from server
+ * Fetch wallet balances using scanner API (gets ALL tokens, not just recent)
  */
-async function fetchWalletBalancesNoPrices(address: string): Promise<Wallet> {
-  const response = await fetch(`/api/wallet/${address}/balances-no-prices`);
+async function fetchWalletBalancesFromScanner(address: string): Promise<Wallet> {
+  const response = await fetch(`/api/wallet/${address}/scanner-balances`);
   
   if (!response.ok) {
     const errorData = await response.json();
@@ -95,9 +95,9 @@ export async function fetchWalletDataClientSide(
   onProgress?: (message: string, progress: number) => void
 ): Promise<Wallet> {
   try {
-    // Step 1: Fetch balances without prices from server
-    if (onProgress) onProgress('Fetching wallet balances...', 10);
-    const walletDataRaw = await fetchWalletBalancesNoPrices(address);
+    // Step 1: Fetch ALL token balances using scanner API
+    if (onProgress) onProgress('Fetching all wallet tokens...', 10);
+    const walletDataRaw = await fetchWalletBalancesFromScanner(address);
     
     // Convert null values to undefined for proper type compatibility
     const walletData: Wallet = {
@@ -203,9 +203,9 @@ export async function fetchWalletDataWithContractPrices(
   onProgress?: (message: string, progress: number) => void
 ): Promise<Wallet> {
   try {
-    // Step 1: Fetch balances without prices from server
-    if (onProgress) onProgress('Fetching wallet balances...', 10);
-    const walletDataRaw = await fetchWalletBalancesNoPrices(address);
+    // Step 1: Fetch ALL token balances using scanner API
+    if (onProgress) onProgress('Fetching all wallet tokens...', 10);
+    const walletDataRaw = await fetchWalletBalancesFromScanner(address);
     
     // Convert null values to undefined for proper type compatibility
     const walletData: Wallet = {

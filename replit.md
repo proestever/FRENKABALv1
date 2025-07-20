@@ -161,6 +161,14 @@ Required environment variables:
 - **Manual blacklist management** - Dust tokens must be explicitly added to the blacklist by their contract address
 - **Result** - Full control over which tokens to exclude, no tokens are automatically filtered out based on liquidity thresholds
 
+### July 20, 2025 - Fixed Token Fetching to Use Scanner API for Complete Token Lists
+- **Identified issue** - Client was using limited endpoint that only scanned last 1 million blocks (~3 months)
+- **Updated client endpoint** - Changed from `/api/wallet/:address/balances-no-prices` to `/api/wallet/:address/scanner-balances`
+- **Scanner API benefits** - Fetches ALL tokens from PulseChain Scan API, not just recent transactions
+- **Complete token visibility** - Users now see all tokens they've ever held, including older tokens without recent activity
+- **Updated both fetch functions** - Both `fetchWalletDataClientSide` and `fetchWalletDataWithContractPrices` now use scanner API
+- **Result** - Complete token lists are now displayed, solving the issue of missing tokens
+
 ### July 20, 2025 - Implemented Direct Smart Contract Price Reading for Real-Time Updates
 - **Created smart-contract-price-service.ts** - New service that reads prices directly from PulseX liquidity pool contracts
 - **Real-time price updates** - Prices now update within 1-2 seconds instead of 30-60 seconds from external APIs
