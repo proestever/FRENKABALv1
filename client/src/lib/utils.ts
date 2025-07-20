@@ -227,8 +227,17 @@ export function combineWalletData(wallets: Record<string, any>): any {
     });
   });
   
-  // Convert the token map back to an array
-  const combinedTokens = Object.values(tokenMap);
+  // Convert the token map back to an array and filter out dust tokens
+  const combinedTokens = Object.values(tokenMap)
+    .filter(token => {
+      // Always include major tokens regardless of value
+      const isMajorToken = ['HEX', 'PLSX', 'INC', 'WPLS', 'PLS'].includes(token.symbol?.toUpperCase());
+      const isNativeToken = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      
+      // Include if: major token, native token, or value >= $100
+      return isMajorToken || isNativeToken || (token.value || 0) >= 100;
+    })
+    .sort((a, b) => (b.value || 0) - (a.value || 0));
   
   // Create the combined wallet object
   const combinedWallet = {

@@ -147,7 +147,7 @@ Required environment variables:
 - **WPLS price caching** - Added dedicated caching for WPLS price to avoid redundant blockchain calls when multiple tokens need WPLS conversion
 - **Logo preservation fix** - Fixed issue where server logos were being overwritten by smart contract data
 - **Background logo fetching optimized** - Made immediate (removed 5-second delay), increased batch size to 10, reduced delays to 200ms
-- **Dust token filtering** - Added $300 minimum liquidity filter to exclude dust tokens with inflated values
+- **Dust token filtering** - Added $100 minimum liquidity filter to exclude dust tokens with inflated values
 - **Exception for major tokens** - Native tokens and major tokens (HEX, PLSX, INC, WPLS, PLS) are exempt from liquidity filter
 - **Portfolio bundle fix** - Fixed critical issue where portfolio bundles showed near-zero total values by switching to client-side price fetching
 - **Result** - 5x faster price fetching with 100 simultaneous calls while filtering out low-liquidity dust tokens, portfolio bundles now show correct total values

@@ -237,12 +237,12 @@ export async function fetchWalletDataWithContractPrices(
       const priceData = priceMap.get(addressForPrice.toLowerCase());
       
       if (priceData) {
-        // Filter out dust tokens with less than $300 liquidity
+        // Filter out dust tokens with less than $100 liquidity
         // Exception: Don't filter out native tokens or major tokens
         const isNativeToken = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
         const isMajorToken = ['HEX', 'PLSX', 'INC', 'WPLS', 'PLS'].includes(token.symbol?.toUpperCase());
         
-        if (priceData.liquidity < 300 && !isNativeToken && !isMajorToken) {
+        if (priceData.liquidity < 100 && !isNativeToken && !isMajorToken) {
           token.price = 0; // Set price to 0 for dust tokens
           token.value = 0;
           token.priceData = undefined;
