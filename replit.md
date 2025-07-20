@@ -132,6 +132,18 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 20, 2025 - Implemented Direct Smart Contract Price Reading for Real-Time Updates
+- **Created smart-contract-price-service.ts** - New service that reads prices directly from PulseX liquidity pool contracts
+- **Real-time price updates** - Prices now update within 1-2 seconds instead of 30-60 seconds from external APIs
+- **Direct blockchain reading** - Uses ethers.js to connect to PulseChain RPC nodes and read DEX contract reserves
+- **No rate limits** - Since we're reading directly from blockchain, there are no API rate limits
+- **Multiple RPC endpoints** - Configured with primary and backup RPC endpoints for reliability
+- **Smart pair selection** - Automatically finds the best trading pair (stablecoin pairs preferred, then WPLS pairs)
+- **Live price refreshing** - Added useRealTimePrices hook that updates prices every 5 seconds while viewing wallets
+- **Improved user experience** - Users see live price changes without needing to refresh the page
+- **Reduced dependency on DexScreener** - Only need DexScreener for logos now, prices come from blockchain
+- **Batch price fetching** - Can fetch multiple token prices in parallel for efficient updates
+
 ### July 15, 2025 - Transaction History Now Uses Scanner API for Immediate Loading
 - **Updated transaction history component** - Transaction history now uses `/api/wallet/:address/scanner-transactions` endpoint for instant loading
 - **No more "load more" delays** - Transactions appear immediately when opening transaction history, no need to click multiple times

@@ -4,6 +4,7 @@
  */
 
 import { getTokenPriceFromDexScreener, TokenPriceData } from './dexscreener-client';
+import { getTokenPriceFromContract, getMultipleTokenPricesFromContract } from './smart-contract-price-service';
 
 // Import types directly from server since they're not in shared schema
 interface ProcessedToken {
@@ -183,6 +184,95 @@ export async function fetchWalletDataClientSide(
     };
   } catch (error) {
     console.error('Error fetching wallet data client-side:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch wallet data using direct smart contract price reading for real-time prices
+ * This provides faster updates (1-2 seconds) compared to DexScreener (30-60 seconds)
+ */
+export async function fetchWalletDataWithContractPrices(
+  address: string, 
+  onProgress?: (message: string, progress: number) => void
+): Promise<Wallet> {
+  try {
+    // Step 1: Fetch balances without prices from server
+    if (onProgress) onProgress('Fetching wallet balances...', 10);
+    const walletDataRaw = await fetchWalletBalancesNoPrices(address);
+    
+    // Convert null values to undefined for proper type compatibility
+    const walletData: Wallet = {
+      ...walletDataRaw,
+      plsBalance: walletDataRaw.plsBalance ?? undefined,
+      plsPriceChange: walletDataRaw.plsPriceChange ?? undefined
+    };
+    
+    if (!walletData.tokens || walletData.tokens.length === 0) {
+      return walletData;
+    }
+    
+    // Step 2: Fetch prices from smart contracts directly
+    const tokensWithPrices: TokenWithPrice[] = [...walletData.tokens];
+    const totalTokens = tokensWithPrices.length;
+    
+    if (onProgress) onProgress('Reading prices from blockchain...', 30);
+    
+    // Prepare token addresses for batch price fetching
+    const tokenAddresses = tokensWithPrices.map(token => {
+      // For PLS native token, use WPLS price
+      if (token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+        return '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
+      }
+      return token.address;
+    });
+    
+    // Fetch all prices in batches from smart contracts
+    const priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
+    
+    // Apply prices to tokens
+    let processedCount = 0;
+    tokensWithPrices.forEach((token, index) => {
+      const addressForPrice = tokenAddresses[index];
+      const priceData = priceMap.get(addressForPrice.toLowerCase());
+      
+      if (priceData) {
+        token.price = priceData.price;
+        token.value = token.balanceFormatted * priceData.price;
+        // Store minimal price data for UI
+        token.priceData = {
+          price: priceData.price,
+          priceChange24h: 0, // Contract method doesn't provide 24h change
+          liquidityUsd: priceData.liquidity,
+          volumeUsd24h: 0, // Contract method doesn't provide volume
+          dexId: 'pulsex',
+          pairAddress: priceData.pairAddress,
+          logo: undefined // Logos need to be fetched separately
+        };
+      }
+      
+      processedCount++;
+      const progress = Math.round(30 + (processedCount / totalTokens) * 60); // 30% to 90%
+      if (onProgress) onProgress(`Processing prices... (${processedCount}/${totalTokens})`, progress);
+    });
+    
+    // Step 3: Calculate total value
+    const totalValue = tokensWithPrices.reduce((sum, token) => sum + (token.value || 0), 0);
+    
+    // Step 4: Sort by value
+    tokensWithPrices.sort((a, b) => (b.value || 0) - (a.value || 0));
+    
+    if (onProgress) onProgress('Processing complete', 100);
+    
+    return {
+      ...walletData,
+      tokens: tokensWithPrices,
+      totalValue,
+      plsBalance: walletData.plsBalance ?? undefined,
+      plsPriceChange: walletData.plsPriceChange ?? undefined
+    };
+  } catch (error) {
+    console.error('Error fetching wallet data with contract prices:', error);
     throw error;
   }
 }

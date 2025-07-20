@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchWalletDataClientSide, fetchMissingLogosInBackground } from '@/services/wallet-client-service';
+import { fetchWalletDataClientSide, fetchWalletDataWithContractPrices, fetchMissingLogosInBackground } from '@/services/wallet-client-service';
+import { useRealTimePrices } from './use-real-time-prices';
 
 // Define types locally since they're not in shared schema
 interface ProcessedToken {
@@ -76,8 +77,8 @@ export function useClientSideWallet(walletAddress: string | null) {
       if (!walletAddress) return null;
       
       try {
-        // Fetch wallet data with client-side price fetching
-        const data = await fetchWalletDataClientSide(walletAddress, (message, progress) => {
+        // Fetch wallet data with direct smart contract price reading (real-time)
+        const data = await fetchWalletDataWithContractPrices(walletAddress, (message, progress) => {
           setProgress({
             currentBatch: progress,
             totalBatches: 100,
@@ -156,6 +157,14 @@ export function useClientSideWallet(walletAddress: string | null) {
     return () => clearInterval(interval);
   }, [isFetching, progress.status]);
   
+  // Enable real-time price updates when wallet data is loaded
+  const { refreshPrices } = useRealTimePrices({
+    walletAddress: walletAddress || '',
+    tokens: walletData?.tokens || [],
+    enabled: !!walletData && !isLoading && !isFetching,
+    intervalMs: 5000 // Update every 5 seconds
+  });
+  
   return {
     walletData,
     isLoading,
@@ -163,6 +172,7 @@ export function useClientSideWallet(walletAddress: string | null) {
     error,
     isFetching,
     refetch,
+    refreshPrices,
     progress
   };
 }
