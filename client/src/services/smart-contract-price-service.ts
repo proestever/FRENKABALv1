@@ -60,6 +60,7 @@ class SmartContractPriceService {
   private providers: ethers.providers.JsonRpcProvider[] = [];
   private currentProviderIndex = 0;
   private priceCache = new Map<string, { data: PriceData; timestamp: number }>();
+  private wplsPriceCache: { price: number; timestamp: number } | null = null;
   private CACHE_TTL = 2000; // 2 seconds cache for rapid updates
 
   constructor() {
@@ -213,8 +214,23 @@ class SmartContractPriceService {
    * Get WPLS price in USD from stablecoin pairs
    */
   private async getWPLSPrice(): Promise<number | null> {
+    // Check cache first
+    if (this.wplsPriceCache && Date.now() - this.wplsPriceCache.timestamp < this.CACHE_TTL) {
+      return this.wplsPriceCache.price;
+    }
+
+    // Fetch fresh price
     const wplsPriceData = await this.getStablecoinPairPrice(WPLS_ADDRESS);
-    return wplsPriceData ? wplsPriceData.price : null;
+    if (wplsPriceData) {
+      // Cache the price
+      this.wplsPriceCache = {
+        price: wplsPriceData.price,
+        timestamp: Date.now()
+      };
+      return wplsPriceData.price;
+    }
+    
+    return null;
   }
 
   /**
@@ -277,17 +293,32 @@ class SmartContractPriceService {
   async getMultipleTokenPrices(tokenAddresses: string[]): Promise<Map<string, PriceData | null>> {
     const results = new Map<string, PriceData | null>();
     
-    // Process in batches to avoid overwhelming the RPC
-    const BATCH_SIZE = 10;
+    // Process all tokens in parallel with rate limiting
+    const BATCH_SIZE = 20; // Increased since we're processing in parallel
+    const batches: string[][] = [];
+    
+    // Create batches
     for (let i = 0; i < tokenAddresses.length; i += BATCH_SIZE) {
-      const batch = tokenAddresses.slice(i, i + BATCH_SIZE);
-      const batchPromises = batch.map(async (address) => {
-        const price = await this.getTokenPrice(address);
-        results.set(address.toLowerCase(), price);
-      });
-      
-      await Promise.all(batchPromises);
+      batches.push(tokenAddresses.slice(i, i + BATCH_SIZE));
     }
+    
+    // Process all batches in parallel
+    const allBatchPromises = batches.map(async (batch) => {
+      const batchResults = await Promise.all(
+        batch.map(async (address) => {
+          const price = await this.getTokenPrice(address);
+          return { address: address.toLowerCase(), price };
+        })
+      );
+      
+      // Add results to map
+      batchResults.forEach(({ address, price }) => {
+        results.set(address, price);
+      });
+    });
+    
+    // Wait for all batches to complete
+    await Promise.all(allBatchPromises);
     
     return results;
   }

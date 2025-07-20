@@ -132,6 +132,12 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 20, 2025 - Performance Optimizations for Smart Contract Price Fetching
+- **Parallel batch processing** - Changed from sequential to parallel processing of token price batches, significantly reducing wait times
+- **WPLS price caching** - Added dedicated caching for WPLS price to avoid redundant blockchain calls when multiple tokens need WPLS conversion
+- **Increased batch size** - Increased batch size from 10 to 20 tokens for more efficient processing
+- **Result** - These optimizations provide faster wallet loading speeds when using the new smart contract price fetching tool
+
 ### July 20, 2025 - Implemented Direct Smart Contract Price Reading for Real-Time Updates
 - **Created smart-contract-price-service.ts** - New service that reads prices directly from PulseX liquidity pool contracts
 - **Real-time price updates** - Prices now update within 1-2 seconds instead of 30-60 seconds from external APIs
