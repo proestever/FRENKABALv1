@@ -169,6 +169,14 @@ Required environment variables:
 - **Updated both fetch functions** - Both `fetchWalletDataClientSide` and `fetchWalletDataWithContractPrices` now use scanner API
 - **Result** - Complete token lists are now displayed, solving the issue of missing tokens
 
+### July 20, 2025 - Enhanced Logo Fetching to Ensure All Tokens Display Logos
+- **Updated client-side fetching** - Always fetch from DexScreener even when tokens have prices, ensuring logos are retrieved
+- **Removed price check skip** - Eliminated the logic that skipped DexScreener calls for tokens with existing prices
+- **Added parallel logo fetching** - Implemented parallel logo fetching in contract prices function for comprehensive coverage
+- **Scanner API already includes logos** - Scanner API service fetches and saves logos from DexScreener automatically
+- **Progress message updates** - Changed messages to indicate "Fetching token logos and prices" for clarity
+- **Result** - All tokens should now display proper logos from DexScreener, with fallback to placeholder only when unavailable
+
 ### July 20, 2025 - Implemented Direct Smart Contract Price Reading for Real-Time Updates
 - **Created smart-contract-price-service.ts** - New service that reads prices directly from PulseX liquidity pool contracts
 - **Real-time price updates** - Prices now update within 1-2 seconds instead of 30-60 seconds from external APIs

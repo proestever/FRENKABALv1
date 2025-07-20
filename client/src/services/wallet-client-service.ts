@@ -123,7 +123,7 @@ export async function fetchWalletDataClientSide(
       batches.push(tokensWithPrices.slice(i, i + BATCH_SIZE));
     }
     
-    if (onProgress) onProgress('Fetching token prices from DexScreener...', 30);
+    if (onProgress) onProgress('Fetching token logos and prices from DexScreener...', 30);
     
     // Process each batch
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
@@ -132,24 +132,24 @@ export async function fetchWalletDataClientSide(
       await Promise.all(
         batch.map(async (token) => {
           try {
-            // Skip if already has price (shouldn't happen with no-prices endpoint)
-            if (token.price && token.price > 0) return;
-            
-            // For PLS native token, use WPLS price
-            let tokenAddressForPrice = token.address;
+            // For PLS native token, use WPLS address
+            let tokenAddressForDex = token.address;
             if (token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-              tokenAddressForPrice = '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
+              tokenAddressForDex = '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
             }
             
-            // Fetch price from DexScreener
-            const priceData = await getTokenPriceFromDexScreener(tokenAddressForPrice);
+            // Always fetch from DexScreener to get logos, even if we have prices
+            const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
             
             if (priceData) {
-              token.price = priceData.price;
-              token.value = token.balanceFormatted * priceData.price;
+              // Only update price if we don't have one from scanner
+              if (!token.price || token.price === 0) {
+                token.price = priceData.price;
+                token.value = token.balanceFormatted * priceData.price;
+              }
               token.priceData = priceData;
               
-              // If DexScreener provided a logo and we don't have one, save it
+              // Always check for logo updates
               if (priceData.logo && (!token.logo || token.logo.includes('100xfrenlogo'))) {
                 token.logo = priceData.logo;
                 
@@ -158,12 +158,12 @@ export async function fetchWalletDataClientSide(
               }
             }
           } catch (error) {
-            console.error(`Failed to fetch price for ${token.symbol}:`, error);
+            console.error(`Failed to fetch data for ${token.symbol}:`, error);
           }
           
           processedCount++;
           const progress = Math.round(30 + (processedCount / totalTokens) * 60); // 30% to 90%
-          if (onProgress) onProgress(`Fetching prices... (${processedCount}/${totalTokens})`, progress);
+          if (onProgress) onProgress(`Fetching logos and prices... (${processedCount}/${totalTokens})`, progress);
         })
       );
       
@@ -235,6 +235,31 @@ export async function fetchWalletDataWithContractPrices(
     
     // Fetch all prices in batches from smart contracts
     const priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
+    
+    // Step 3: Fetch logos from DexScreener in parallel
+    if (onProgress) onProgress('Fetching token logos...', 50);
+    
+    // Fetch logos in parallel batches
+    const logoPromises = tokensWithPrices.map(async (token) => {
+      if (!token.logo || token.logo.includes('100xfrenlogo')) {
+        try {
+          const tokenAddressForDex = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' 
+            ? '0xa1077a294dde1b09bb078844df40758a5d0f9a27' 
+            : token.address;
+          
+          const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
+          if (priceData?.logo) {
+            token.logo = priceData.logo;
+            saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
+          }
+        } catch (error) {
+          console.error(`Failed to fetch logo for ${token.symbol}:`, error);
+        }
+      }
+    });
+    
+    // Wait for all logo fetches to complete
+    await Promise.all(logoPromises);
     
     // Apply prices to tokens
     let processedCount = 0;
