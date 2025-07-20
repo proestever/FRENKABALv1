@@ -239,7 +239,7 @@ export async function fetchWalletDataWithContractPrices(
       if (priceData) {
         token.price = priceData.price;
         token.value = token.balanceFormatted * priceData.price;
-        // Store minimal price data for UI
+        // Store minimal price data for UI (keep existing logo)
         token.priceData = {
           price: priceData.price,
           priceChange24h: 0, // Contract method doesn't provide 24h change
@@ -247,7 +247,7 @@ export async function fetchWalletDataWithContractPrices(
           volumeUsd24h: 0, // Contract method doesn't provide volume
           dexId: 'pulsex',
           pairAddress: priceData.pairAddress,
-          logo: undefined // Logos need to be fetched separately
+          logo: token.logo // Preserve logo from server
         };
       }
       
@@ -289,8 +289,8 @@ export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): P
   
   console.log(`Starting background logo fetch for ${tokensWithoutLogos.length} tokens`);
   
-  // Process in small batches to avoid rate limits
-  const BATCH_SIZE = 3;
+  // Process in larger batches since DexScreener can handle it
+  const BATCH_SIZE = 10;
   
   for (let i = 0; i < tokensWithoutLogos.length; i += BATCH_SIZE) {
     const batch = tokensWithoutLogos.slice(i, i + BATCH_SIZE);
@@ -311,8 +311,8 @@ export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): P
       })
     );
     
-    // Longer delay for background fetching
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Short delay between batches
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
   
   console.log('Background logo fetch completed');

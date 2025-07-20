@@ -294,7 +294,7 @@ class SmartContractPriceService {
     const results = new Map<string, PriceData | null>();
     
     // Process all tokens in parallel with rate limiting
-    const BATCH_SIZE = 20; // Increased since we're processing in parallel
+    const BATCH_SIZE = 100; // Massive parallelization for fast processing
     const batches: string[][] = [];
     
     // Create batches

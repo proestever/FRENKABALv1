@@ -113,12 +113,10 @@ export function useClientSideWallet(walletAddress: string | null) {
     if (walletData && walletData.tokens && !backgroundFetchTriggered.current) {
       backgroundFetchTriggered.current = true;
       
-      // Start background logo fetching
-      setTimeout(() => {
-        fetchMissingLogosInBackground(walletData.tokens).catch(error => {
-          console.error('Background logo fetch error:', error);
-        });
-      }, 5000); // Wait 5 seconds before starting background fetch
+      // Start background logo fetching immediately
+      fetchMissingLogosInBackground(walletData.tokens).catch(error => {
+        console.error('Background logo fetch error:', error);
+      });
     }
   }, [walletData]);
   
