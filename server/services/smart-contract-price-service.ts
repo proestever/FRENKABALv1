@@ -118,10 +118,8 @@ async function getStablecoinPairPrice(tokenAddress: string, provider: ethers.pro
       const price = stableAmount / tokenAmount;
       const liquidity = stableAmount * 2; // Total liquidity in USD
       
-      // Only return if liquidity is sufficient
-      if (liquidity >= 300) {
-        return { price, liquidity, pairAddress, token0: pairData.token0, token1: pairData.token1 };
-      }
+      // Return price data without liquidity filter
+      return { price, liquidity, pairAddress, token0: pairData.token0, token1: pairData.token1 };
     } catch (error) {
       console.error(`Error checking stablecoin pair with ${stablecoin}:`, error);
     }

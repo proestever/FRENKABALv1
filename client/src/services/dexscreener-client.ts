@@ -143,8 +143,7 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
       pair.chainId === 'pulsechain' && 
       pair.baseToken.address.toLowerCase() === normalizedAddress && // Only pairs where token is base
       pair.priceUsd && 
-      pair.liquidity?.usd && 
-      pair.liquidity.usd >= 1000
+      pair.liquidity?.usd
     );
 
     if (validPairs.length === 0) {

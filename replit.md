@@ -147,10 +147,19 @@ Required environment variables:
 - **WPLS price caching** - Added dedicated caching for WPLS price to avoid redundant blockchain calls when multiple tokens need WPLS conversion
 - **Logo preservation fix** - Fixed issue where server logos were being overwritten by smart contract data
 - **Background logo fetching optimized** - Made immediate (removed 5-second delay), increased batch size to 10, reduced delays to 200ms
-- **Dust token filtering** - Added liquidity filters: 250,000 WPLS minimum for WPLS pairs, $100 minimum for stablecoin pairs
-- **Exception for major tokens** - Native tokens and major tokens (HEX, PLSX, INC, WPLS, PLS) are exempt from liquidity filter
+- **~~Dust token filtering~~ REMOVED** - ~~Added liquidity filters: 250,000 WPLS minimum for WPLS pairs, $100 minimum for stablecoin pairs~~
+- **~~Exception for major tokens~~ REMOVED** - ~~Native tokens and major tokens (HEX, PLSX, INC, WPLS, PLS) are exempt from liquidity filter~~
 - **Portfolio bundle fix** - Fixed critical issue where portfolio bundles showed near-zero total values by switching to client-side price fetching
-- **Result** - 5x faster price fetching with 100 simultaneous calls while filtering out low-liquidity dust tokens, portfolio bundles now show correct total values
+- **Result** - 5x faster price fetching with 100 simultaneous calls ~~while filtering out low-liquidity dust tokens~~, portfolio bundles now show correct total values
+
+### July 20, 2025 - Removed All Liquidity-Based Filtering in Favor of Blacklist Approach
+- **Complete removal of liquidity filters** - Removed ALL liquidity-based filtering logic from the entire codebase
+- **Client-side changes** - Removed liquidity filters from `wallet-client-service.ts`, `utils.ts`, and `dexscreener-client.ts`
+- **Server-side changes** - Removed liquidity filters from `smart-contract-price-service.ts` 
+- **Blacklist approach implemented** - Added `DUST_TOKEN_BLACKLIST` constant (currently empty Set<string>) ready for specific dust token addresses
+- **No automatic filtering** - All tokens are now included regardless of liquidity or value
+- **Manual blacklist management** - Dust tokens must be explicitly added to the blacklist by their contract address
+- **Result** - Full control over which tokens to exclude, no tokens are automatically filtered out based on liquidity thresholds
 
 ### July 20, 2025 - Implemented Direct Smart Contract Price Reading for Real-Time Updates
 - **Created smart-contract-price-service.ts** - New service that reads prices directly from PulseX liquidity pool contracts

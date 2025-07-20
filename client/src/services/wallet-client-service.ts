@@ -6,6 +6,12 @@
 import { getTokenPriceFromDexScreener, TokenPriceData } from './dexscreener-client';
 import { getTokenPriceFromContract, getMultipleTokenPricesFromContract } from './smart-contract-price-service';
 
+// Blacklist of known dust tokens to filter out
+const DUST_TOKEN_BLACKLIST = new Set<string>([
+  // Add dust token addresses here in lowercase
+  // Example: '0x1234567890abcdef...',
+]);
+
 // Import types directly from server since they're not in shared schema
 interface ProcessedToken {
   address: string;
@@ -237,18 +243,11 @@ export async function fetchWalletDataWithContractPrices(
       const priceData = priceMap.get(addressForPrice.toLowerCase());
       
       if (priceData) {
-        // Filter out dust tokens based on liquidity
-        // Exception: Don't filter out native tokens or major tokens
-        const isNativeToken = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-        const isMajorToken = ['HEX', 'PLSX', 'INC', 'WPLS', 'PLS'].includes(token.symbol?.toUpperCase());
+        // Check if token is in blacklist
+        const isBlacklisted = DUST_TOKEN_BLACKLIST.has(token.address.toLowerCase());
         
-        // For WPLS pairs, require at least 250,000 WPLS liquidity
-        // For other pairs, require at least $100 USD liquidity
-        const isWPLSPair = priceData.pairedTokenSymbol === 'WPLS';
-        const liquidityThreshold = isWPLSPair ? 250000 : 100;
-        
-        if (priceData.liquidity < liquidityThreshold && !isNativeToken && !isMajorToken) {
-          token.price = 0; // Set price to 0 for dust tokens
+        if (isBlacklisted) {
+          token.price = 0; // Set price to 0 for blacklisted dust tokens
           token.value = 0;
           token.priceData = undefined;
         } else {
