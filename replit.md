@@ -132,6 +132,16 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 20, 2025 - Upgraded LP Token and HEX Stakes to Smart Contract Prices
+- **Created server-side smart contract price service** - New `server/services/smart-contract-price-service.ts` for server-side blockchain price fetching
+- **Updated LP token service** - Modified `processLpToken` to use `getTokenPriceFromContract` instead of DexScreener API
+- **Real-time LP token prices** - LP tokens now calculate values using real-time smart contract prices for both tokens in the pair
+- **Enhanced HEX price fetching** - HEX stakes now use smart contract prices directly (showing ~$0.00726 vs old $0.00004)
+- **Eliminated API dependencies** - Both LP tokens and HEX stakes no longer rely on external APIs for pricing
+- **Cached WPLS price optimization** - Special 1-minute cache for WPLS price to optimize LP token calculations
+- **Batch processing support** - Server-side service can fetch multiple token prices in parallel batches
+- **Result** - All token types (regular, LP, HEX stakes) now use real-time blockchain prices with <2 second updates
+
 ### July 20, 2025 - Performance Optimizations and Dust Token Filtering
 - **Parallel batch processing** - Increased batch size to 100 simultaneous calls for smart contract price fetching
 - **WPLS price caching** - Added dedicated caching for WPLS price to avoid redundant blockchain calls when multiple tokens need WPLS conversion

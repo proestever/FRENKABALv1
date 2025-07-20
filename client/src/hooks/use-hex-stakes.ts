@@ -158,13 +158,13 @@ export async function getHexPriceWithCache(): Promise<number> {
   // Create the ongoing request promise
   ongoingPriceRequest = (async () => {
     try {
-      // No valid cache, fetch from API
-      const response = await fetch(`/api/token-price/${HEX_CONTRACT_ADDRESS}`);
-      const priceData = await response.json();
+      // Import and use the smart contract price service
+      const { getTokenPriceFromContract } = await import('../services/smart-contract-price-service');
       
-      if (priceData && priceData.usdPrice && typeof priceData.usdPrice === 'number' && !isNaN(priceData.usdPrice)) {
-        hexPrice = priceData.usdPrice;
-      } else if (priceData && priceData.price && typeof priceData.price === 'number' && !isNaN(priceData.price)) {
+      // Fetch HEX price directly from smart contracts
+      const priceData = await getTokenPriceFromContract(HEX_CONTRACT_ADDRESS);
+      
+      if (priceData && priceData.price && typeof priceData.price === 'number' && !isNaN(priceData.price)) {
         hexPrice = priceData.price;
       }
       
@@ -179,9 +179,9 @@ export async function getHexPriceWithCache(): Promise<number> {
         timestamp: Date.now()
       };
       
-      console.log('Fetched fresh HEX price:', hexPrice);
+      console.log('Fetched fresh HEX price from smart contract:', hexPrice);
     } catch (error) {
-      console.error('Error fetching HEX price:', error);
+      console.error('Error fetching HEX price from smart contract:', error);
       // If we have any cached price (even expired), use it as backup
       if (cachedHexPrice) {
         console.log('Using expired cached HEX price after fetch error:', cachedHexPrice.price);

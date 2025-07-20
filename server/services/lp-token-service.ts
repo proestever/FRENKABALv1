@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import { ethers } from 'ethers';
 import { ProcessedToken } from '../types';
 import { getTokenPrice } from './api';
+import { getTokenPriceFromContract } from './smart-contract-price-service';
 
 /**
  * Check if a token address is a liquidity pool token by trying to call LP-specific functions
@@ -223,11 +224,15 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
     const token0BalanceFormatted = Number(ethers.utils.formatUnits(token0Balance, token0Decimals));
     const token1BalanceFormatted = Number(ethers.utils.formatUnits(token1Balance, token1Decimals));
     
-    // 8. Get prices for tokens
-    const [token0Price, token1Price] = await Promise.all([
-      getTokenPrice(token0Address),
-      getTokenPrice(token1Address)
+    // 8. Get prices for tokens using smart contract service
+    const [token0PriceData, token1PriceData] = await Promise.all([
+      getTokenPriceFromContract(token0Address),
+      getTokenPriceFromContract(token1Address)
     ]);
+    
+    // Convert to API format for compatibility
+    const token0Price = token0PriceData ? { usdPrice: token0PriceData.price } : null;
+    const token1Price = token1PriceData ? { usdPrice: token1PriceData.price } : null;
     
     // 9. Calculate values
     const token0Value = token0Price ? token0BalanceFormatted * token0Price.usdPrice : undefined;
