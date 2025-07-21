@@ -106,10 +106,10 @@ export function WalletShareModal({
         allAssets.push(hexStakesToken);
       }
       
-      // Sort all assets by value and get top 10
+      // Sort all assets by value and get top 5
       const sorted = allAssets
         .sort((a, b) => (b.value || 0) - (a.value || 0))
-        .slice(0, 10);
+        .slice(0, 5);
       
       setSortedTokens(sorted);
       
@@ -175,9 +175,11 @@ export function WalletShareModal({
                     {index + 1}.
                   </span>
                   {token.address === 'hex-stakes-virtual' ? (
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                      <span className="text-white font-bold text-xs md:text-sm">HEX</span>
-                    </div>
+                    <TokenLogo 
+                      address="0x2b591e99afe9f32eaa6214f7b7629768c40eeb39" 
+                      symbol="HEX" 
+                      size="sm"
+                    />
                   ) : token.address === 'native-pls' ? (
                     <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
                       <span className="text-white font-bold text-xs md:text-sm">PLS</span>

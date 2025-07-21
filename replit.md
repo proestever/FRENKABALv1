@@ -132,17 +132,18 @@ Required environment variables:
 
 ## Recent Changes
 
-### July 21, 2025 - Wallet Share Feature Added
-- **Share Link Feature** - Added a new screenshot-friendly share page for wallets
-- **Share Route** - Created `/share/:walletAddress` route that displays top 10 tokens
+### July 21, 2025 - Wallet Share Feature Enhanced with Modal and Responsive Design
+- **Share Modal** - Converted share feature from full page to popup modal for better UX
+- **Top 5 Tokens** - Changed from top 10 to top 5 tokens for cleaner, more focused display
 - **Share Button** - Added Share button to wallet overview component (only shows for single wallets)
-- **Beautiful Design** - Share page includes Frenkabal branding, portfolio total, and numbered token list
+- **Beautiful Design** - Share modal includes Frenkabal branding, portfolio total, and numbered token list
 - **Enhanced Display** - Shows token names, symbols, logos, values, and balances in an easy-to-screenshot format
 - **Gradient Styling** - Beautiful gradient backgrounds and text effects for visual appeal
-- **Mobile Responsive** - Clean design works well on all screen sizes for easy sharing
+- **Mobile Responsive** - Responsive design with proper scaling, vertical padding, and text sizes for all devices
 - **Domain Update** - Changed domain display from frenkabal.app to frenkabal.com per user preference
-- **Hidden Token Support** - Share page respects hidden tokens - they are excluded from both the top 10 list and total value calculations
-- **HEX Stakes Integration** - HEX stakes now appear as a line item in the top 10 list, positioned based on dollar value with special purple gradient logo
+- **Hidden Token Support** - Share modal respects hidden tokens - they are excluded from both the top 5 list and total value calculations
+- **HEX Stakes Integration** - HEX stakes appear with actual HEX logo, positioned based on dollar value
+- **Native PLS Support** - Includes native PLS balance in portfolio total and token list using WPLS price
 
 ### July 21, 2025 - Performance Optimizations for Large Wallet Loading
 - **Reduced real-time price update frequency** - Changed from 5 seconds to 5 minutes to prevent constant blockchain calls
