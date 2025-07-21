@@ -105,7 +105,7 @@ export function PortfolioShareModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-[90vw] max-h-[90vh] bg-gradient-to-b from-black via-gray-950 to-black border-gray-800 text-white p-0 overflow-hidden [&>button:first-child]:hidden">
+      <DialogContent className="max-w-2xl w-[90vw] bg-gradient-to-b from-black via-gray-950 to-black border-gray-800 text-white p-0 overflow-hidden [&>button:first-child]:hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(147,51,234,0.15)_0%,transparent_60%),radial-gradient(ellipse_at_bottom,rgba(236,72,153,0.15)_0%,transparent_60%)] pointer-events-none"></div>
         
@@ -113,7 +113,7 @@ export function PortfolioShareModal({
           <DialogTitle>Portfolio Share</DialogTitle>
         </VisuallyHidden>
         
-        <div className="relative z-10 px-4 py-8 md:p-8 md:py-16 overflow-y-auto max-h-[90vh]">
+        <div className="relative z-10 px-4 py-8 md:p-8 md:py-16">
           {/* Close button */}
           <button
             onClick={() => onOpenChange(false)}
