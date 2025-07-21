@@ -309,11 +309,19 @@ export async function fetchWalletDataWithContractPrices(
     let priceMap = new Map<string, any>();
     try {
       console.log('Fetching prices from smart contracts...');
-      priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
+      
+      // Add a timeout wrapper to prevent hanging
+      const pricePromise = getMultipleTokenPricesFromContract(tokenAddresses);
+      const timeoutPromise = new Promise<Map<string, any>>((_, reject) => {
+        setTimeout(() => reject(new Error('Price fetching timeout after 30 seconds')), 30000);
+      });
+      
+      priceMap = await Promise.race([pricePromise, timeoutPromise]);
       console.log(`Successfully fetched prices for ${priceMap.size} tokens`);
     } catch (error) {
       console.error('Failed to fetch prices from smart contracts:', error);
       // Continue without prices rather than failing the entire query
+      if (onProgress) onProgress('Using fallback pricing...', 40);
     }
     
     // Step 3: Fetch logos from DexScreener in parallel

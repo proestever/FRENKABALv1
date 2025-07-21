@@ -119,9 +119,10 @@ class SmartContractPriceService {
         // Don't retry on certain errors
         if (error.message?.includes('call revert') || 
             error.message?.includes('invalid address') ||
+            error.message?.includes('could not detect network') || // Fail fast on network detection errors
             isLastAttempt) {
-          if (isLastAttempt) {
-            console.warn(`Operation failed after ${maxRetries + 1} attempts:`, error.message);
+          if (isLastAttempt || error.message?.includes('could not detect network')) {
+            console.warn(`Operation failed after ${attempt + 1} attempts:`, error.message);
           }
           return null;
         }

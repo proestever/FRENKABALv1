@@ -188,8 +188,9 @@ export default function Home() {
       });
       
       // Process all wallet addresses in parallel for much faster loading
+      let completedCount = 0;
       setMultiWalletProgress({
-        currentBatch: addresses.length,
+        currentBatch: 0,
         totalBatches: addresses.length,
         status: 'loading',
         message: `Loading ${addresses.length} wallets in parallel...`
@@ -199,12 +200,46 @@ export default function Home() {
         try {
           // Fetch wallet data with smart contract prices
           const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
-          const dataWithPrices = await fetchWalletDataWithContractPrices(address);
+          
+          // Add individual wallet timeout to prevent hanging
+          const dataPromise = fetchWalletDataWithContractPrices(address);
+          const timeoutPromise = new Promise<any>((_, reject) => {
+            setTimeout(() => reject(new Error(`Timeout fetching wallet ${address}`)), 45000); // 45 second timeout per wallet
+          });
+          
+          const dataWithPrices = await Promise.race([dataPromise, timeoutPromise]);
+          
+          // Update progress
+          completedCount++;
+          setMultiWalletProgress({
+            currentBatch: completedCount,
+            totalBatches: addresses.length,
+            status: 'loading',
+            message: `Loading wallets... (${completedCount}/${addresses.length} completed)`
+          });
           
           return { [address]: dataWithPrices };
         } catch (error) {
           console.error(`Error fetching wallet ${address}:`, error);
-          return null;
+          
+          // Update progress even on error
+          completedCount++;
+          setMultiWalletProgress({
+            currentBatch: completedCount,
+            totalBatches: addresses.length,
+            status: 'loading',
+            message: `Loading wallets... (${completedCount}/${addresses.length} completed, some errors)`
+          });
+          
+          // Return empty wallet data instead of null to prevent complete failure
+          return { 
+            [address]: {
+              address,
+              tokens: [],
+              totalValue: 0,
+              error: error instanceof Error ? error.message : 'Failed to load wallet'
+            }
+          };
         }
       });
       
