@@ -107,7 +107,7 @@ export class ClientBlockchainService {
       
       // Step 3: Fetch balances for all found tokens
       const tokenArray = Array.from(tokenAddresses);
-      const batchSize = 10;
+      const batchSize = 5; // Reduced batch size to prevent RPC overload
       let processedCount = 0;
       
       for (let i = 0; i < tokenArray.length; i += batchSize) {

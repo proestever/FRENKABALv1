@@ -216,6 +216,14 @@ Required environment variables:
 - **Performance principle** - Server only fetches token balances and metadata, client handles all real-time price updates
 - **Result** - Portfolio loading no longer hangs, server response is much faster, prices update in real-time on client
 
+### July 21, 2025 - Fixed Client-Side RPC Overload Issues
+- **Reduced price fetching batch size** - Changed from 100 to 10 concurrent price calls to prevent RPC overload
+- **Reduced token balance batch size** - Changed from 10 to 5 concurrent balance calls for better RPC stability
+- **Fixed native PLS address handling** - Added check to skip invalid native address (0xeeee...) in price service
+- **Added 30-second timeout** - Price fetching now has a timeout to prevent infinite hanging
+- **Better error handling** - Process continues even if price fetching fails, shows tokens without prices
+- **Result** - Wallet searches no longer hang, more stable RPC connection, graceful fallback on errors
+
 ### July 21, 2025 - Optimized Portfolio View Logo Fetching for 400+ Tokens
 - **Created specialized portfolio logo function** - New `fetchPortfolioLogos` function specifically for multi-wallet portfolios
 - **Combines all tokens first** - Collects unique tokens from all wallets and aggregates their values
