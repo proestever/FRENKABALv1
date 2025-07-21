@@ -1,10 +1,9 @@
 import { ethers } from 'ethers';
 
-// Multiple RPC endpoints for reliability
+// Multiple RPC endpoints for reliability - using only the most stable providers
 const RPC_ENDPOINTS = [
   'https://rpc-pulsechain.g4mm4.io',
-  'https://rpc.pulsechain.com',
-  'https://pulsechain-rpc.publicnode.com'
+  'https://rpc.pulsechain.com'
 ];
 
 // ABI for PulseX pair contracts (minimal required functions)
