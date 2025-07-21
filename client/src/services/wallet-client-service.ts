@@ -274,8 +274,6 @@ export async function fetchWalletDataWithContractPrices(
     if (onProgress) onProgress('Fetching all wallet tokens...', 10);
     const walletDataRaw = await fetchWalletBalancesFromScanner(address);
     
-    console.log('Raw wallet data from scanner:', walletDataRaw);
-    
     // Convert null values to undefined for proper type compatibility
     const walletData: Wallet = {
       ...walletDataRaw,
@@ -283,10 +281,7 @@ export async function fetchWalletDataWithContractPrices(
       plsPriceChange: walletDataRaw.plsPriceChange ?? undefined
     };
     
-    console.log('Wallet data after conversion:', walletData);
-    
     if (!walletData.tokens || walletData.tokens.length === 0) {
-      console.log('No tokens found, returning early');
       return walletData;
     }
     
@@ -305,28 +300,11 @@ export async function fetchWalletDataWithContractPrices(
       return token.address;
     });
     
-    // Fetch all prices in batches from smart contracts with better error handling
-    let priceMap = new Map<string, any>();
-    try {
-      console.log('Fetching prices from smart contracts...');
-      
-      // Add a timeout wrapper to prevent hanging
-      const pricePromise = getMultipleTokenPricesFromContract(tokenAddresses);
-      const timeoutPromise = new Promise<Map<string, any>>((_, reject) => {
-        setTimeout(() => reject(new Error('Price fetching timeout after 30 seconds')), 30000);
-      });
-      
-      priceMap = await Promise.race([pricePromise, timeoutPromise]);
-      console.log(`Successfully fetched prices for ${priceMap.size} tokens`);
-    } catch (error) {
-      console.error('Failed to fetch prices from smart contracts:', error);
-      // Continue without prices rather than failing the entire query
-      if (onProgress) onProgress('Using fallback pricing...', 40);
-    }
+    // Fetch all prices in batches from smart contracts
+    const priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
     
     // Step 3: Fetch logos from DexScreener in parallel
     if (onProgress) onProgress('Fetching token logos...', 50);
-    console.log('Starting logo fetching step...');
     
     // Limit logo fetching to top 50 tokens to avoid DexScreener rate limits
     const tokensForLogos = tokensWithPrices.slice(0, 50);
@@ -356,37 +334,30 @@ export async function fetchWalletDataWithContractPrices(
     // Apply prices to tokens
     let processedCount = 0;
     tokensWithPrices.forEach((token, index) => {
-      // First check if server already provided a price
-      if (token.price && token.price > 0) {
-        console.log(`Using server price for ${token.symbol}: $${token.price}`);
-        token.value = token.balanceFormatted * token.price;
-      } else {
-        const addressForPrice = tokenAddresses[index];
-        const priceData = priceMap.get(addressForPrice.toLowerCase());
+      const addressForPrice = tokenAddresses[index];
+      const priceData = priceMap.get(addressForPrice.toLowerCase());
+      
+      if (priceData) {
+        // Check if token is in blacklist
+        const isBlacklisted = DUST_TOKEN_BLACKLIST.has(token.address.toLowerCase());
         
-        if (priceData) {
-          // Check if token is in blacklist
-          const isBlacklisted = DUST_TOKEN_BLACKLIST.has(token.address.toLowerCase());
-          
-          if (isBlacklisted) {
-            token.price = 0; // Set price to 0 for blacklisted dust tokens
-            token.value = 0;
-            token.priceData = undefined;
-          } else {
-            console.log(`Using contract price for ${token.symbol}: $${priceData.price}`);
-            token.price = priceData.price;
-            token.value = token.balanceFormatted * priceData.price;
-            // Store minimal price data for UI (keep existing logo)
-            token.priceData = {
-              price: priceData.price,
-              priceChange24h: 0, // Contract method doesn't provide 24h change
-              liquidityUsd: priceData.liquidity,
-              volumeUsd24h: 0, // Contract method doesn't provide volume
-              dexId: 'pulsex',
-              pairAddress: priceData.pairAddress,
-              logo: token.logo // Preserve logo from server
-            };
-          }
+        if (isBlacklisted) {
+          token.price = 0; // Set price to 0 for blacklisted dust tokens
+          token.value = 0;
+          token.priceData = undefined;
+        } else {
+          token.price = priceData.price;
+          token.value = token.balanceFormatted * priceData.price;
+          // Store minimal price data for UI (keep existing logo)
+          token.priceData = {
+            price: priceData.price,
+            priceChange24h: 0, // Contract method doesn't provide 24h change
+            liquidityUsd: priceData.liquidity,
+            volumeUsd24h: 0, // Contract method doesn't provide volume
+            dexId: 'pulsex',
+            pairAddress: priceData.pairAddress,
+            logo: token.logo // Preserve logo from server
+          };
         }
       }
       
@@ -403,21 +374,15 @@ export async function fetchWalletDataWithContractPrices(
     
     if (onProgress) onProgress('Processing complete', 100);
     
-    const result = {
+    return {
       ...walletData,
       tokens: tokensWithPrices,
       totalValue,
       plsBalance: walletData.plsBalance ?? undefined,
       plsPriceChange: walletData.plsPriceChange ?? undefined
     };
-    
-    console.log('Returning wallet data with', result.tokens.length, 'tokens');
-    return result;
   } catch (error) {
     console.error('Error fetching wallet data with contract prices:', error);
-    console.error('Error type:', typeof error);
-    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     throw error;
   }
 }

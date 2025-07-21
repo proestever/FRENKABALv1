@@ -132,19 +132,6 @@ Required environment variables:
 
 ## Recent Changes
 
-### July 21, 2025 - Removed All Price/Liquidity Filtering - Enhanced Smart Contract Price Service with Largest WPLS Pair Selection
-- **Complete removal of filtering** - Removed ALL price and liquidity filtering from smart contract price service and DexScreener
-- **Enhanced smart contract service** - Upgraded with retry logic, parallel processing, and better error handling
-- **Permanent decimals caching** - Token decimals are now cached permanently to reduce RPC calls
-- **Parallel stablecoin pair fetching** - All stablecoin pairs checked simultaneously for faster performance
-- **WPLS price caching optimization** - Special 1-minute cache for WPLS price to optimize LP token calculations
-- **Custom error class** - Added `PriceServiceError` for better debugging and error tracking
-- **Exponential backoff retry** - Automatic retry with increasing delays for transient failures
-- **Largest WPLS pair selection** - System now checks multiple factories (V1, V2) and always selects the WPLS pair with highest liquidity
-- **WPLS-first pricing strategy** - Always uses WPLS pairs first when available, only falling back to stablecoin or ETH pairs if no WPLS pair exists
-- **ETH pair fallback** - Added ETH/WETH pair support as final fallback when neither WPLS nor stablecoin pairs exist
-- **Result** - System now fetches prices for ALL tokens with priority: WPLS pairs → Stablecoin pairs → ETH pairs
-
 ### July 20, 2025 - Upgraded LP Token and HEX Stakes to Smart Contract Prices
 - **Created server-side smart contract price service** - New `server/services/smart-contract-price-service.ts` for server-side blockchain price fetching
 - **Updated LP token service** - Modified `processLpToken` to use `getTokenPriceFromContract` instead of DexScreener API
@@ -228,17 +215,6 @@ Required environment variables:
 - **Parallel fetching maintained** - All 50 logos still fetch simultaneously for maximum speed
 - **Integrated into portfolio loading** - Automatically runs after all wallet data is loaded for portfolios
 - **Result** - Portfolio views with 400+ tokens now show logos for the most valuable tokens across the entire portfolio
-
-### July 21, 2025 - Mobile Optimization for Smart Contract Price Service
-- **Implemented exponential backoff retry logic** - Added retry mechanism with increasing delays for mobile network reliability
-- **Smaller batch sizes for mobile** - Reduced batch size from 100 to 10 tokens to prevent mobile memory issues
-- **Sequential batch processing** - Changed from parallel to sequential processing with 100ms delays between batches
-- **Extended timeouts for mobile** - Increased timeout from 5s to 8s to handle slower mobile networks
-- **Cache size limits** - Added automatic cache pruning to limit memory usage on mobile devices (max 1000 entries)
-- **Reduced polling intervals** - Extended provider polling to 8s to reduce battery usage on mobile
-- **Optimized RPC endpoint order** - Prioritized official PulseChain RPC first for better mobile reliability
-- **Improved error handling** - Gracefully handles network errors without spamming console logs
-- **Result** - Mobile app now loads wallets reliably with 61 tokens showing proper prices within seconds
 
 ### July 21, 2025 - Implemented Server-Side Logo Caching with 24-Hour Retry Logic
 - **Enhanced tokenLogos schema** - Added `hasLogo` boolean and `lastAttempt` timestamp fields for intelligent retry management

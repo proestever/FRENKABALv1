@@ -74,14 +74,9 @@ export function useClientSideWallet(walletAddress: string | null) {
     staleTime: Infinity,
     gcTime: Infinity,
     queryFn: async () => {
-      console.log('Query function called with address:', walletAddress);
-      if (!walletAddress) {
-        console.log('No wallet address, returning null');
-        return null;
-      }
+      if (!walletAddress) return null;
       
       try {
-        console.log('Fetching wallet data for:', walletAddress);
         // Fetch wallet data with direct smart contract price reading (real-time)
         const data = await fetchWalletDataWithContractPrices(walletAddress, (message, progress) => {
           setProgress({
@@ -100,11 +95,8 @@ export function useClientSideWallet(walletAddress: string | null) {
           message: `Successfully loaded ${data.tokens.length} tokens`
         });
         
-        console.log('Returning wallet data from query:', data);
-        console.log('Data has', data?.tokens?.length || 0, 'tokens');
         return data;
       } catch (error) {
-        console.error('Error in wallet query:', error);
         setProgress({
           currentBatch: 0,
           totalBatches: 100,
@@ -135,34 +127,13 @@ export function useClientSideWallet(walletAddress: string | null) {
   
   // Poll for loading progress from server (only for initial blockchain data fetch)
   useEffect(() => {
-    // Don't poll if not fetching, already complete, or if progress is already at 100%
-    if (!isFetching || progress.status === 'complete' || progress.currentBatch === 100) return;
-    
-    let completedCount = 0;
+    if (!isFetching || progress.status === 'complete') return;
     
     const pollProgress = async () => {
       try {
         const response = await fetch('/api/loading-progress');
         if (response.ok) {
           const serverProgress = await response.json();
-          
-          // Check if server is reporting complete (100/100)
-          if (serverProgress.currentBatch === 100 && serverProgress.totalBatches === 100) {
-            completedCount++;
-            // If we've seen complete status multiple times, stop polling
-            if (completedCount > 2) {
-              console.log('Server progress appears complete, stopping client-side wallet polling');
-              setProgress({
-                currentBatch: 100,
-                totalBatches: 100,
-                status: 'complete',
-                message: 'Loading complete'
-              });
-              return; // This will cause the interval to be cleared on next useEffect cycle
-            }
-          } else {
-            completedCount = 0; // Reset if we see non-complete status
-          }
           
           // Only update progress for the blockchain data fetch part (up to 30%)
           if (serverProgress.status === 'loading' && serverProgress.currentBatch > 0) {
@@ -180,9 +151,9 @@ export function useClientSideWallet(walletAddress: string | null) {
       }
     };
     
-    const interval = setInterval(pollProgress, 500); // Reduce polling frequency to 500ms
+    const interval = setInterval(pollProgress, 200);
     return () => clearInterval(interval);
-  }, [isFetching, progress.status, progress.currentBatch]);
+  }, [isFetching, progress.status]);
   
   // Enable real-time price updates when wallet data is loaded
   const { refreshPrices } = useRealTimePrices({

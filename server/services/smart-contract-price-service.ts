@@ -1,6 +1,6 @@
 /**
  * Server-side smart contract price service for fetching real-time token prices
- * directly from PulseChain liquidity pools - Optimized Version
+ * directly from PulseChain liquidity pools
  */
 
 import { ethers } from 'ethers';
@@ -48,67 +48,17 @@ const STABLECOINS = [
 const priceCache = new Map<string, { data: PriceData; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-// Permanent cache for token decimals
-const decimalsCache = new Map<string, number>();
-
 // Special cache for WPLS price (1 minute TTL)
 let wplsCache: { price: number; timestamp: number } | null = null;
 const WPLS_CACHE_TTL = 60 * 1000; // 1 minute
 
-// Price validation constants - REMOVED ALL FILTERING
-// const MIN_PRICE = 0.000000001;
-// const MAX_PRICE = 1000000;
-// const MIN_LIQUIDITY = 100; // $100 minimum
-
-// Custom error class for better debugging
-class PriceServiceError extends Error {
-  constructor(
-    message: string,
-    public tokenAddress: string,
-    public context?: string,
-    public originalError?: any
-  ) {
-    super(message);
-    this.name = 'PriceServiceError';
-  }
-}
-
-// Retry logic with exponential backoff
-async function withRetry<T>(
-  fn: () => Promise<T>, 
-  maxRetries: number = 3,
-  baseDelay: number = 100
-): Promise<T | null> {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await fn();
-    } catch (error) {
-      if (i === maxRetries - 1) throw error;
-      
-      const delay = baseDelay * Math.pow(2, i);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-  return null;
-}
-
-// Optimized decimals fetching with permanent cache
 async function getTokenDecimals(tokenAddress: string, provider: ethers.providers.Provider): Promise<number> {
-  const normalized = tokenAddress.toLowerCase();
-  
-  if (decimalsCache.has(normalized)) {
-    return decimalsCache.get(normalized)!;
-  }
-  
   try {
     const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-    const decimals = await tokenContract.decimals();
-    decimalsCache.set(normalized, decimals);
-    return decimals;
+    return await tokenContract.decimals();
   } catch (error) {
     console.error(`Error getting decimals for ${tokenAddress}:`, error);
-    decimalsCache.set(normalized, 18); // Cache default too
-    return 18;
+    return 18; // Default to 18 decimals
   }
 }
 
@@ -138,33 +88,16 @@ async function getPairReserves(pairAddress: string, provider: ethers.providers.P
   }
 }
 
-// Price validation - REMOVED ALL FILTERING
-function validatePrice(priceData: PriceData, tokenAddress: string): boolean {
-  // NO FILTERING - Accept all prices and liquidity levels
-  return true;
-}
-
-// Optimized with parallel processing
 async function getStablecoinPairPrice(tokenAddress: string, provider: ethers.providers.Provider): Promise<PriceData | null> {
   const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
   
-  // Get all pair addresses in parallel
-  const pairPromises = STABLECOINS.map(stablecoin => 
-    factory.getPair(tokenAddress, stablecoin)
-      .then((pairAddress: string) => ({ stablecoin, pairAddress }))
-      .catch(() => ({ stablecoin, pairAddress: ethers.constants.AddressZero }))
-  );
-  
-  const pairs = await Promise.all(pairPromises);
-  const validPairs = pairs.filter(p => p.pairAddress !== ethers.constants.AddressZero);
-  
-  if (validPairs.length === 0) return null;
-  
-  // Process valid pairs in parallel
-  const pricePromises = validPairs.map(async ({ stablecoin, pairAddress }) => {
+  for (const stablecoin of STABLECOINS) {
     try {
+      const pairAddress = await factory.getPair(tokenAddress, stablecoin);
+      if (pairAddress === ethers.constants.AddressZero) continue;
+      
       const pairData = await getPairReserves(pairAddress, provider);
-      if (!pairData) return null;
+      if (!pairData) continue;
       
       const [tokenDecimals, stableDecimals] = await Promise.all([
         getTokenDecimals(tokenAddress, provider),
@@ -180,182 +113,57 @@ async function getStablecoinPairPrice(tokenAddress: string, provider: ethers.pro
       const tokenAmount = parseFloat(ethers.utils.formatUnits(tokenReserve, tokenDecimals));
       const stableAmount = parseFloat(ethers.utils.formatUnits(stableReserve, stableDecimals));
       
-      if (tokenAmount === 0) return null;
+      if (tokenAmount === 0) continue;
       
       const price = stableAmount / tokenAmount;
       const liquidity = stableAmount * 2; // Total liquidity in USD
       
-      const priceData = { 
-        price, 
-        liquidity, 
-        pairAddress, 
-        token0: pairData.token0, 
-        token1: pairData.token1 
-      };
-      
-      // Validate price before returning
-      return validatePrice(priceData, tokenAddress) ? priceData : null;
+      // Return price data without liquidity filter
+      return { price, liquidity, pairAddress, token0: pairData.token0, token1: pairData.token1 };
     } catch (error) {
-      console.error(`Error processing pair ${pairAddress}:`, error);
-      return null;
+      console.error(`Error checking stablecoin pair with ${stablecoin}:`, error);
     }
-  });
+  }
   
-  const results = await Promise.all(pricePromises);
-  const validResults = results.filter(Boolean) as PriceData[];
-  
-  // Return the pair with highest liquidity
-  return validResults.length > 0
-    ? validResults.sort((a, b) => b.liquidity - a.liquidity)[0]
-    : null;
+  return null;
 }
-
-// Known PulseX factory addresses for different versions/fee tiers
-const PULSEX_FACTORIES = [
-  PULSEX_FACTORY, // Main V2 factory
-  '0x1715a3E4A142d8b698131108995174F37aEBA10D', // V1 factory
-  // Add more factory addresses as they become known
-];
 
 async function getWPLSPairPrice(tokenAddress: string, provider: ethers.providers.Provider): Promise<PriceData | null> {
   try {
-    // Get all WPLS pairs from all known factories
-    const pairPromises = PULSEX_FACTORIES.map(async (factoryAddress) => {
-      try {
-        const factory = new ethers.Contract(factoryAddress, FACTORY_ABI, provider);
-        const pairAddress = await factory.getPair(tokenAddress, WPLS_ADDRESS);
-        
-        if (pairAddress === ethers.constants.AddressZero) return null;
-        
-        const pairData = await getPairReserves(pairAddress, provider);
-        if (!pairData) return null;
-        
-        const [tokenDecimals, wplsDecimals] = await Promise.all([
-          getTokenDecimals(tokenAddress, provider),
-          getTokenDecimals(WPLS_ADDRESS, provider)
-        ]);
-        
-        // Determine which token is which
-        const isToken0 = pairData.token0.toLowerCase() === tokenAddress.toLowerCase();
-        const tokenReserve = isToken0 ? pairData.reserve0 : pairData.reserve1;
-        const wplsReserve = isToken0 ? pairData.reserve1 : pairData.reserve0;
-        
-        // Calculate price in WPLS
-        const tokenAmount = parseFloat(ethers.utils.formatUnits(tokenReserve, tokenDecimals));
-        const wplsAmount = parseFloat(ethers.utils.formatUnits(wplsReserve, wplsDecimals));
-        
-        if (tokenAmount === 0) return null;
-        
-        const priceInWPLS = wplsAmount / tokenAmount;
-        
-        // Get WPLS price in USD
-        const wplsPrice = await getWPLSPrice(provider);
-        const price = priceInWPLS * wplsPrice;
-        const liquidity = wplsAmount * wplsPrice * 2; // Total liquidity in USD
-        
-        const priceData = { 
-          price, 
-          liquidity, 
-          pairAddress, 
-          token0: pairData.token0, 
-          token1: pairData.token1 
-        };
-        
-        // Validate price before returning
-        return validatePrice(priceData, tokenAddress) ? priceData : null;
-      } catch (error) {
-        console.error(`Error getting WPLS pair from factory ${factoryAddress}:`, error);
-        return null;
-      }
-    });
+    const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
+    const pairAddress = await factory.getPair(tokenAddress, WPLS_ADDRESS);
     
-    const results = await Promise.all(pairPromises);
-    const validResults = results.filter(Boolean) as PriceData[];
+    if (pairAddress === ethers.constants.AddressZero) return null;
     
-    if (validResults.length === 0) return null;
+    const pairData = await getPairReserves(pairAddress, provider);
+    if (!pairData) return null;
     
-    // Return the pair with highest liquidity (largest WPLS pair)
-    const largestPair = validResults.sort((a, b) => b.liquidity - a.liquidity)[0];
+    const [tokenDecimals, wplsDecimals] = await Promise.all([
+      getTokenDecimals(tokenAddress, provider),
+      getTokenDecimals(WPLS_ADDRESS, provider)
+    ]);
     
-    console.log(`Found ${validResults.length} WPLS pairs for ${tokenAddress}, using largest with liquidity: ${largestPair.liquidity}`);
+    // Determine which token is which
+    const isToken0 = pairData.token0.toLowerCase() === tokenAddress.toLowerCase();
+    const tokenReserve = isToken0 ? pairData.reserve0 : pairData.reserve1;
+    const wplsReserve = isToken0 ? pairData.reserve1 : pairData.reserve0;
     
-    return largestPair;
+    // Calculate price in WPLS
+    const tokenAmount = parseFloat(ethers.utils.formatUnits(tokenReserve, tokenDecimals));
+    const wplsAmount = parseFloat(ethers.utils.formatUnits(wplsReserve, wplsDecimals));
+    
+    if (tokenAmount === 0) return null;
+    
+    const priceInWPLS = wplsAmount / tokenAmount;
+    
+    // Get WPLS price in USD
+    const wplsPrice = await getWPLSPrice(provider);
+    const price = priceInWPLS * wplsPrice;
+    const liquidity = wplsAmount * wplsPrice * 2; // Total liquidity in USD
+    
+    return { price, liquidity, pairAddress, token0: pairData.token0, token1: pairData.token1 };
   } catch (error) {
     console.error(`Error getting WPLS pair price for ${tokenAddress}:`, error);
-    return null;
-  }
-}
-
-// ETH/WETH address on PulseChain
-const WETH_ADDRESS = '0x02DcdD04e3F455D838cd1249292C58f3B79e3C3C';
-
-async function getETHPairPrice(tokenAddress: string, provider: ethers.providers.Provider): Promise<PriceData | null> {
-  try {
-    // Get all ETH pairs from all known factories
-    const pairPromises = PULSEX_FACTORIES.map(async (factoryAddress) => {
-      try {
-        const factory = new ethers.Contract(factoryAddress, FACTORY_ABI, provider);
-        const pairAddress = await factory.getPair(tokenAddress, WETH_ADDRESS);
-        
-        if (pairAddress === ethers.constants.AddressZero) return null;
-        
-        const pairData = await getPairReserves(pairAddress, provider);
-        if (!pairData) return null;
-        
-        const [tokenDecimals, ethDecimals] = await Promise.all([
-          getTokenDecimals(tokenAddress, provider),
-          getTokenDecimals(WETH_ADDRESS, provider)
-        ]);
-        
-        // Determine which token is which
-        const isToken0 = pairData.token0.toLowerCase() === tokenAddress.toLowerCase();
-        const tokenReserve = isToken0 ? pairData.reserve0 : pairData.reserve1;
-        const ethReserve = isToken0 ? pairData.reserve1 : pairData.reserve0;
-        
-        // Calculate price in ETH
-        const tokenAmount = parseFloat(ethers.utils.formatUnits(tokenReserve, tokenDecimals));
-        const ethAmount = parseFloat(ethers.utils.formatUnits(ethReserve, ethDecimals));
-        
-        if (tokenAmount === 0) return null;
-        
-        const priceInETH = ethAmount / tokenAmount;
-        
-        // Get ETH price in USD (from ETH/stablecoin pairs)
-        const ethPrice = await getStablecoinPairPrice(WETH_ADDRESS, provider);
-        const ethPriceUSD = ethPrice ? ethPrice.price : 0; // ETH price fallback
-        
-        const price = priceInETH * ethPriceUSD;
-        const liquidity = ethAmount * ethPriceUSD * 2; // Total liquidity in USD
-        
-        const priceData = { 
-          price, 
-          liquidity, 
-          pairAddress, 
-          token0: pairData.token0, 
-          token1: pairData.token1 
-        };
-        
-        // Validate price before returning
-        return validatePrice(priceData, tokenAddress) ? priceData : null;
-      } catch (error) {
-        console.error(`Error getting ETH pair from factory ${factoryAddress}:`, error);
-        return null;
-      }
-    });
-    
-    const results = await Promise.all(pairPromises);
-    const validResults = results.filter(Boolean) as PriceData[];
-    
-    if (validResults.length === 0) return null;
-    
-    // Return the pair with highest liquidity (largest ETH pair)
-    const largestPair = validResults.sort((a, b) => b.liquidity - a.liquidity)[0];
-    
-    console.log(`Found ${validResults.length} ETH pairs for ${tokenAddress}, using largest with liquidity: ${largestPair.liquidity}`);
-    
-    return largestPair;
-  } catch (error) {
-    console.error(`Error getting ETH pair price for ${tokenAddress}:`, error);
     return null;
   }
 }
@@ -366,13 +174,8 @@ async function getWPLSPrice(provider: ethers.providers.Provider): Promise<number
     return wplsCache.price;
   }
 
-  // Get WPLS price from stablecoin pairs with retry
-  const priceData = await withRetry(
-    () => getStablecoinPairPrice(WPLS_ADDRESS, provider),
-    3,
-    100
-  );
-  
+  // Get WPLS price from stablecoin pairs
+  const priceData = await getStablecoinPairPrice(WPLS_ADDRESS, provider);
   const price = priceData ? priceData.price : 0.0027; // Fallback price
   
   // Cache the result
@@ -407,46 +210,28 @@ export async function getTokenPriceFromContract(tokenAddress: string): Promise<P
       return data;
     }
     
-    // First, try to get WPLS pair price
-    const wplsPrice = await withRetry(() => getWPLSPairPrice(tokenAddress, provider), 3, 100);
-    
-    // If WPLS pair exists, always use it first
-    if (wplsPrice) {
-      console.log(`Using WPLS pair for ${tokenAddress} - Liquidity: $${wplsPrice.liquidity.toFixed(2)}`);
-      priceCache.set(normalizedAddress, { data: wplsPrice, timestamp: Date.now() });
-      return wplsPrice;
-    }
-    
-    // Only if no WPLS pair exists, try stablecoin pairs
-    const stablecoinPrice = await withRetry(() => getStablecoinPairPrice(tokenAddress, provider), 3, 100);
-    
+    // Try stablecoin pairs first for direct USD price
+    const stablecoinPrice = await getStablecoinPairPrice(tokenAddress, provider);
     if (stablecoinPrice) {
-      console.log(`Using stablecoin pair for ${tokenAddress} (no WPLS pair found) - Liquidity: $${stablecoinPrice.liquidity.toFixed(2)}`);
       priceCache.set(normalizedAddress, { data: stablecoinPrice, timestamp: Date.now() });
       return stablecoinPrice;
     }
     
-    // If no WPLS or stablecoin pairs, try ETH pair as last resort
-    const ethPrice = await withRetry(() => getETHPairPrice(tokenAddress, provider), 3, 100);
-    
-    if (ethPrice) {
-      console.log(`Using ETH pair for ${tokenAddress} (no WPLS/stablecoin pairs found) - Liquidity: $${ethPrice.liquidity.toFixed(2)}`);
-      priceCache.set(normalizedAddress, { data: ethPrice, timestamp: Date.now() });
-      return ethPrice;
+    // Fall back to WPLS pair
+    const wplsPrice = await getWPLSPairPrice(tokenAddress, provider);
+    if (wplsPrice) {
+      priceCache.set(normalizedAddress, { data: wplsPrice, timestamp: Date.now() });
+      return wplsPrice;
     }
     
     return null;
   } catch (error) {
-    throw new PriceServiceError(
-      `Failed to fetch token price from contract`,
-      tokenAddress,
-      'getTokenPriceFromContract',
-      error
-    );
+    console.error(`Error fetching token price from contract for ${tokenAddress}:`, error);
+    return null;
   }
 }
 
-// Optimized batch function with better error handling
+// Export batch function for efficiency
 export async function getMultipleTokenPricesFromContract(
   tokenAddresses: string[]
 ): Promise<Map<string, PriceData>> {
@@ -456,36 +241,17 @@ export async function getMultipleTokenPricesFromContract(
   const BATCH_SIZE = 10;
   for (let i = 0; i < tokenAddresses.length; i += BATCH_SIZE) {
     const batch = tokenAddresses.slice(i, i + BATCH_SIZE);
-    
-    // Process batch in parallel with proper error handling
     const promises = batch.map(address => 
       getTokenPriceFromContract(address)
-        .then(data => ({ address: address.toLowerCase(), data, error: null }))
-        .catch(error => ({ 
-          address: address.toLowerCase(), 
-          data: null, 
-          error: error instanceof PriceServiceError ? error : new PriceServiceError(
-            'Unknown error',
-            address,
-            'batch processing',
-            error
-          )
-        }))
+        .then(data => ({ address: address.toLowerCase(), data }))
+        .catch(() => ({ address: address.toLowerCase(), data: null }))
     );
     
     const batchResults = await Promise.all(promises);
-    
-    for (const { address, data, error } of batchResults) {
+    for (const { address, data } of batchResults) {
       if (data) {
         results.set(address, data);
-      } else if (error) {
-        console.error(`Failed to get price for ${address}:`, error.message);
       }
-    }
-    
-    // Small delay between batches to avoid rate limiting
-    if (i + BATCH_SIZE < tokenAddresses.length) {
-      await new Promise(resolve => setTimeout(resolve, 50));
     }
   }
   

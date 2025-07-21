@@ -1,10 +1,10 @@
 import { ethers } from 'ethers';
 
-// RPC endpoints optimized for mobile - using the most reliable endpoints
+// Multiple RPC endpoints for reliability
 const RPC_ENDPOINTS = [
-  'https://rpc.pulsechain.com', // Official endpoint first for mobile reliability
-  'https://rpc-pulsechain.g4mm4.io', // g4mm4 as backup
-  'https://pulsechain.publicnode.com' // Public node as last resort
+  'https://rpc.pulsechain.com',
+  'https://rpc-pulsechain.g4mm4.io',
+  'https://pulsechain.publicnode.com'
 ];
 
 // ABI for PulseX pair contracts (minimal required functions)
@@ -61,94 +61,28 @@ class SmartContractPriceService {
   private currentProviderIndex = 0;
   private priceCache = new Map<string, { data: PriceData; timestamp: number }>();
   private wplsPriceCache: { price: number; timestamp: number } | null = null;
-  private CACHE_TTL = 5000; // Increased cache time for mobile
-  private REQUEST_TIMEOUT = 8000; // 8 second timeout for mobile
-  private MAX_RETRIES = 2; // Reduced retries for mobile
+  private CACHE_TTL = 2000; // 2 seconds cache for rapid updates
 
   constructor() {
     this.initializeProviders();
   }
 
   private initializeProviders() {
-    this.providers = RPC_ENDPOINTS.map((url, index) => {
-      const provider = new ethers.providers.JsonRpcProvider({
-        url,
-        timeout: this.REQUEST_TIMEOUT,
-        throttleLimit: 1, // Limit concurrent requests on mobile
-      }, {
-        chainId: 369,
-        name: 'pulsechain'
-      });
-      
-      // Longer polling interval for mobile to reduce battery usage
-      provider.pollingInterval = 8000;
-      
-      // Add error handling for connection issues
-      provider.on('error', (error) => {
-        console.warn(`Provider ${index} error:`, error.message);
-      });
-      
-      return provider;
-    });
+    // Initialize multiple providers for redundancy
+    this.providers = RPC_ENDPOINTS.map(url => new ethers.providers.JsonRpcProvider(url));
   }
 
   private getProvider(): ethers.providers.JsonRpcProvider {
+    // Round-robin through providers for load balancing
     const provider = this.providers[this.currentProviderIndex];
     this.currentProviderIndex = (this.currentProviderIndex + 1) % this.providers.length;
     return provider;
   }
 
   /**
-   * Retry function with exponential backoff for mobile networks
-   */
-  private async retryWithBackoff<T>(
-    operation: () => Promise<T>,
-    maxRetries: number = this.MAX_RETRIES
-  ): Promise<T | null> {
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        return await Promise.race([
-          operation(),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), this.REQUEST_TIMEOUT)
-          )
-        ]);
-      } catch (error: any) {
-        const isLastAttempt = attempt === maxRetries;
-        
-        // Don't retry on certain errors
-        if (error.message?.includes('call revert') || 
-            error.message?.includes('invalid address') ||
-            error.message?.includes('could not detect network') || // Fail fast on network detection errors
-            isLastAttempt) {
-          if (isLastAttempt || error.message?.includes('could not detect network')) {
-            console.warn(`Operation failed after ${attempt + 1} attempts:`, error.message);
-          }
-          return null;
-        }
-        
-        // Exponential backoff with jitter for mobile networks
-        const backoffTime = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 5000);
-        await new Promise(resolve => setTimeout(resolve, backoffTime));
-        
-        // Try next provider on network errors
-        if (error.message?.includes('network') || error.message?.includes('timeout')) {
-          this.currentProviderIndex = (this.currentProviderIndex + 1) % this.providers.length;
-        }
-      }
-    }
-    return null;
-  }
-
-  /**
    * Get real-time price for a token by reading directly from smart contracts
    */
   async getTokenPrice(tokenAddress: string): Promise<PriceData | null> {
-    if (!tokenAddress || typeof tokenAddress !== 'string') {
-      console.error('Invalid token address provided');
-      return null;
-    }
-
     const normalizedAddress = tokenAddress.toLowerCase();
     
     // Check cache first
@@ -178,8 +112,8 @@ class SmartContractPriceService {
       }
 
       return null;
-    } catch (error: any) {
-      console.error('Error fetching token price:', error.message || error);
+    } catch (error) {
+      console.error('Error fetching token price from smart contract:', error);
       return null;
     }
   }
@@ -188,58 +122,41 @@ class SmartContractPriceService {
    * Get price from stablecoin pairs
    */
   private async getStablecoinPairPrice(tokenAddress: string): Promise<PriceData | null> {
-    // Try each stablecoin sequentially to reduce network load
+    const provider = this.getProvider();
+    const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
+
+    // Try each stablecoin
     for (const [stableAddress, stableInfo] of Object.entries(STABLECOINS)) {
       try {
-        const result = await this.retryWithBackoff(async () => {
-          const provider = this.getProvider();
-          const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
-          
-          const pairAddress = await factory.getPair(tokenAddress, stableAddress);
-          if (!pairAddress || pairAddress === ethers.constants.AddressZero) {
-            return null;
-          }
+        const pairAddress = await factory.getPair(tokenAddress, stableAddress);
+        
+        if (pairAddress === ethers.constants.AddressZero) continue;
 
-          const reserves = await this.getPairReserves(pairAddress, tokenAddress, stableAddress);
-          if (!reserves) return null;
+        const reserves = await this.getPairReserves(pairAddress, tokenAddress, stableAddress);
+        if (!reserves) continue;
 
-          // Calculate price
-          const isToken0 = reserves.token0Address.toLowerCase() === tokenAddress.toLowerCase();
-          const tokenReserve = isToken0 ? reserves.reserve0 : reserves.reserve1;
-          const stableReserve = isToken0 ? reserves.reserve1 : reserves.reserve0;
-          const tokenDecimals = isToken0 ? reserves.decimals0 : reserves.decimals1;
-          const stableDecimals = isToken0 ? reserves.decimals1 : reserves.decimals0;
+        // Calculate price
+        const isToken0 = reserves.token0Address.toLowerCase() === tokenAddress.toLowerCase();
+        const tokenReserve = isToken0 ? reserves.reserve0 : reserves.reserve1;
+        const stableReserve = isToken0 ? reserves.reserve1 : reserves.reserve0;
+        const tokenDecimals = isToken0 ? reserves.decimals0 : reserves.decimals1;
+        const stableDecimals = isToken0 ? reserves.decimals1 : reserves.decimals0;
 
-          // Ensure reserves are not zero
-          if (tokenReserve === 0n || stableReserve === 0n) {
-            return null;
-          }
+        // Calculate price: stableReserve / tokenReserve adjusted for decimals
+        const price = Number(stableReserve) / Number(tokenReserve) * 
+                     Math.pow(10, tokenDecimals - stableDecimals);
 
-          // Calculate price with safer arithmetic
-          const price = Number(stableReserve) / Number(tokenReserve) * 
-                       Math.pow(10, tokenDecimals - stableDecimals);
+        // Calculate liquidity
+        const stableLiquidity = Number(stableReserve) / Math.pow(10, stableDecimals);
+        const liquidity = stableLiquidity * 2; // Total liquidity is roughly 2x one side
 
-          // Validate price is reasonable
-          if (!isFinite(price) || price <= 0) {
-            return null;
-          }
-
-          // Calculate liquidity
-          const stableLiquidity = Number(stableReserve) / Math.pow(10, stableDecimals);
-          const liquidity = stableLiquidity * 2;
-
-          return {
-            price,
-            pairAddress,
-            pairedTokenSymbol: stableInfo.name,
-            liquidity,
-            lastUpdate: Date.now()
-          };
-        });
-
-        if (result) {
-          return result;
-        }
+        return {
+          price,
+          pairAddress,
+          pairedTokenSymbol: stableInfo.name,
+          liquidity,
+          lastUpdate: Date.now()
+        };
       } catch (error) {
         // Continue to next stablecoin
         continue;
@@ -254,17 +171,15 @@ class SmartContractPriceService {
    */
   private async getWPLSPairPrice(tokenAddress: string): Promise<PriceData | null> {
     if (tokenAddress.toLowerCase() === WPLS_ADDRESS.toLowerCase()) {
-      return null;
+      return null; // Can't get WPLS price from WPLS pair
     }
 
-    return this.retryWithBackoff(async () => {
-      const provider = this.getProvider();
-      const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
+    const provider = this.getProvider();
+    const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
 
+    try {
       const pairAddress = await factory.getPair(tokenAddress, WPLS_ADDRESS);
-      if (!pairAddress || pairAddress === ethers.constants.AddressZero) {
-        return null;
-      }
+      if (pairAddress === ethers.constants.AddressZero) return null;
 
       const reserves = await this.getPairReserves(pairAddress, tokenAddress, WPLS_ADDRESS);
       if (!reserves) return null;
@@ -276,28 +191,23 @@ class SmartContractPriceService {
       const tokenDecimals = isToken0 ? reserves.decimals0 : reserves.decimals1;
       const wplsDecimals = isToken0 ? reserves.decimals1 : reserves.decimals0;
 
-      if (tokenReserve === 0n || wplsReserve === 0n) {
-        return null;
-      }
-
       const priceInWPLS = Number(wplsReserve) / Number(tokenReserve) * 
                           Math.pow(10, tokenDecimals - wplsDecimals);
-
-      if (!isFinite(priceInWPLS) || priceInWPLS <= 0) {
-        return null;
-      }
 
       // Calculate liquidity in WPLS
       const wplsLiquidity = Number(wplsReserve) / Math.pow(10, wplsDecimals);
 
       return {
-        price: priceInWPLS,
+        price: priceInWPLS, // Will be converted to USD by caller
         pairAddress,
         pairedTokenSymbol: 'WPLS',
         liquidity: wplsLiquidity * 2,
         lastUpdate: Date.now()
       };
-    });
+    } catch (error) {
+      console.error('Error getting WPLS pair price:', error);
+      return null;
+    }
   }
 
   /**
@@ -331,16 +241,18 @@ class SmartContractPriceService {
     token0Address: string, 
     token1Address: string
   ): Promise<TokenReserves | null> {
-    return this.retryWithBackoff(async () => {
-      const provider = this.getProvider();
-      const pair = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+    const provider = this.getProvider();
+    const pair = new ethers.Contract(pairAddress, PAIR_ABI, provider);
 
-      // Get pair tokens and reserves in parallel
-      const [pairToken0, pairToken1, reserves] = await Promise.all([
+    try {
+      // Get pair tokens to determine order
+      const [pairToken0, pairToken1] = await Promise.all([
         pair.token0(),
-        pair.token1(),
-        pair.getReserves()
+        pair.token1()
       ]);
+
+      // Get reserves
+      const reserves = await pair.getReserves();
 
       // Get decimals for both tokens
       const token0Contract = new ethers.Contract(pairToken0, ERC20_ABI, provider);
@@ -359,7 +271,10 @@ class SmartContractPriceService {
         decimals0: Number(decimals0),
         decimals1: Number(decimals1)
       };
-    });
+    } catch (error) {
+      console.error('Error getting pair reserves:', error);
+      return null;
+    }
   }
 
   /**
@@ -370,12 +285,6 @@ class SmartContractPriceService {
       data,
       timestamp: Date.now()
     });
-    
-    // Limit cache size on mobile devices
-    if (this.priceCache.size > 1000) {
-      const oldestKey = this.priceCache.keys().next().value;
-      this.priceCache.delete(oldestKey);
-    }
   }
 
   /**
@@ -384,26 +293,21 @@ class SmartContractPriceService {
   async getMultipleTokenPrices(tokenAddresses: string[]): Promise<Map<string, PriceData | null>> {
     const results = new Map<string, PriceData | null>();
     
-    // Mobile-optimized batch processing
-    const BATCH_SIZE = 10; // Smaller batches for mobile stability
+    // Process all tokens in parallel with rate limiting
+    const BATCH_SIZE = 100; // Massive parallelization for fast processing
     const batches: string[][] = [];
     
-    // Create smaller batches
+    // Create batches
     for (let i = 0; i < tokenAddresses.length; i += BATCH_SIZE) {
       batches.push(tokenAddresses.slice(i, i + BATCH_SIZE));
     }
     
-    // Process batches sequentially with delays for mobile network stability
-    for (const batch of batches) {
+    // Process all batches in parallel
+    const allBatchPromises = batches.map(async (batch) => {
       const batchResults = await Promise.all(
         batch.map(async (address) => {
-          try {
-            const price = await this.getTokenPrice(address);
-            return { address: address.toLowerCase(), price };
-          } catch (error) {
-            console.warn(`Failed to get price for ${address}:`, error);
-            return { address: address.toLowerCase(), price: null };
-          }
+          const price = await this.getTokenPrice(address);
+          return { address: address.toLowerCase(), price };
         })
       );
       
@@ -411,12 +315,10 @@ class SmartContractPriceService {
       batchResults.forEach(({ address, price }) => {
         results.set(address, price);
       });
-      
-      // Small delay between batches for mobile network stability
-      if (batches.indexOf(batch) < batches.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
+    });
+    
+    // Wait for all batches to complete
+    await Promise.all(allBatchPromises);
     
     return results;
   }

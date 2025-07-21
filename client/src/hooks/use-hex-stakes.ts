@@ -263,12 +263,9 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
     // If we couldn't get data from the DOM, use a different approach:
     // We'll use PulseChain RPC call to get a basic estimate based on the wallet address pattern
     
-    // Get RPC provider for PulseChain with explicit network config
+    // Get RPC provider for PulseChain (we only use PulseChain now)
     const rpcUrl = 'https://rpc-pulsechain.g4mm4.io';
-    const provider = new ethers.providers.JsonRpcProvider(rpcUrl, {
-      chainId: 369,
-      name: 'pulsechain'
-    });
+    const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
     const hexContract = new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);
     
     let count = 0;

@@ -188,9 +188,8 @@ export default function Home() {
       });
       
       // Process all wallet addresses in parallel for much faster loading
-      let completedCount = 0;
       setMultiWalletProgress({
-        currentBatch: 0,
+        currentBatch: addresses.length,
         totalBatches: addresses.length,
         status: 'loading',
         message: `Loading ${addresses.length} wallets in parallel...`
@@ -200,46 +199,12 @@ export default function Home() {
         try {
           // Fetch wallet data with smart contract prices
           const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
-          
-          // Add individual wallet timeout to prevent hanging
-          const dataPromise = fetchWalletDataWithContractPrices(address);
-          const timeoutPromise = new Promise<any>((_, reject) => {
-            setTimeout(() => reject(new Error(`Timeout fetching wallet ${address}`)), 45000); // 45 second timeout per wallet
-          });
-          
-          const dataWithPrices = await Promise.race([dataPromise, timeoutPromise]);
-          
-          // Update progress
-          completedCount++;
-          setMultiWalletProgress({
-            currentBatch: completedCount,
-            totalBatches: addresses.length,
-            status: 'loading',
-            message: `Loading wallets... (${completedCount}/${addresses.length} completed)`
-          });
+          const dataWithPrices = await fetchWalletDataWithContractPrices(address);
           
           return { [address]: dataWithPrices };
         } catch (error) {
           console.error(`Error fetching wallet ${address}:`, error);
-          
-          // Update progress even on error
-          completedCount++;
-          setMultiWalletProgress({
-            currentBatch: completedCount,
-            totalBatches: addresses.length,
-            status: 'loading',
-            message: `Loading wallets... (${completedCount}/${addresses.length} completed, some errors)`
-          });
-          
-          // Return empty wallet data instead of null to prevent complete failure
-          return { 
-            [address]: {
-              address,
-              tokens: [],
-              totalValue: 0,
-              error: error instanceof Error ? error.message : 'Failed to load wallet'
-            }
-          };
+          return null;
         }
       });
       
@@ -576,7 +541,6 @@ export default function Home() {
   }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
 
   // Use client-side wallet hook to avoid server rate limits
-  console.log('Calling useClientSideWallet with searchedAddress:', searchedAddress);
   const {
     walletData,
     isLoading,
@@ -869,17 +833,8 @@ export default function Home() {
         </>
       )}
       
-      {/* Debug info */}
-      {searchedAddress && (
-        <div className="text-xs text-white/50 mb-2">
-          Debug: searchedAddress={searchedAddress}, isError={String(isError)}, isLoading={String(isLoading)}, 
-          isFetching={String(isFetching)}, walletData={walletData ? 'exists' : 'null'}, 
-          tokens={walletData?.tokens?.length || 0}
-        </div>
-      )}
-
       {/* Single wallet view - only show wallet data when not loading */}
-      {searchedAddress && !isError && !isLoading && !isFetching && !multiWalletData && (
+      {searchedAddress && !isError && !(isLoading || isFetching) && !multiWalletData && (
         <>
           <div className="mt-4">
             {/* Two-column layout: Wallet overview (1/3) on left, Token list (2/3) on right */}
@@ -888,17 +843,13 @@ export default function Home() {
               <div className="w-full lg:w-1/3 flex flex-col gap-6">
 
                 
-                {walletData ? (
+                {walletData && (
                   <WalletOverview 
                     wallet={walletData} 
                     isLoading={false} 
                     hexStakesSummary={singleWalletHexStakes}
                     onRefresh={handleRefresh}
                   />
-                ) : (
-                  <div className="glass-card p-6 text-center">
-                    <p className="text-white/60">No wallet data available. Try refreshing.</p>
-                  </div>
                 )}
                 
 
