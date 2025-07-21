@@ -188,6 +188,30 @@ export function WalletShareModal({
                     <div className="w-full h-full rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
                       <span className="text-white font-bold text-base md:text-lg">PLS</span>
                     </div>
+                  ) : token.isLp && token.lpToken0Address && token.lpToken1Address ? (
+                    <div className="relative">
+                      <div className="flex">
+                        {/* Token logos side by side with slight overlap */}
+                        <div className="rounded-full border-2 border-black z-10">
+                          <TokenLogo 
+                            address={token.lpToken0Address} 
+                            symbol={token.lpToken0Symbol || '?'} 
+                            size="md" 
+                          />
+                        </div>
+                        <div className="-ml-2 rounded-full border-2 border-black">
+                          <TokenLogo 
+                            address={token.lpToken1Address} 
+                            symbol={token.lpToken1Symbol || '?'} 
+                            size="md" 
+                          />
+                        </div>
+                      </div>
+                      {/* LP Badge */}
+                      <div className="absolute -bottom-1 -right-1 z-20 bg-purple-600/30 text-purple-100 text-[0.65rem] px-1 py-0.5 rounded-md border border-purple-500/60 flex-shrink-0 font-semibold scale-[0.65] origin-bottom-right">
+                        LP
+                      </div>
+                    </div>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <TokenLogo 
@@ -201,7 +225,9 @@ export function WalletShareModal({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-base md:text-lg font-semibold text-white uppercase tracking-wide">
-                      {token.symbol || 'Unknown'}
+                      {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol 
+                        ? `${token.lpToken0Symbol}/${token.lpToken1Symbol}`
+                        : token.symbol || 'Unknown'}
                     </span>
                     <span className="text-base md:text-lg font-bold text-green-400">
                       {formatCurrency(token.value || 0)}
@@ -209,7 +235,9 @@ export function WalletShareModal({
                   </div>
                   <div className="flex items-center justify-between text-xs md:text-sm text-gray-400">
                     <span className="truncate mr-2">
-                      {token.name || token.symbol || 'Unknown Token'}
+                      {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol 
+                        ? `PulseX LP: ${token.lpToken0Symbol}/${token.lpToken1Symbol}`
+                        : token.name || token.symbol || 'Unknown Token'}
                     </span>
                     <span className="flex-shrink-0">
                       {formatTokenAmount(token.balanceFormatted || 0)}
