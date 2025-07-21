@@ -189,26 +189,26 @@ export function WalletShareModal({
                       <span className="text-white font-bold text-base md:text-lg">PLS</span>
                     </div>
                   ) : token.isLp && token.lpToken0Address && token.lpToken1Address ? (
-                    <div className="relative">
-                      <div className="flex">
+                    <div className="relative flex items-center justify-center w-full h-full">
+                      <div className="flex items-center">
                         {/* Token logos side by side with slight overlap */}
-                        <div className="rounded-full border-2 border-black z-10">
+                        <div className="rounded-full border-2 border-black/80 z-10 overflow-hidden">
                           <TokenLogo 
                             address={token.lpToken0Address} 
                             symbol={token.lpToken0Symbol || '?'} 
-                            size="md" 
+                            size="sm" 
                           />
                         </div>
-                        <div className="-ml-2 rounded-full border-2 border-black">
+                        <div className="-ml-1.5 rounded-full border-2 border-black/80 overflow-hidden">
                           <TokenLogo 
                             address={token.lpToken1Address} 
                             symbol={token.lpToken1Symbol || '?'} 
-                            size="md" 
+                            size="sm" 
                           />
                         </div>
                       </div>
                       {/* LP Badge */}
-                      <div className="absolute -bottom-1 -right-1 z-20 bg-purple-600/30 text-purple-100 text-[0.65rem] px-1 py-0.5 rounded-md border border-purple-500/60 flex-shrink-0 font-semibold scale-[0.65] origin-bottom-right">
+                      <div className="absolute -bottom-0.5 -right-0.5 z-20 bg-purple-600/90 text-purple-100 text-[0.5rem] px-1 py-0.5 rounded-md border border-purple-400/80 flex-shrink-0 font-bold">
                         LP
                       </div>
                     </div>
