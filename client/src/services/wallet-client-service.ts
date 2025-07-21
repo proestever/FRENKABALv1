@@ -115,66 +115,49 @@ export async function fetchWalletDataClientSide(
     const totalTokens = tokensWithPrices.length;
     let processedCount = 0;
     
-    // Limit to top 50 tokens (already sorted by value) to avoid DexScreener rate limits
+    // Take top 50 tokens by value for logo fetching
     const tokensToProcess = tokensWithPrices.slice(0, 50);
     
-    // Process in batches to avoid overwhelming DexScreener
-    const BATCH_SIZE = 5;
-    const batches: TokenWithPrice[][] = [];
+    if (onProgress) onProgress('Fetching token logos from DexScreener...', 30);
     
-    for (let i = 0; i < tokensToProcess.length; i += BATCH_SIZE) {
-      batches.push(tokensToProcess.slice(i, i + BATCH_SIZE));
-    }
-    
-    if (onProgress) onProgress('Fetching token logos and prices from DexScreener...', 30);
-    
-    // Process each batch
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex];
-      
-      await Promise.all(
-        batch.map(async (token) => {
-          try {
-            // For PLS native token, use WPLS address
-            let tokenAddressForDex = token.address;
-            if (token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-              tokenAddressForDex = '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
-            }
-            
-            // Always fetch from DexScreener to get logos, even if we have prices
-            const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
-            
-            if (priceData) {
-              // Only update price if we don't have one from scanner
-              if (!token.price || token.price === 0) {
-                token.price = priceData.price;
-                token.value = token.balanceFormatted * priceData.price;
-              }
-              token.priceData = priceData;
-              
-              // Always check for logo updates
-              if (priceData.logo && (!token.logo || token.logo.includes('100xfrenlogo'))) {
-                token.logo = priceData.logo;
-                
-                // Save logo to server in background
-                saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to fetch data for ${token.symbol}:`, error);
+    // Process all 50 tokens in parallel for maximum speed
+    await Promise.all(
+      tokensToProcess.map(async (token, index) => {
+        try {
+          // For PLS native token, use WPLS address
+          let tokenAddressForDex = token.address;
+          if (token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+            tokenAddressForDex = '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
           }
           
-          processedCount++;
-          const progress = Math.round(30 + (processedCount / Math.min(totalTokens, 50)) * 60); // 30% to 90%
-          if (onProgress) onProgress(`Fetching logos and prices... (${processedCount}/${Math.min(totalTokens, 50)})`, progress);
-        })
-      );
-      
-      // Small delay between batches to respect rate limits
-      if (batchIndex < batches.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-    }
+          // Always fetch from DexScreener to get logos, even if we have prices
+          const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
+          
+          if (priceData) {
+            // Only update price if we don't have one from scanner
+            if (!token.price || token.price === 0) {
+              token.price = priceData.price;
+              token.value = token.balanceFormatted * priceData.price;
+            }
+            token.priceData = priceData;
+            
+            // Always check for logo updates
+            if (priceData.logo && (!token.logo || token.logo.includes('100xfrenlogo'))) {
+              token.logo = priceData.logo;
+              
+              // Save logo to server in background
+              saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch data for ${token.symbol}:`, error);
+        }
+        
+        processedCount++;
+        const progress = Math.round(30 + (processedCount / tokensToProcess.length) * 60); // 30% to 90%
+        if (onProgress) onProgress(`Fetching logos... (${processedCount}/${tokensToProcess.length})`, progress);
+      })
+    );
     
     // Step 3: Calculate total value
     const totalValue = tokensWithPrices.reduce((sum, token) => sum + (token.value || 0), 0);
