@@ -130,15 +130,26 @@ interface TokenWithPrice extends ProcessedToken {
 /**
  * Fetch wallet balances using scanner API (gets ALL tokens, not just recent)
  */
-async function fetchWalletBalancesFromScanner(address: string): Promise<Wallet> {
-  const response = await fetch(`/api/wallet/${address}/scanner-balances`);
+async function fetchWalletBalancesFromBlockchain(address: string, onProgress?: (message: string, progress: number) => void): Promise<Wallet> {
+  const { clientBlockchainService } = await import('./blockchain-service');
   
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to fetch wallet balances');
-  }
+  // Fetch tokens directly from blockchain
+  const tokens = await clientBlockchainService.fetchWalletTokens(address, onProgress);
   
-  return response.json();
+  // Calculate PLS balance for wallet data
+  const plsToken = tokens.find(t => t.isNative);
+  const plsBalance = plsToken?.balanceFormatted || 0;
+  
+  return {
+    address,
+    tokens,
+    plsBalance,
+    totalValue: 0, // Will be calculated after prices are fetched
+    tokenCount: tokens.length,
+    networkCount: 1,
+    plsPriceChange: undefined,
+    pricesNeeded: true
+  };
 }
 
 /**
@@ -176,9 +187,9 @@ export async function fetchWalletDataClientSide(
   onProgress?: (message: string, progress: number) => void
 ): Promise<Wallet> {
   try {
-    // Step 1: Fetch ALL token balances using scanner API
+    // Step 1: Fetch ALL token balances directly from blockchain
     if (onProgress) onProgress('Fetching all wallet tokens...', 10);
-    const walletDataRaw = await fetchWalletBalancesFromScanner(address);
+    const walletDataRaw = await fetchWalletBalancesFromBlockchain(address, onProgress);
     
     // Convert null values to undefined for proper type compatibility
     const walletData: Wallet = {
@@ -270,9 +281,9 @@ export async function fetchWalletDataWithContractPrices(
   onProgress?: (message: string, progress: number) => void
 ): Promise<Wallet> {
   try {
-    // Step 1: Fetch ALL token balances using scanner API
+    // Step 1: Fetch ALL token balances directly from blockchain
     if (onProgress) onProgress('Fetching all wallet tokens...', 10);
-    const walletDataRaw = await fetchWalletBalancesFromScanner(address);
+    const walletDataRaw = await fetchWalletBalancesFromBlockchain(address, onProgress);
     
     // Convert null values to undefined for proper type compatibility
     const walletData: Wallet = {
