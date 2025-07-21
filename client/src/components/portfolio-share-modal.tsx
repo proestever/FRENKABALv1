@@ -112,46 +112,46 @@ export function PortfolioShareModal({
           <DialogTitle>Portfolio Share</DialogTitle>
         </VisuallyHidden>
         
-        <div className="relative z-10 px-4 py-8 md:p-8 md:py-16">
+        <div className="relative z-10 px-4 py-4 sm:py-6 md:p-8 md:py-12 overflow-y-auto max-h-[85vh]">
 
 
           {/* Frenkabal Branding */}
-          <div className="flex items-center justify-center mb-8 md:mb-12">
+          <div className="flex items-center justify-center mb-4 sm:mb-6 md:mb-10">
             <img 
               src="/assets/100xfrenlogo.png" 
               alt="Frenkabal" 
-              className="h-16 w-16 md:h-20 md:w-20 mr-3 md:mr-4 animate-pulse"
+              className="h-12 w-12 sm:h-14 sm:w-14 md:h-18 md:w-18 lg:h-20 lg:w-20 mr-2 sm:mr-3 md:mr-4 animate-pulse"
             />
             <div>
-              <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                 FRENKABAL
               </h1>
-              <p className="text-sm md:text-base text-gray-400">Portfolio Tracker</p>
+              <p className="text-xs sm:text-sm md:text-base text-gray-400">Portfolio Tracker</p>
             </div>
           </div>
 
           {/* Portfolio Name */}
-          <div className="text-center mb-4">
-            <h2 className="text-xl md:text-3xl font-bold text-white">{portfolioName}</h2>
-            <p className="text-sm md:text-base text-gray-400 mt-1">Portfolio Bundle</p>
+          <div className="text-center mb-2 sm:mb-4">
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">{portfolioName}</h2>
+            <p className="text-xs sm:text-sm md:text-base text-gray-400 mt-0.5 sm:mt-1">Portfolio Bundle</p>
           </div>
 
           {/* Portfolio Total */}
-          <div className="text-center mb-6 md:mb-8">
-            <p className="text-gray-400 text-xs md:text-sm mb-2">Total Portfolio Value</p>
-            <p className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+          <div className="text-center mb-4 sm:mb-6 md:mb-8">
+            <p className="text-gray-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Portfolio Value</p>
+            <p className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
               {formatCurrency(totalValue)}
             </p>
           </div>
 
           {/* Token List */}
-          <div className="space-y-3 md:space-y-4 mb-8">
+          <div className="space-y-2 sm:space-y-3 md:space-y-4 mb-4 sm:mb-6 md:mb-8">
             {topTokens.map((token, index) => (
-              <div key={token.address} className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-lg bg-gray-900/50 backdrop-blur-sm border border-gray-800">
-                <span className="text-lg md:text-2xl font-bold bg-gradient-to-r from-gray-400 to-gray-500 bg-clip-text text-transparent w-6 md:w-8 flex-shrink-0">
+              <div key={token.address} className="flex items-center gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 md:p-4 rounded-lg bg-gray-900/50 backdrop-blur-sm border border-gray-800">
+                <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-400 to-gray-500 bg-clip-text text-transparent w-5 sm:w-6 md:w-8 flex-shrink-0">
                   {index + 1}.
                 </span>
-                <div className="h-12 w-12 md:h-14 md:w-14 flex-shrink-0 flex items-center justify-center">
+                <div className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 flex-shrink-0 flex items-center justify-center">
                   {token.address === 'hex-stakes-virtual' ? (
                     <div className="w-full h-full flex items-center justify-center">
                       <TokenLogo 
@@ -200,12 +200,12 @@ export function PortfolioShareModal({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-base md:text-lg font-semibold text-white uppercase tracking-wide">
+                    <span className="text-sm sm:text-base md:text-lg font-semibold text-white uppercase tracking-wide">
                       {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol 
                         ? `${token.lpToken0Symbol}/${token.lpToken1Symbol}`
                         : token.symbol || 'Unknown'}
                     </span>
-                    <span className="text-base md:text-lg font-bold text-green-400">
+                    <span className="text-sm sm:text-base md:text-lg font-bold text-green-400">
                       {formatCurrency(token.value || 0)}
                     </span>
                   </div>
