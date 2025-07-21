@@ -210,6 +210,15 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
         }
       }
       
+      // Truncate to max 18 decimal places (parseEther limit)
+      const decimalIndex = ratioString.indexOf('.');
+      if (decimalIndex !== -1) {
+        const decimalPlaces = ratioString.length - decimalIndex - 1;
+        if (decimalPlaces > 18) {
+          ratioString = ratioString.substring(0, decimalIndex + 19); // +1 for dot, +18 for decimals
+        }
+      }
+      
       // 6. Calculate token balances based on user's share
       token0Balance = reserve0.mul(ethers.utils.parseEther(ratioString))
                                .div(ethers.utils.parseEther('1')).toString();
