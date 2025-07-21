@@ -9,7 +9,7 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { TokenLogo } from '@/components/token-logo';
 import { formatCurrency, formatTokenAmount } from '@/lib/utils';
 import { getHiddenTokens } from '@/lib/api';
-import { X } from 'lucide-react';
+
 
 interface WalletShareModalProps {
   open: boolean;
@@ -135,13 +135,6 @@ export function WalletShareModal({
         </VisuallyHidden>
         
         <div className="relative z-10 px-4 py-8 md:p-8 md:py-16 overflow-y-auto max-h-[90vh]">
-          {/* Close button */}
-          <button
-            onClick={() => onOpenChange(false)}
-            className="absolute top-2 right-2 md:top-4 md:right-4 p-2 rounded-full hover:bg-gray-800/50 transition-colors z-20"
-          >
-            <X className="h-5 w-5 text-gray-400" />
-          </button>
 
           {/* Frenkabal Branding */}
           <div className="flex items-center justify-center mb-8 md:mb-12">
