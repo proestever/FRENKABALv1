@@ -238,7 +238,7 @@ export async function getMultipleTokenPricesFromContract(
   const results = new Map<string, PriceData>();
   
   // Process in batches to avoid overwhelming the RPC
-  const BATCH_SIZE = 10;
+  const BATCH_SIZE = 100; // Increased from 10 to 100 for much faster processing
   for (let i = 0; i < tokenAddresses.length; i += BATCH_SIZE) {
     const batch = tokenAddresses.slice(i, i + BATCH_SIZE);
     const promises = batch.map(address => 

@@ -12,7 +12,7 @@ import { updateLoadingProgress } from '../routes';
 import { getTokenPriceDataFromDexScreener } from './dexscreener';
 import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
 import { executeWithFailover } from './rpc-provider';
-import { getTokenPriceFromContract } from './smart-contract-price-service';
+import { getTokenPriceFromContract, getMultipleTokenPricesFromContract } from './smart-contract-price-service';
 
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
 const RECENT_BLOCKS_TO_SCAN = 1000; // Last ~20 minutes of blocks
@@ -264,125 +264,155 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
       message: `Fetching details for ${tokenAddresses.size} tokens...`
     });
     
-    // Process tokens in batches
-    const BATCH_SIZE = 50;
+    // First, collect all token information
     const tokenArray = Array.from(tokenAddresses);
-    const batches: string[][] = [];
+    const tokenInfoMap = new Map<string, any>();
     
-    for (let i = 0; i < tokenArray.length; i += BATCH_SIZE) {
-      batches.push(tokenArray.slice(i, i + BATCH_SIZE));
-    }
-    
-    // Process all batches in parallel
+    // Process token metadata in batches
+    const METADATA_BATCH_SIZE = 50;
     let processedCount = 0;
-    const batchPromises = batches.map(async (batch, batchIndex) => {
-      const batchResults = await Promise.all(
+    
+    for (let i = 0; i < tokenArray.length; i += METADATA_BATCH_SIZE) {
+      const batch = tokenArray.slice(i, i + METADATA_BATCH_SIZE);
+      
+      await Promise.all(
         batch.map(async (tokenAddress) => {
           try {
-            // Check if we have scanner data for this token
             const scannerData = scannerBalances.get(tokenAddress);
             let tokenInfo;
             
             if (scannerData) {
-              // Use scanner data
               const decimals = parseInt(scannerData.token.decimals);
               const balanceFormatted = parseFloat(ethers.utils.formatUnits(scannerData.value, decimals));
               
               tokenInfo = {
+                address: tokenAddress,
                 balance: scannerData.value,
                 decimals,
                 symbol: scannerData.token.symbol,
                 name: scannerData.token.name,
-                balanceFormatted
+                balanceFormatted,
+                verified: scannerData.token.type === 'ERC-20'
               };
             } else {
-              // Token found in recent blocks but not in scanner, get balance from contract
               const contractData = await getTokenBalanceFromContract(tokenAddress, walletAddress);
-              if (!contractData || contractData.balance === '0') return null;
+              if (!contractData || contractData.balance === '0') return;
               
               const balanceFormatted = parseFloat(ethers.utils.formatUnits(contractData.balance, contractData.decimals));
               tokenInfo = {
+                address: tokenAddress,
                 ...contractData,
-                balanceFormatted
+                balanceFormatted,
+                verified: false
               };
             }
             
-            if (tokenInfo.balanceFormatted === 0) return null;
-            
-            // Get price from smart contract for real-time data
-            const contractPriceData = await getTokenPriceFromContract(tokenAddress).catch(() => null);
-            
-            // Get logo data from DexScreener (only for logo, not price)
-            const dexScreenerData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
-            
-            // First check database for existing logo
-            let logoUrl = '';
-            try {
-              const dbLogo = await storage.getTokenLogo(tokenAddress.toLowerCase());
-              if (dbLogo && dbLogo.hasLogo && dbLogo.logoUrl) {
-                logoUrl = dbLogo.logoUrl;
-              }
-            } catch (error) {
-              console.error(`Error fetching logo from database for ${tokenAddress}:`, error);
+            if (tokenInfo.balanceFormatted > 0) {
+              tokenInfoMap.set(tokenAddress, tokenInfo);
             }
-            
-            // If no logo in database and DexScreener has one, save it
-            if (!logoUrl && dexScreenerData?.logo) {
-              logoUrl = dexScreenerData.logo;
-              // Save logo to database with new schema
-              try {
-                await storage.saveTokenLogo({
-                  tokenAddress: tokenAddress.toLowerCase(),
-                  logoUrl: dexScreenerData.logo,
-                  symbol: tokenInfo.symbol,
-                  name: tokenInfo.name,
-                  hasLogo: true,
-                  lastAttempt: new Date()
-                });
-              } catch (error) {
-                console.error(`Failed to save logo for ${tokenAddress}:`, error);
-              }
-            }
-            
-            // If still no logo, check default (only PLS)
-            if (!logoUrl) {
-              logoUrl = getDefaultLogo(tokenInfo.symbol);
-            }
-            
-            return {
-              address: tokenAddress,
-              symbol: tokenInfo.symbol,
-              name: tokenInfo.name,
-              decimals: tokenInfo.decimals,
-              balance: tokenInfo.balance,
-              balanceFormatted: tokenInfo.balanceFormatted,
-              price: contractPriceData?.price || 0,
-              value: tokenInfo.balanceFormatted * (contractPriceData?.price || 0),
-              logo: logoUrl,
-              verified: scannerData?.token.type === 'ERC-20'
-            };
           } catch (error) {
-            console.error(`Error processing token ${tokenAddress}:`, error);
-            return null;
+            console.error(`Error processing token metadata for ${tokenAddress}:`, error);
           }
         })
       );
       
-      // Update progress
       processedCount += batch.length;
-      const progress = Math.floor((processedCount / tokenArray.length) * 40) + 40;
+      const progress = Math.floor((processedCount / tokenArray.length) * 20) + 40;
       updateLoadingProgress({
         status: 'loading',
-        currentBatch: Math.min(progress, 80),
+        currentBatch: Math.min(progress, 60),
         totalBatches: 100,
-        message: `Processing tokens... (${processedCount}/${tokenArray.length})`
+        message: `Processing token metadata... (${processedCount}/${tokenArray.length})`
       });
-      
-      return batchResults.filter(result => result !== null);
+    }
+    
+    // Update progress - Fetching prices (60%)
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: 60,
+      totalBatches: 100,
+      message: `Fetching prices for ${tokenInfoMap.size} tokens...`
     });
     
-    const batchResults = await Promise.all(batchPromises);
-    processedTokens.push(...batchResults.flat());
+    // Fetch all prices in one batch call
+    const tokensWithBalances = Array.from(tokenInfoMap.keys());
+    const priceMap = await getMultipleTokenPricesFromContract(tokensWithBalances);
+    
+    // Update progress - Fetching logos (70%)
+    updateLoadingProgress({
+      status: 'loading',
+      currentBatch: 70,
+      totalBatches: 100,
+      message: 'Fetching token logos...'
+    });
+    
+    // Process logos in batches (smaller batches to avoid rate limits)
+    const LOGO_BATCH_SIZE = 10;
+    const logoPromises: Promise<void>[] = [];
+    
+    for (let i = 0; i < tokensWithBalances.length; i += LOGO_BATCH_SIZE) {
+      const logoBatch = tokensWithBalances.slice(i, i + LOGO_BATCH_SIZE);
+      
+      logoPromises.push(...logoBatch.map(async (tokenAddress) => {
+        try {
+          // Check database for existing logo
+          let logoUrl = '';
+          const dbLogo = await storage.getTokenLogo(tokenAddress.toLowerCase()).catch(() => null);
+          
+          if (dbLogo && dbLogo.hasLogo && dbLogo.logoUrl) {
+            logoUrl = dbLogo.logoUrl;
+          } else {
+            // Fetch from DexScreener only if not in database
+            const dexScreenerData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
+            
+            if (dexScreenerData?.logo) {
+              logoUrl = dexScreenerData.logo;
+              // Save to database
+              await storage.saveTokenLogo({
+                tokenAddress: tokenAddress.toLowerCase(),
+                logoUrl: dexScreenerData.logo,
+                symbol: tokenInfoMap.get(tokenAddress)?.symbol || '',
+                name: tokenInfoMap.get(tokenAddress)?.name || '',
+                hasLogo: true,
+                lastAttempt: new Date()
+              }).catch(err => console.error(`Failed to save logo for ${tokenAddress}:`, err));
+            }
+          }
+          
+          if (!logoUrl) {
+            logoUrl = getDefaultLogo(tokenInfoMap.get(tokenAddress)?.symbol || '');
+          }
+          
+          // Update token info with logo
+          const info = tokenInfoMap.get(tokenAddress);
+          if (info) {
+            info.logo = logoUrl;
+          }
+        } catch (error) {
+          console.error(`Error fetching logo for ${tokenAddress}:`, error);
+        }
+      }));
+      
+      // Small delay between batches to avoid rate limits
+      if (i + LOGO_BATCH_SIZE < tokensWithBalances.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
+    await Promise.all(logoPromises);
+    
+    // Build final processed tokens array
+    for (const [tokenAddress, tokenInfo] of tokenInfoMap) {
+      const priceData = priceMap.get(tokenAddress.toLowerCase());
+      const price = priceData?.price || 0;
+      
+      processedTokens.push({
+        ...tokenInfo,
+        price,
+        value: tokenInfo.balanceFormatted * price,
+        logo: tokenInfo.logo || ''
+      });
+    }
     
     // Update progress - Checking LP tokens (80%)
     updateLoadingProgress({
