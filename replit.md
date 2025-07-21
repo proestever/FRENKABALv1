@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 21, 2025 - Implemented Local Image Storage for Logos
+- **Added image storage in database** - Logo images are now downloaded and stored as base64 data in the database
+- **Eliminated external dependencies** - No more reliance on DexScreener or external URLs that might change or rate limit
+- **Added imageData and imageType columns** - Database schema updated to store actual image data
+- **Created image-storage-service** - New service to download images and convert to base64 format
+- **Updated logo endpoints** - Both single and batch logo endpoints now download and store image data
+- **Result** - Logo loading is now instant from local storage, completely eliminating rate limiting concerns
+
 ### July 21, 2025 - Optimized Logo Loading for Large Portfolios
 - **Batch API calls for logos** - Changed from individual API calls (380 for large portfolios) to batch calls (max 100 per batch)
 - **Removed artificial delays** - All logo batches now process in parallel without delays

@@ -115,6 +115,8 @@ export const tokenLogos = pgTable("token_logos", {
   id: serial("id").primaryKey(),
   tokenAddress: text("token_address").notNull().unique(),
   logoUrl: text("logo_url"),
+  imageData: text("image_data"), // Base64 encoded image data
+  imageType: text("image_type"), // mime type (image/png, image/jpeg, etc)
   symbol: text("symbol"),
   name: text("name"),
   lastUpdated: text("last_updated").notNull(),
@@ -125,6 +127,8 @@ export const tokenLogos = pgTable("token_logos", {
 export const insertTokenLogoSchema = createInsertSchema(tokenLogos).pick({
   tokenAddress: true,
   logoUrl: true,
+  imageData: true,
+  imageType: true,
   symbol: true,
   name: true,
   lastUpdated: true,

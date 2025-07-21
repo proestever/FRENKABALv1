@@ -930,9 +930,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const tokenData = await getTokenPrice(address);
             
             if (tokenData && tokenData.tokenLogo) {
+              // Download and store the image
+              const { downloadImageAsBase64 } = await import('./services/image-storage-service.js');
+              const imageData = await downloadImageAsBase64(tokenData.tokenLogo);
+              
               const newLogo = {
                 tokenAddress: address,
                 logoUrl: tokenData.tokenLogo,
+                imageData: imageData?.imageData || undefined,
+                imageType: imageData?.imageType || undefined,
                 symbol: tokenData.tokenSymbol || "",
                 name: tokenData.tokenName || "",
                 lastUpdated: new Date().toISOString()
@@ -1148,9 +1154,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               }
               
+              // Download and store the image
+              const { downloadImageAsBase64 } = await import('./services/image-storage-service.js');
+              const imageData = await downloadImageAsBase64(logoUrl);
+              
               const newLogo = {
                 tokenAddress: address,
                 logoUrl: logoUrl,
+                imageData: imageData?.imageData || undefined,
+                imageType: imageData?.imageType || undefined,
                 symbol: tokenInfo.symbol || "",
                 name: tokenInfo.name || "",
                 lastUpdated: new Date().toISOString()
@@ -1235,6 +1247,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // At this point we should definitely have a logo to return
+      // If we have stored image data, convert it to a data URL
+      if (logo.imageData && logo.imageType) {
+        const { base64ToDataUrl } = await import('./services/image-storage-service.js');
+        return res.json({
+          ...logo,
+          logoUrl: base64ToDataUrl(logo.imageData, logo.imageType)
+        });
+      }
+      
       return res.json(logo);
     } catch (error) {
       console.error("Error fetching token logo:", error);

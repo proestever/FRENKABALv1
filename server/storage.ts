@@ -122,6 +122,8 @@ export class DatabaseStorage implements IStorage {
         // Update the existing logo - only use fields that exist in current database
         const updateData: any = {
           logoUrl: processedLogo.logoUrl,
+          imageData: processedLogo.imageData,
+          imageType: processedLogo.imageType,
           symbol: processedLogo.symbol,
           name: processedLogo.name,
           lastUpdated: processedLogo.lastUpdated
@@ -141,6 +143,8 @@ export class DatabaseStorage implements IStorage {
         const insertData: any = {
           tokenAddress: processedLogo.tokenAddress,
           logoUrl: processedLogo.logoUrl,
+          imageData: processedLogo.imageData,
+          imageType: processedLogo.imageType,
           symbol: processedLogo.symbol,
           name: processedLogo.name,
           lastUpdated: processedLogo.lastUpdated
