@@ -274,6 +274,8 @@ export async function fetchWalletDataWithContractPrices(
     if (onProgress) onProgress('Fetching all wallet tokens...', 10);
     const walletDataRaw = await fetchWalletBalancesFromScanner(address);
     
+    console.log('Raw wallet data from scanner:', walletDataRaw);
+    
     // Convert null values to undefined for proper type compatibility
     const walletData: Wallet = {
       ...walletDataRaw,
@@ -281,7 +283,10 @@ export async function fetchWalletDataWithContractPrices(
       plsPriceChange: walletDataRaw.plsPriceChange ?? undefined
     };
     
+    console.log('Wallet data after conversion:', walletData);
+    
     if (!walletData.tokens || walletData.tokens.length === 0) {
+      console.log('No tokens found, returning early');
       return walletData;
     }
     

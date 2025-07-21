@@ -74,9 +74,14 @@ export function useClientSideWallet(walletAddress: string | null) {
     staleTime: Infinity,
     gcTime: Infinity,
     queryFn: async () => {
-      if (!walletAddress) return null;
+      console.log('Query function called with address:', walletAddress);
+      if (!walletAddress) {
+        console.log('No wallet address, returning null');
+        return null;
+      }
       
       try {
+        console.log('Fetching wallet data for:', walletAddress);
         // Fetch wallet data with direct smart contract price reading (real-time)
         const data = await fetchWalletDataWithContractPrices(walletAddress, (message, progress) => {
           setProgress({
@@ -95,8 +100,10 @@ export function useClientSideWallet(walletAddress: string | null) {
           message: `Successfully loaded ${data.tokens.length} tokens`
         });
         
+        console.log('Returning wallet data from query:', data);
         return data;
       } catch (error) {
+        console.error('Error in wallet query:', error);
         setProgress({
           currentBatch: 0,
           totalBatches: 100,
