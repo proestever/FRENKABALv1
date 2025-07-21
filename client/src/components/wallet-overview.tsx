@@ -11,7 +11,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useHexStakes, fetchHexStakesSummary, HexStakeSummary } from '@/hooks/use-hex-stakes';
 import { LastUpdatedInfo } from '@/components/last-updated-info';
-import { useLocation } from 'wouter';
+import { WalletShareModal } from '@/components/wallet-share-modal';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -29,11 +29,9 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
   const [visibleTokenCount, setVisibleTokenCount] = useState<number>(0);
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
   const [existingBookmark, setExistingBookmark] = useState<Bookmark | null>(null);
-  const [, setLocation] = useLocation();
-  
-
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isCheckingBookmark, setIsCheckingBookmark] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   
   // Get HEX stakes data from hook for single wallet view
   const hexStakesFromHook = useHexStakes(wallet?.address);
@@ -263,10 +261,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
             {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
               <Button
                 variant="outline"
-                onClick={() => {
-                  const shareUrl = `/share/${wallet.address}`;
-                  setLocation(shareUrl);
-                }}
+                onClick={() => setShareModalOpen(true)}
                 className="glass-card border-white/15 text-sm h-8 hover:bg-black/20 hover:text-white flex items-center"
               >
                 <Share2 className="h-4 w-4 mr-1" />
@@ -402,6 +397,15 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
 
         </div>
       </Card>
+      
+      {/* Share Modal */}
+      <WalletShareModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        walletAddress={wallet.address}
+        walletData={wallet}
+        hexStakesData={hexStakesFromHook}
+      />
     </section>
   );
 }
