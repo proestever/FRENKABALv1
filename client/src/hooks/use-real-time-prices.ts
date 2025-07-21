@@ -14,7 +14,7 @@ interface UseRealTimePricesOptions {
   walletAddress: string;
   tokens: TokenWithPrice[];
   enabled?: boolean;
-  intervalMs?: number; // Default: 5000ms (5 seconds)
+  intervalMs?: number; // Default: 30000ms (30 seconds)
 }
 
 /**
@@ -25,7 +25,7 @@ export function useRealTimePrices({
   walletAddress,
   tokens,
   enabled = true,
-  intervalMs = 5000
+  intervalMs = 30000
 }: UseRealTimePricesOptions) {
   const queryClient = useQueryClient();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -37,8 +37,20 @@ export function useRealTimePrices({
     try {
       isUpdatingRef.current = true;
       
+      // For very large wallets, only update top tokens by value to prevent performance issues
+      const MAX_TOKENS_TO_UPDATE = 50;
+      let tokensToUpdate = tokens;
+      
+      if (tokens.length > MAX_TOKENS_TO_UPDATE) {
+        // Sort by value and take top 50
+        tokensToUpdate = [...tokens]
+          .sort((a, b) => (b.value || 0) - (a.value || 0))
+          .slice(0, MAX_TOKENS_TO_UPDATE);
+        console.log(`Limiting real-time updates to top ${MAX_TOKENS_TO_UPDATE} tokens by value`);
+      }
+      
       // Prepare token addresses
-      const tokenAddresses = tokens.map(token => {
+      const tokenAddresses = tokensToUpdate.map(token => {
         // For PLS native token, use WPLS price
         if (token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
           return '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS

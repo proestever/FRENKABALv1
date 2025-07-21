@@ -342,22 +342,24 @@ export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): P
   
   console.log(`Starting background logo fetch for ${tokensWithoutLogos.length} tokens`);
   
-  // Process all tokens in parallel for maximum speed
-  const BATCH_SIZE = 100; // Max batch size supported by server
+  // Process tokens in smaller batches with delays to prevent system overload
+  const BATCH_SIZE = 20; // Reduced batch size for better performance
+  const BATCH_DELAY = 2000; // 2 second delay between batches
+  const MAX_CONCURRENT = 5; // Maximum concurrent requests per batch
   
-  // Process all batches in parallel instead of sequentially
-  const batches = [];
+  // Process batches sequentially with delays
   for (let i = 0; i < tokensWithoutLogos.length; i += BATCH_SIZE) {
     const batch = tokensWithoutLogos.slice(i, i + BATCH_SIZE);
-    batches.push(batch);
-  }
-  
-  await Promise.all(
-    batches.map(async (batch) => {
-      // No delay - process all batches immediately in parallel
-      
+    
+    // Process tokens within batch with limited concurrency
+    const chunks = [];
+    for (let j = 0; j < batch.length; j += MAX_CONCURRENT) {
+      chunks.push(batch.slice(j, j + MAX_CONCURRENT));
+    }
+    
+    for (const chunk of chunks) {
       await Promise.all(
-        batch.map(async (token) => {
+        chunk.map(async (token) => {
           try {
             const priceData = await getTokenPriceFromDexScreener(token.address);
             
@@ -371,8 +373,18 @@ export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): P
           }
         })
       );
-    })
-  );
+      
+      // Small delay between chunks
+      if (chunks.indexOf(chunk) < chunks.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+    
+    // Delay between batches (except for the last batch)
+    if (i + BATCH_SIZE < tokensWithoutLogos.length) {
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+    }
+  }
   
   console.log('Background logo fetch completed');
 }

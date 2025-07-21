@@ -132,6 +132,13 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 21, 2025 - Performance Optimizations for Large Wallet Loading
+- **Reduced real-time price update frequency** - Changed from 5 seconds to 30 seconds to prevent constant blockchain calls
+- **Throttled background logo fetching** - Reduced batch size from 100 to 20 tokens with 2-second delays between batches
+- **Limited concurrent requests** - Maximum 5 simultaneous logo requests to prevent browser overload
+- **Smart price updates for large wallets** - Only top 50 tokens by value get real-time updates for wallets with 100+ tokens
+- **Result** - Eliminated sluggishness when loading wallets with hundreds of tokens, much more responsive UI
+
 ### July 21, 2025 - Implemented Local Image Storage for Logos
 - **Added image storage in database** - Logo images are now downloaded and stored as base64 data in the database
 - **Eliminated external dependencies** - No more reliance on DexScreener or external URLs that might change or rate limit
