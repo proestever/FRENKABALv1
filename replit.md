@@ -140,6 +140,9 @@ Required environment variables:
 - **Enhanced Display** - Shows token names, symbols, logos, values, and balances in an easy-to-screenshot format
 - **Gradient Styling** - Beautiful gradient backgrounds and text effects for visual appeal
 - **Mobile Responsive** - Clean design works well on all screen sizes for easy sharing
+- **Domain Update** - Changed domain display from frenkabal.app to frenkabal.com per user preference
+- **Hidden Token Support** - Share page respects hidden tokens - they are excluded from both the top 10 list and total value calculations
+- **HEX Stakes Integration** - HEX stakes now appear as a line item in the top 10 list, positioned based on dollar value with special purple gradient logo
 
 ### July 21, 2025 - Performance Optimizations for Large Wallet Loading
 - **Reduced real-time price update frequency** - Changed from 5 seconds to 5 minutes to prevent constant blockchain calls

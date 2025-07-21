@@ -12,7 +12,7 @@ export default function WalletShare() {
   const { walletData, isLoading } = useClientSideWallet(walletAddress || '');
   const hexStakesData = useHexStakes(walletAddress || '');
   const [totalValue, setTotalValue] = useState(0);
-  const [sortedTokens, setSortedTokens] = useState<Token[]>([]);
+  const [sortedTokens, setSortedTokens] = useState<any[]>([]);
   const [hiddenTokens, setHiddenTokens] = useState<string[]>([]);
 
   // Load hidden tokens on mount
@@ -28,14 +28,44 @@ export default function WalletShare() {
         !hiddenTokens.includes(token.address)
       );
       
-      // Sort visible tokens by value and get top 10
-      const sorted = [...visibleTokens]
+      // Create a list including HEX stakes if they have value
+      let allAssets = [...visibleTokens];
+      
+      // Add HEX stakes as a virtual token if it has value
+      if (hexStakesData && hexStakesData.totalCombinedValueUsd > 0) {
+        const hexStakesToken = {
+          address: 'hex-stakes-virtual',
+          symbol: 'HEX (Staked)',
+          name: 'HEX Stakes',
+          balance: hexStakesData.totalCombinedHex,
+          value: hexStakesData.totalCombinedValueUsd,
+          price: hexStakesData.hexPrice || 0,
+          balanceFormatted: parseFloat(hexStakesData.totalCombinedHex),
+          decimals: 8,
+          logo: '',
+          isLp: false,
+          lpToken0Address: '',
+          lpToken1Address: '',
+          lpToken0Symbol: '',
+          lpToken1Symbol: '',
+          lpToken0Balance: '',
+          lpToken1Balance: '',
+          lpToken0BalanceFormatted: 0,
+          lpToken1BalanceFormatted: 0,
+          lpToken0Value: 0,
+          lpToken1Value: 0
+        };
+        allAssets.push(hexStakesToken);
+      }
+      
+      // Sort all assets by value and get top 10
+      const sorted = allAssets
         .sort((a, b) => (b.value || 0) - (a.value || 0))
         .slice(0, 10);
       
       setSortedTokens(sorted);
       
-      // Calculate total portfolio value (only visible tokens)
+      // Calculate total portfolio value (visible tokens + HEX stakes)
       const tokenTotal = visibleTokens.reduce((sum, token) => sum + (token.value || 0), 0);
       const hexStakesTotal = hexStakesData?.totalCombinedValueUsd || 0;
       setTotalValue(tokenTotal + hexStakesTotal);
@@ -109,11 +139,17 @@ export default function WalletShare() {
                     <span className="text-2xl font-bold bg-gradient-to-r from-gray-400 to-gray-500 bg-clip-text text-transparent w-10">
                       {index + 1}.
                     </span>
-                    <TokenLogo 
-                      address={token.address} 
-                      symbol={token.symbol} 
-                      size="md"
-                    />
+                    {token.address === 'hex-stakes-virtual' ? (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">HEX</span>
+                      </div>
+                    ) : (
+                      <TokenLogo 
+                        address={token.address} 
+                        symbol={token.symbol} 
+                        size="md"
+                      />
+                    )}
                     <div>
                       <span className="text-xl font-semibold text-white">
                         {token.symbol || 'Unknown'}
