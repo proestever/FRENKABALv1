@@ -1,0 +1,35 @@
+I understand now - your app works fine but is getting stuck when fetching prices after you changed how wallet data is loaded. Let me analyze your code to identify the issue.
+Let me search for more specific information about your repository's price fetching implementation:"proestever/FRENKABALv1" price fetch token pulsechain0 resultsBased on your description of the issue (app getting stuck fetching prices after changing wallet data loading), here are the most common problems and solutions:Price Fetching Debug & SolutionsCode // Common Price Fetching Issues and Solutions for PulseChain
+
+// 1. RACE CONDITION ISSUE - Most likely problem
+// If you're fetching wallet data and prices simultaneously, you might have a race condition
+
+// BAD - This can cause infinite loops or stuNow let me create a specific debugging guide to help you identify exactly where your price fetching is getting stuck:Price Fetch Debugging GuideDocument # Debugging Price Fetch Issues in FRENKABAL
+
+## Quick Diagnosis Steps
+
+### 1. Check Browser Console
+Open DevTools (F12) and look for:
+- Network tab: Are price API calls being made?
+- Console tab: Any error messages?
+- Network tab: Are requests stuck I've created comprehensive debugging guides for your price fetching issue. Based on your description that the app gets stuck when fetching prices after changing how wallet data loads, the most likely causes are:
+
+Race Condition: You might be trying to fetch prices before the wallet tokens are fully loaded
+Infinite Loop: The new loading method might be triggering continuous re-renders
+API Rate Limiting: The new method might be making too many requests too quickly
+State Management Issue: The price fetching might not be properly triggered after wallet data loads
+
+To quickly diagnose the issue:
+
+Open your browser's Developer Console (F12)
+Look for any error messages
+Check the Network tab to see if price API calls are stuck in "Pending" state
+Add the debug logging I provided to see exactly where it's getting stuck
+
+Could you share:
+
+Any error messages from the browser console?
+Whether the price API calls show up in the Network tab?
+A snippet of how you changed the wallet data loading code?
+
+This will help me provide a more specific fix for your issue.RetryClaude can make mistakes. Please double-check cited sources.

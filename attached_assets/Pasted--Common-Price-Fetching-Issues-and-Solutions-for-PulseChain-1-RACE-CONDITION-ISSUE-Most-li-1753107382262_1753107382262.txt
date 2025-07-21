@@ -1,0 +1,285 @@
+// Common Price Fetching Issues and Solutions for PulseChain
+
+// 1. RACE CONDITION ISSUE - Most likely problem
+// If you're fetching wallet data and prices simultaneously, you might have a race condition
+
+// BAD - This can cause infinite loops or stuck states
+const fetchWalletData = async (address: string) => {
+  // Don't do this - fetching prices before tokens are loaded
+  const [tokens, prices] = await Promise.all([
+    getWalletTokens(address),
+    getTokenPrices(/* tokens not available yet! */)
+  ]);
+};
+
+// GOOD - Sequential loading with proper dependencies
+const fetchWalletData = async (address: string) => {
+  try {
+    // First, get the wallet tokens
+    const tokens = await getWalletTokens(address);
+    
+    // Then, get prices only for tokens that exist
+    if (tokens && tokens.length > 0) {
+      const tokenAddresses = tokens.map(t => t.address).filter(Boolean);
+      const prices = await getTokenPrices(tokenAddresses);
+      return { tokens, prices };
+    }
+    
+    return { tokens: [], prices: {} };
+  } catch (error) {
+    console.error('Error fetching wallet data:', error);
+    return { tokens: [], prices: {} };
+  }
+};
+
+// 2. PRICE API RATE LIMITING ISSUE
+// If you're hitting rate limits, implement retry logic and caching
+
+class PriceService {
+  private cache = new Map<string, { price: number; timestamp: number }>();
+  private CACHE_DURATION = 60000; // 1 minute
+  private requestQueue: Promise<any> = Promise.resolve();
+  private requestDelay = 100; // ms between requests
+  
+  async getTokenPrices(tokenAddresses: string[]): Promise<Record<string, number>> {
+    const prices: Record<string, number> = {};
+    const tokensToFetch: string[] = [];
+    
+    // Check cache first
+    for (const address of tokenAddresses) {
+      const cached = this.cache.get(address.toLowerCase());
+      if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+        prices[address] = cached.price;
+      } else {
+        tokensToFetch.push(address);
+      }
+    }
+    
+    // Batch fetch uncached prices
+    if (tokensToFetch.length > 0) {
+      const freshPrices = await this.fetchPricesWithRetry(tokensToFetch);
+      Object.assign(prices, freshPrices);
+    }
+    
+    return prices;
+  }
+  
+  private async fetchPricesWithRetry(
+    addresses: string[], 
+    retries = 3
+  ): Promise<Record<string, number>> {
+    try {
+      // Queue requests to avoid rate limits
+      await this.requestQueue;
+      this.requestQueue = this.requestQueue.then(() => 
+        new Promise(resolve => setTimeout(resolve, this.requestDelay))
+      );
+      
+      // Batch addresses to avoid URL length limits
+      const BATCH_SIZE = 30;
+      const batches = [];
+      
+      for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
+        batches.push(addresses.slice(i, i + BATCH_SIZE));
+      }
+      
+      const allPrices: Record<string, number> = {};
+      
+      for (const batch of batches) {
+        const prices = await this.fetchPriceBatch(batch);
+        Object.assign(allPrices, prices);
+        
+        // Add to cache
+        for (const [address, price] of Object.entries(prices)) {
+          this.cache.set(address.toLowerCase(), {
+            price,
+            timestamp: Date.now()
+          });
+        }
+      }
+      
+      return allPrices;
+    } catch (error) {
+      if (retries > 0) {
+        console.warn(`Price fetch failed, retrying... (${retries} left)`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return this.fetchPricesWithRetry(addresses, retries - 1);
+      }
+      throw error;
+    }
+  }
+  
+  private async fetchPriceBatch(addresses: string[]): Promise<Record<string, number>> {
+    // DexScreener API example
+    const params = addresses.map(a => `address=${a}`).join('&');
+    const response = await fetch(
+      `https://api.dexscreener.com/latest/dex/tokens/${addresses.join(',')}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Price API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const prices: Record<string, number> = {};
+    
+    // Parse DexScreener response
+    if (data.pairs) {
+      for (const pair of data.pairs) {
+        const tokenAddress = pair.baseToken.address.toLowerCase();
+        prices[tokenAddress] = parseFloat(pair.priceUsd) || 0;
+      }
+    }
+    
+    return prices;
+  }
+}
+
+// 3. REACT HOOK ISSUE - Infinite re-render loop
+// BAD - This causes infinite loops
+function WalletView({ address }: { address: string }) {
+  const [tokens, setTokens] = useState([]);
+  const [prices, setPrices] = useState({});
+  
+  // This runs on every render!
+  fetchWalletData(address).then(data => {
+    setTokens(data.tokens);
+    setPrices(data.prices);
+  });
+  
+  return <div>...</div>;
+}
+
+// GOOD - Proper effect with dependencies
+function WalletView({ address }: { address: string }) {
+  const [tokens, setTokens] = useState([]);
+  const [prices, setPrices] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    let cancelled = false;
+    
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch tokens first
+        const walletTokens = await getWalletTokens(address);
+        
+        if (cancelled) return;
+        
+        setTokens(walletTokens);
+        
+        // Only fetch prices if we have tokens
+        if (walletTokens.length > 0) {
+          const tokenAddresses = walletTokens
+            .map(t => t.address)
+            .filter(Boolean);
+            
+          const tokenPrices = await priceService.getTokenPrices(tokenAddresses);
+          
+          if (cancelled) return;
+          
+          setPrices(tokenPrices);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message);
+          console.error('Failed to load wallet data:', err);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    loadData();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [address]); // Only re-run when address changes
+  
+  if (loading) return <div>Loading prices...</div>;
+  if (error) return <div>Error: {error}</div>;
+  
+  return (
+    <div>
+      {tokens.map(token => (
+        <div key={token.address}>
+          {token.symbol}: ${prices[token.address] || 'Loading...'}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// 4. MORALIS API SPECIFIC ISSUES
+// If using Moralis for price data, handle their specific requirements
+
+async function getMoralisPrices(tokens: string[]) {
+  const MORALIS_API_KEY = process.env.MORALIS_API_KEY;
+  
+  try {
+    // Moralis requires chain specification
+    const chain = '0x171'; // PulseChain
+    
+    // Batch request for multiple tokens
+    const response = await fetch(
+      `https://deep-index.moralis.io/api/v2/erc20/prices?chain=${chain}`,
+      {
+        method: 'POST',
+        headers: {
+          'X-API-Key': MORALIS_API_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tokens: tokens.map(address => ({ address }))
+        })
+      }
+    );
+    
+    if (!response.ok) {
+      // Handle Moralis-specific errors
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded');
+      }
+      throw new Error(`Moralis API error: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Moralis price fetch failed:', error);
+    // Fallback to alternative price source
+    return getFallbackPrices(tokens);
+  }
+}
+
+// 5. DEBUGGING HELPER
+// Add this to identify where the app is getting stuck
+
+const debugFetch = async (name: string, fn: () => Promise<any>) => {
+  console.log(`[${name}] Starting...`);
+  const start = Date.now();
+  
+  try {
+    const result = await fn();
+    console.log(`[${name}] Completed in ${Date.now() - start}ms`);
+    return result;
+  } catch (error) {
+    console.error(`[${name}] Failed after ${Date.now() - start}ms:`, error);
+    throw error;
+  }
+};
+
+// Use it like this:
+const tokens = await debugFetch('getWalletTokens', () => 
+  getWalletTokens(address)
+);
+
+const prices = await debugFetch('getTokenPrices', () => 
+  getTokenPrices(tokenAddresses)
+);

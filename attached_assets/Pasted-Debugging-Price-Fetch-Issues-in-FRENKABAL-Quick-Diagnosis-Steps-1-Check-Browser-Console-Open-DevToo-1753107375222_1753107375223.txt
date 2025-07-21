@@ -1,0 +1,129 @@
+Debugging Price Fetch Issues in FRENKABAL
+Quick Diagnosis Steps
+1. Check Browser Console
+Open DevTools (F12) and look for:
+
+Network tab: Are price API calls being made?
+Console tab: Any error messages?
+Network tab: Are requests stuck in "Pending" state?
+
+2. Add Debug Logging
+Add this to your price fetching code:
+javascript// In your price fetching function
+console.log('Price fetch started for tokens:', tokenAddresses);
+console.time('priceFetch');
+
+try {
+  const prices = await fetchPrices(tokenAddresses);
+  console.timeEnd('priceFetch');
+  console.log('Prices received:', prices);
+  return prices;
+} catch (error) {
+  console.timeEnd('priceFetch');
+  console.error('Price fetch failed:', error);
+  throw error;
+}
+3. Common Issues & Quick Fixes
+A. Empty Token Array
+javascript// Check if tokens array is empty or undefined
+if (!tokens || tokens.length === 0) {
+  console.log('No tokens to fetch prices for');
+  return {};
+}
+B. Invalid Token Addresses
+javascript// Filter out invalid addresses
+const validAddresses = tokenAddresses.filter(addr => 
+  addr && addr.match(/^0x[a-fA-F0-9]{40}$/)
+);
+C. API Key Issues
+javascript// Check if API key is loaded
+console.log('Moralis API Key exists:', !!process.env.MORALIS_API_KEY);
+Most Likely Issues Based on Your Description
+1. Async State Update Issue
+If you changed from synchronous to asynchronous wallet loading:
+javascript// OLD WAY (might have worked)
+const wallet = getWalletDataSync();
+const prices = getPricesForWallet(wallet);
+
+// NEW WAY (might be broken)
+getWalletDataAsync().then(wallet => {
+  // This might not trigger price updates properly
+  getPricesForWallet(wallet);
+});
+Fix:
+javascript// Ensure proper state management
+const [wallet, setWallet] = useState(null);
+const [prices, setPrices] = useState({});
+
+useEffect(() => {
+  if (wallet?.tokens) {
+    fetchPrices(wallet.tokens).then(setPrices);
+  }
+}, [wallet?.tokens]); // Trigger when tokens change
+2. Price API Changed Response Format
+DexScreener/Moralis might have changed their API:
+javascript// Add response validation
+const response = await fetch(priceApiUrl);
+const data = await response.json();
+
+console.log('API Response structure:', data);
+
+// Validate expected structure
+if (!data.pairs && !data.tokens) {
+  console.error('Unexpected API response format');
+}
+3. Token Address Format Mismatch
+PulseChain might use different address formats:
+javascript// Normalize addresses
+const normalizeAddress = (address) => {
+  return address.toLowerCase();
+};
+
+// When fetching prices
+const normalizedAddresses = tokens.map(t => 
+  normalizeAddress(t.address || t.contractAddress)
+);
+Emergency Fixes
+Quick Fix 1: Bypass Price Fetching
+javascript// Temporarily return mock prices to test if this is the issue
+const getTokenPrices = async (tokens) => {
+  console.warn('Using mock prices - remove in production!');
+  return tokens.reduce((acc, token) => {
+    acc[token] = 0.001; // Mock price
+    return acc;
+  }, {});
+};
+Quick Fix 2: Add Timeout
+javascriptconst fetchWithTimeout = async (promise, timeoutMs = 5000) => {
+  const timeout = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
+  );
+  
+  return Promise.race([promise, timeout]);
+};
+
+// Use it
+try {
+  const prices = await fetchWithTimeout(fetchPrices(tokens), 10000);
+} catch (error) {
+  console.error('Price fetch timed out or failed:', error);
+  // Use fallback prices or show error
+}
+Quick Fix 3: Disable Price Fetching
+javascript// Add a feature flag
+const ENABLE_PRICE_FETCH = false; // Toggle this
+
+if (ENABLE_PRICE_FETCH) {
+  // Normal price fetching
+} else {
+  // Skip price fetching to test if app works
+  setPrices({});
+}
+Next Steps
+
+Add the debug logging from section 1
+Check the console for specific error messages
+Test with a single wallet that you know works
+Check your API rate limits - you might be hitting limits with the new loading method
+
+Let me know what errors you see in the console, and I can provide more specific fixes!Chat controls Opus 4

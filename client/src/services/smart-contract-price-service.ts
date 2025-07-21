@@ -2,9 +2,9 @@ import { ethers } from 'ethers';
 
 // Multiple RPC endpoints for reliability
 const RPC_ENDPOINTS = [
-  'https://rpc.pulsechain.com',
   'https://rpc-pulsechain.g4mm4.io',
-  'https://pulsechain.publicnode.com'
+  'https://rpc.pulsechain.com',
+  'https://pulsechain-rpc.publicnode.com'
 ];
 
 // ABI for PulseX pair contracts (minimal required functions)
@@ -64,15 +64,38 @@ class SmartContractPriceService {
   private CACHE_TTL = 2000; // 2 seconds cache for rapid updates
 
   constructor() {
-    this.initializeProviders();
+    this.initializeProviders().catch(console.error);
   }
 
-  private initializeProviders() {
-    // Initialize multiple providers for redundancy
-    this.providers = RPC_ENDPOINTS.map(url => new ethers.providers.JsonRpcProvider(url));
+  private async initializeProviders() {
+    // Initialize multiple providers for redundancy with network detection
+    for (const url of RPC_ENDPOINTS) {
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(url);
+        // Set a timeout for network detection
+        const networkPromise = provider.getNetwork();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Network detection timeout')), 5000)
+        );
+        
+        await Promise.race([networkPromise, timeoutPromise]);
+        this.providers.push(provider);
+      } catch (error) {
+        console.warn(`Failed to initialize provider ${url}:`, error);
+      }
+    }
+    
+    if (this.providers.length === 0) {
+      console.error('Failed to initialize any RPC providers');
+    }
   }
 
-  private getProvider(): ethers.providers.JsonRpcProvider {
+  private getProvider(): ethers.providers.JsonRpcProvider | null {
+    if (this.providers.length === 0) {
+      console.error('No RPC providers available');
+      return null;
+    }
+    
     // Round-robin through providers for load balancing
     const provider = this.providers[this.currentProviderIndex];
     this.currentProviderIndex = (this.currentProviderIndex + 1) % this.providers.length;
@@ -123,6 +146,7 @@ class SmartContractPriceService {
    */
   private async getStablecoinPairPrice(tokenAddress: string): Promise<PriceData | null> {
     const provider = this.getProvider();
+    if (!provider) return null;
     const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
 
     // Try each stablecoin
@@ -175,6 +199,7 @@ class SmartContractPriceService {
     }
 
     const provider = this.getProvider();
+    if (!provider) return null;
     const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
 
     try {
@@ -242,6 +267,7 @@ class SmartContractPriceService {
     token1Address: string
   ): Promise<TokenReserves | null> {
     const provider = this.getProvider();
+    if (!provider) return null;
     const pair = new ethers.Contract(pairAddress, PAIR_ABI, provider);
 
     try {
@@ -255,8 +281,8 @@ class SmartContractPriceService {
       const reserves = await pair.getReserves();
 
       // Get decimals for both tokens
-      const token0Contract = new ethers.Contract(pairToken0, ERC20_ABI, provider);
-      const token1Contract = new ethers.Contract(pairToken1, ERC20_ABI, provider);
+      const token0Contract = new ethers.Contract(pairToken0, ERC20_ABI, provider!);
+      const token1Contract = new ethers.Contract(pairToken1, ERC20_ABI, provider!);
       
       const [decimals0, decimals1] = await Promise.all([
         token0Contract.decimals(),
