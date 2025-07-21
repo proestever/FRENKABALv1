@@ -126,7 +126,7 @@ export function WalletShareModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-gradient-to-b from-black via-gray-950 to-black border-gray-800 text-white p-0 overflow-hidden">
+      <DialogContent className="max-w-2xl w-[90vw] max-h-[90vh] bg-gradient-to-b from-black via-gray-950 to-black border-gray-800 text-white p-0 overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(147,51,234,0.15)_0%,transparent_60%),radial-gradient(ellipse_at_bottom,rgba(236,72,153,0.15)_0%,transparent_60%)] pointer-events-none"></div>
         
@@ -134,75 +134,75 @@ export function WalletShareModal({
           <DialogTitle>Wallet Share</DialogTitle>
         </VisuallyHidden>
         
-        <div className="relative z-10 p-8">
+        <div className="relative z-10 px-4 py-8 md:p-8 md:py-16 overflow-y-auto max-h-[90vh]">
           {/* Close button */}
           <button
             onClick={() => onOpenChange(false)}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-800/50 transition-colors"
+            className="absolute top-2 right-2 md:top-4 md:right-4 p-2 rounded-full hover:bg-gray-800/50 transition-colors z-20"
           >
             <X className="h-5 w-5 text-gray-400" />
           </button>
 
           {/* Frenkabal Branding */}
-          <div className="flex items-center justify-center mb-12">
+          <div className="flex items-center justify-center mb-8 md:mb-12">
             <img 
               src="/assets/100xfrenlogo.png" 
               alt="Frenkabal" 
-              className="h-20 w-20 mr-4 animate-pulse"
+              className="h-16 w-16 md:h-20 md:w-20 mr-3 md:mr-4 animate-pulse"
             />
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                 FRENKABAL
               </h1>
-              <p className="text-gray-400">Wallet Tracker</p>
+              <p className="text-sm md:text-base text-gray-400">Wallet Tracker</p>
             </div>
           </div>
 
           {/* Portfolio Total */}
-          <div className="text-center mb-8">
-            <p className="text-gray-400 text-sm mb-2">Total Portfolio Value</p>
-            <p className="text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+          <div className="text-center mb-6 md:mb-8">
+            <p className="text-gray-400 text-xs md:text-sm mb-2">Total Portfolio Value</p>
+            <p className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
               {formatCurrency(totalValue)}
             </p>
           </div>
 
           {/* Token List */}
-          <div className="space-y-4 mb-8">
+          <div className="space-y-2 md:space-y-4 mb-8">
             {sortedTokens.map((token, index) => (
-              <div key={token.address} className="flex items-center justify-between p-4 rounded-lg bg-gray-900/50 backdrop-blur-sm border border-gray-800">
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl font-bold bg-gradient-to-r from-gray-400 to-gray-500 bg-clip-text text-transparent w-10">
+              <div key={token.address} className="flex items-center justify-between p-3 md:p-4 rounded-lg bg-gray-900/50 backdrop-blur-sm border border-gray-800">
+                <div className="flex items-center gap-2 md:gap-4">
+                  <span className="text-lg md:text-2xl font-bold bg-gradient-to-r from-gray-400 to-gray-500 bg-clip-text text-transparent w-8 md:w-10">
                     {index + 1}.
                   </span>
                   {token.address === 'hex-stakes-virtual' ? (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">HEX</span>
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <span className="text-white font-bold text-xs md:text-sm">HEX</span>
                     </div>
                   ) : token.address === 'native-pls' ? (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">PLS</span>
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                      <span className="text-white font-bold text-xs md:text-sm">PLS</span>
                     </div>
                   ) : (
                     <TokenLogo 
                       address={token.address} 
                       symbol={token.symbol} 
-                      size="md"
+                      size="sm"
                     />
                   )}
                   <div>
-                    <span className="text-xl font-semibold text-white">
+                    <span className="text-sm md:text-xl font-semibold text-white">
                       {token.symbol || 'Unknown'}
                     </span>
-                    <span className="text-gray-400 ml-2 text-sm">
+                    <span className="text-gray-400 ml-1 md:ml-2 text-xs md:text-sm">
                       {token.name || ''}
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-bold text-white">
+                  <p className="text-sm md:text-xl font-bold text-white">
                     {formatCurrency(token.value || 0)}
                   </p>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-xs md:text-sm text-gray-400">
                     {formatTokenAmount(token.balanceFormatted || 0)} {token.symbol}
                   </p>
                 </div>
@@ -212,7 +212,7 @@ export function WalletShareModal({
 
           {/* Footer */}
           <div className="text-center">
-            <p className="text-gray-500 text-sm mb-2">
+            <p className="text-gray-500 text-xs md:text-sm mb-2">
               Wallet: {walletAddress}
             </p>
             <p className="text-gray-600 text-xs">
