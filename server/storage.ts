@@ -92,11 +92,13 @@ export class DatabaseStorage implements IStorage {
     // Ensure the token address is lowercase for consistent storage
     const processedLogo = {
       ...logo,
-      tokenAddress: logo.tokenAddress.toLowerCase()
+      tokenAddress: logo.tokenAddress.toLowerCase(),
+      lastAttempt: new Date(),
     };
 
     console.log(`Saving logo for token ${processedLogo.tokenAddress}:`, {
-      url: processedLogo.logoUrl.substring(0, 30) + '...',
+      hasLogo: processedLogo.hasLogo,
+      url: processedLogo.logoUrl ? processedLogo.logoUrl.substring(0, 30) + '...' : 'null',
       symbol: processedLogo.symbol,
       name: processedLogo.name
     });
@@ -106,7 +108,7 @@ export class DatabaseStorage implements IStorage {
       const existingLogo = await this.getTokenLogo(processedLogo.tokenAddress);
       
       if (existingLogo) {
-        console.log(`Token ${processedLogo.tokenAddress} already has a logo, updating it`);
+        console.log(`Token ${processedLogo.tokenAddress} already has a logo entry, updating it`);
         // Update the existing logo
         const [updatedLogo] = await db
           .update(tokenLogos)
@@ -114,7 +116,9 @@ export class DatabaseStorage implements IStorage {
             logoUrl: processedLogo.logoUrl,
             symbol: processedLogo.symbol,
             name: processedLogo.name,
-            lastUpdated: processedLogo.lastUpdated
+            hasLogo: processedLogo.hasLogo,
+            lastAttempt: processedLogo.lastAttempt,
+            updatedAt: new Date(),
           })
           .where(eq(tokenLogos.tokenAddress, processedLogo.tokenAddress))
           .returning();
@@ -122,14 +126,14 @@ export class DatabaseStorage implements IStorage {
         console.log(`Successfully updated logo for token ${processedLogo.tokenAddress}`);
         return updatedLogo;
       } else {
-        console.log(`Token ${processedLogo.tokenAddress} doesn't have a logo yet, inserting new one`);
+        console.log(`Token ${processedLogo.tokenAddress} doesn't have a logo entry yet, inserting new one`);
         // Insert a new logo
         const [newLogo] = await db
           .insert(tokenLogos)
           .values(processedLogo)
           .returning();
         
-        console.log(`Successfully inserted new logo for token ${processedLogo.tokenAddress}`);
+        console.log(`Successfully inserted new logo entry for token ${processedLogo.tokenAddress}`);
         return newLogo;
       }
     } catch (error) {

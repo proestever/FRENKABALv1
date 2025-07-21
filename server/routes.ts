@@ -829,7 +829,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logoUrl,
         symbol: symbol || "",
         name: name || "",
-        lastUpdated: new Date().toISOString()
+        hasLogo: true,
+        lastAttempt: new Date()
       });
       
       console.log(`Client-side logo saved for ${tokenAddress}: ${logoUrl}`);
@@ -880,15 +881,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create a map of address -> logo
       const logoMap: Record<string, any> = {};
       
-      // For addresses without logos in our DB, try to fetch from Moralis
-      const missingAddresses = normalizedAddresses.filter(
-        (addr, index) => !existingLogos[index]
-      );
+      // Check which addresses need to be fetched:
+      // 1. No entry in database
+      // 2. Entry exists but hasLogo=false and lastAttempt > 24 hours ago
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const missingAddresses: string[] = [];
       
-      // First, add all existing logos to the map
+      // Process existing logos and determine which need fetching
       for (let i = 0; i < normalizedAddresses.length; i++) {
-        if (existingLogos[i]) {
-          logoMap[normalizedAddresses[i]] = existingLogos[i];
+        const address = normalizedAddresses[i];
+        const existingLogo = existingLogos[i];
+        
+        if (!existingLogo) {
+          // No entry in database, need to fetch
+          missingAddresses.push(address);
+        } else if (existingLogo.hasLogo && existingLogo.logoUrl) {
+          // Has a logo, use it
+          logoMap[address] = existingLogo;
+        } else if (!existingLogo.hasLogo && existingLogo.lastAttempt > twentyFourHoursAgo) {
+          // No logo available and checked recently, don't retry
+          logoMap[address] = existingLogo;
+        } else {
+          // No logo but hasn't been checked in 24 hours, retry
+          missingAddresses.push(address);
         }
       }
       
@@ -901,7 +916,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             logoUrl: '/assets/pls-logo-trimmed.png',
             symbol: "PLS",
             name: "PulseChain",
-            lastUpdated: new Date().toISOString()
+            hasLogo: true,
+            lastAttempt: new Date()
           };
           
           // Store it for future requests
@@ -926,61 +942,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const chunk of chunks) {
         await Promise.all(chunk.map(async (address) => {
           try {
-            // Try to get token data from Moralis
-            const tokenData = await getTokenPrice(address);
+            // Try to get token data from DexScreener
+            console.log(`Fetching logo from DexScreener for ${address}`);
+            const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
             
-            if (tokenData && tokenData.tokenLogo) {
-              const newLogo = {
+            if (response.ok) {
+              const data = await response.json();
+              
+              let logoUrl = null;
+              let hasLogo = false;
+              let symbol = "";
+              let name = "";
+              
+              if (data.pairs && data.pairs.length > 0) {
+                const pair = data.pairs[0];
+                const tokenInfo = pair.baseToken.address.toLowerCase() === address.toLowerCase() 
+                  ? pair.baseToken 
+                  : pair.quoteToken;
+                
+                symbol = tokenInfo.symbol || "";
+                name = tokenInfo.name || "";
+                
+                // Check if DexScreener provides a logo in the info field
+                if (pair.info && pair.info.imageUrl) {
+                  logoUrl = pair.info.imageUrl;
+                  hasLogo = true;
+                  console.log(`Found DexScreener logo for ${address}: ${logoUrl}`);
+                }
+              }
+              
+              // Save the result (whether logo found or not)
+              const logoData = {
                 tokenAddress: address,
-                logoUrl: tokenData.tokenLogo,
-                symbol: tokenData.tokenSymbol || "",
-                name: tokenData.tokenName || "",
-                lastUpdated: new Date().toISOString()
+                logoUrl: logoUrl,
+                symbol: symbol,
+                name: name,
+                hasLogo: hasLogo,
+                lastAttempt: new Date()
               };
               
               // Store in database
-              const savedLogo = await storage.saveTokenLogo(newLogo);
+              const savedLogo = await storage.saveTokenLogo(logoData);
               
               // Add to response map
               logoMap[address] = savedLogo;
+              
+              if (!hasLogo) {
+                console.log(`No logo found on DexScreener for ${address}, marked as no logo available`);
+              }
             } else {
-              // If Moralis doesn't have a logo, use Frenkabal as default
-              const defaultLogo = {
+              // DexScreener API error, save as no logo available
+              console.error(`DexScreener API error for ${address}: ${response.status}`);
+              
+              const noLogoData = {
                 tokenAddress: address,
-                logoUrl: '/assets/100xfrenlogo.png',
-                symbol: tokenData?.tokenSymbol || "",
-                name: tokenData?.tokenName || "",
-                lastUpdated: new Date().toISOString()
+                logoUrl: null,
+                symbol: "",
+                name: "",
+                hasLogo: false,
+                lastAttempt: new Date()
               };
               
-              // Store default logo in database to prevent future API calls
-              const savedLogo = await storage.saveTokenLogo(defaultLogo);
-              
-              // Add to response map
+              const savedLogo = await storage.saveTokenLogo(noLogoData);
               logoMap[address] = savedLogo;
-              console.log(`Saved default Frenkabal logo for token ${address} in batch request`);
             }
           } catch (error) {
             console.error(`Error fetching logo for ${address} in batch:`, error);
             
-            // Even on error, save a default logo to prevent future API calls
+            // On error, save as no logo available to prevent repeated failures
             try {
-              const defaultLogo = {
+              const noLogoData = {
                 tokenAddress: address,
-                logoUrl: '/assets/100xfrenlogo.png',
+                logoUrl: null,
                 symbol: "",
                 name: "",
-                lastUpdated: new Date().toISOString()
+                hasLogo: false,
+                lastAttempt: new Date()
               };
               
-              // Store default logo in database
-              const savedLogo = await storage.saveTokenLogo(defaultLogo);
-              
-              // Add to response map
+              const savedLogo = await storage.saveTokenLogo(noLogoData);
               logoMap[address] = savedLogo;
-              console.log(`Saved error fallback logo for token ${address} in batch request`);
+              console.log(`Saved no-logo entry for ${address} after error`);
             } catch (saveErr) {
-              console.error(`Failed to save fallback logo for ${address}:`, saveErr);
+              console.error(`Failed to save no-logo entry for ${address}:`, saveErr);
             }
           }
         }));
@@ -1083,7 +1127,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             logoUrl: '/assets/pls-logo-trimmed.png', // Reference to static asset we're serving
             symbol: "PLS",
             name: "PulseChain",
-            lastUpdated: new Date().toISOString()
+            hasLogo: true,
+            lastAttempt: new Date()
           };
           
           console.log(`Saving logo for token ${address}: ${newLogo.logoUrl}`);
@@ -1153,7 +1198,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 logoUrl: logoUrl,
                 symbol: tokenInfo.symbol || "",
                 name: tokenInfo.name || "",
-                lastUpdated: new Date().toISOString()
+                hasLogo: logoUrl !== '/assets/100xfrenlogo.png',
+                lastAttempt: new Date()
               };
               
               logo = await storage.saveTokenLogo(newLogo);
@@ -1272,7 +1318,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logoUrl: data.logoUrl,
         symbol: data.symbol || "",
         name: data.name || "",
-        lastUpdated: new Date().toISOString()
+        hasLogo: true,
+        lastAttempt: new Date()
       });
       
       return res.json(logo);

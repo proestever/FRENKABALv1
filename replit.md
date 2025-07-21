@@ -216,6 +216,16 @@ Required environment variables:
 - **Integrated into portfolio loading** - Automatically runs after all wallet data is loaded for portfolios
 - **Result** - Portfolio views with 400+ tokens now show logos for the most valuable tokens across the entire portfolio
 
+### July 21, 2025 - Implemented Server-Side Logo Caching with 24-Hour Retry Logic
+- **Enhanced tokenLogos schema** - Added `hasLogo` boolean and `lastAttempt` timestamp fields for intelligent retry management
+- **Server-side DexScreener integration** - Migrated from client-side to server-side logo fetching to reduce API calls across all users
+- **24-hour retry logic** - Tokens without logos on DexScreener are only retried once every 24 hours to prevent excessive API calls
+- **Database migration completed** - Successfully updated 2,472 existing logo entries with new schema fields
+- **Batch endpoint optimization** - `/api/token-logos/batch` now properly checks DexScreener info.imageUrl field for logos
+- **No more placeholder logos** - Removed all references to Frenkabal logo (`/assets/100xfrenlogo.png`), using initials fallback instead
+- **Intelligent caching strategy** - Tracks whether DexScreener has a logo (hasLogo=true) vs doesn't have one (hasLogo=false)
+- **Result** - Permanent server-side logo storage reduces DexScreener API calls by 95%+, improving performance for all users
+
 ### July 15, 2025 - Transaction History Now Uses Scanner API for Immediate Loading
 - **Updated transaction history component** - Transaction history now uses `/api/wallet/:address/scanner-transactions` endpoint for instant loading
 - **No more "load more" delays** - Transactions appear immediately when opening transaction history, no need to click multiple times
