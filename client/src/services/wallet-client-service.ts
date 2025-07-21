@@ -236,30 +236,43 @@ export async function fetchWalletDataWithContractPrices(
     // Fetch all prices in batches from smart contracts
     const priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
     
-    // Step 3: Fetch logos from DexScreener in parallel
+    // Step 3: Fetch logos using batch endpoint
     if (onProgress) onProgress('Fetching token logos...', 50);
     
-    // Fetch logos in parallel batches
-    const logoPromises = tokensWithPrices.map(async (token) => {
-      if (!token.logo || token.logo === '') {
-        try {
-          const tokenAddressForDex = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' 
-            ? '0xa1077a294dde1b09bb078844df40758a5d0f9a27' 
-            : token.address;
-          
-          const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
-          if (priceData?.logo) {
-            token.logo = priceData.logo;
-            saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
-          }
-        } catch (error) {
-          console.error(`Failed to fetch logo for ${token.symbol}:`, error);
-        }
-      }
-    });
+    // Get tokens without logos
+    const tokensWithoutLogos = tokensWithPrices.filter(t => !t.logo || t.logo === '');
     
-    // Wait for all logo fetches to complete
-    await Promise.all(logoPromises);
+    if (tokensWithoutLogos.length > 0) {
+      try {
+        // Use batch endpoint to fetch all logos at once (max 100 per batch)
+        const BATCH_SIZE = 100;
+        const addresses = tokensWithoutLogos.map(t => t.address);
+        
+        for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
+          const batchAddresses = addresses.slice(i, i + BATCH_SIZE);
+          
+          const response = await fetch('/api/token-logos/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ addresses: batchAddresses })
+          });
+          
+          if (response.ok) {
+            const logoMap = await response.json();
+            
+            // Apply logos to tokens
+            tokensWithoutLogos.forEach(token => {
+              const logoData = logoMap[token.address.toLowerCase()];
+              if (logoData?.logoUrl) {
+                token.logo = logoData.logoUrl;
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch logos in batch:', error);
+      }
+    }
     
     // Apply prices to tokens
     let processedCount = 0;
@@ -329,31 +342,37 @@ export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): P
   
   console.log(`Starting background logo fetch for ${tokensWithoutLogos.length} tokens`);
   
-  // Process in larger batches since DexScreener can handle it
-  const BATCH_SIZE = 10;
+  // Process all tokens in parallel for maximum speed
+  const BATCH_SIZE = 100; // Max batch size supported by server
   
+  // Process all batches in parallel instead of sequentially
+  const batches = [];
   for (let i = 0; i < tokensWithoutLogos.length; i += BATCH_SIZE) {
     const batch = tokensWithoutLogos.slice(i, i + BATCH_SIZE);
-    
-    await Promise.all(
-      batch.map(async (token) => {
-        try {
-          const priceData = await getTokenPriceFromDexScreener(token.address);
-          
-          if (priceData?.logo) {
-            // Save logo to server
-            await saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
-            console.log(`Saved logo for ${token.symbol}`);
-          }
-        } catch (error) {
-          console.error(`Failed to fetch logo for ${token.symbol}:`, error);
-        }
-      })
-    );
-    
-    // Short delay between batches
-    await new Promise(resolve => setTimeout(resolve, 200));
+    batches.push(batch);
   }
+  
+  await Promise.all(
+    batches.map(async (batch) => {
+      // No delay - process all batches immediately in parallel
+      
+      await Promise.all(
+        batch.map(async (token) => {
+          try {
+            const priceData = await getTokenPriceFromDexScreener(token.address);
+            
+            if (priceData?.logo) {
+              // Save logo to server
+              await saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
+              console.log(`Saved logo for ${token.symbol}`);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch logo for ${token.symbol}:`, error);
+          }
+        })
+      );
+    })
+  );
   
   console.log('Background logo fetch completed');
 }

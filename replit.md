@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 21, 2025 - Optimized Logo Loading for Large Portfolios
+- **Batch API calls for logos** - Changed from individual API calls (380 for large portfolios) to batch calls (max 100 per batch)
+- **Removed artificial delays** - All logo batches now process in parallel without delays
+- **Initial load optimization** - Primary logo fetching now uses batch endpoint instead of individual DexScreener calls
+- **Background batch increase** - Increased background logo batch size from 50 to 100 tokens
+- **Fixed database schema** - Removed non-existent columns (last_fetch_attempt, fetchFailed) from insertTokenLogoSchema
+- **Result** - 380-token portfolios now make only 4 batch API calls instead of 380 individual calls, ~95% reduction in network requests
+
 ### July 20, 2025 - Upgraded LP Token and HEX Stakes to Smart Contract Prices
 - **Created server-side smart contract price service** - New `server/services/smart-contract-price-service.ts` for server-side blockchain price fetching
 - **Updated LP token service** - Modified `processLpToken` to use `getTokenPriceFromContract` instead of DexScreener API

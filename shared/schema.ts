@@ -128,8 +128,6 @@ export const insertTokenLogoSchema = createInsertSchema(tokenLogos).pick({
   symbol: true,
   name: true,
   lastUpdated: true,
-  lastFetchAttempt: true,
-  fetchFailed: true,
 });
 
 export type InsertTokenLogo = z.infer<typeof insertTokenLogoSchema>;
