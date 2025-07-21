@@ -207,6 +207,15 @@ Required environment variables:
 - **Simplified progress tracking** - Updated progress messages to show clearer "Fetching logos... (X/50)" format
 - **Result** - Logo loading no longer feels slow, entire wallet loading experience is much faster
 
+### July 21, 2025 - Major Architecture Change: Client-Side Smart Contract Price Fetching
+- **Moved ALL smart contract price fetching to client-side** - Server no longer fetches prices from blockchain contracts
+- **Fixed portfolio loading bottleneck** - Server-side price fetching was causing portfolios to hang at 100% loading
+- **Removed server-side price imports** - Cleaned up scanner-balance-service and lp-token-service imports
+- **Server returns price = 0** - All tokens from server now have price: 0 and value: 0, client updates these
+- **LP tokens simplified** - LP token processing no longer fetches underlying token prices server-side
+- **Performance principle** - Server only fetches token balances and metadata, client handles all real-time price updates
+- **Result** - Portfolio loading no longer hangs, server response is much faster, prices update in real-time on client
+
 ### July 21, 2025 - Optimized Portfolio View Logo Fetching for 400+ Tokens
 - **Created specialized portfolio logo function** - New `fetchPortfolioLogos` function specifically for multi-wallet portfolios
 - **Combines all tokens first** - Collects unique tokens from all wallets and aggregates their values

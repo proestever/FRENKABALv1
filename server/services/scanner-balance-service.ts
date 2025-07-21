@@ -12,7 +12,7 @@ import { updateLoadingProgress } from '../routes';
 import { getTokenPriceDataFromDexScreener } from './dexscreener';
 import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
 import { executeWithFailover } from './rpc-provider';
-import { getTokenPriceFromContract, getMultipleTokenPricesFromContract } from './smart-contract-price-service';
+// Price fetching removed - now handled client-side
 
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
 const RECENT_BLOCKS_TO_SCAN = 1000; // Last ~20 minutes of blocks
@@ -234,7 +234,6 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
     }
     
     const plsBalanceFormatted = parseFloat(ethers.utils.formatUnits(plsBalance, PLS_DECIMALS));
-    const plsPrice = (await getTokenPriceFromContract(WPLS_CONTRACT_ADDRESS))?.price || 0;
     
     if (plsBalanceFormatted > 0) {
       processedTokens.push({
@@ -244,8 +243,8 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
         decimals: PLS_DECIMALS,
         balance: plsBalance.toString(),
         balanceFormatted: plsBalanceFormatted,
-        price: plsPrice,
-        value: plsBalanceFormatted * plsPrice,
+        price: 0, // Price will be fetched client-side
+        value: 0, // Value will be calculated client-side
         logo: getDefaultLogo('PLS'),
         isNative: true,
         verified: true
@@ -253,7 +252,7 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
     }
     
     // Process all tokens from scanner
-    const tokenAddresses = new Set<string>([...scannerBalances.keys(), ...recentTokens]);
+    const tokenAddresses = new Set<string>([...Array.from(scannerBalances.keys()), ...recentTokens]);
     console.log(`Processing ${tokenAddresses.size} unique tokens`);
     
     // Update progress - Fetching token details (40%)
@@ -326,25 +325,16 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
       });
     }
     
-    // Update progress - Fetching prices (60%)
+    // Update progress - Fetching logos (60%)
     updateLoadingProgress({
       status: 'loading',
       currentBatch: 60,
       totalBatches: 100,
-      message: `Fetching prices for ${tokenInfoMap.size} tokens...`
-    });
-    
-    // Fetch all prices in one batch call
-    const tokensWithBalances = Array.from(tokenInfoMap.keys());
-    const priceMap = await getMultipleTokenPricesFromContract(tokensWithBalances);
-    
-    // Update progress - Fetching logos (70%)
-    updateLoadingProgress({
-      status: 'loading',
-      currentBatch: 70,
-      totalBatches: 100,
       message: 'Fetching token logos...'
     });
+    
+    // Note: Prices are now fetched client-side for better performance
+    const tokensWithBalances = Array.from(tokenInfoMap.keys());
     
     // Process logos in batches (smaller batches to avoid rate limits)
     const LOGO_BATCH_SIZE = 10;
@@ -402,14 +392,11 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
     await Promise.all(logoPromises);
     
     // Build final processed tokens array
-    for (const [tokenAddress, tokenInfo] of tokenInfoMap) {
-      const priceData = priceMap.get(tokenAddress.toLowerCase());
-      const price = priceData?.price || 0;
-      
+    for (const [tokenAddress, tokenInfo] of Array.from(tokenInfoMap)) {
       processedTokens.push({
         ...tokenInfo,
-        price,
-        value: tokenInfo.balanceFormatted * price,
+        price: 0, // Price will be fetched client-side
+        value: 0, // Value will be calculated client-side
         logo: tokenInfo.logo || ''
       });
     }
