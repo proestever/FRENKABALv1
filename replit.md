@@ -141,8 +141,9 @@ Required environment variables:
 - **Custom error class** - Added `PriceServiceError` for better debugging and error tracking
 - **Exponential backoff retry** - Automatic retry with increasing delays for transient failures
 - **Largest WPLS pair selection** - System now checks multiple factories (V1, V2) and always selects the WPLS pair with highest liquidity
-- **Smart price source selection** - Fetches both stablecoin and WPLS pairs in parallel, then chooses based on liquidity thresholds
-- **Result** - System now fetches prices for ALL tokens regardless of liquidity, with improved accuracy from largest liquidity pools
+- **WPLS-first pricing strategy** - Always uses WPLS pairs first when available, only falling back to stablecoin or ETH pairs if no WPLS pair exists
+- **ETH pair fallback** - Added ETH/WETH pair support as final fallback when neither WPLS nor stablecoin pairs exist
+- **Result** - System now fetches prices for ALL tokens with priority: WPLS pairs → Stablecoin pairs → ETH pairs
 
 ### July 20, 2025 - Upgraded LP Token and HEX Stakes to Smart Contract Prices
 - **Created server-side smart contract price service** - New `server/services/smart-contract-price-service.ts` for server-side blockchain price fetching

@@ -286,6 +286,80 @@ async function getWPLSPairPrice(tokenAddress: string, provider: ethers.providers
   }
 }
 
+// ETH/WETH address on PulseChain
+const WETH_ADDRESS = '0x02DcdD04e3F455D838cd1249292C58f3B79e3C3C';
+
+async function getETHPairPrice(tokenAddress: string, provider: ethers.providers.Provider): Promise<PriceData | null> {
+  try {
+    // Get all ETH pairs from all known factories
+    const pairPromises = PULSEX_FACTORIES.map(async (factoryAddress) => {
+      try {
+        const factory = new ethers.Contract(factoryAddress, FACTORY_ABI, provider);
+        const pairAddress = await factory.getPair(tokenAddress, WETH_ADDRESS);
+        
+        if (pairAddress === ethers.constants.AddressZero) return null;
+        
+        const pairData = await getPairReserves(pairAddress, provider);
+        if (!pairData) return null;
+        
+        const [tokenDecimals, ethDecimals] = await Promise.all([
+          getTokenDecimals(tokenAddress, provider),
+          getTokenDecimals(WETH_ADDRESS, provider)
+        ]);
+        
+        // Determine which token is which
+        const isToken0 = pairData.token0.toLowerCase() === tokenAddress.toLowerCase();
+        const tokenReserve = isToken0 ? pairData.reserve0 : pairData.reserve1;
+        const ethReserve = isToken0 ? pairData.reserve1 : pairData.reserve0;
+        
+        // Calculate price in ETH
+        const tokenAmount = parseFloat(ethers.utils.formatUnits(tokenReserve, tokenDecimals));
+        const ethAmount = parseFloat(ethers.utils.formatUnits(ethReserve, ethDecimals));
+        
+        if (tokenAmount === 0) return null;
+        
+        const priceInETH = ethAmount / tokenAmount;
+        
+        // Get ETH price in USD (from ETH/stablecoin pairs)
+        const ethPrice = await getStablecoinPairPrice(WETH_ADDRESS, provider);
+        const ethPriceUSD = ethPrice ? ethPrice.price : 0; // ETH price fallback
+        
+        const price = priceInETH * ethPriceUSD;
+        const liquidity = ethAmount * ethPriceUSD * 2; // Total liquidity in USD
+        
+        const priceData = { 
+          price, 
+          liquidity, 
+          pairAddress, 
+          token0: pairData.token0, 
+          token1: pairData.token1 
+        };
+        
+        // Validate price before returning
+        return validatePrice(priceData, tokenAddress) ? priceData : null;
+      } catch (error) {
+        console.error(`Error getting ETH pair from factory ${factoryAddress}:`, error);
+        return null;
+      }
+    });
+    
+    const results = await Promise.all(pairPromises);
+    const validResults = results.filter(Boolean) as PriceData[];
+    
+    if (validResults.length === 0) return null;
+    
+    // Return the pair with highest liquidity (largest ETH pair)
+    const largestPair = validResults.sort((a, b) => b.liquidity - a.liquidity)[0];
+    
+    console.log(`Found ${validResults.length} ETH pairs for ${tokenAddress}, using largest with liquidity: ${largestPair.liquidity}`);
+    
+    return largestPair;
+  } catch (error) {
+    console.error(`Error getting ETH pair price for ${tokenAddress}:`, error);
+    return null;
+  }
+}
+
 async function getWPLSPrice(provider: ethers.providers.Provider): Promise<number> {
   // Check cache first
   if (wplsCache && Date.now() - wplsCache.timestamp < WPLS_CACHE_TTL) {
@@ -333,40 +407,32 @@ export async function getTokenPriceFromContract(tokenAddress: string): Promise<P
       return data;
     }
     
-    // Fetch both stablecoin and WPLS pairs in parallel
-    const [stablecoinPrice, wplsPrice] = await Promise.all([
-      withRetry(() => getStablecoinPairPrice(tokenAddress, provider), 3, 100),
-      withRetry(() => getWPLSPairPrice(tokenAddress, provider), 3, 100)
-    ]);
+    // First, try to get WPLS pair price
+    const wplsPrice = await withRetry(() => getWPLSPairPrice(tokenAddress, provider), 3, 100);
     
-    // Choose the best price source based on liquidity
-    let bestPrice: PriceData | null = null;
-    
-    // If we have both, choose the one with higher liquidity
-    if (stablecoinPrice && wplsPrice) {
-      // For very high liquidity WPLS pairs (>$10k), prefer them over low liquidity stablecoin pairs
-      const WPLS_LIQUIDITY_THRESHOLD = 10000;
-      
-      if (wplsPrice.liquidity > WPLS_LIQUIDITY_THRESHOLD && wplsPrice.liquidity > stablecoinPrice.liquidity * 0.5) {
-        // Use WPLS pair if it has substantial liquidity (at least 50% of stablecoin pair)
-        bestPrice = wplsPrice;
-        console.log(`Using WPLS pair for ${tokenAddress} - Liquidity: $${wplsPrice.liquidity.toFixed(2)} (vs stablecoin: $${stablecoinPrice.liquidity.toFixed(2)})`);
-      } else {
-        // Otherwise prefer stablecoin for direct USD pricing
-        bestPrice = stablecoinPrice;
-        console.log(`Using stablecoin pair for ${tokenAddress} - Liquidity: $${stablecoinPrice.liquidity.toFixed(2)}`);
-      }
-    } else if (stablecoinPrice) {
-      bestPrice = stablecoinPrice;
-      console.log(`Using stablecoin pair for ${tokenAddress} (no WPLS pair found)`);
-    } else if (wplsPrice) {
-      bestPrice = wplsPrice;
-      console.log(`Using WPLS pair for ${tokenAddress} (no stablecoin pair found)`);
+    // If WPLS pair exists, always use it first
+    if (wplsPrice) {
+      console.log(`Using WPLS pair for ${tokenAddress} - Liquidity: $${wplsPrice.liquidity.toFixed(2)}`);
+      priceCache.set(normalizedAddress, { data: wplsPrice, timestamp: Date.now() });
+      return wplsPrice;
     }
     
-    if (bestPrice) {
-      priceCache.set(normalizedAddress, { data: bestPrice, timestamp: Date.now() });
-      return bestPrice;
+    // Only if no WPLS pair exists, try stablecoin pairs
+    const stablecoinPrice = await withRetry(() => getStablecoinPairPrice(tokenAddress, provider), 3, 100);
+    
+    if (stablecoinPrice) {
+      console.log(`Using stablecoin pair for ${tokenAddress} (no WPLS pair found) - Liquidity: $${stablecoinPrice.liquidity.toFixed(2)}`);
+      priceCache.set(normalizedAddress, { data: stablecoinPrice, timestamp: Date.now() });
+      return stablecoinPrice;
+    }
+    
+    // If no WPLS or stablecoin pairs, try ETH pair as last resort
+    const ethPrice = await withRetry(() => getETHPairPrice(tokenAddress, provider), 3, 100);
+    
+    if (ethPrice) {
+      console.log(`Using ETH pair for ${tokenAddress} (no WPLS/stablecoin pairs found) - Liquidity: $${ethPrice.liquidity.toFixed(2)}`);
+      priceCache.set(normalizedAddress, { data: ethPrice, timestamp: Date.now() });
+      return ethPrice;
     }
     
     return null;
