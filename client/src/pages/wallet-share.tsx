@@ -5,6 +5,7 @@ import { useHexStakes } from '@/hooks/use-hex-stakes';
 import { TokenLogo } from '@/components/token-logo';
 import { formatCurrency, formatTokenAmount } from '@/lib/utils';
 import { Token } from '@shared/schema';
+import { getHiddenTokens } from '@/lib/api';
 
 export default function WalletShare() {
   const { walletAddress } = useParams<{ walletAddress: string }>();
@@ -12,22 +13,34 @@ export default function WalletShare() {
   const hexStakesData = useHexStakes(walletAddress || '');
   const [totalValue, setTotalValue] = useState(0);
   const [sortedTokens, setSortedTokens] = useState<Token[]>([]);
+  const [hiddenTokens, setHiddenTokens] = useState<string[]>([]);
+
+  // Load hidden tokens on mount
+  useEffect(() => {
+    const hidden = getHiddenTokens();
+    setHiddenTokens(hidden);
+  }, []);
 
   useEffect(() => {
     if (walletData && walletData.tokens) {
-      // Sort tokens by value and get top 10
-      const sorted = [...walletData.tokens]
+      // Filter out hidden tokens first
+      const visibleTokens = walletData.tokens.filter(token => 
+        !hiddenTokens.includes(token.address)
+      );
+      
+      // Sort visible tokens by value and get top 10
+      const sorted = [...visibleTokens]
         .sort((a, b) => (b.value || 0) - (a.value || 0))
         .slice(0, 10);
       
       setSortedTokens(sorted);
       
-      // Calculate total portfolio value
-      const tokenTotal = walletData.tokens.reduce((sum, token) => sum + (token.value || 0), 0);
+      // Calculate total portfolio value (only visible tokens)
+      const tokenTotal = visibleTokens.reduce((sum, token) => sum + (token.value || 0), 0);
       const hexStakesTotal = hexStakesData?.totalCombinedValueUsd || 0;
       setTotalValue(tokenTotal + hexStakesTotal);
     }
-  }, [walletData, hexStakesData]);
+  }, [walletData, hexStakesData, hiddenTokens]);
 
   if (isLoading) {
     return (
@@ -132,7 +145,7 @@ export default function WalletShare() {
             </p>
             <p className="text-gray-600 text-xs">
               Track your PulseChain portfolio at{' '}
-              <span className="text-purple-400">frenkabal.app</span>
+              <span className="text-purple-400">frenkabal.com</span>
             </p>
           </div>
         </div>
