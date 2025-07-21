@@ -120,8 +120,6 @@ export const tokenLogos = pgTable("token_logos", {
   symbol: text("symbol"),
   name: text("name"),
   lastUpdated: text("last_updated").notNull(),
-  lastFetchAttempt: text("last_fetch_attempt"),
-  fetchFailed: boolean("fetch_failed").default(false),
 });
 
 export const insertTokenLogoSchema = createInsertSchema(tokenLogos).pick({
