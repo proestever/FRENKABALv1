@@ -226,6 +226,16 @@ Required environment variables:
 - **Intelligent caching strategy** - Tracks whether DexScreener has a logo (hasLogo=true) vs doesn't have one (hasLogo=false)
 - **Result** - Permanent server-side logo storage reduces DexScreener API calls by 95%+, improving performance for all users
 
+### July 21, 2025 - Fixed Token Logo System with Client-Side DexScreener Fetching
+- **Removed hardcoded logos** - Eliminated hardcoded tokens.app.pulsex.com logos for PLSX, INC, HEX, etc. from scanner-balance-service
+- **Database-first approach** - Scanner service now checks database for existing logos before using defaults
+- **Client-side DexScreener calls** - Updated useBatchTokenLogos hook to fetch directly from DexScreener when server doesn't have logos
+- **Smart retry logic** - Client only fetches from DexScreener if server indicates no logo exists or 24 hours have passed since last attempt
+- **Background logo saving** - Client saves newly discovered DexScreener logos to server for future use
+- **Fixed schema issues** - Updated all logo saves to use new hasLogo/lastAttempt schema instead of deprecated lastUpdated
+- **Rate limit protection** - Client-side fetching limited to 50 tokens at a time to avoid DexScreener throttling
+- **Result** - Tokens like PLSX and INC now properly display their DexScreener logos instead of hardcoded PulseX ones
+
 ### July 15, 2025 - Transaction History Now Uses Scanner API for Immediate Loading
 - **Updated transaction history component** - Transaction history now uses `/api/wallet/:address/scanner-transactions` endpoint for instant loading
 - **No more "load more" delays** - Transactions appear immediately when opening transaction history, no need to click multiple times

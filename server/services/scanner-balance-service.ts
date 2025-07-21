@@ -24,17 +24,13 @@ const PLS_DECIMALS = 18;
  * Get default logo for known tokens
  */
 function getDefaultLogo(symbol: string): string {
+  // Only provide default logo for native PLS token
   const symbolLower = symbol.toLowerCase();
-  
-  const logoMap: Record<string, string> = {
-    'pls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
-    'wpls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
-    'plsx': 'https://tokens.app.pulsex.com/images/tokens/0x15D38573d2feeb82e7ad5187aB8c5D52810B6f40.png',
-    'hex': 'https://tokens.app.pulsex.com/images/tokens/0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39.png',
-    'inc': 'https://tokens.app.pulsex.com/images/tokens/0x6c203a555824ec90a215f37916cf8db58ebe2fa3.png'
-  };
-  
-  return logoMap[symbolLower] || '';
+  if (symbolLower === 'pls') {
+    return '/assets/pls-logo-trimmed.png';
+  }
+  // Return empty string for all other tokens - let client fetch from DexScreener
+  return '';
 }
 
 interface TokenBalanceFromScanner {
@@ -312,24 +308,41 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
             
             if (tokenInfo.balanceFormatted === 0) return null;
             
-            // Get price and logo data
+            // Get price data from DexScreener
             const priceData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
             
-            let logoUrl = getDefaultLogo(tokenInfo.symbol);
-            if (priceData?.logo) {
+            // First check database for existing logo
+            let logoUrl = '';
+            try {
+              const dbLogo = await storage.getTokenLogo(tokenAddress.toLowerCase());
+              if (dbLogo && dbLogo.hasLogo && dbLogo.logoUrl) {
+                logoUrl = dbLogo.logoUrl;
+              }
+            } catch (error) {
+              console.error(`Error fetching logo from database for ${tokenAddress}:`, error);
+            }
+            
+            // If no logo in database and DexScreener has one, save it
+            if (!logoUrl && priceData?.logo) {
               logoUrl = priceData.logo;
-              // Save logo to database
+              // Save logo to database with new schema
               try {
                 await storage.saveTokenLogo({
                   tokenAddress: tokenAddress.toLowerCase(),
                   logoUrl: priceData.logo,
                   symbol: tokenInfo.symbol,
                   name: tokenInfo.name,
-                  lastUpdated: new Date().toISOString()
+                  hasLogo: true,
+                  lastAttempt: new Date()
                 });
               } catch (error) {
                 console.error(`Failed to save logo for ${tokenAddress}:`, error);
               }
+            }
+            
+            // If still no logo, check default (only PLS)
+            if (!logoUrl) {
+              logoUrl = getDefaultLogo(tokenInfo.symbol);
             }
             
             return {
