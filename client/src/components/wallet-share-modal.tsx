@@ -175,9 +175,9 @@ export function WalletShareModal({
                 <span className="text-lg md:text-2xl font-bold bg-gradient-to-r from-gray-400 to-gray-500 bg-clip-text text-transparent w-6 md:w-8 flex-shrink-0">
                   {index + 1}.
                 </span>
-                <div className="h-12 w-12 md:h-14 md:w-14 flex-shrink-0">
+                <div className="h-12 w-12 md:h-14 md:w-14 flex-shrink-0 flex items-center justify-center">
                   {token.address === 'hex-stakes-virtual' ? (
-                    <div className="w-full h-full">
+                    <div className="w-full h-full flex items-center justify-center">
                       <TokenLogo 
                         address="0x2b591e99afe9f32eaa6214f7b7629768c40eeb39" 
                         symbol="HEX" 
@@ -189,7 +189,7 @@ export function WalletShareModal({
                       <span className="text-white font-bold text-base md:text-lg">PLS</span>
                     </div>
                   ) : (
-                    <div className="w-full h-full">
+                    <div className="w-full h-full flex items-center justify-center">
                       <TokenLogo 
                         address={token.address} 
                         symbol={token.symbol} 
