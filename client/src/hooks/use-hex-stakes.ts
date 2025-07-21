@@ -152,8 +152,9 @@ export async function getHexPriceWithCache(): Promise<number> {
     return await ongoingPriceRequest;
   }
   
-  // Default fallback price - ensure it's always a valid number
-  let hexPrice = 0.00004;
+  // Default fallback price - updated to more realistic value
+  // HEX typically trades between $0.005 - $0.01
+  let hexPrice = 0.0074;
   
   // Create the ongoing request promise
   ongoingPriceRequest = (async () => {
