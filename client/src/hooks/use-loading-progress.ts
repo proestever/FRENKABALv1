@@ -77,6 +77,7 @@ export function useLoadingProgress(isLoading: boolean): LoadingProgress {
     let isCancelled = false;
     let progressStageIndex = 0;
     let artificialProgress = 0;
+    let completedCount = 0; // Track how many times we've seen complete status
     
     // Make initial request for progress
     fetchProgress().then(data => {
@@ -91,8 +92,29 @@ export function useLoadingProgress(isLoading: boolean): LoadingProgress {
       
       // Always fetch real progress from server during loading
       const serverProgress = await fetchProgress();
-      if (serverProgress && !isCancelled && isLoading) {
-        setProgress(serverProgress);
+      if (serverProgress && !isCancelled) {
+        // Check if progress is complete
+        if (serverProgress.currentBatch === 100 && serverProgress.totalBatches === 100) {
+          completedCount++;
+          // If we've seen complete status multiple times, stop polling
+          if (completedCount > 3) {
+            console.log('Loading appears to be complete, stopping progress polling');
+            clearInterval(pollingIntervalRef.current!);
+            pollingIntervalRef.current = null;
+            setProgress({
+              ...serverProgress,
+              status: 'complete',
+              message: 'Loading complete'
+            });
+            return;
+          }
+        } else {
+          completedCount = 0; // Reset if we see non-complete status
+        }
+        
+        if (isLoading) {
+          setProgress(serverProgress);
+        }
       }
     }, 200); // Poll every 200ms during loading to catch all stage transitions
 

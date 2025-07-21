@@ -127,13 +127,34 @@ export function useClientSideWallet(walletAddress: string | null) {
   
   // Poll for loading progress from server (only for initial blockchain data fetch)
   useEffect(() => {
-    if (!isFetching || progress.status === 'complete') return;
+    // Don't poll if not fetching, already complete, or if progress is already at 100%
+    if (!isFetching || progress.status === 'complete' || progress.currentBatch === 100) return;
+    
+    let completedCount = 0;
     
     const pollProgress = async () => {
       try {
         const response = await fetch('/api/loading-progress');
         if (response.ok) {
           const serverProgress = await response.json();
+          
+          // Check if server is reporting complete (100/100)
+          if (serverProgress.currentBatch === 100 && serverProgress.totalBatches === 100) {
+            completedCount++;
+            // If we've seen complete status multiple times, stop polling
+            if (completedCount > 2) {
+              console.log('Server progress appears complete, stopping client-side wallet polling');
+              setProgress({
+                currentBatch: 100,
+                totalBatches: 100,
+                status: 'complete',
+                message: 'Loading complete'
+              });
+              return; // This will cause the interval to be cleared on next useEffect cycle
+            }
+          } else {
+            completedCount = 0; // Reset if we see non-complete status
+          }
           
           // Only update progress for the blockchain data fetch part (up to 30%)
           if (serverProgress.status === 'loading' && serverProgress.currentBatch > 0) {
@@ -151,9 +172,9 @@ export function useClientSideWallet(walletAddress: string | null) {
       }
     };
     
-    const interval = setInterval(pollProgress, 200);
+    const interval = setInterval(pollProgress, 500); // Reduce polling frequency to 500ms
     return () => clearInterval(interval);
-  }, [isFetching, progress.status]);
+  }, [isFetching, progress.status, progress.currentBatch]);
   
   // Enable real-time price updates when wallet data is loaded
   const { refreshPrices } = useRealTimePrices({
