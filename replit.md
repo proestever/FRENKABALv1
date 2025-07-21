@@ -189,6 +189,16 @@ Required environment variables:
 - **Reduced dependency on DexScreener** - Only need DexScreener for logos now, prices come from blockchain
 - **Batch price fetching** - Can fetch multiple token prices in parallel for efficient updates
 
+### July 21, 2025 - Removed All Frenkabal Logo References and Implemented Top 50 Token Rate Limiting
+- **Eliminated Frenkabal logo usage** - Removed all references to `/assets/100xfrenlogo.png` across the codebase
+- **Updated client-side fallback logic** - Modified `useBatchTokenLogos` hook to return empty string instead of Frenkabal logo
+- **Server-side logo fallback fixed** - Updated `scanner-balance-service.ts` to return empty string instead of Frenkabal logo
+- **Initials-style placeholders** - Token logo component now shows initials-style placeholders when DexScreener logos unavailable
+- **Rate limiting implementation** - Limited DexScreener API calls to top 50 tokens (by value) to avoid throttling
+- **Updated progress indicators** - Modified progress messages to reflect accurate token counts (e.g., "50/50" instead of "137/137")
+- **Preserved logo fetching separation** - Kept logo fetching separate from price fetching to ensure all tokens get logo attempts
+- **Result** - Users now see DexScreener logos when available, initials fallback when not, never the Frenkabal placeholder
+
 ### July 15, 2025 - Transaction History Now Uses Scanner API for Immediate Loading
 - **Updated transaction history component** - Transaction history now uses `/api/wallet/:address/scanner-transactions` endpoint for instant loading
 - **No more "load more" delays** - Transactions appear immediately when opening transaction history, no need to click multiple times

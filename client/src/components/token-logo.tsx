@@ -75,11 +75,10 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', logo }: 
       return;
     }
     
-    // Handle special case for Frenkabal placeholder logo
+    // Handle special case for these tokens - use initials fallback
     if (symbol && ['pDAI', 'frpl', 'PDAI'].includes(symbol)) {
-      const frenLogo = '/assets/100xfrenlogo.png';
-      logoCache[normalizedAddress] = frenLogo;
-      setLogoUrl(frenLogo);
+      // Let these tokens use the initials fallback instead
+      setLogoUrl(null);
       setIsLoading(false);
       return;
     }
@@ -116,23 +115,19 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', logo }: 
           logoCache[normalizedAddress] = data.logoUrl;
           setLogoUrl(data.logoUrl);
         } else {
-          // Default to the app logo if no logo found
-          const defaultLogo = '/assets/100xfrenlogo.png';
+          // No logo found - use initials fallback
           if (DEBUG_LOGGING) {
-            console.log(`Using default logo for ${normalizedAddress}: ${defaultLogo}`);
+            console.log(`No logo found for ${normalizedAddress}, using initials fallback`);
           }
-          logoCache[normalizedAddress] = defaultLogo;
-          setLogoUrl(defaultLogo);
+          setLogoUrl(null); // This will trigger the initials fallback
         }
       } catch (error) {
         if (DEBUG_LOGGING) {
           console.error('Error fetching token logo:', error);
         }
         setError(true);
-        // Default to the app logo if error
-        const defaultLogo = '/assets/100xfrenlogo.png';
-        logoCache[normalizedAddress] = defaultLogo;
-        setLogoUrl(defaultLogo);
+        // Use initials fallback on error
+        setLogoUrl(null); // This will trigger the initials fallback
       } finally {
         setIsLoading(false);
       }

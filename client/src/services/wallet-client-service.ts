@@ -115,12 +115,15 @@ export async function fetchWalletDataClientSide(
     const totalTokens = tokensWithPrices.length;
     let processedCount = 0;
     
+    // Limit to top 50 tokens (already sorted by value) to avoid DexScreener rate limits
+    const tokensToProcess = tokensWithPrices.slice(0, 50);
+    
     // Process in batches to avoid overwhelming DexScreener
     const BATCH_SIZE = 5;
     const batches: TokenWithPrice[][] = [];
     
-    for (let i = 0; i < tokensWithPrices.length; i += BATCH_SIZE) {
-      batches.push(tokensWithPrices.slice(i, i + BATCH_SIZE));
+    for (let i = 0; i < tokensToProcess.length; i += BATCH_SIZE) {
+      batches.push(tokensToProcess.slice(i, i + BATCH_SIZE));
     }
     
     if (onProgress) onProgress('Fetching token logos and prices from DexScreener...', 30);
@@ -162,8 +165,8 @@ export async function fetchWalletDataClientSide(
           }
           
           processedCount++;
-          const progress = Math.round(30 + (processedCount / totalTokens) * 60); // 30% to 90%
-          if (onProgress) onProgress(`Fetching logos and prices... (${processedCount}/${totalTokens})`, progress);
+          const progress = Math.round(30 + (processedCount / Math.min(totalTokens, 50)) * 60); // 30% to 90%
+          if (onProgress) onProgress(`Fetching logos and prices... (${processedCount}/${Math.min(totalTokens, 50)})`, progress);
         })
       );
       
@@ -239,8 +242,11 @@ export async function fetchWalletDataWithContractPrices(
     // Step 3: Fetch logos from DexScreener in parallel
     if (onProgress) onProgress('Fetching token logos...', 50);
     
+    // Limit logo fetching to top 50 tokens to avoid DexScreener rate limits
+    const tokensForLogos = tokensWithPrices.slice(0, 50);
+    
     // Fetch logos in parallel batches
-    const logoPromises = tokensWithPrices.map(async (token) => {
+    const logoPromises = tokensForLogos.map(async (token) => {
       if (!token.logo || token.logo.includes('100xfrenlogo')) {
         try {
           const tokenAddressForDex = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' 

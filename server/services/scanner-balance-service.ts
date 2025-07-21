@@ -34,7 +34,7 @@ function getDefaultLogo(symbol: string): string {
     'inc': 'https://tokens.app.pulsex.com/images/tokens/0x6c203a555824ec90a215f37916cf8db58ebe2fa3.png'
   };
   
-  return logoMap[symbolLower] || '/assets/100xfrenlogo.png';
+  return logoMap[symbolLower] || '';
 }
 
 interface TokenBalanceFromScanner {
