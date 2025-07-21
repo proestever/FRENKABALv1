@@ -172,68 +172,50 @@ export default function Home() {
     try {
       console.log(`Fetching data for ${addresses.length} wallets individually`);
       
-      // Instead of loading all wallets in parallel, process them sequentially
-      // to provide better progress indication
-      const walletResults = [];
-      
-      // Start with fetching combined HEX stakes data
-      setMultiWalletProgress({
-        ...customProgressState,
-        message: 'Fetching combined HEX stakes data...'
-      });
-      
-      const hexStakesPromise = fetchCombinedHexStakes(addresses).catch(error => {
-        console.error('Error fetching combined HEX stakes:', error);
-        return null;
-      });
-      
-      // Process all wallet addresses in parallel for much faster loading
+      // Parallelize all data fetching for maximum speed
       setMultiWalletProgress({
         currentBatch: addresses.length,
         totalBatches: addresses.length,
         status: 'loading',
-        message: `Loading ${addresses.length} wallets in parallel...`
+        message: `Loading ${addresses.length} wallets and HEX stakes in parallel...`
       });
       
-      const walletPromises = addresses.map(async (address) => {
-        try {
-          // Fetch wallet data with smart contract prices
-          const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
-          const dataWithPrices = await fetchWalletDataWithContractPrices(address);
-          
-          return { [address]: dataWithPrices };
-        } catch (error) {
-          console.error(`Error fetching wallet ${address}:`, error);
-          return null;
-        }
-      });
-      
-      // Wait for all wallets to be fetched in parallel
-      walletResults.push(...await Promise.all(walletPromises));
-      
-      // Wait for the hex stakes data to complete
-      const hexStakesData = await hexStakesPromise;
-      
-      // Update progress for HEX stakes data
-      setMultiWalletProgress({
-        currentBatch: addresses.length,
-        totalBatches: addresses.length,
-        status: 'loading',
-        message: 'Fetching individual HEX stakes data...'
-      });
-      
-      // Fetch individual HEX stakes data for each wallet in parallel (already optimized with Promise.all)
-      const individualHexStakesPromises = addresses.map(address => 
-        fetchHexStakesSummary(address)
-          .then(data => ({ [address]: data }))
-          .catch(error => {
-            console.error(`Error fetching HEX stakes for ${address}:`, error);
-            return null;
+      // Start ALL async operations in parallel for maximum speed
+      const [walletResults, hexStakesData, individualHexResults] = await Promise.all([
+        // Fetch all wallet data in parallel
+        Promise.all(
+          addresses.map(async (address) => {
+            try {
+              // Fetch wallet data with smart contract prices
+              const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
+              const dataWithPrices = await fetchWalletDataWithContractPrices(address);
+              
+              return { [address]: dataWithPrices };
+            } catch (error) {
+              console.error(`Error fetching wallet ${address}:`, error);
+              return null;
+            }
           })
-      );
+        ),
+        // Fetch combined HEX stakes data
+        fetchCombinedHexStakes(addresses).catch(error => {
+          console.error('Error fetching combined HEX stakes:', error);
+          return null;
+        }),
+        // Fetch individual HEX stakes data for each wallet in parallel
+        Promise.all(
+          addresses.map(address => 
+            fetchHexStakesSummary(address)
+              .then(data => ({ [address]: data }))
+              .catch(error => {
+                console.error(`Error fetching HEX stakes for ${address}:`, error);
+                return null;
+              })
+          )
+        )
+      ]);
       
       // Process individual HEX stakes data
-      const individualHexResults = await Promise.all(individualHexStakesPromises);
       const individualHexData = individualHexResults
         .filter(result => result !== null)
         .reduce((acc, result) => ({ ...acc, ...result }), {});
@@ -338,21 +320,40 @@ export default function Home() {
       
       const fetchPortfolioByCode = async () => {
         try {
-          // Fetch portfolio by public code
-          const portfolioResponse = await fetch(`/api/portfolios/public/${params.publicCode}`);
-          if (!portfolioResponse.ok) {
-            throw new Error('Portfolio not found');
-          }
-          const portfolio = await portfolioResponse.json();
+          // Check cache first for portfolio data
+          const cacheKey = `portfolio_cache_${params.publicCode}`;
+          const cachedData = sessionStorage.getItem(cacheKey);
+          const cacheExpiry = sessionStorage.getItem(`${cacheKey}_expiry`);
           
-          // Then fetch the wallet addresses
-          const addressesResponse = await fetch(`/api/portfolios/${portfolio.id}/addresses`);
-          const addresses = await addressesResponse.json();
+          let portfolio, addresses;
+          
+          // Use cache if valid (5 minutes)
+          if (cachedData && cacheExpiry && Number(cacheExpiry) > Date.now()) {
+            console.log('Using cached portfolio data');
+            const cached = JSON.parse(cachedData);
+            portfolio = cached.portfolio;
+            addresses = cached.addresses;
+          } else {
+            // Fetch portfolio by public code
+            const portfolioResponse = await fetch(`/api/portfolios/public/${params.publicCode}`);
+            if (!portfolioResponse.ok) {
+              throw new Error('Portfolio not found');
+            }
+            portfolio = await portfolioResponse.json();
+            
+            // Then fetch the wallet addresses
+            const addressesResponse = await fetch(`/api/portfolios/${portfolio.id}/addresses`);
+            addresses = await addressesResponse.json();
+            
+            // Cache the results for 5 minutes
+            sessionStorage.setItem(cacheKey, JSON.stringify({ portfolio, addresses }));
+            sessionStorage.setItem(`${cacheKey}_expiry`, String(Date.now() + 5 * 60 * 1000));
+          }
           
           if (addresses && addresses.length > 0) {
             setPortfolioName(portfolio.name);
-            setPortfolioUrlId(params.publicCode);
-            console.log(`Portfolio name from API: ${portfolio.name}`);
+            setPortfolioUrlId(params.publicCode || null);
+            console.log(`Portfolio name: ${portfolio.name}`);
             
             // Filter out any invalid addresses and get wallet addresses
             const validAddresses = addresses
