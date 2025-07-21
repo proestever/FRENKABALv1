@@ -20,6 +20,13 @@ interface DexScreenerPair {
   };
   priceNative: string;
   priceUsd?: string;
+  info?: {
+    imageUrl?: string;
+    header?: string;
+    openGraph?: string;
+    websites?: Array<{ label: string; url: string }>;
+    socials?: Array<{ type: string; url: string }>;
+  };
   txns?: {
     m5: {
       buys: number;
@@ -216,10 +223,19 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
 
     // Try to get logo from the token info
     let logo: string | undefined;
-    if (bestPair.baseToken.address.toLowerCase() === normalizedAddress) {
-      // Check if DexScreener provides a logo URL (they might add this in future)
-      // For now, we'll leave it undefined and let the server provide stored logos
-      logo = undefined;
+    if (bestPair.info?.imageUrl) {
+      logo = bestPair.info.imageUrl;
+    }
+    
+    // Debug logging for specific tokens
+    if (normalizedAddress === '0x2fa878ab3f87cc1c9737fc071108f904c0b0c95d' || 
+        normalizedAddress === '0x95b303987a60c71504d99aa1b13b4da07b0790ab') {
+      console.log(`DexScreener response for ${normalizedAddress}:`, {
+        symbol: bestPair.baseToken.symbol,
+        hasInfo: !!bestPair.info,
+        imageUrl: bestPair.info?.imageUrl,
+        logo: logo
+      });
     }
 
     const result: TokenPriceData = {
