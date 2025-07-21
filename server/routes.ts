@@ -944,41 +944,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Add to response map
               logoMap[address] = savedLogo;
             } else {
-              // If Moralis doesn't have a logo, use Frenkabal as default
+              // If Moralis doesn't have a logo, save null logo to indicate we tried
               const defaultLogo = {
                 tokenAddress: address,
-                logoUrl: '/assets/100xfrenlogo.png',
+                logoUrl: null,
                 symbol: tokenData?.tokenSymbol || "",
                 name: tokenData?.tokenName || "",
                 lastUpdated: new Date().toISOString()
               };
               
-              // Store default logo in database to prevent future API calls
+              // Store null logo in database to prevent future API calls
               const savedLogo = await storage.saveTokenLogo(defaultLogo);
               
               // Add to response map
               logoMap[address] = savedLogo;
-              console.log(`Saved default Frenkabal logo for token ${address} in batch request`);
+              console.log(`No logo found for token ${address}, saved null logo`);
             }
           } catch (error) {
             console.error(`Error fetching logo for ${address} in batch:`, error);
             
-            // Even on error, save a default logo to prevent future API calls
+            // Even on error, save a null logo to prevent future API calls
             try {
               const defaultLogo = {
                 tokenAddress: address,
-                logoUrl: '/assets/100xfrenlogo.png',
+                logoUrl: null,
                 symbol: "",
                 name: "",
                 lastUpdated: new Date().toISOString()
               };
               
-              // Store default logo in database
+              // Store null logo in database
               const savedLogo = await storage.saveTokenLogo(defaultLogo);
               
               // Add to response map
               logoMap[address] = savedLogo;
-              console.log(`Saved error fallback logo for token ${address} in batch request`);
+              console.log(`Saved null logo for token ${address} after fetch error`);
             } catch (saveErr) {
               console.error(`Failed to save fallback logo for ${address}:`, saveErr);
             }
@@ -1119,7 +1119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 : pair.quoteToken;
               
               // Try to get logo from known sources based on token info
-              let logoUrl = '/assets/100xfrenlogo.png'; // Default fallback
+              let logoUrl: string | null = null; // Default is null, not FrenKabal logo
               
               // First, check if DexScreener provides a logo in the info field
               if (pair.info && pair.info.imageUrl) {
@@ -1159,47 +1159,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
               logo = await storage.saveTokenLogo(newLogo);
               console.log(`Saved DexScreener-based logo for token ${address}: ${logoUrl}`);
             } else {
-              console.log(`No DexScreener pairs found for ${address}, using default logo`);
-              // No pairs found, save default logo
+              console.log(`No DexScreener pairs found for ${address}, saving null logo`);
+              // No pairs found, save null logo
               const defaultLogo = {
                 tokenAddress: address,
-                logoUrl: '/assets/100xfrenlogo.png',
+                logoUrl: null,
                 symbol: "",
                 name: "",
                 lastUpdated: new Date().toISOString()
               };
               
               logo = await storage.saveTokenLogo(defaultLogo);
-              console.log(`Saved default logo for token ${address} - no DexScreener data`);
+              console.log(`Saved null logo for token ${address} - no DexScreener data`);
             }
           } else {
             console.log(`DexScreener API error for ${address}: ${response.status}`);
-            // DexScreener API error, save default logo
+            // DexScreener API error, save null logo
             const defaultLogo = {
               tokenAddress: address,
-              logoUrl: '/assets/100xfrenlogo.png',
+              logoUrl: null,
               symbol: "",
               name: "",
               lastUpdated: new Date().toISOString()
             };
             
             logo = await storage.saveTokenLogo(defaultLogo);
-            console.log(`Saved default logo for token ${address} after DexScreener API error`);
+            console.log(`Saved null logo for token ${address} after DexScreener API error`);
           }
         } catch (err) {
           console.error(`Error fetching token data from DexScreener: ${err}`);
           
-          // Even on error, store a default logo to prevent future API calls
+          // Even on error, store a null logo to prevent future API calls
           const defaultLogo = {
             tokenAddress: address,
-            logoUrl: '/assets/100xfrenlogo.png',
+            logoUrl: null,
             symbol: "",
             name: "",
             lastUpdated: new Date().toISOString()
           };
           
           logo = await storage.saveTokenLogo(defaultLogo);
-          console.log(`Saved fallback logo for token ${address} after DexScreener error`);
+          console.log(`Saved null logo for token ${address} after DexScreener error`);
         }
       }
       

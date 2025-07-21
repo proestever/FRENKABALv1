@@ -81,11 +81,23 @@ export class DatabaseStorage implements IStorage {
 
   async getTokenLogo(tokenAddress: string): Promise<TokenLogo | undefined> {
     const addressLower = tokenAddress.toLowerCase();
-    const [logo] = await db
-      .select()
-      .from(tokenLogos)
-      .where(eq(tokenLogos.tokenAddress, addressLower));
-    return logo || undefined;
+    try {
+      const [logo] = await db
+        .select({
+          id: tokenLogos.id,
+          tokenAddress: tokenLogos.tokenAddress,
+          logoUrl: tokenLogos.logoUrl,
+          symbol: tokenLogos.symbol,
+          name: tokenLogos.name,
+          lastUpdated: tokenLogos.lastUpdated
+        })
+        .from(tokenLogos)
+        .where(eq(tokenLogos.tokenAddress, addressLower));
+      return logo || undefined;
+    } catch (error) {
+      console.error(`Error fetching token logo for ${addressLower}:`, error);
+      return undefined;
+    }
   }
 
   async saveTokenLogo(logo: InsertTokenLogo): Promise<TokenLogo> {
@@ -107,15 +119,17 @@ export class DatabaseStorage implements IStorage {
       
       if (existingLogo) {
         console.log(`Token ${processedLogo.tokenAddress} already has a logo, updating it`);
-        // Update the existing logo
+        // Update the existing logo - only use fields that exist in current database
+        const updateData: any = {
+          logoUrl: processedLogo.logoUrl,
+          symbol: processedLogo.symbol,
+          name: processedLogo.name,
+          lastUpdated: processedLogo.lastUpdated
+        };
+        
         const [updatedLogo] = await db
           .update(tokenLogos)
-          .set({
-            logoUrl: processedLogo.logoUrl,
-            symbol: processedLogo.symbol,
-            name: processedLogo.name,
-            lastUpdated: processedLogo.lastUpdated
-          })
+          .set(updateData)
           .where(eq(tokenLogos.tokenAddress, processedLogo.tokenAddress))
           .returning();
         
@@ -123,10 +137,18 @@ export class DatabaseStorage implements IStorage {
         return updatedLogo;
       } else {
         console.log(`Token ${processedLogo.tokenAddress} doesn't have a logo yet, inserting new one`);
-        // Insert a new logo
+        // Insert a new logo - only use fields that exist in current database
+        const insertData: any = {
+          tokenAddress: processedLogo.tokenAddress,
+          logoUrl: processedLogo.logoUrl,
+          symbol: processedLogo.symbol,
+          name: processedLogo.name,
+          lastUpdated: processedLogo.lastUpdated
+        };
+        
         const [newLogo] = await db
           .insert(tokenLogos)
-          .values(processedLogo)
+          .values(insertData)
           .returning();
         
         console.log(`Successfully inserted new logo for token ${processedLogo.tokenAddress}`);

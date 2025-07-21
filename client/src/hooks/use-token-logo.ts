@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import customTokenLogo from '../assets/100xfrenlogo.png';
 
 // Cache for both found and not-found logos to prevent repeated API calls
 // String value for found logos, false for confirmed not-found
@@ -21,7 +20,7 @@ const notFoundTimestamps: Record<string, number> = {};
  * @returns The token logo URL
  */
 export function useTokenLogo(tokenAddress: string, fallbackLogo?: string): string {
-  const defaultLogo = fallbackLogo || customTokenLogo;
+  const defaultLogo = fallbackLogo || '';
   const [logoUrl, setLogoUrl] = useState<string>(defaultLogo);
   
   useEffect(() => {

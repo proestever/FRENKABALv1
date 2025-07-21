@@ -49,8 +49,8 @@ export const getBatchTokenLogos = (addresses: string[]): Record<string, string> 
     if (globalLogoCache[addr]) {
       results[addr] = globalLogoCache[addr];
     } else {
-      // Default fallback if not in cache
-      results[addr] = '/assets/100xfrenlogo.png';
+      // No logo found, return empty string
+      results[addr] = '';
     }
   });
   
@@ -140,9 +140,9 @@ export function useBatchTokenLogos(addresses: string[]): Record<string, string> 
             // Also update the global cache
             globalLogoCache[normalizedAddr] = value.logoUrl;
           } else {
-            // Use fallback logo
-            newLogos[normalizedAddr] = '/assets/100xfrenlogo.png';
-            globalLogoCache[normalizedAddr] = '/assets/100xfrenlogo.png';
+            // No logo found, use empty string
+            newLogos[normalizedAddr] = '';
+            globalLogoCache[normalizedAddr] = '';
           }
         });
         
@@ -161,13 +161,13 @@ export function useBatchTokenLogos(addresses: string[]): Record<string, string> 
       } catch (error) {
         console.error('Error fetching batch token logos:', error);
         
-        // Create fallback logos for the addresses that failed
+        // Create empty logos for the addresses that failed
         const fallbackUrls: Record<string, string> = {};
         addressesToFetch.forEach((address) => {
-          // Default to Frenkabal logo
+          // No logo found, use empty string
           const normalizedAddr = address.toLowerCase();
-          fallbackUrls[normalizedAddr] = '/assets/100xfrenlogo.png';
-          globalLogoCache[normalizedAddr] = '/assets/100xfrenlogo.png';
+          fallbackUrls[normalizedAddr] = '';
+          globalLogoCache[normalizedAddr] = '';
         });
         
         // Merge with existing results

@@ -75,14 +75,7 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', logo }: 
       return;
     }
     
-    // Handle special case for Frenkabal placeholder logo
-    if (symbol && ['pDAI', 'frpl', 'PDAI'].includes(symbol)) {
-      const frenLogo = '/assets/100xfrenlogo.png';
-      logoCache[normalizedAddress] = frenLogo;
-      setLogoUrl(frenLogo);
-      setIsLoading(false);
-      return;
-    }
+    // Removed special case - all tokens now use standard logo fetching
 
     // Don't attempt to fetch the same logo multiple times in one session
     if (attemptedFetch.current) {
@@ -116,23 +109,21 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', logo }: 
           logoCache[normalizedAddress] = data.logoUrl;
           setLogoUrl(data.logoUrl);
         } else {
-          // Default to the app logo if no logo found
-          const defaultLogo = '/assets/100xfrenlogo.png';
+          // No logo found, will use initials instead
           if (DEBUG_LOGGING) {
-            console.log(`Using default logo for ${normalizedAddress}: ${defaultLogo}`);
+            console.log(`No logo found for ${normalizedAddress}, will use initials`);
           }
-          logoCache[normalizedAddress] = defaultLogo;
-          setLogoUrl(defaultLogo);
+          logoCache[normalizedAddress] = null;
+          setLogoUrl(null);
         }
       } catch (error) {
         if (DEBUG_LOGGING) {
           console.error('Error fetching token logo:', error);
         }
         setError(true);
-        // Default to the app logo if error
-        const defaultLogo = '/assets/100xfrenlogo.png';
-        logoCache[normalizedAddress] = defaultLogo;
-        setLogoUrl(defaultLogo);
+        // On error, use initials instead
+        logoCache[normalizedAddress] = null;
+        setLogoUrl(null);
       } finally {
         setIsLoading(false);
       }

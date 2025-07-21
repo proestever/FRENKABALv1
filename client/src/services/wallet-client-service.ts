@@ -150,7 +150,7 @@ export async function fetchWalletDataClientSide(
               token.priceData = priceData;
               
               // Always check for logo updates
-              if (priceData.logo && (!token.logo || token.logo.includes('100xfrenlogo'))) {
+              if (priceData.logo && (!token.logo || token.logo === '')) {
                 token.logo = priceData.logo;
                 
                 // Save logo to server in background
@@ -241,7 +241,7 @@ export async function fetchWalletDataWithContractPrices(
     
     // Fetch logos in parallel batches
     const logoPromises = tokensWithPrices.map(async (token) => {
-      if (!token.logo || token.logo.includes('100xfrenlogo')) {
+      if (!token.logo || token.logo === '') {
         try {
           const tokenAddressForDex = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' 
             ? '0xa1077a294dde1b09bb078844df40758a5d0f9a27' 
@@ -322,7 +322,7 @@ export async function fetchWalletDataWithContractPrices(
  */
 export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): Promise<void> {
   const tokensWithoutLogos = tokens.filter(t => 
-    !t.logo || t.logo.includes('placeholder') || t.logo.includes('100xfrenlogo')
+    !t.logo || t.logo === '' || t.logo.includes('placeholder')
   );
   
   if (tokensWithoutLogos.length === 0) return;
