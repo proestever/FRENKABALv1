@@ -12,6 +12,7 @@ import { updateLoadingProgress } from '../routes';
 import { getTokenPriceDataFromDexScreener } from './dexscreener';
 import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
 import { executeWithFailover } from './rpc-provider';
+import { getTokenPriceFromContract } from './smart-contract-price-service';
 
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
 const RECENT_BLOCKS_TO_SCAN = 1000; // Last ~20 minutes of blocks
@@ -233,7 +234,7 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
     }
     
     const plsBalanceFormatted = parseFloat(ethers.utils.formatUnits(plsBalance, PLS_DECIMALS));
-    const plsPrice = await getTokenPriceFromDexScreener(WPLS_CONTRACT_ADDRESS) || 0;
+    const plsPrice = (await getTokenPriceFromContract(WPLS_CONTRACT_ADDRESS))?.price || 0;
     
     if (plsBalanceFormatted > 0) {
       processedTokens.push({
@@ -308,8 +309,11 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
             
             if (tokenInfo.balanceFormatted === 0) return null;
             
-            // Get price data from DexScreener
-            const priceData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
+            // Get price from smart contract for real-time data
+            const contractPriceData = await getTokenPriceFromContract(tokenAddress).catch(() => null);
+            
+            // Get logo data from DexScreener (only for logo, not price)
+            const dexScreenerData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
             
             // First check database for existing logo
             let logoUrl = '';
@@ -323,13 +327,13 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
             }
             
             // If no logo in database and DexScreener has one, save it
-            if (!logoUrl && priceData?.logo) {
-              logoUrl = priceData.logo;
+            if (!logoUrl && dexScreenerData?.logo) {
+              logoUrl = dexScreenerData.logo;
               // Save logo to database with new schema
               try {
                 await storage.saveTokenLogo({
                   tokenAddress: tokenAddress.toLowerCase(),
-                  logoUrl: priceData.logo,
+                  logoUrl: dexScreenerData.logo,
                   symbol: tokenInfo.symbol,
                   name: tokenInfo.name,
                   hasLogo: true,
@@ -352,8 +356,8 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
               decimals: tokenInfo.decimals,
               balance: tokenInfo.balance,
               balanceFormatted: tokenInfo.balanceFormatted,
-              price: priceData?.price || 0,
-              value: tokenInfo.balanceFormatted * (priceData?.price || 0),
+              price: contractPriceData?.price || 0,
+              value: tokenInfo.balanceFormatted * (contractPriceData?.price || 0),
               logo: logoUrl,
               verified: scannerData?.token.type === 'ERC-20'
             };
