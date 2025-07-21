@@ -68,8 +68,11 @@ class SmartContractPriceService {
   }
 
   private initializeProviders() {
-    // Initialize multiple providers for redundancy
-    this.providers = RPC_ENDPOINTS.map(url => new ethers.providers.JsonRpcProvider(url));
+    // Initialize multiple providers for redundancy with explicit PulseChain network config
+    this.providers = RPC_ENDPOINTS.map(url => new ethers.providers.JsonRpcProvider(url, {
+      chainId: 369,
+      name: 'pulsechain'
+    }));
   }
 
   private getProvider(): ethers.providers.JsonRpcProvider {

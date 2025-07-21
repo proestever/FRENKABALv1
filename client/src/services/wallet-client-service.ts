@@ -305,11 +305,14 @@ export async function fetchWalletDataWithContractPrices(
       return token.address;
     });
     
-    // Fetch all prices in batches from smart contracts
-    const priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
+    // Skip smart contract price fetching on mobile/browsers to avoid network detection issues
+    // Prices will come from the scanner API instead
+    let priceMap = new Map<string, any>();
+    console.log('Skipping smart contract price fetching to avoid network errors');
     
     // Step 3: Fetch logos from DexScreener in parallel
     if (onProgress) onProgress('Fetching token logos...', 50);
+    console.log('Starting logo fetching step...');
     
     // Limit logo fetching to top 50 tokens to avoid DexScreener rate limits
     const tokensForLogos = tokensWithPrices.slice(0, 50);
@@ -379,15 +382,21 @@ export async function fetchWalletDataWithContractPrices(
     
     if (onProgress) onProgress('Processing complete', 100);
     
-    return {
+    const result = {
       ...walletData,
       tokens: tokensWithPrices,
       totalValue,
       plsBalance: walletData.plsBalance ?? undefined,
       plsPriceChange: walletData.plsPriceChange ?? undefined
     };
+    
+    console.log('Returning wallet data with', result.tokens.length, 'tokens');
+    return result;
   } catch (error) {
     console.error('Error fetching wallet data with contract prices:', error);
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     throw error;
   }
 }

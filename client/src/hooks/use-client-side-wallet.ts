@@ -101,6 +101,7 @@ export function useClientSideWallet(walletAddress: string | null) {
         });
         
         console.log('Returning wallet data from query:', data);
+        console.log('Data has', data?.tokens?.length || 0, 'tokens');
         return data;
       } catch (error) {
         console.error('Error in wallet query:', error);
