@@ -85,11 +85,6 @@ class SmartContractPriceService {
   async getTokenPrice(tokenAddress: string): Promise<PriceData | null> {
     const normalizedAddress = tokenAddress.toLowerCase();
     
-    // Skip native PLS address - it should use WPLS price instead
-    if (normalizedAddress === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-      return null;
-    }
-    
     // Check cache first
     const cached = this.priceCache.get(normalizedAddress);
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
@@ -299,7 +294,7 @@ class SmartContractPriceService {
     const results = new Map<string, PriceData | null>();
     
     // Process all tokens in parallel with rate limiting
-    const BATCH_SIZE = 10; // Reduced batch size to avoid overwhelming RPC
+    const BATCH_SIZE = 100; // Massive parallelization for fast processing
     const batches: string[][] = [];
     
     // Create batches

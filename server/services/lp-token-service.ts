@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import { ethers } from 'ethers';
 import { ProcessedToken } from '../types';
 import { getTokenPrice } from './api';
+import { getTokenPriceFromContract } from './smart-contract-price-service';
 
 /**
  * Check if a token address is a liquidity pool token by trying to call LP-specific functions
@@ -209,15 +210,6 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
         }
       }
       
-      // Truncate to max 18 decimal places (parseEther limit)
-      const decimalIndex = ratioString.indexOf('.');
-      if (decimalIndex !== -1) {
-        const decimalPlaces = ratioString.length - decimalIndex - 1;
-        if (decimalPlaces > 18) {
-          ratioString = ratioString.substring(0, decimalIndex + 19); // +1 for dot, +18 for decimals
-        }
-      }
-      
       // 6. Calculate token balances based on user's share
       token0Balance = reserve0.mul(ethers.utils.parseEther(ratioString))
                                .div(ethers.utils.parseEther('1')).toString();
@@ -232,17 +224,23 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
     const token0BalanceFormatted = Number(ethers.utils.formatUnits(token0Balance, token0Decimals));
     const token1BalanceFormatted = Number(ethers.utils.formatUnits(token1Balance, token1Decimals));
     
-    // 8. Prices will be fetched client-side for performance
-    // Set prices to 0 - client will update these
-    const token0Price = null;
-    const token1Price = null;
+    // 8. Get prices for tokens using smart contract service
+    const [token0PriceData, token1PriceData] = await Promise.all([
+      getTokenPriceFromContract(token0Address),
+      getTokenPriceFromContract(token1Address)
+    ]);
     
-    // 9. Values will be calculated client-side
-    const token0Value = undefined;
-    const token1Value = undefined;
+    // Convert to API format for compatibility
+    const token0Price = token0PriceData ? { usdPrice: token0PriceData.price } : null;
+    const token1Price = token1PriceData ? { usdPrice: token1PriceData.price } : null;
     
-    // 9. Combined value will be calculated client-side
-    const combinedValue = 0;
+    // 9. Calculate values
+    const token0Value = token0Price ? token0BalanceFormatted * token0Price.usdPrice : undefined;
+    const token1Value = token1Price ? token1BalanceFormatted * token1Price.usdPrice : undefined;
+    
+    // 9. Calculate combined value
+    const combinedValue = 
+      (token0Value || 0) + (token1Value || 0);
     
     // 10. Update the token with LP details
     return {

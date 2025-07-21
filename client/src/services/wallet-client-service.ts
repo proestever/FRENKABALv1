@@ -130,26 +130,15 @@ interface TokenWithPrice extends ProcessedToken {
 /**
  * Fetch wallet balances using scanner API (gets ALL tokens, not just recent)
  */
-async function fetchWalletBalancesFromBlockchain(address: string, onProgress?: (message: string, progress: number) => void): Promise<Wallet> {
-  const { clientBlockchainService } = await import('./blockchain-service');
+async function fetchWalletBalancesFromScanner(address: string): Promise<Wallet> {
+  const response = await fetch(`/api/wallet/${address}/scanner-balances`);
   
-  // Fetch tokens directly from blockchain
-  const tokens = await clientBlockchainService.fetchWalletTokens(address, onProgress);
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to fetch wallet balances');
+  }
   
-  // Calculate PLS balance for wallet data
-  const plsToken = tokens.find(t => t.isNative);
-  const plsBalance = plsToken?.balanceFormatted || 0;
-  
-  return {
-    address,
-    tokens,
-    plsBalance,
-    totalValue: 0, // Will be calculated after prices are fetched
-    tokenCount: tokens.length,
-    networkCount: 1,
-    plsPriceChange: undefined,
-    pricesNeeded: true
-  };
+  return response.json();
 }
 
 /**
@@ -187,9 +176,9 @@ export async function fetchWalletDataClientSide(
   onProgress?: (message: string, progress: number) => void
 ): Promise<Wallet> {
   try {
-    // Step 1: Fetch ALL token balances directly from blockchain
+    // Step 1: Fetch ALL token balances using scanner API
     if (onProgress) onProgress('Fetching all wallet tokens...', 10);
-    const walletDataRaw = await fetchWalletBalancesFromBlockchain(address, onProgress);
+    const walletDataRaw = await fetchWalletBalancesFromScanner(address);
     
     // Convert null values to undefined for proper type compatibility
     const walletData: Wallet = {
@@ -281,9 +270,9 @@ export async function fetchWalletDataWithContractPrices(
   onProgress?: (message: string, progress: number) => void
 ): Promise<Wallet> {
   try {
-    // Step 1: Fetch ALL token balances directly from blockchain
+    // Step 1: Fetch ALL token balances using scanner API
     if (onProgress) onProgress('Fetching all wallet tokens...', 10);
-    const walletDataRaw = await fetchWalletBalancesFromBlockchain(address, onProgress);
+    const walletDataRaw = await fetchWalletBalancesFromScanner(address);
     
     // Convert null values to undefined for proper type compatibility
     const walletData: Wallet = {
@@ -311,31 +300,8 @@ export async function fetchWalletDataWithContractPrices(
       return token.address;
     });
     
-    // Fetch all prices in batches from smart contracts with timeout
-    try {
-      const priceMap = await Promise.race([
-        getMultipleTokenPricesFromContract(tokenAddresses),
-        new Promise<Map<string, any>>((_, reject) => 
-          setTimeout(() => reject(new Error('Price fetching timeout')), 30000) // 30 second timeout
-        )
-      ]);
-      
-      if (onProgress) onProgress('Applying prices to tokens...', 45);
-      
-      // Apply prices to tokens
-      tokensWithPrices.forEach((token, index) => {
-        const addressToCheck = tokenAddresses[index].toLowerCase();
-        const priceData = priceMap.get(addressToCheck);
-        
-        if (priceData) {
-          token.price = priceData.price;
-          token.value = token.balanceFormatted * priceData.price;
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching prices:', error);
-      if (onProgress) onProgress('Price fetching failed, continuing without prices...', 45);
-    }
+    // Fetch all prices in batches from smart contracts
+    const priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
     
     // Step 3: Fetch logos from DexScreener in parallel
     if (onProgress) onProgress('Fetching token logos...', 50);
@@ -365,7 +331,40 @@ export async function fetchWalletDataWithContractPrices(
     // Wait for all logo fetches to complete
     await Promise.all(logoPromises);
     
-    // Note: Price application already happened in the try/catch block above
+    // Apply prices to tokens
+    let processedCount = 0;
+    tokensWithPrices.forEach((token, index) => {
+      const addressForPrice = tokenAddresses[index];
+      const priceData = priceMap.get(addressForPrice.toLowerCase());
+      
+      if (priceData) {
+        // Check if token is in blacklist
+        const isBlacklisted = DUST_TOKEN_BLACKLIST.has(token.address.toLowerCase());
+        
+        if (isBlacklisted) {
+          token.price = 0; // Set price to 0 for blacklisted dust tokens
+          token.value = 0;
+          token.priceData = undefined;
+        } else {
+          token.price = priceData.price;
+          token.value = token.balanceFormatted * priceData.price;
+          // Store minimal price data for UI (keep existing logo)
+          token.priceData = {
+            price: priceData.price,
+            priceChange24h: 0, // Contract method doesn't provide 24h change
+            liquidityUsd: priceData.liquidity,
+            volumeUsd24h: 0, // Contract method doesn't provide volume
+            dexId: 'pulsex',
+            pairAddress: priceData.pairAddress,
+            logo: token.logo // Preserve logo from server
+          };
+        }
+      }
+      
+      processedCount++;
+      const progress = Math.round(30 + (processedCount / totalTokens) * 60); // 30% to 90%
+      if (onProgress) onProgress(`Processing prices... (${processedCount}/${totalTokens})`, progress);
+    });
     
     // Step 3: Calculate total value
     const totalValue = tokensWithPrices.reduce((sum, token) => sum + (token.value || 0), 0);
