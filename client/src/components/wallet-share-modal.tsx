@@ -167,46 +167,52 @@ export function WalletShareModal({
           </div>
 
           {/* Token List */}
-          <div className="space-y-2 md:space-y-4 mb-8">
+          <div className="space-y-3 md:space-y-4 mb-8">
             {sortedTokens.map((token, index) => (
-              <div key={token.address} className="flex items-center justify-between p-3 md:p-4 rounded-lg bg-gray-900/50 backdrop-blur-sm border border-gray-800">
-                <div className="flex items-center gap-2 md:gap-4">
-                  <span className="text-lg md:text-2xl font-bold bg-gradient-to-r from-gray-400 to-gray-500 bg-clip-text text-transparent w-8 md:w-10">
-                    {index + 1}.
-                  </span>
+              <div key={token.address} className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-lg bg-gray-900/50 backdrop-blur-sm border border-gray-800">
+                <span className="text-lg md:text-2xl font-bold bg-gradient-to-r from-gray-400 to-gray-500 bg-clip-text text-transparent w-6 md:w-8 flex-shrink-0">
+                  {index + 1}.
+                </span>
+                <div className="h-12 w-12 md:h-14 md:w-14 flex-shrink-0">
                   {token.address === 'hex-stakes-virtual' ? (
-                    <TokenLogo 
-                      address="0x2b591e99afe9f32eaa6214f7b7629768c40eeb39" 
-                      symbol="HEX" 
-                      size="sm"
-                    />
+                    <div className="w-full h-full">
+                      <TokenLogo 
+                        address="0x2b591e99afe9f32eaa6214f7b7629768c40eeb39" 
+                        symbol="HEX" 
+                        size="lg"
+                      />
+                    </div>
                   ) : token.address === 'native-pls' ? (
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                      <span className="text-white font-bold text-xs md:text-sm">PLS</span>
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                      <span className="text-white font-bold text-base md:text-lg">PLS</span>
                     </div>
                   ) : (
-                    <TokenLogo 
-                      address={token.address} 
-                      symbol={token.symbol} 
-                      size="sm"
-                    />
+                    <div className="w-full h-full">
+                      <TokenLogo 
+                        address={token.address} 
+                        symbol={token.symbol} 
+                        size="lg"
+                      />
+                    </div>
                   )}
-                  <div>
-                    <span className="text-sm md:text-xl font-semibold text-white">
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-base md:text-lg font-semibold text-white uppercase tracking-wide">
                       {token.symbol || 'Unknown'}
                     </span>
-                    <span className="text-gray-400 ml-1 md:ml-2 text-xs md:text-sm">
-                      {token.name || ''}
+                    <span className="text-base md:text-lg font-bold text-green-400">
+                      {formatCurrency(token.value || 0)}
                     </span>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm md:text-xl font-bold text-white">
-                    {formatCurrency(token.value || 0)}
-                  </p>
-                  <p className="text-xs md:text-sm text-gray-400">
-                    {formatTokenAmount(token.balanceFormatted || 0)} {token.symbol}
-                  </p>
+                  <div className="flex items-center justify-between text-xs md:text-sm text-gray-400">
+                    <span className="truncate mr-2">
+                      {token.name || token.symbol || 'Unknown Token'}
+                    </span>
+                    <span className="flex-shrink-0">
+                      {formatTokenAmount(token.balanceFormatted || 0)}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
