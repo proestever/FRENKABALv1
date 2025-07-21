@@ -3,15 +3,23 @@ import fetch from 'node-fetch';
 /**
  * Download an image from a URL and convert it to base64
  */
-export async function downloadImageAsBase64(imageUrl: string): Promise<{ 
+export async function downloadImageAsBase64(imageUrl: string | null): Promise<{ 
   imageData: string; 
   imageType: string;
 } | null> {
   try {
-    // Skip if it's already a data URL or local asset
-    if (imageUrl.startsWith('data:') || imageUrl.startsWith('/assets/')) {
+    // Skip if URL is null or empty
+    if (!imageUrl) {
       return null;
     }
+    
+    // Skip if it's already a data URL or local asset
+    if (imageUrl.startsWith('data:') || imageUrl.startsWith('/assets/')) {
+      console.log(`Skipping download for local/data URL: ${imageUrl}`);
+      return null;
+    }
+    
+    console.log(`Attempting to download image from: ${imageUrl}`);
 
     const response = await fetch(imageUrl);
     
