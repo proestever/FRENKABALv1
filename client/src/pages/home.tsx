@@ -757,6 +757,11 @@ export default function Home() {
                           console.log(`Added ${hexStakeValue} in HEX stakes to wallet ${address}`);
                         }
                         
+                        // Get top 3 tokens for this wallet
+                        const top3Tokens = wallet.tokens
+                          .sort((a, b) => (b.value || 0) - (a.value || 0))
+                          .slice(0, 3);
+                        
                         return (
                           <div key={address} className="border border-white/10 rounded-md p-3">
                             <div className="flex justify-between items-start mb-2">
@@ -783,7 +788,7 @@ export default function Home() {
                               )}
                             </div>
                             
-                            <div className="text-xs">
+                            <div className="text-xs mb-2">
                               <span className="opacity-70">Tokens:</span>{' '}
                               {wallet.tokenCount}
                               {walletHexStakes && walletHexStakes.stakeCount > 0 && (
@@ -792,6 +797,31 @@ export default function Home() {
                                 </span>
                               )}
                             </div>
+                            
+                            {/* Top 3 tokens */}
+                            {top3Tokens.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-white/5">
+                                <div className="text-xs opacity-70 mb-1">Top Tokens:</div>
+                                <div className="space-y-1">
+                                  {top3Tokens.map((token, index) => (
+                                    <div key={token.address} className="flex items-center justify-between text-xs">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-white/50">{index + 1}.</span>
+                                        <TokenLogo 
+                                          address={token.address} 
+                                          symbol={token.symbol} 
+                                          size="xs" 
+                                        />
+                                        <span className="font-medium">{token.symbol}</span>
+                                      </div>
+                                      <span className="text-white/70">
+                                        ${(token.value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
