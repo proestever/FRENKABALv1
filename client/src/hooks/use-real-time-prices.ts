@@ -14,7 +14,7 @@ interface UseRealTimePricesOptions {
   walletAddress: string;
   tokens: TokenWithPrice[];
   enabled?: boolean;
-  intervalMs?: number; // Default: 30000ms (30 seconds)
+  intervalMs?: number; // Default: 300000ms (5 minutes)
 }
 
 /**
@@ -25,7 +25,7 @@ export function useRealTimePrices({
   walletAddress,
   tokens,
   enabled = true,
-  intervalMs = 30000
+  intervalMs = 300000
 }: UseRealTimePricesOptions) {
   const queryClient = useQueryClient();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -38,11 +38,11 @@ export function useRealTimePrices({
       isUpdatingRef.current = true;
       
       // For very large wallets, only update top tokens by value to prevent performance issues
-      const MAX_TOKENS_TO_UPDATE = 50;
+      const MAX_TOKENS_TO_UPDATE = 10;
       let tokensToUpdate = tokens;
       
       if (tokens.length > MAX_TOKENS_TO_UPDATE) {
-        // Sort by value and take top 50
+        // Sort by value and take top 10
         tokensToUpdate = [...tokens]
           .sort((a, b) => (b.value || 0) - (a.value || 0))
           .slice(0, MAX_TOKENS_TO_UPDATE);

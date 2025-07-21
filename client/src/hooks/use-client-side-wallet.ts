@@ -160,7 +160,7 @@ export function useClientSideWallet(walletAddress: string | null) {
     walletAddress: walletAddress || '',
     tokens: walletData?.tokens || [],
     enabled: !!walletData && !isLoading && !isFetching,
-    intervalMs: 30000 // Update every 30 seconds (reduced from 5 seconds to prevent sluggishness)
+    intervalMs: 300000 // Update every 5 minutes (reduced from 30 seconds for better performance)
   });
   
   return {
