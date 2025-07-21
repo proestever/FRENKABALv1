@@ -12,6 +12,7 @@ import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useHexStakes, fetchHexStakesSummary, HexStakeSummary } from '@/hooks/use-hex-stakes';
 import { LastUpdatedInfo } from '@/components/last-updated-info';
 import { WalletShareModal } from '@/components/wallet-share-modal';
+import { PortfolioShareModal } from '@/components/portfolio-share-modal';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -257,8 +258,8 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
               </Button>
             )}
             
-            {/* Share button - only show for single wallet */}
-            {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
+            {/* Share button - show for single wallet and portfolios */}
+            {!wallet.address.startsWith("Combined") && (
               <Button
                 variant="outline"
                 onClick={() => setShareModalOpen(true)}
@@ -398,14 +399,24 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
         </div>
       </Card>
       
-      {/* Share Modal */}
-      <WalletShareModal
-        open={shareModalOpen}
-        onOpenChange={setShareModalOpen}
-        walletAddress={wallet.address}
-        walletData={wallet}
-        hexStakesData={hexStakesFromHook}
-      />
+      {/* Share Modal - Use portfolio modal for portfolios, wallet modal for single wallets */}
+      {wallet.address.startsWith("Portfolio:") ? (
+        <PortfolioShareModal
+          open={shareModalOpen}
+          onOpenChange={setShareModalOpen}
+          portfolioName={portfolioName || wallet.address.replace("Portfolio:", "")}
+          walletData={wallet}
+          hexStakesData={manualHexSummary}
+        />
+      ) : (
+        <WalletShareModal
+          open={shareModalOpen}
+          onOpenChange={setShareModalOpen}
+          walletAddress={wallet.address}
+          walletData={wallet}
+          hexStakesData={hexStakesFromHook}
+        />
+      )}
     </section>
   );
 }
