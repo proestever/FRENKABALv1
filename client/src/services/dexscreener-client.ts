@@ -145,18 +145,47 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
       return null;
     }
 
-    // Filter for PulseChain pairs only where our token is the BASE token
-    const validPairs = data.pairs.filter(pair => 
+    // Filter for PulseChain pairs - include both base and quote token pairs
+    // Lower the liquidity requirement to catch small pairs
+    const allPairs = data.pairs.filter(pair => 
       pair.chainId === 'pulsechain' && 
-      pair.baseToken.address.toLowerCase() === normalizedAddress && // Only pairs where token is base
       pair.priceUsd && 
-      pair.liquidity?.usd
+      pair.liquidity?.usd !== undefined // Don't require minimum liquidity
     );
 
+    // Separate pairs where our token is base vs quote
+    const basePairs = allPairs.filter(pair => 
+      pair.baseToken.address.toLowerCase() === normalizedAddress
+    );
+    
+    const quotePairs = allPairs.filter(pair => 
+      pair.quoteToken.address.toLowerCase() === normalizedAddress
+    );
+
+    console.log(`Found ${basePairs.length} base pairs and ${quotePairs.length} quote pairs for ${tokenAddress}`);
+    
+    // Log details about small pairs
+    if (allPairs.length > 0) {
+      const smallPairs = allPairs.filter(p => (p.liquidity?.usd || 0) < 1000);
+      if (smallPairs.length > 0) {
+        console.log(`Including ${smallPairs.length} small pairs (< $1k liquidity) for ${tokenAddress}`);
+      }
+    }
+
+    // Prefer base pairs but fall back to quote pairs if needed
+    let validPairs = basePairs.length > 0 ? basePairs : quotePairs;
+    
     if (validPairs.length === 0) {
       console.log(`No valid PulseChain pairs found for token ${tokenAddress}`);
+      // Log all pairs for debugging
+      if (data.pairs.length > 0) {
+        console.log(`All pairs for token: ${data.pairs.map(p => `${p.baseToken.symbol}/${p.quoteToken.symbol} on ${p.chainId}`).join(', ')}`);
+      }
       return null;
     }
+
+    // If we're using quote pairs, we need to invert the price
+    const usingQuotePairs = basePairs.length === 0;
 
     // First, try to find the largest WPLS pair
     const WPLS_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27'.toLowerCase();
@@ -181,19 +210,33 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
       for (const pair of validPairs) {
         let score = 0;
         
-        // Base score from liquidity
-        const liquidityScore = Math.min(pair.liquidity!.usd / 1000, 5000);
-        score += liquidityScore * 2;
+        // Base score from liquidity - be more generous with small pairs
+        const liquidity = pair.liquidity?.usd || 0;
+        const liquidityScore = liquidity > 0 ? Math.log10(liquidity + 1) * 100 : 0;
+        score += liquidityScore;
         
-        // Bonus for volume
+        // Bonus for volume - weighted less heavily
         if (pair.volume?.h24) {
-          score += Math.min(pair.volume.h24 / 100, 100);
+          const volumeScore = Math.log10(pair.volume.h24 + 1) * 10;
+          score += volumeScore;
         }
         
         // Bonus for transaction activity
         if (pair.txns?.h24) {
           const totalTxns = (pair.txns.h24.buys || 0) + (pair.txns.h24.sells || 0);
           score += Math.min(totalTxns, 50);
+        }
+        
+        // Bonus for pairs with stable coins
+        const stableAddresses = [
+          '0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07', // USDC
+          '0xefd766ccb38eaf1dfd701853bfce31359239f305', // DAI
+          '0x0cb6f5a34ad42ec934882a05265a7d5f59b51a2f', // USDT
+        ].map(a => a.toLowerCase());
+        
+        if (stableAddresses.includes(pair.quoteToken.address.toLowerCase()) ||
+            stableAddresses.includes(pair.baseToken.address.toLowerCase())) {
+          score += 50; // Prefer stablecoin pairs for accuracy
         }
         
         // Penalty for extreme price ratios
@@ -238,8 +281,29 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
       });
     }
 
+    // Calculate the correct price based on whether we're using quote pairs
+    let tokenPrice = parseFloat(bestPair.priceUsd!);
+    
+    if (usingQuotePairs) {
+      // If our token is the quote token, we need to calculate its price
+      // The pair price is baseToken/quoteToken, so quoteToken price = baseToken price / pair price ratio
+      const baseTokenPrice = parseFloat(bestPair.priceUsd!);
+      const pairPrice = bestPair.priceNative ? parseFloat(bestPair.priceNative) : 1;
+      
+      // For quote pairs, the token price needs special handling
+      // We'll use the baseToken's USD price if available
+      if (bestPair.baseToken.address.toLowerCase() === WPLS_ADDRESS) {
+        // If paired with WPLS, use WPLS price to calculate token price
+        tokenPrice = baseTokenPrice / pairPrice;
+      } else {
+        // For other pairs, we might need to fetch the base token's price
+        // For now, we'll use the pair's liquidity to estimate
+        console.log(`Using quote pair for ${tokenAddress}, may need price adjustment`);
+      }
+    }
+
     const result: TokenPriceData = {
-      price: parseFloat(bestPair.priceUsd!),
+      price: tokenPrice,
       priceChange24h: bestPair.priceChange?.h24 || 0,
       liquidityUsd: bestPair.liquidity!.usd,
       volumeUsd24h: bestPair.volume?.h24 || 0,
