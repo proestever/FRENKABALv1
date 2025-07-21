@@ -207,6 +207,15 @@ Required environment variables:
 - **Simplified progress tracking** - Updated progress messages to show clearer "Fetching logos... (X/50)" format
 - **Result** - Logo loading no longer feels slow, entire wallet loading experience is much faster
 
+### July 21, 2025 - Optimized Portfolio View Logo Fetching for 400+ Tokens
+- **Created specialized portfolio logo function** - New `fetchPortfolioLogos` function specifically for multi-wallet portfolios
+- **Combines all tokens first** - Collects unique tokens from all wallets and aggregates their values
+- **Smart sorting by combined value** - Sorts tokens by their total value across ALL wallets in the portfolio
+- **Fetches logos for top 50 combined** - Instead of top 50 per wallet, now fetches logos for the actual top 50 most valuable tokens
+- **Parallel fetching maintained** - All 50 logos still fetch simultaneously for maximum speed
+- **Integrated into portfolio loading** - Automatically runs after all wallet data is loaded for portfolios
+- **Result** - Portfolio views with 400+ tokens now show logos for the most valuable tokens across the entire portfolio
+
 ### July 15, 2025 - Transaction History Now Uses Scanner API for Immediate Loading
 - **Updated transaction history component** - Transaction history now uses `/api/wallet/:address/scanner-transactions` endpoint for instant loading
 - **No more "load more" delays** - Transactions appear immediately when opening transaction history, no need to click multiple times

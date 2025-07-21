@@ -12,6 +12,86 @@ const DUST_TOKEN_BLACKLIST = new Set<string>([
   // Example: '0x1234567890abcdef...',
 ]);
 
+// Optimized logo fetching for portfolio bundles with 400+ tokens
+export async function fetchPortfolioLogos(
+  walletData: Record<string, Wallet>, 
+  onProgress?: (message: string, percentage: number) => void
+): Promise<void> {
+  // Step 1: Collect all unique tokens from all wallets
+  const allTokens: Map<string, TokenWithPrice> = new Map();
+  
+  Object.values(walletData).forEach(wallet => {
+    wallet.tokens?.forEach(token => {
+      const key = token.address.toLowerCase();
+      const existing = allTokens.get(key);
+      
+      if (existing) {
+        // If token already exists, combine the values
+        existing.value = (existing.value || 0) + (token.value || 0);
+      } else {
+        // Clone the token to avoid modifying original
+        allTokens.set(key, { ...token });
+      }
+    });
+  });
+  
+  // Step 2: Sort all tokens by combined value
+  const sortedTokens = Array.from(allTokens.values())
+    .filter(token => !token.hide) // Filter out hidden tokens
+    .sort((a, b) => (b.value || 0) - (a.value || 0));
+  
+  if (onProgress) {
+    onProgress(`Preparing to fetch logos for top 50 tokens from ${sortedTokens.length} total tokens...`, 10);
+  }
+  
+  // Step 3: Take top 50 tokens by value for logo fetching
+  const tokensForLogos = sortedTokens.slice(0, 50);
+  
+  // Step 4: Fetch all logos in parallel
+  const logoPromises = tokensForLogos.map(async (token, index) => {
+    // Skip if already has a logo (and it's not the Frenkabal placeholder)
+    if (token.logo && !token.logo.includes('100xfrenlogo')) {
+      return;
+    }
+    
+    try {
+      const tokenAddressForDex = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' 
+        ? '0xa1077a294dde1b09bb078844df40758a5d0f9a27' 
+        : token.address;
+      
+      const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
+      if (priceData?.logo) {
+        // Update the logo in all wallet instances
+        Object.values(walletData).forEach(wallet => {
+          const walletToken = wallet.tokens?.find(t => 
+            t.address.toLowerCase() === token.address.toLowerCase()
+          );
+          if (walletToken) {
+            walletToken.logo = priceData.logo;
+          }
+        });
+        
+        // Save to server for future use
+        saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
+        
+        if (onProgress) {
+          const progress = Math.round(10 + ((index + 1) / tokensForLogos.length) * 80);
+          onProgress(`Fetching logos... (${index + 1}/${tokensForLogos.length})`, progress);
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to fetch logo for ${token.symbol}:`, error);
+    }
+  });
+  
+  // Wait for all logos to complete
+  await Promise.all(logoPromises);
+  
+  if (onProgress) {
+    onProgress('Logo fetching complete', 100);
+  }
+}
+
 // Import types directly from server since they're not in shared schema
 interface ProcessedToken {
   address: string;
@@ -44,6 +124,7 @@ interface Wallet {
 
 interface TokenWithPrice extends ProcessedToken {
   priceData?: TokenPriceData;
+  hide?: boolean;
 }
 
 /**
