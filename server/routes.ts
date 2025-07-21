@@ -661,7 +661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         try {
           // Find the portfolio by share code
-          const portfolio = await storage.getPortfolioByShareCode(portfolioCode);
+          const portfolio = await storage.getPortfolioByPublicCode(portfolioCode);
           if (!portfolio) {
             return res.status(404).json({ message: "Portfolio not found" });
           }
@@ -1057,7 +1057,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error testing logo fetch:', error);
-      res.status(500).json({ message: "Error testing logo fetch", error: error.message });
+      res.status(500).json({ message: "Error testing logo fetch", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
@@ -1209,7 +1209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create default fallback logo as absolute last resort
         const fallbackLogo = {
           tokenAddress: address,
-          logoUrl: '/assets/100xfrenlogo.png',
+          logoUrl: null,
           symbol: null,
           name: null,
           lastUpdated: new Date().toISOString()
@@ -1226,7 +1226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json({
             id: -1,
             tokenAddress: address,
-            logoUrl: '/assets/100xfrenlogo.png',
+            logoUrl: null,
             symbol: null,
             name: null,
             lastUpdated: new Date().toISOString()
