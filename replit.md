@@ -216,6 +216,17 @@ Required environment variables:
 - **Integrated into portfolio loading** - Automatically runs after all wallet data is loaded for portfolios
 - **Result** - Portfolio views with 400+ tokens now show logos for the most valuable tokens across the entire portfolio
 
+### July 21, 2025 - Mobile Optimization for Smart Contract Price Service
+- **Implemented exponential backoff retry logic** - Added retry mechanism with increasing delays for mobile network reliability
+- **Smaller batch sizes for mobile** - Reduced batch size from 100 to 10 tokens to prevent mobile memory issues
+- **Sequential batch processing** - Changed from parallel to sequential processing with 100ms delays between batches
+- **Extended timeouts for mobile** - Increased timeout from 5s to 8s to handle slower mobile networks
+- **Cache size limits** - Added automatic cache pruning to limit memory usage on mobile devices (max 1000 entries)
+- **Reduced polling intervals** - Extended provider polling to 8s to reduce battery usage on mobile
+- **Optimized RPC endpoint order** - Prioritized official PulseChain RPC first for better mobile reliability
+- **Improved error handling** - Gracefully handles network errors without spamming console logs
+- **Result** - Mobile app now loads wallets reliably with 61 tokens showing proper prices within seconds
+
 ### July 21, 2025 - Implemented Server-Side Logo Caching with 24-Hour Retry Logic
 - **Enhanced tokenLogos schema** - Added `hasLogo` boolean and `lastAttempt` timestamp fields for intelligent retry management
 - **Server-side DexScreener integration** - Migrated from client-side to server-side logo fetching to reduce API calls across all users

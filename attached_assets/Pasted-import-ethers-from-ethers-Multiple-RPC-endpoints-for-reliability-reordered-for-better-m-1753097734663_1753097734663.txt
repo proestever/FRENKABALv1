@@ -1,10 +1,10 @@
 import { ethers } from 'ethers';
 
-// RPC endpoints optimized for mobile - using the most reliable endpoints
+// Multiple RPC endpoints for reliability - reordered for better mobile performance
 const RPC_ENDPOINTS = [
-  'https://rpc.pulsechain.com', // Official endpoint first for mobile reliability
-  'https://rpc-pulsechain.g4mm4.io', // g4mm4 as backup
-  'https://pulsechain.publicnode.com' // Public node as last resort
+  'https://pulsechain.publicnode.com',
+  'https://rpc.pulsechain.com',
+  'https://rpc-pulsechain.g4mm4.io'
 ];
 
 // ABI for PulseX pair contracts (minimal required functions)
@@ -311,7 +311,6 @@ class SmartContractPriceService {
     // Fetch fresh price
     const wplsPriceData = await this.getStablecoinPairPrice(WPLS_ADDRESS);
     if (wplsPriceData) {
-      // Cache the price
       this.wplsPriceCache = {
         price: wplsPriceData.price,
         timestamp: Date.now()
@@ -378,40 +377,46 @@ class SmartContractPriceService {
   }
 
   /**
-   * Get prices for multiple tokens in parallel
+   * Get prices for multiple tokens with better mobile handling
    */
   async getMultipleTokenPrices(tokenAddresses: string[]): Promise<Map<string, PriceData | null>> {
     const results = new Map<string, PriceData | null>();
     
-    // Mobile-optimized batch processing
-    const BATCH_SIZE = 10; // Smaller batches for mobile stability
+    // Reduced batch size for mobile to prevent memory issues
+    const BATCH_SIZE = 10;
     const batches: string[][] = [];
     
-    // Create smaller batches
+    // Create smaller batches for mobile
     for (let i = 0; i < tokenAddresses.length; i += BATCH_SIZE) {
       batches.push(tokenAddresses.slice(i, i + BATCH_SIZE));
     }
     
-    // Process batches sequentially with delays for mobile network stability
+    // Process batches sequentially on mobile to reduce network strain
     for (const batch of batches) {
-      const batchResults = await Promise.all(
+      const batchResults = await Promise.allSettled(
         batch.map(async (address) => {
-          try {
-            const price = await this.getTokenPrice(address);
-            return { address: address.toLowerCase(), price };
-          } catch (error) {
-            console.warn(`Failed to get price for ${address}:`, error);
-            return { address: address.toLowerCase(), price: null };
+          if (!address || typeof address !== 'string') {
+            return { address: '', price: null };
           }
+          const price = await this.getTokenPrice(address);
+          return { address: address.toLowerCase(), price };
         })
       );
       
-      // Add results to map
-      batchResults.forEach(({ address, price }) => {
-        results.set(address, price);
+      // Add successful results to map
+      batchResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const { address, price } = result.value;
+          if (address) {
+            results.set(address, price);
+          }
+        } else {
+          console.warn(`Failed to get price for ${batch[index]}:`, result.reason);
+          results.set(batch[index].toLowerCase(), null);
+        }
       });
       
-      // Small delay between batches for mobile network stability
+      // Small delay between batches on mobile
       if (batches.indexOf(batch) < batches.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
@@ -425,6 +430,27 @@ class SmartContractPriceService {
    */
   clearCache() {
     this.priceCache.clear();
+    this.wplsPriceCache = null;
+  }
+
+  /**
+   * Health check for providers
+   */
+  async checkProviderHealth(): Promise<boolean[]> {
+    const healthChecks = await Promise.allSettled(
+      this.providers.map(async (provider) => {
+        try {
+          await provider.getBlockNumber();
+          return true;
+        } catch {
+          return false;
+        }
+      })
+    );
+
+    return healthChecks.map(result => 
+      result.status === 'fulfilled' ? result.value : false
+    );
   }
 }
 
@@ -439,4 +465,9 @@ export async function getTokenPriceFromContract(tokenAddress: string): Promise<P
 // Export function for batch pricing
 export async function getMultipleTokenPricesFromContract(tokenAddresses: string[]): Promise<Map<string, PriceData | null>> {
   return smartContractPriceService.getMultipleTokenPrices(tokenAddresses);
+}
+
+// Export health check function
+export async function checkNetworkHealth(): Promise<boolean[]> {
+  return smartContractPriceService.checkProviderHealth();
 }
