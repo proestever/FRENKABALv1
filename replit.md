@@ -132,6 +132,15 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 21, 2025 - Wallet Share Feature Added
+- **Share Link Feature** - Added a new screenshot-friendly share page for wallets
+- **Share Route** - Created `/share/:walletAddress` route that displays top 10 tokens
+- **Share Button** - Added Share button to wallet overview component (only shows for single wallets)
+- **Beautiful Design** - Share page includes Frenkabal branding, portfolio total, and numbered token list
+- **Enhanced Display** - Shows token names, symbols, logos, values, and balances in an easy-to-screenshot format
+- **Gradient Styling** - Beautiful gradient backgrounds and text effects for visual appeal
+- **Mobile Responsive** - Clean design works well on all screen sizes for easy sharing
+
 ### July 21, 2025 - Performance Optimizations for Large Wallet Loading
 - **Reduced real-time price update frequency** - Changed from 5 seconds to 5 minutes to prevent constant blockchain calls
 - **Throttled background logo fetching** - Reduced batch size from 100 to 20 tokens with 2-second delays between batches
