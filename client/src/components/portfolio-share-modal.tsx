@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { TokenLogo } from './token-logo';
 import { formatCurrency, formatTokenAmount } from '@/lib/utils';
-import { X } from 'lucide-react';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Token } from '@shared/schema';
 import { getHiddenTokens } from '@/lib/api';
@@ -114,14 +113,7 @@ export function PortfolioShareModal({
         </VisuallyHidden>
         
         <div className="relative z-10 px-4 py-8 md:p-8 md:py-16">
-          {/* Close button */}
-          <button
-            onClick={() => onOpenChange(false)}
-            className="absolute top-4 right-4 md:top-6 md:right-6 p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors z-20"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5 text-gray-400 hover:text-white" />
-          </button>
+
 
           {/* Frenkabal Branding */}
           <div className="flex items-center justify-center mb-8 md:mb-12">
