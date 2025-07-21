@@ -12,6 +12,7 @@ import { updateLoadingProgress } from '../routes';
 import { getTokenPriceDataFromDexScreener } from './dexscreener';
 import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
 import { executeWithFailover } from './rpc-provider';
+import { getTokenPriceFromContract } from './smart-contract-price-service';
 
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
 const RECENT_BLOCKS_TO_SCAN = 1000; // Last ~20 minutes of blocks
@@ -233,7 +234,24 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
     }
     
     const plsBalanceFormatted = parseFloat(ethers.utils.formatUnits(plsBalance, PLS_DECIMALS));
-    const plsPrice = await getTokenPriceFromDexScreener(WPLS_CONTRACT_ADDRESS) || 0;
+    
+    // Try smart contract price first, fall back to DexScreener
+    let plsPrice = 0;
+    try {
+      const contractPrice = await getTokenPriceFromContract(WPLS_CONTRACT_ADDRESS);
+      if (contractPrice && contractPrice.price > 0) {
+        plsPrice = contractPrice.price;
+        console.log(`Got PLS price from smart contract: $${plsPrice}`);
+      }
+    } catch (error) {
+      console.error('Failed to get PLS price from contract:', error);
+    }
+    
+    // If smart contract price failed, try DexScreener
+    if (plsPrice === 0) {
+      plsPrice = await getTokenPriceDataFromDexScreener(WPLS_CONTRACT_ADDRESS).then(data => data?.price || 0);
+      console.log(`Got PLS price from DexScreener: $${plsPrice}`);
+    }
     
     if (plsBalanceFormatted > 0) {
       processedTokens.push({
@@ -308,8 +326,45 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
             
             if (tokenInfo.balanceFormatted === 0) return null;
             
-            // Get price data from DexScreener
-            const priceData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
+            // Get price data - try smart contract first, then DexScreener
+            let priceData: any = null;
+            
+            // Define major tokens to prioritize smart contract pricing
+            const MAJOR_TOKENS = [
+              '0x95b303987a60c71504d99aa1b13b4da07b0790ab', // PLSX
+              '0x2b591e99afe9f32eaa6214f7b7629768c40eeb39', // HEX  
+              '0x2fa878ab3f87cc1c9737fc071108f904c0b0c95d', // INC
+              '0xa1077a294dde1b09bb078844df40758a5d0f9a27'  // WPLS
+            ];
+            
+            const isKnownToken = MAJOR_TOKENS.includes(tokenAddress.toLowerCase());
+            
+            if (isKnownToken) {
+              try {
+                const contractPrice = await getTokenPriceFromContract(tokenAddress);
+                if (contractPrice && contractPrice.price > 0) {
+                  priceData = {
+                    price: contractPrice.price,
+                    priceChange24h: 0, // Contract doesn't provide 24h change
+                    logo: null // Will be fetched from DexScreener below
+                  };
+                  console.log(`Got ${tokenInfo.symbol} price from smart contract: $${contractPrice.price}`);
+                }
+              } catch (error) {
+                console.error(`Failed to get ${tokenInfo.symbol} price from contract:`, error);
+              }
+            }
+            
+            // If no contract price or not a major token, try DexScreener
+            if (!priceData) {
+              const dexData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
+              if (dexData) {
+                priceData = dexData;
+                if (isKnownToken && dexData.price > 0) {
+                  console.log(`Got ${tokenInfo.symbol} price from DexScreener: $${dexData.price}`);
+                }
+              }
+            }
             
             // First check database for existing logo
             let logoUrl = '';
