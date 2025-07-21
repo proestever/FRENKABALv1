@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { SearchSection } from '@/components/search-section';
 import { WalletOverview } from '@/components/wallet-overview';
 import { TokenList } from '@/components/token-list';
+import { TokenLogo } from '@/components/token-logo';
 import { EmptyState } from '@/components/empty-state';
 import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
@@ -720,7 +721,7 @@ export default function Home() {
             
             return (
               <div className="flex flex-col lg:flex-row gap-6">
-                {/* Left column - Combined Wallet Overview */}
+                {/* Left column - Combined Wallet Overview (desktop only) */}
                 <div className="w-full lg:w-1/3 flex flex-col gap-6">
                   <WalletOverview 
                     wallet={combinedWallet} 
@@ -735,8 +736,8 @@ export default function Home() {
                     }}
                   />
                   
-                  {/* Show individual wallet cards below the main overview */}
-                  <div className="glass-card p-4 border border-white/20 rounded-md">
+                  {/* Show individual wallet cards below the main overview on desktop only */}
+                  <div className="hidden lg:block glass-card p-4 border border-white/20 rounded-md">
                     <h3 className="text-lg font-semibold mb-3">
                       Individual Wallets ({Object.keys(multiWalletData).length})
                     </h3>
@@ -808,6 +809,92 @@ export default function Home() {
                     otherWalletAddresses={Object.keys(multiWalletData)}
                     isMultiWallet={true}
                   />
+                  
+                  {/* Show individual wallet cards below tokens on mobile only */}
+                  <div className="block lg:hidden mt-6 glass-card p-4 border border-white/20 rounded-md">
+                    <h3 className="text-lg font-semibold mb-3">
+                      Individual Wallets ({Object.keys(multiWalletData).length})
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      {Object.entries(multiWalletData).map(([address, wallet]) => {
+                        // Find if we have HEX stakes for this wallet
+                        const walletHexStakes = individualWalletHexStakes[address];
+                        
+                        // Calculate total value including HEX stakes
+                        let totalValue = wallet.totalValue || 0;
+                        let hexStakeValue = 0;
+                        
+                        if (walletHexStakes && walletHexStakes.totalCombinedValueUsd) {
+                          hexStakeValue = walletHexStakes.totalCombinedValueUsd;
+                          totalValue += hexStakeValue;
+                        }
+                        
+                        // Get top 3 tokens for this wallet
+                        const top3Tokens = wallet.tokens
+                          .sort((a, b) => (b.value || 0) - (a.value || 0))
+                          .slice(0, 3);
+                        
+                        return (
+                          <div key={address} className="border border-white/10 rounded-md p-3">
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="text-sm font-medium truncate max-w-[160px]">
+                                {address}
+                              </h4>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 px-2 py-0 text-xs" 
+                                onClick={() => handleSearch(address)}
+                              >
+                                Details
+                              </Button>
+                            </div>
+                            
+                            <div className="text-xs mb-2">
+                              <span className="opacity-70">Value:</span>{' '}
+                              ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                            
+                            <div className="text-xs mb-2">
+                              <span className="opacity-70">Tokens:</span>{' '}
+                              {wallet.tokenCount}
+                              {walletHexStakes && walletHexStakes.stakeCount > 0 && (
+                                <span className="text-purple-300 ml-2">
+                                  + {walletHexStakes.stakeCount} HEX {walletHexStakes.stakeCount === 1 ? 'stake' : 'stakes'}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Top 3 tokens */}
+                            {top3Tokens.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-white/5">
+                                <div className="text-xs opacity-70 mb-1">Top Tokens:</div>
+                                <div className="space-y-1">
+                                  {top3Tokens.map((token, index) => (
+                                    <div key={token.address} className="flex items-center justify-between text-xs">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-white/50">{index + 1}.</span>
+                                        <TokenLogo 
+                                          address={token.address} 
+                                          symbol={token.symbol} 
+                                          size="xs" 
+                                        />
+                                        <span className="font-medium">{token.symbol}</span>
+                                      </div>
+                                      <span className="text-white/70">
+                                        ${(token.value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             );

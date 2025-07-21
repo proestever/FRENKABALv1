@@ -277,33 +277,18 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
             </div>
             <div className="text-xl md:text-2xl font-bold text-white">
               {totalVisibleValue !== undefined ? formatCurrency(totalVisibleValue) : 'N/A'}
-              {(wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:")) && (
-                <div className="text-sm text-purple-300 font-normal">
-                  Including tokens and HEX stakes from {
-                    wallet.address.startsWith("Portfolio:") ? 
-                      "all wallets in portfolio" : 
-                      wallet.address.includes("(") ? 
-                        wallet.address.split("(")[1].replace(")", "") : 
-                        "5 wallets"
-                  }
-                </div>
-              )}
             </div>
-            <div className="text-sm mt-2 flex items-center justify-between">
-              <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
-              {/* Show HEX stakes value for combined wallet view */}
-              {(wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:")) && hexStakesSummary && hexStakesSummary.totalCombinedValueUsd > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  Includes <span className="text-purple-300 font-medium">{formatCurrency(hexStakesSummary.totalCombinedValueUsd)}</span> in HEX stakes
-                </span>
-              )}
-              {/* Show HEX stakes value for single wallet view */}
-              {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && hexStakesFromHook && hexStakesFromHook.totalCombinedValueUsd > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  Includes <span className="text-purple-300 font-medium">{formatCurrency(hexStakesFromHook.totalCombinedValueUsd)}</span> in HEX stakes
-                </span>
-              )}
-            </div>
+            {/* Show HEX stakes value and percentage only for single wallet view */}
+            {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
+              <div className="text-sm mt-2 flex items-center justify-between">
+                <span className="text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium">+2.34% (24h)</span>
+                {hexStakesFromHook && hexStakesFromHook.totalCombinedValueUsd > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    Includes <span className="text-purple-300 font-medium">{formatCurrency(hexStakesFromHook.totalCombinedValueUsd)}</span> in HEX stakes
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           
           {/* PLS Balance Card - Now second */}
@@ -321,19 +306,9 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                 `${formatTokenAmount(wallet.plsBalance)} PLS` : 
                 'N/A'
               }
-              {(wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:")) && (
-                <span className="text-sm ml-2 text-purple-300">
-                  (Combined from {
-                    wallet.address.startsWith("Portfolio:") ? 
-                      "all portfolio wallets" : 
-                      wallet.address.includes("(") ? 
-                        wallet.address.split("(")[1].replace(")", "") : 
-                        "5 wallets"
-                  })
-                </span>
-              )}
             </div>
-            {wallet.plsPriceChange !== null && wallet.plsPriceChange !== undefined && (
+            {/* Show percentage change only for single wallet view */}
+            {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && wallet.plsPriceChange !== null && wallet.plsPriceChange !== undefined && (
               <div className="text-sm mt-2 flex items-center">
                 <span className={wallet.plsPriceChange > 0 
                   ? "text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded-md font-medium"
