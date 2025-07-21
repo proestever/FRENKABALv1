@@ -12,86 +12,6 @@ const DUST_TOKEN_BLACKLIST = new Set<string>([
   // Example: '0x1234567890abcdef...',
 ]);
 
-// Optimized logo fetching for portfolio bundles with 400+ tokens
-export async function fetchPortfolioLogos(
-  walletData: Record<string, Wallet>, 
-  onProgress?: (message: string, percentage: number) => void
-): Promise<void> {
-  // Step 1: Collect all unique tokens from all wallets
-  const allTokens: Map<string, TokenWithPrice> = new Map();
-  
-  Object.values(walletData).forEach(wallet => {
-    wallet.tokens?.forEach(token => {
-      const key = token.address.toLowerCase();
-      const existing = allTokens.get(key);
-      
-      if (existing) {
-        // If token already exists, combine the values
-        existing.value = (existing.value || 0) + (token.value || 0);
-      } else {
-        // Clone the token to avoid modifying original
-        allTokens.set(key, { ...token });
-      }
-    });
-  });
-  
-  // Step 2: Sort all tokens by combined value
-  const sortedTokens = Array.from(allTokens.values())
-    .filter(token => !token.hide) // Filter out hidden tokens
-    .sort((a, b) => (b.value || 0) - (a.value || 0));
-  
-  if (onProgress) {
-    onProgress(`Preparing to fetch logos for top 50 tokens from ${sortedTokens.length} total tokens...`, 10);
-  }
-  
-  // Step 3: Take top 50 tokens by value for logo fetching
-  const tokensForLogos = sortedTokens.slice(0, 50);
-  
-  // Step 4: Fetch all logos in parallel
-  const logoPromises = tokensForLogos.map(async (token, index) => {
-    // Skip if already has a logo (and it's not the Frenkabal placeholder)
-    if (token.logo && !token.logo.includes('100xfrenlogo')) {
-      return;
-    }
-    
-    try {
-      const tokenAddressForDex = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' 
-        ? '0xa1077a294dde1b09bb078844df40758a5d0f9a27' 
-        : token.address;
-      
-      const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
-      if (priceData?.logo) {
-        // Update the logo in all wallet instances
-        Object.values(walletData).forEach(wallet => {
-          const walletToken = wallet.tokens?.find(t => 
-            t.address.toLowerCase() === token.address.toLowerCase()
-          );
-          if (walletToken) {
-            walletToken.logo = priceData.logo;
-          }
-        });
-        
-        // Save to server for future use
-        saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
-        
-        if (onProgress) {
-          const progress = Math.round(10 + ((index + 1) / tokensForLogos.length) * 80);
-          onProgress(`Fetching logos... (${index + 1}/${tokensForLogos.length})`, progress);
-        }
-      }
-    } catch (error) {
-      console.error(`Failed to fetch logo for ${token.symbol}:`, error);
-    }
-  });
-  
-  // Wait for all logos to complete
-  await Promise.all(logoPromises);
-  
-  if (onProgress) {
-    onProgress('Logo fetching complete', 100);
-  }
-}
-
 // Import types directly from server since they're not in shared schema
 interface ProcessedToken {
   address: string;
@@ -124,7 +44,6 @@ interface Wallet {
 
 interface TokenWithPrice extends ProcessedToken {
   priceData?: TokenPriceData;
-  hide?: boolean;
 }
 
 /**
@@ -196,49 +115,63 @@ export async function fetchWalletDataClientSide(
     const totalTokens = tokensWithPrices.length;
     let processedCount = 0;
     
-    // Take top 50 tokens by value for logo fetching
-    const tokensToProcess = tokensWithPrices.slice(0, 50);
+    // Process in batches to avoid overwhelming DexScreener
+    const BATCH_SIZE = 5;
+    const batches: TokenWithPrice[][] = [];
     
-    if (onProgress) onProgress('Fetching token logos from DexScreener...', 30);
+    for (let i = 0; i < tokensWithPrices.length; i += BATCH_SIZE) {
+      batches.push(tokensWithPrices.slice(i, i + BATCH_SIZE));
+    }
     
-    // Process all 50 tokens in parallel for maximum speed
-    await Promise.all(
-      tokensToProcess.map(async (token, index) => {
-        try {
-          // For PLS native token, use WPLS address
-          let tokenAddressForDex = token.address;
-          if (token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-            tokenAddressForDex = '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
-          }
-          
-          // Always fetch from DexScreener to get logos, even if we have prices
-          const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
-          
-          if (priceData) {
-            // Only update price if we don't have one from scanner
-            if (!token.price || token.price === 0) {
-              token.price = priceData.price;
-              token.value = token.balanceFormatted * priceData.price;
+    if (onProgress) onProgress('Fetching token logos and prices from DexScreener...', 30);
+    
+    // Process each batch
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      
+      await Promise.all(
+        batch.map(async (token) => {
+          try {
+            // For PLS native token, use WPLS address
+            let tokenAddressForDex = token.address;
+            if (token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+              tokenAddressForDex = '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
             }
-            token.priceData = priceData;
             
-            // Always check for logo updates
-            if (priceData.logo && (!token.logo || token.logo.includes('100xfrenlogo'))) {
-              token.logo = priceData.logo;
+            // Always fetch from DexScreener to get logos, even if we have prices
+            const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
+            
+            if (priceData) {
+              // Only update price if we don't have one from scanner
+              if (!token.price || token.price === 0) {
+                token.price = priceData.price;
+                token.value = token.balanceFormatted * priceData.price;
+              }
+              token.priceData = priceData;
               
-              // Save logo to server in background
-              saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
+              // Always check for logo updates
+              if (priceData.logo && (!token.logo || token.logo.includes('100xfrenlogo'))) {
+                token.logo = priceData.logo;
+                
+                // Save logo to server in background
+                saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
+              }
             }
+          } catch (error) {
+            console.error(`Failed to fetch data for ${token.symbol}:`, error);
           }
-        } catch (error) {
-          console.error(`Failed to fetch data for ${token.symbol}:`, error);
-        }
-        
-        processedCount++;
-        const progress = Math.round(30 + (processedCount / tokensToProcess.length) * 60); // 30% to 90%
-        if (onProgress) onProgress(`Fetching logos... (${processedCount}/${tokensToProcess.length})`, progress);
-      })
-    );
+          
+          processedCount++;
+          const progress = Math.round(30 + (processedCount / totalTokens) * 60); // 30% to 90%
+          if (onProgress) onProgress(`Fetching logos and prices... (${processedCount}/${totalTokens})`, progress);
+        })
+      );
+      
+      // Small delay between batches to respect rate limits
+      if (batchIndex < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
     
     // Step 3: Calculate total value
     const totalValue = tokensWithPrices.reduce((sum, token) => sum + (token.value || 0), 0);
@@ -306,11 +239,8 @@ export async function fetchWalletDataWithContractPrices(
     // Step 3: Fetch logos from DexScreener in parallel
     if (onProgress) onProgress('Fetching token logos...', 50);
     
-    // Limit logo fetching to top 50 tokens to avoid DexScreener rate limits
-    const tokensForLogos = tokensWithPrices.slice(0, 50);
-    
     // Fetch logos in parallel batches
-    const logoPromises = tokensForLogos.map(async (token) => {
+    const logoPromises = tokensWithPrices.map(async (token) => {
       if (!token.logo || token.logo.includes('100xfrenlogo')) {
         try {
           const tokenAddressForDex = token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' 

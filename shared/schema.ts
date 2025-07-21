@@ -110,23 +110,22 @@ export const insertRecentAddressSchema = createInsertSchema(recentAddresses).pic
 export type InsertRecentAddress = z.infer<typeof insertRecentAddressSchema>;
 export type RecentAddress = typeof recentAddresses.$inferSelect;
 
-// Token logos schema - Enhanced with retry logic
+// Token logos schema
 export const tokenLogos = pgTable("token_logos", {
   id: serial("id").primaryKey(),
   tokenAddress: text("token_address").notNull().unique(),
-  logoUrl: text("logo_url"), // Can be null if no logo found
+  logoUrl: text("logo_url").notNull(),
   symbol: text("symbol"),
   name: text("name"),
-  hasLogo: boolean("has_logo").notNull().default(false), // Whether DexScreener has a logo
-  lastAttempt: timestamp("last_attempt").notNull().defaultNow(), // Last time we tried to fetch
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  lastUpdated: text("last_updated").notNull(),
 });
 
-export const insertTokenLogoSchema = createInsertSchema(tokenLogos).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertTokenLogoSchema = createInsertSchema(tokenLogos).pick({
+  tokenAddress: true,
+  logoUrl: true,
+  symbol: true,
+  name: true,
+  lastUpdated: true,
 });
 
 export type InsertTokenLogo = z.infer<typeof insertTokenLogoSchema>;

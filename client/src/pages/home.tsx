@@ -264,25 +264,6 @@ export default function Home() {
         console.log('No combined HEX stakes data received');
       }
       
-      // Update progress to show we're optimizing logo fetching for portfolio
-      setMultiWalletProgress({
-        currentBatch: addresses.length,
-        totalBatches: addresses.length,
-        status: 'loading',
-        message: 'Optimizing logo fetching for portfolio tokens...'
-      });
-      
-      // Fetch logos for top 50 tokens across all wallets combined
-      const { fetchPortfolioLogos } = await import('@/services/wallet-client-service');
-      await fetchPortfolioLogos(walletData, (message, progress) => {
-        setMultiWalletProgress({
-          currentBatch: addresses.length,
-          totalBatches: addresses.length,
-          status: 'loading',
-          message: message
-        });
-      });
-      
       // Update progress to show we're in the final steps
       setMultiWalletProgress({
         currentBatch: addresses.length,

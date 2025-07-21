@@ -49,8 +49,8 @@ export const getBatchTokenLogos = (addresses: string[]): Record<string, string> 
     if (globalLogoCache[addr]) {
       results[addr] = globalLogoCache[addr];
     } else {
-      // Return null to trigger initials fallback
-      results[addr] = '';
+      // Default fallback if not in cache
+      results[addr] = '/assets/100xfrenlogo.png';
     }
   });
   
@@ -113,7 +113,6 @@ export function useBatchTokenLogos(addresses: string[]): Record<string, string> 
     // Create a batch request to fetch all missing logos at once
     const fetchBatchLogos = async () => {
       try {
-        // First check server cache
         const response = await fetch('/api/token-logos/batch', {
           method: 'POST',
           headers: {
@@ -128,79 +127,24 @@ export function useBatchTokenLogos(addresses: string[]): Record<string, string> 
           throw new Error('Failed to fetch batch token logos');
         }
         
-        const serverData = await response.json();
+        const data = await response.json();
         
         // Extract logo URLs from the response
         const newLogos: Record<string, string> = {};
-        const needDexScreenerFetch: string[] = [];
         
-        // Process the server response
-        Object.entries(serverData).forEach(([address, value]: [string, any]) => {
+        // Process the response data
+        Object.entries(data).forEach(([address, value]: [string, any]) => {
           const normalizedAddr = address.toLowerCase();
-          if (value && value.hasLogo && value.logoUrl) {
-            // Server has a logo
+          if (value && value.logoUrl) {
             newLogos[normalizedAddr] = value.logoUrl;
+            // Also update the global cache
             globalLogoCache[normalizedAddr] = value.logoUrl;
           } else {
-            // Server doesn't have a logo or it's been 24 hours since last attempt
-            needDexScreenerFetch.push(normalizedAddr);
+            // Use fallback logo
+            newLogos[normalizedAddr] = '/assets/100xfrenlogo.png';
+            globalLogoCache[normalizedAddr] = '/assets/100xfrenlogo.png';
           }
         });
-        
-        // For tokens without logos, fetch from DexScreener client-side
-        if (needDexScreenerFetch.length > 0) {
-          console.log(`Fetching ${needDexScreenerFetch.length} logos from DexScreener client-side`);
-          
-          // Limit to 50 at a time to avoid rate limits
-          const tokensToFetch = needDexScreenerFetch.slice(0, 50);
-          
-          await Promise.all(
-            tokensToFetch.map(async (address) => {
-              try {
-                // Use WPLS address for native PLS token
-                const dexScreenerAddress = address === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' 
-                  ? '0xa1077a294dde1b09bb078844df40758a5d0f9a27' 
-                  : address;
-                
-                const dexResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${dexScreenerAddress}`);
-                if (dexResponse.ok) {
-                  const dexData = await dexResponse.json();
-                  if (dexData.pairs && dexData.pairs.length > 0) {
-                    const pair = dexData.pairs[0];
-                    if (pair.info && pair.info.imageUrl) {
-                      newLogos[address] = pair.info.imageUrl;
-                      globalLogoCache[address] = pair.info.imageUrl;
-                      
-                      // Save to server in background
-                      const tokenInfo = pair.baseToken.address.toLowerCase() === dexScreenerAddress.toLowerCase() 
-                        ? pair.baseToken 
-                        : pair.quoteToken;
-                      
-                      fetch('/api/token-logos/save-from-client', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          tokenAddress: address,
-                          logoUrl: pair.info.imageUrl,
-                          symbol: tokenInfo.symbol,
-                          name: tokenInfo.name
-                        })
-                      }).catch(err => console.error('Failed to save logo to server:', err));
-                    }
-                  }
-                }
-              } catch (error) {
-                console.error(`Failed to fetch logo from DexScreener for ${address}:`, error);
-              }
-              
-              // If still no logo, set empty string
-              if (!newLogos[address]) {
-                newLogos[address] = '';
-                globalLogoCache[address] = '';
-              }
-            })
-          );
-        }
         
         // Merge with existing cached results
         setLogoUrls(prev => ({ ...prev, ...newLogos }));
@@ -220,10 +164,10 @@ export function useBatchTokenLogos(addresses: string[]): Record<string, string> 
         // Create fallback logos for the addresses that failed
         const fallbackUrls: Record<string, string> = {};
         addressesToFetch.forEach((address) => {
-          // Use empty string to trigger initials fallback
+          // Default to Frenkabal logo
           const normalizedAddr = address.toLowerCase();
-          fallbackUrls[normalizedAddr] = '';
-          globalLogoCache[normalizedAddr] = '';
+          fallbackUrls[normalizedAddr] = '/assets/100xfrenlogo.png';
+          globalLogoCache[normalizedAddr] = '/assets/100xfrenlogo.png';
         });
         
         // Merge with existing results
