@@ -133,7 +133,7 @@ function calculateStakeStartBonusHearts(stakedHearts: string, stakedDays: number
 
 // Cache HEX price to avoid excessive API calls
 let cachedHexPrice: { price: number; timestamp: number } | null = null;
-const HEX_PRICE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache to reduce API calls
+const HEX_PRICE_CACHE_TTL = 1 * 60 * 1000; // 1 minute cache for more frequent updates
 
 // Track ongoing price requests to prevent duplicate calls
 let ongoingPriceRequest: Promise<number> | null = null;
@@ -165,22 +165,38 @@ export async function getHexPriceWithCache(): Promise<number> {
       // Fetch HEX price directly from smart contracts
       const priceData = await getTokenPriceFromContract(HEX_CONTRACT_ADDRESS);
       
-      if (priceData && priceData.price && typeof priceData.price === 'number' && !isNaN(priceData.price)) {
+      if (priceData && priceData.price && typeof priceData.price === 'number' && !isNaN(priceData.price) && priceData.price > 0) {
         hexPrice = priceData.price;
+        console.log('Fetched fresh HEX price from smart contract:', hexPrice);
+      } else {
+        // If smart contract fetch fails, try DexScreener as backup
+        console.log('Smart contract price fetch failed, trying DexScreener...');
+        try {
+          const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${HEX_CONTRACT_ADDRESS}`);
+          const data = await response.json();
+          
+          if (data && data.pairs && data.pairs.length > 0) {
+            // Find the best pair (highest liquidity USD)
+            const bestPair = data.pairs
+              .filter(pair => pair.priceUsd && parseFloat(pair.priceUsd) > 0)
+              .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+            
+            if (bestPair && bestPair.priceUsd) {
+              hexPrice = parseFloat(bestPair.priceUsd);
+              console.log('Fetched HEX price from DexScreener:', hexPrice);
+            }
+          }
+        } catch (dexError) {
+          console.error('DexScreener fetch also failed:', dexError);
+        }
       }
       
-      // Ensure hexPrice is always a valid number
-      if (typeof hexPrice !== 'number' || isNaN(hexPrice) || hexPrice <= 0) {
-        hexPrice = 0.00004; // Fallback to default
-      }
-      
-      // Update cache
+      // Update cache with whatever price we got
       cachedHexPrice = {
         price: hexPrice,
         timestamp: Date.now()
       };
       
-      console.log('Fetched fresh HEX price from smart contract:', hexPrice);
     } catch (error) {
       console.error('Error fetching HEX price from smart contract:', error);
       // If we have any cached price (even expired), use it as backup
