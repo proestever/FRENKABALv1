@@ -132,7 +132,7 @@ Required environment variables:
 
 ## Recent Changes
 
-### July 21, 2025 - Removed All Price/Liquidity Filtering - Enhanced Smart Contract Price Service
+### July 21, 2025 - Removed All Price/Liquidity Filtering - Enhanced Smart Contract Price Service with Largest WPLS Pair Selection
 - **Complete removal of filtering** - Removed ALL price and liquidity filtering from smart contract price service and DexScreener
 - **Enhanced smart contract service** - Upgraded with retry logic, parallel processing, and better error handling
 - **Permanent decimals caching** - Token decimals are now cached permanently to reduce RPC calls
@@ -140,7 +140,9 @@ Required environment variables:
 - **WPLS price caching optimization** - Special 1-minute cache for WPLS price to optimize LP token calculations
 - **Custom error class** - Added `PriceServiceError` for better debugging and error tracking
 - **Exponential backoff retry** - Automatic retry with increasing delays for transient failures
-- **Result** - System now fetches prices for ALL tokens regardless of liquidity, allowing users to filter later
+- **Largest WPLS pair selection** - System now checks multiple factories (V1, V2) and always selects the WPLS pair with highest liquidity
+- **Smart price source selection** - Fetches both stablecoin and WPLS pairs in parallel, then chooses based on liquidity thresholds
+- **Result** - System now fetches prices for ALL tokens regardless of liquidity, with improved accuracy from largest liquidity pools
 
 ### July 20, 2025 - Upgraded LP Token and HEX Stakes to Smart Contract Prices
 - **Created server-side smart contract price service** - New `server/services/smart-contract-price-service.ts` for server-side blockchain price fetching
