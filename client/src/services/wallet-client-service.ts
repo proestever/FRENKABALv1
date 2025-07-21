@@ -305,10 +305,16 @@ export async function fetchWalletDataWithContractPrices(
       return token.address;
     });
     
-    // Skip smart contract price fetching on mobile/browsers to avoid network detection issues
-    // Prices will come from the scanner API instead
+    // Fetch all prices in batches from smart contracts with better error handling
     let priceMap = new Map<string, any>();
-    console.log('Skipping smart contract price fetching to avoid network errors');
+    try {
+      console.log('Fetching prices from smart contracts...');
+      priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
+      console.log(`Successfully fetched prices for ${priceMap.size} tokens`);
+    } catch (error) {
+      console.error('Failed to fetch prices from smart contracts:', error);
+      // Continue without prices rather than failing the entire query
+    }
     
     // Step 3: Fetch logos from DexScreener in parallel
     if (onProgress) onProgress('Fetching token logos...', 50);
@@ -342,30 +348,37 @@ export async function fetchWalletDataWithContractPrices(
     // Apply prices to tokens
     let processedCount = 0;
     tokensWithPrices.forEach((token, index) => {
-      const addressForPrice = tokenAddresses[index];
-      const priceData = priceMap.get(addressForPrice.toLowerCase());
-      
-      if (priceData) {
-        // Check if token is in blacklist
-        const isBlacklisted = DUST_TOKEN_BLACKLIST.has(token.address.toLowerCase());
+      // First check if server already provided a price
+      if (token.price && token.price > 0) {
+        console.log(`Using server price for ${token.symbol}: $${token.price}`);
+        token.value = token.balanceFormatted * token.price;
+      } else {
+        const addressForPrice = tokenAddresses[index];
+        const priceData = priceMap.get(addressForPrice.toLowerCase());
         
-        if (isBlacklisted) {
-          token.price = 0; // Set price to 0 for blacklisted dust tokens
-          token.value = 0;
-          token.priceData = undefined;
-        } else {
-          token.price = priceData.price;
-          token.value = token.balanceFormatted * priceData.price;
-          // Store minimal price data for UI (keep existing logo)
-          token.priceData = {
-            price: priceData.price,
-            priceChange24h: 0, // Contract method doesn't provide 24h change
-            liquidityUsd: priceData.liquidity,
-            volumeUsd24h: 0, // Contract method doesn't provide volume
-            dexId: 'pulsex',
-            pairAddress: priceData.pairAddress,
-            logo: token.logo // Preserve logo from server
-          };
+        if (priceData) {
+          // Check if token is in blacklist
+          const isBlacklisted = DUST_TOKEN_BLACKLIST.has(token.address.toLowerCase());
+          
+          if (isBlacklisted) {
+            token.price = 0; // Set price to 0 for blacklisted dust tokens
+            token.value = 0;
+            token.priceData = undefined;
+          } else {
+            console.log(`Using contract price for ${token.symbol}: $${priceData.price}`);
+            token.price = priceData.price;
+            token.value = token.balanceFormatted * priceData.price;
+            // Store minimal price data for UI (keep existing logo)
+            token.priceData = {
+              price: priceData.price,
+              priceChange24h: 0, // Contract method doesn't provide 24h change
+              liquidityUsd: priceData.liquidity,
+              volumeUsd24h: 0, // Contract method doesn't provide volume
+              dexId: 'pulsex',
+              pairAddress: priceData.pairAddress,
+              logo: token.logo // Preserve logo from server
+            };
+          }
         }
       }
       

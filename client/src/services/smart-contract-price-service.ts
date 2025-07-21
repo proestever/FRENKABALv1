@@ -69,10 +69,15 @@ class SmartContractPriceService {
 
   private initializeProviders() {
     // Initialize multiple providers for redundancy with explicit PulseChain network config
-    this.providers = RPC_ENDPOINTS.map(url => new ethers.providers.JsonRpcProvider(url, {
-      chainId: 369,
-      name: 'pulsechain'
-    }));
+    this.providers = RPC_ENDPOINTS.map(url => {
+      const provider = new ethers.providers.JsonRpcProvider(url, {
+        chainId: 369,
+        name: 'pulsechain'
+      });
+      // Set a shorter timeout for mobile environments
+      provider.pollingInterval = 4000;
+      return provider;
+    });
   }
 
   private getProvider(): ethers.providers.JsonRpcProvider {
@@ -131,7 +136,8 @@ class SmartContractPriceService {
     // Try each stablecoin
     for (const [stableAddress, stableInfo] of Object.entries(STABLECOINS)) {
       try {
-        const pairAddress = await factory.getPair(tokenAddress, stableAddress);
+        const pairAddress = await factory.getPair(tokenAddress, stableAddress).catch(() => null);
+        if (!pairAddress) continue;
         
         if (pairAddress === ethers.constants.AddressZero) continue;
 
@@ -181,8 +187,8 @@ class SmartContractPriceService {
     const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
 
     try {
-      const pairAddress = await factory.getPair(tokenAddress, WPLS_ADDRESS);
-      if (pairAddress === ethers.constants.AddressZero) return null;
+      const pairAddress = await factory.getPair(tokenAddress, WPLS_ADDRESS).catch(() => null);
+      if (!pairAddress || pairAddress === ethers.constants.AddressZero) return null;
 
       const reserves = await this.getPairReserves(pairAddress, tokenAddress, WPLS_ADDRESS);
       if (!reserves) return null;
@@ -274,8 +280,11 @@ class SmartContractPriceService {
         decimals0: Number(decimals0),
         decimals1: Number(decimals1)
       };
-    } catch (error) {
-      console.error('Error getting pair reserves:', error);
+    } catch (error: any) {
+      // Don't log network errors on mobile
+      if (error.code !== 'NETWORK_ERROR' && error.reason !== 'could not detect network') {
+        console.error('Error getting pair reserves:', error);
+      }
       return null;
     }
   }
