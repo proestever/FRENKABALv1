@@ -108,7 +108,7 @@ export class DatabaseStorage implements IStorage {
     };
 
     console.log(`Saving logo for token ${processedLogo.tokenAddress}:`, {
-      url: processedLogo.logoUrl.substring(0, 30) + '...',
+      url: processedLogo.logoUrl ? processedLogo.logoUrl.substring(0, 30) + '...' : 'null',
       symbol: processedLogo.symbol,
       name: processedLogo.name
     });

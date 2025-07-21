@@ -23,9 +23,9 @@ const PLS_TOKEN_ADDRESS = '0x0000000000000000000000000000000000000000';
 /**
  * Get default token logo for common tokens
  */
-export function getDefaultLogo(symbol: string | null | undefined): string {
+export function getDefaultLogo(symbol: string | null | undefined): string | null {
   if (!symbol) {
-    return 'https://cryptologos.cc/logos/placeholder-logo.png';
+    return null;
   }
 
   const symbolLower = symbol.toLowerCase();
@@ -40,7 +40,7 @@ export function getDefaultLogo(symbol: string | null | undefined): string {
     pdai: 'https://cryptologos.cc/logos/multi-collateral-dai-dai-logo.png', // pDAI logo
   };
   
-  return defaultLogos[symbolLower] || 'https://cryptologos.cc/logos/placeholder-logo.png';
+  return defaultLogos[symbolLower] || null;
 }
 
 /**

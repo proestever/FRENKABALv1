@@ -285,19 +285,19 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
                 if (storedLogo?.logoUrl) {
                   logoUrl = storedLogo.logoUrl;
                 } else {
-                  // Save the FrenKabal placeholder logo
+                  // Save null logo
                   await storage.saveTokenLogo({
                     tokenAddress: tokenAddress.toLowerCase(),
-                    logoUrl: '/assets/100xfrenlogo.png',
+                    logoUrl: null,
                     symbol: tokenInfo.symbol,
                     name: tokenInfo.name,
                     lastUpdated: new Date().toISOString()
                   });
-                  logoUrl = '/assets/100xfrenlogo.png';
+                  logoUrl = null;
                 }
               } catch (error) {
-                // Use FrenKabal placeholder
-                logoUrl = '/assets/100xfrenlogo.png';
+                // Use null logo
+                logoUrl = null;
               }
             }
             

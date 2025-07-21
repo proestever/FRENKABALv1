@@ -315,7 +315,7 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
             // Get price and logo data
             const priceData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
             
-            let logoUrl = getDefaultLogo(tokenInfo.symbol);
+            let logoUrl = null;
             if (priceData?.logo) {
               logoUrl = priceData.logo;
               // Save logo to database

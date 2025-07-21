@@ -40,8 +40,8 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', logo }: 
     // Normalize address for consistency
     const normalizedAddress = address.toLowerCase();
     
-    // If we have a logo prop from token data, use it immediately
-    if (logo) {
+    // Only use the logo prop if it's a valid URL (not a placeholder)
+    if (logo && !logo.includes('100xfrenlogo')) {
       setLogoUrl(logo);
       setIsLoading(false);
       // Also cache it for future use
