@@ -132,6 +132,18 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 22, 2025 - Integrated Enhanced Scanner with Direct PulseX Liquidity Pool Price Fetching
+- **Major Architecture Change** - Replaced existing wallet scanner with robust enhanced scanner that fetches prices directly from PulseX liquidity pools
+- **Direct Blockchain Pricing** - Token prices now come directly from PulseX V1 and V2 factory contracts, no external price APIs needed
+- **Advanced LP Token Analysis** - New system provides detailed composition breakdown of LP tokens showing underlying token amounts and values
+- **WPLS Price from Stablecoin Pairs** - WPLS price calculated from highest liquidity stablecoin pairs (USDC, DAI, USDT) for accuracy
+- **Load Balanced RPC Providers** - Uses multiple PulseChain RPC endpoints with automatic failover for reliability
+- **Intelligent Token Discovery** - Combines PulseChain Scan API data with recent blockchain activity for comprehensive token detection
+- **Built-in Price Caching** - 5-minute cache for token prices, 1-minute cache for WPLS price to reduce blockchain calls
+- **LP Token Details** - Shows user's share percentage, underlying token amounts, and total value for each LP position
+- **Performance** - Maintains fast scan times (2-4 seconds) while providing more accurate and detailed data
+- **Backwards Compatible** - Enhanced scanner maintains same API interface, no changes needed to existing endpoints
+
 ### July 22, 2025 - Unified Client-Side Price Fetching & Removed Server-Side Duplication
 - **Removed server-side smart contract price fetching** - Scanner API no longer fetches prices, returns only token balances
 - **LP tokens simplified** - Server no longer calculates LP token prices, client handles all price calculations
