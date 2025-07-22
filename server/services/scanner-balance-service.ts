@@ -283,7 +283,18 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
     }
     
     const plsBalanceFormatted = parseFloat(ethers.utils.formatUnits(plsBalance, PLS_DECIMALS));
-    const plsPrice = await getTokenPriceFromDexScreener(WPLS_CONTRACT_ADDRESS) || 0;
+    
+    // Get PLS price from smart contract service
+    let plsPrice = 0;
+    try {
+      const { getTokenPriceFromContract } = await import('./smart-contract-price-service');
+      const plsPriceData = await getTokenPriceFromContract(WPLS_CONTRACT_ADDRESS);
+      if (plsPriceData) {
+        plsPrice = plsPriceData.price;
+      }
+    } catch (error) {
+      console.error('Failed to get PLS price from smart contract:', error);
+    }
     
     if (plsBalanceFormatted > 0) {
       processedTokens.push({
@@ -358,41 +369,40 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
             
             if (tokenInfo.balanceFormatted === 0) return null;
             
-            // Get price from smart contract service first
+            // Get price from smart contract service ONLY
             let price = 0;
             try {
               const { getTokenPriceFromContract } = await import('./smart-contract-price-service');
               const contractPriceData = await getTokenPriceFromContract(tokenAddress);
               if (contractPriceData) {
                 price = contractPriceData.price;
+                console.log(`Got smart contract price for ${tokenInfo.symbol}: $${price}`);
               }
             } catch (error) {
               console.error(`Failed to get smart contract price for ${tokenAddress}:`, error);
             }
             
-            // Get logo data from DexScreener (and price as fallback)
-            const priceData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
-            
-            // Use DexScreener price only if no smart contract price
-            if (!price && priceData?.price) {
-              price = priceData.price;
-            }
-            
+            // Only get logo from DexScreener, NOT price
             let logoUrl = null;
-            if (priceData?.logo) {
-              logoUrl = priceData.logo;
-              // Save logo to database
-              try {
-                await storage.saveTokenLogo({
-                  tokenAddress: tokenAddress.toLowerCase(),
-                  logoUrl: priceData.logo,
-                  symbol: tokenInfo.symbol,
-                  name: tokenInfo.name,
-                  lastUpdated: new Date().toISOString()
-                });
-              } catch (error) {
-                console.error(`Failed to save logo for ${tokenAddress}:`, error);
+            try {
+              const priceData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
+              if (priceData?.logo) {
+                logoUrl = priceData.logo;
+                // Save logo to database
+                try {
+                  await storage.saveTokenLogo({
+                    tokenAddress: tokenAddress.toLowerCase(),
+                    logoUrl: priceData.logo,
+                    symbol: tokenInfo.symbol,
+                    name: tokenInfo.name,
+                    lastUpdated: new Date().toISOString()
+                  });
+                } catch (error) {
+                  console.error(`Failed to save logo for ${tokenAddress}:`, error);
+                }
               }
+            } catch (error) {
+              console.error(`Failed to get logo for ${tokenAddress}:`, error);
             }
             
             return {
