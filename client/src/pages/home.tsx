@@ -182,76 +182,69 @@ export default function Home() {
         message: `Loading ${addresses.length} wallets and HEX stakes in parallel...`
       });
       
-      // Start ALL async operations but with controlled concurrency for wallet fetching
+      // Start ALL async operations but load wallets one by one to avoid timeouts
       const [walletResults, hexStakesData, individualHexResults] = await Promise.all([
-        // Fetch wallet data with controlled concurrency to avoid rate limiting
+        // Fetch wallet data one by one sequentially
         (async () => {
           const results = [];
-          const BATCH_SIZE = 3; // Process 3 wallets at a time with retry logic
-          const DELAY_BETWEEN_BATCHES = 500; // 500ms delay between batches
+          const DELAY_BETWEEN_WALLETS = 1000; // 1 second delay between each wallet
           
-          for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
-            const batch = addresses.slice(i, i + BATCH_SIZE);
+          for (let i = 0; i < addresses.length; i++) {
+            const address = addresses[i];
             
             // Update progress
             setMultiWalletProgress({
-              currentBatch: i + batch.length,
+              currentBatch: i + 1,
               totalBatches: addresses.length,
               status: 'loading',
-              message: `Loading wallets ${i + 1} to ${Math.min(i + batch.length, addresses.length)} of ${addresses.length}...`
+              message: `Loading wallet ${i + 1} of ${addresses.length}...`
             });
             
-            // Add delay between batches (except for the first batch)
+            // Add delay between wallets (except for the first wallet)
             if (i > 0) {
-              await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+              await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_WALLETS));
             }
             
-            const batchResults = await Promise.all(
-              batch.map(async (address) => {
-                try {
-                  // Fetch wallet data with smart contract prices
-                  const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
-                  const dataWithPrices = await fetchWalletDataWithContractPrices(address);
-                  
-                  // Check if wallet had an error
-                  if (dataWithPrices.error) {
-                    console.warn(`Wallet ${address} loaded with error: ${dataWithPrices.error}`);
-                  } else {
-                    console.log(`Successfully fetched wallet ${address}:`, {
-                      tokenCount: dataWithPrices.tokens.length,
-                      totalValue: dataWithPrices.totalValue,
-                      lpCount: dataWithPrices.tokens.filter(t => t.isLp).length
-                    });
-                  }
-                  
-                  return { [address]: dataWithPrices };
-                } catch (error) {
-                  console.error(`Error fetching wallet ${address}:`, error);
-                  // Return wallet data with error flag instead of empty data
-                  return { 
-                    [address]: {
-                      address,
-                      tokens: [],
-                      totalValue: 0,
-                      tokenCount: 0,
-                      plsBalance: 0,
-                      networkCount: 1,
-                      error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
-                    }
-                  };
+            try {
+              // Fetch wallet data with smart contract prices
+              const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
+              const dataWithPrices = await fetchWalletDataWithContractPrices(address);
+              
+              // Check if wallet had an error
+              if (dataWithPrices.error) {
+                console.warn(`Wallet ${address} loaded with error: ${dataWithPrices.error}`);
+              } else {
+                console.log(`Successfully fetched wallet ${address}:`, {
+                  tokenCount: dataWithPrices.tokens.length,
+                  totalValue: dataWithPrices.totalValue,
+                  lpCount: dataWithPrices.tokens.filter((t: any) => t.isLp).length
+                });
+              }
+              
+              results.push({ [address]: dataWithPrices });
+            } catch (error) {
+              console.error(`Error fetching wallet ${address}:`, error);
+              // Return wallet data with error flag instead of empty data
+              results.push({ 
+                [address]: {
+                  address,
+                  tokens: [],
+                  totalValue: 0,
+                  tokenCount: 0,
+                  plsBalance: 0,
+                  networkCount: 1,
+                  error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
                 }
-              })
-            );
+              });
+            }
             
-            results.push(...batchResults);
-            
-            // Update progress
-            const progress = Math.round((i + batch.length) / addresses.length * 100);
+            // Update progress percentage
+            const progress = Math.round((i + 1) / addresses.length * 100);
             setMultiWalletProgress({
-              currentBatch: i + batch.length,
+              currentBatch: i + 1,
               totalBatches: addresses.length,
               status: 'loading',
-              message: `Loading wallets... (${i + batch.length}/${addresses.length})`
+              message: `Loading wallets... (${i + 1}/${addresses.length})`
             });
           }
           
@@ -286,7 +279,7 @@ export default function Home() {
       // Filter out null results and combine into a single object
       const walletData = walletResults
         .filter(result => result !== null)
-        .reduce((acc, result) => ({ ...acc, ...result }), {});
+        .reduce((acc: any, result: any) => ({ ...acc, ...result }), {});
       
       // Log summary of fetched data
       console.log('Portfolio fetch summary:', {
@@ -851,6 +844,8 @@ export default function Home() {
                           .sort((a, b) => (b.value || 0) - (a.value || 0))
                           .slice(0, 3);
                         
+                        const walletWithError = wallet as any;
+                        
                         return (
                           <div key={address} className="border border-white/10 rounded-md p-3">
                             <div className="flex justify-between items-start mb-2">
@@ -867,10 +862,10 @@ export default function Home() {
                               </Button>
                             </div>
                             
-                            {wallet.error ? (
+                            {walletWithError.error ? (
                               // Show error state for failed wallets
                               <div className="text-xs text-red-400 mb-2">
-                                <span>⚠️ Failed to load: {wallet.error}</span>
+                                <span>⚠️ Failed to load: {walletWithError.error}</span>
                               </div>
                             ) : (
                               <>
@@ -963,6 +958,8 @@ export default function Home() {
                           .sort((a, b) => (b.value || 0) - (a.value || 0))
                           .slice(0, 3);
                         
+                        const walletWithError = wallet as any;
+                        
                         return (
                           <div key={address} className="border border-white/10 rounded-md p-3">
                             <div className="flex justify-between items-start mb-2">
@@ -979,10 +976,10 @@ export default function Home() {
                               </Button>
                             </div>
                             
-                            {wallet.error ? (
+                            {walletWithError.error ? (
                               // Show error state for failed wallets
                               <div className="text-xs text-red-400 mb-2">
-                                <span>⚠️ Failed to load: {wallet.error}</span>
+                                <span>⚠️ Failed to load: {walletWithError.error}</span>
                               </div>
                             ) : (
                               <>
