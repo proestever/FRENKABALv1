@@ -161,12 +161,18 @@ export function combineWalletData(wallets: Record<string, any>): any {
   let totalValue = 0;
   const walletAddresses = Object.keys(wallets);
   let totalLpTokens = 0;
+  let totalPlsBalance = 0;
   
-  // Iterate through each wallet
+  // Iterate through each wallet to aggregate PLS balances
   Object.values(wallets).forEach(wallet => {
     // Add to the total value
     totalValue += wallet.totalValue || 0;
     console.log('Processing wallet:', wallet.address, 'with totalValue:', wallet.totalValue);
+    
+    // Add up PLS balances
+    if (wallet.plsBalance && wallet.plsBalance > 0) {
+      totalPlsBalance += wallet.plsBalance;
+    }
     
     // Process each token
     wallet.tokens.forEach((token: any) => {
@@ -228,8 +234,39 @@ export function combineWalletData(wallets: Record<string, any>): any {
   });
   
   // Convert the token map back to an array (no filtering)
-  const combinedTokens = Object.values(tokenMap)
-    .sort((a, b) => (b.value || 0) - (a.value || 0));
+  let combinedTokens = Object.values(tokenMap);
+  
+  // Add native PLS as a virtual token if there's a combined balance
+  if (totalPlsBalance > 0) {
+    // Find WPLS token to get PLS price
+    const wplsToken = combinedTokens.find((t: any) => 
+      t.address.toLowerCase() === '0xa1077a294dde1b09bb078844df40758a5d0f9a27'
+    );
+    const plsPrice = wplsToken?.price || 0;
+    const plsPriceChange24h = wplsToken?.priceChange24h || 0;
+    
+    // Create PLS virtual token
+    const plsToken = {
+      address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', // Native PLS address convention
+      symbol: 'PLS',
+      name: 'PulseChain',
+      balance: totalPlsBalance.toString(),
+      value: totalPlsBalance * plsPrice,
+      price: plsPrice,
+      priceChange24h: plsPriceChange24h,
+      balanceFormatted: totalPlsBalance,
+      decimals: 18,
+      logo: '', // Will be handled by TokenLogo component
+      isLp: false,
+      isNative: true
+    };
+    
+    // Add PLS to the beginning of the token list
+    combinedTokens.unshift(plsToken);
+  }
+  
+  // Sort tokens by value
+  combinedTokens = combinedTokens.sort((a, b) => (b.value || 0) - (a.value || 0));
   
   // Create the combined wallet object
   const combinedWallet = {
@@ -237,28 +274,24 @@ export function combineWalletData(wallets: Record<string, any>): any {
     tokens: combinedTokens,
     totalValue: totalValue,
     tokenCount: combinedTokens.length,
-    plsBalance: 0, // Will be calculated below
-    plsPriceChange: 0, // Use the value from the first wallet that has it
+    plsBalance: totalPlsBalance,
+    plsPriceChange: 0, // Will be set below
     networkCount: 1, // Always 1 for PulseChain
     lpTokenCount: totalLpTokens // Add LP token count
   };
   
-  // Find the PLS balance from all wallets
-  const plsToken = combinedTokens.find((t: any) => t.isNative === true || t.symbol === 'PLS');
-  if (plsToken) {
-    combinedWallet.plsBalance = plsToken.balanceFormatted || 0;
-    console.log('Combined PLS balance:', combinedWallet.plsBalance);
-    
-    // Get the price change from any PLS token (they should all have the same price change)
-    const firstWalletWithPls = Object.values(wallets).find((wallet: any) => 
-      wallet.tokens.some((t: any) => t.isNative === true || t.symbol === 'PLS')
+  // Get the PLS price change from the first wallet that has PLS
+  const firstWalletWithPls = Object.values(wallets).find((wallet: any) => 
+    wallet.plsBalance && wallet.plsBalance > 0
+  );
+  
+  if (firstWalletWithPls) {
+    // Try to get price change from WPLS token
+    const wplsToken = firstWalletWithPls.tokens.find((t: any) => 
+      t.address.toLowerCase() === '0xa1077a294dde1b09bb078844df40758a5d0f9a27'
     );
-    
-    if (firstWalletWithPls) {
-      const firstPlsToken = firstWalletWithPls.tokens.find((t: any) => t.isNative === true || t.symbol === 'PLS');
-      if (firstPlsToken) {
-        combinedWallet.plsPriceChange = firstPlsToken.priceChange24h || 0;
-      }
+    if (wplsToken) {
+      combinedWallet.plsPriceChange = wplsToken.priceChange24h || 0;
     }
   }
   

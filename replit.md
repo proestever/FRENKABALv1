@@ -145,6 +145,14 @@ Required environment variables:
 - **HEX Stakes Integration** - HEX stakes appear with actual HEX logo, positioned based on dollar value
 - **Native PLS Support** - Includes native PLS balance in portfolio total and token list using WPLS price
 
+### July 22, 2025 - PLS Token Integration in Main Token List
+- **PLS in Token List** - Native PLS balance now appears in the main token list alongside other tokens
+- **Single Wallet View** - PLS is added as a virtual token at the beginning of the token list when viewing single wallets
+- **Multi-Wallet View** - PLS balances are aggregated across all wallets and displayed in the combined token list
+- **Price Synchronization** - PLS uses WPLS (Wrapped PLS) price for accurate valuation
+- **Consistent Display** - PLS token shows with proper logo, value, and 24h price change in the token list
+- **Token Sorting** - PLS is included in the value-based sorting, appearing in its proper position based on total value
+
 ### July 21, 2025 - Performance Optimizations for Large Wallet Loading
 - **Reduced real-time price update frequency** - Changed from 5 seconds to 5 minutes to prevent constant blockchain calls
 - **Throttled background logo fetching** - Reduced batch size from 100 to 20 tokens with 2-second delays between batches
