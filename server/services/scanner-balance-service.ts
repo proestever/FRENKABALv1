@@ -279,6 +279,14 @@ export async function getFastScannerTokenBalances(walletAddress: string): Promis
     // Process scanner tokens
     Array.from(scannerBalances).forEach(([tokenAddress, tokenData]) => {
       const amount = parseFloat(ethers.utils.formatUnits(tokenData.value, tokenData.token.decimals));
+      
+      // Skip tokens with extremely small amounts that could cause calculation errors
+      // This filters out dust tokens and broken liquidity pools
+      if (amount < 0.000001) {
+        console.log(`Skipping dust token ${tokenData.token.symbol} with amount ${amount}`);
+        return;
+      }
+      
       tokens.push({
         address: tokenData.token.address,
         symbol: tokenData.token.symbol,
