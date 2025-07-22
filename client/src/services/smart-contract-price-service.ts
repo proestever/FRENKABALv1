@@ -233,6 +233,12 @@ class SmartContractPriceService {
         const wplsLiquidity = Number(wplsReserve) / Math.pow(10, wplsDecimals);
         const liquidity = wplsLiquidity * 2;
 
+        // Skip pairs with less than 1,000,000 WPLS liquidity
+        if (wplsLiquidity < 1_000_000) {
+          console.log(`Skipping low liquidity pair for ${tokenAddress}: ${wplsLiquidity.toFixed(2)} WPLS`);
+          continue;
+        }
+
         allPairs.push({
           price: priceInWPLS, // Will be converted to USD by caller
           pairAddress,

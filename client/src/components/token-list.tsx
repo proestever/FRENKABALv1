@@ -49,6 +49,14 @@ export function TokenList({
   pagination, 
   onPageChange 
 }: TokenListProps) {
+  // Ensure tokens is always an array
+  const safeTokens = useMemo(() => {
+    if (!tokens || !Array.isArray(tokens)) {
+      console.warn('TokenList received invalid tokens prop:', tokens);
+      return [];
+    }
+    return tokens;
+  }, [tokens]);
   const [filterText, setFilterText] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('value');
   const [showHidden, setShowHidden] = useState(false);
@@ -62,8 +70,8 @@ export function TokenList({
   // and use onPageChange callback to request page changes from the parent
 
   // Extract token addresses and symbols for batch logo loading
-  const tokenAddresses = useMemo(() => tokens ? tokens.map(t => t.address) : [], [tokens]);
-  const tokenSymbols = useMemo(() => tokens ? tokens.map(t => t.symbol) : [], [tokens]);
+  const tokenAddresses = useMemo(() => safeTokens.map(t => t.address), [safeTokens]);
+  const tokenSymbols = useMemo(() => safeTokens.map(t => t.symbol), [safeTokens]);
   
   // Use a useState to store the logo URLs
   const [logoUrls, setLogoUrls] = useState<Record<string, string>>({});
@@ -86,33 +94,46 @@ export function TokenList({
 
   // LP tokens only
   const lpTokens = useMemo(() => {
-    return tokens ? tokens.filter(token => token.isLp === true) : [];
-  }, [tokens]);
+    return safeTokens.filter(token => token.isLp === true);
+  }, [safeTokens]);
   
   // Filter tokens based on view and search
   const filteredTokens = useMemo(() => {
-    if (!tokens || !Array.isArray(tokens)) return [];
-    
-    // First apply the general filters
-    const filtered = tokens.filter(token => 
-      // Text filter - check for null/undefined values
-      ((token.name?.toLowerCase() || '').includes(filterText.toLowerCase()) || 
-       (token.symbol?.toLowerCase() || '').includes(filterText.toLowerCase())) &&
-      // Hidden filter
-      (showHidden || !hiddenTokens.includes(token.address))
-    );
-    
-    // Then apply the view-specific filter
-    if (showLiquidity) {
-      // Only return LP tokens when in liquidity view
-      return filtered.filter(token => token.isLp === true);
-    } else if (!showTransactions) {
-      // In all tokens view, return all tokens
+    try {
+      // First apply the general filters
+      const filtered = safeTokens.filter(token => {
+        try {
+          // Text filter - check for null/undefined values
+          const nameMatch = (token.name?.toLowerCase() || '').includes(filterText.toLowerCase());
+          const symbolMatch = (token.symbol?.toLowerCase() || '').includes(filterText.toLowerCase());
+          const textMatch = nameMatch || symbolMatch;
+          
+          // Hidden filter
+          const isHidden = hiddenTokens.includes(token.address);
+          const shouldShow = showHidden || !isHidden;
+          
+          return textMatch && shouldShow;
+        } catch (filterError) {
+          console.error('Error filtering token:', token?.symbol || 'unknown', filterError);
+          return false;
+        }
+      });
+      
+      // Then apply the view-specific filter
+      if (showLiquidity) {
+        // Only return LP tokens when in liquidity view
+        return filtered.filter(token => token.isLp === true);
+      } else if (!showTransactions) {
+        // In all tokens view, return all tokens
+        return filtered;
+      }
+      
       return filtered;
+    } catch (error) {
+      console.error('Error in filteredTokens:', error);
+      return [];
     }
-    
-    return filtered;
-  }, [tokens, filterText, hiddenTokens, showHidden, showLiquidity, showTransactions]);
+  }, [safeTokens, filterText, hiddenTokens, showHidden, showLiquidity, showTransactions]);
 
   // Sort tokens
   const sortedTokens = useMemo(() => {
@@ -171,7 +192,7 @@ export function TokenList({
   }
 
   // If no tokens and not loading, show empty state
-  if ((!tokens || tokens.length === 0) && !isLoading) {
+  if (safeTokens.length === 0 && !isLoading) {
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm bg-card/70">
         <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">No tokens found</h3>
@@ -181,7 +202,7 @@ export function TokenList({
   }
 
   // Use prop wallet address or extract from token if needed
-  const effectiveWalletAddress = walletAddress || (tokens.length > 0 ? tokens[0].address.split(':')[0] : '');
+  const effectiveWalletAddress = walletAddress || (safeTokens.length > 0 ? safeTokens[0].address.split(':')[0] : '');
 
   return (
     <Card className="shadow-lg glass-card">

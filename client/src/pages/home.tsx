@@ -846,7 +846,7 @@ export default function Home() {
                         }
                         
                         // Get top 3 tokens for this wallet
-                        const top3Tokens = wallet.tokens
+                        const top3Tokens = (wallet.tokens || [])
                           .sort((a, b) => (b.value || 0) - (a.value || 0))
                           .slice(0, 3);
                         
@@ -960,7 +960,7 @@ export default function Home() {
                         }
                         
                         // Get top 3 tokens for this wallet
-                        const top3Tokens = wallet.tokens
+                        const top3Tokens = (wallet.tokens || [])
                           .sort((a, b) => (b.value || 0) - (a.value || 0))
                           .slice(0, 3);
                         
