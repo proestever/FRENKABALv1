@@ -9,7 +9,7 @@ import { ProcessedToken, PulseChainTokenBalance, PulseChainAddressResponse } fro
 import { getProvider } from './rpc-provider';
 import { storage } from '../storage';
 import { updateLoadingProgress } from '../routes';
-import { getTokenPriceDataFromDexScreener } from './dexscreener';
+import { getTokenLogoFromDexScreener } from './dexscreener';
 import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
 import { executeWithFailover } from './rpc-provider';
 
@@ -373,14 +373,14 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
             // Only get logo from DexScreener
             let logoUrl = null;
             try {
-              const priceData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
-              if (priceData?.logo) {
-                logoUrl = priceData.logo;
+              const logo = await getTokenLogoFromDexScreener(tokenAddress).catch(() => null);
+              if (logo) {
+                logoUrl = logo;
                 // Save logo to database
                 try {
                   await storage.saveTokenLogo({
                     tokenAddress: tokenAddress.toLowerCase(),
-                    logoUrl: priceData.logo,
+                    logoUrl: logo,
                     symbol: tokenInfo.symbol,
                     name: tokenInfo.name,
                     lastUpdated: new Date().toISOString()
@@ -490,14 +490,3 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
   }
 }
 
-/**
- * Get token price from DexScreener (helper function)
- */
-async function getTokenPriceFromDexScreener(tokenAddress: string): Promise<number | null> {
-  try {
-    const priceData = await getTokenPriceDataFromDexScreener(tokenAddress);
-    return priceData?.price || null;
-  } catch (error) {
-    return null;
-  }
-}

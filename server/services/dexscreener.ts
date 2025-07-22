@@ -65,6 +65,9 @@ interface DexScreenerResponse {
 const priceCache: Record<string, { price: number; priceChange24h: number; logo?: string; timestamp: number }> = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Logo-only cache
+const logoCache: Record<string, { logo: string | null; timestamp: number }> = {};
+
 // Batch fetching queue
 interface BatchQueueItem {
   tokenAddress: string;
@@ -86,6 +89,10 @@ export interface TokenPriceData {
   price: number;
   priceChange24h: number;
   logo?: string;
+}
+
+export interface TokenLogoData {
+  logo: string | null;
 }
 
 /**
@@ -457,3 +464,4 @@ export async function getDexScreenerTokenData(tokenAddress: string): Promise<any
     return null;
   }
 }
+
