@@ -67,7 +67,7 @@ async function fetchWalletBalancesFromScanner(address: string, retries = 3): Pro
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for enhanced scanner
+      const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minute timeout for enhanced scanner
       
       const response = await fetch(`/api/wallet/${address}/scanner-balances`, {
         signal: controller.signal
