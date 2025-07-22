@@ -187,11 +187,19 @@ export default function Home() {
         // Fetch wallet data with controlled concurrency to avoid rate limiting
         (async () => {
           const results = [];
-          const BATCH_SIZE = 2; // Process 2 wallets at a time (reduced for better reliability)
-          const DELAY_BETWEEN_BATCHES = 1000; // 1 second delay between batches (increased)
+          const BATCH_SIZE = 3; // Process 3 wallets at a time with retry logic
+          const DELAY_BETWEEN_BATCHES = 500; // 500ms delay between batches
           
           for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
             const batch = addresses.slice(i, i + BATCH_SIZE);
+            
+            // Update progress
+            setMultiWalletProgress({
+              currentBatch: i + batch.length,
+              totalBatches: addresses.length,
+              status: 'loading',
+              message: `Loading wallets ${i + 1} to ${Math.min(i + batch.length, addresses.length)} of ${addresses.length}...`
+            });
             
             // Add delay between batches (except for the first batch)
             if (i > 0) {
@@ -205,16 +213,21 @@ export default function Home() {
                   const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
                   const dataWithPrices = await fetchWalletDataWithContractPrices(address);
                   
-                  console.log(`Successfully fetched wallet ${address}:`, {
-                    tokenCount: dataWithPrices.tokens.length,
-                    totalValue: dataWithPrices.totalValue,
-                    lpCount: dataWithPrices.tokens.filter(t => t.isLp).length
-                  });
+                  // Check if wallet had an error
+                  if (dataWithPrices.error) {
+                    console.warn(`Wallet ${address} loaded with error: ${dataWithPrices.error}`);
+                  } else {
+                    console.log(`Successfully fetched wallet ${address}:`, {
+                      tokenCount: dataWithPrices.tokens.length,
+                      totalValue: dataWithPrices.totalValue,
+                      lpCount: dataWithPrices.tokens.filter(t => t.isLp).length
+                    });
+                  }
                   
                   return { [address]: dataWithPrices };
                 } catch (error) {
                   console.error(`Error fetching wallet ${address}:`, error);
-                  // Return empty wallet data instead of null to avoid missing wallets
+                  // Return wallet data with error flag instead of empty data
                   return { 
                     [address]: {
                       address,
@@ -222,7 +235,8 @@ export default function Home() {
                       totalValue: 0,
                       tokenCount: 0,
                       plsBalance: 0,
-                      networkCount: 1
+                      networkCount: 1,
+                      error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
                     }
                   };
                 }

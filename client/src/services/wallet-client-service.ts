@@ -40,6 +40,7 @@ interface Wallet {
   plsPriceChange: number | undefined;
   networkCount: number;
   pricesNeeded?: boolean;
+  error?: string;
 }
 
 interface TokenPriceData {
@@ -58,16 +59,69 @@ interface TokenWithPrice extends ProcessedToken {
 
 /**
  * Fetch wallet balances using scanner API (gets ALL tokens, not just recent)
+ * Includes retry logic for better reliability
  */
-async function fetchWalletBalancesFromScanner(address: string): Promise<Wallet> {
-  const response = await fetch(`/api/wallet/${address}/scanner-balances`);
+async function fetchWalletBalancesFromScanner(address: string, retries = 3): Promise<Wallet> {
+  let lastError: Error | null = null;
   
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || 'Failed to fetch wallet balances');
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`/api/wallet/${address}/scanner-balances`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        // Special handling for rate limit errors
+        if (response.status === 429) {
+          const waitTime = Math.min(2000 * attempt, 5000); // Exponential backoff, max 5 seconds
+          console.log(`Rate limited on attempt ${attempt} for wallet ${address}, waiting ${waitTime}ms`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to fetch wallet balances (status: ${response.status})`);
+      }
+      
+      const data = await response.json();
+      console.log(`Successfully fetched wallet ${address} on attempt ${attempt}`);
+      return data;
+      
+    } catch (error) {
+      lastError = error as Error;
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error(`Timeout on attempt ${attempt} for wallet ${address}`);
+      } else {
+        console.error(`Error on attempt ${attempt} for wallet ${address}:`, error);
+      }
+      
+      // Wait before retrying (except on last attempt)
+      if (attempt < retries) {
+        const waitTime = Math.min(1000 * attempt, 3000); // Exponential backoff, max 3 seconds
+        console.log(`Retrying wallet ${address} after ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
   }
   
-  return response.json();
+  // All retries failed, return empty wallet data instead of throwing
+  console.error(`Failed to fetch wallet ${address} after ${retries} attempts:`, lastError);
+  return {
+    address,
+    tokens: [],
+    totalValue: 0,
+    tokenCount: 0,
+    plsBalance: 0,
+    plsPriceChange: 0,
+    networkCount: 1,
+    error: lastError?.message || 'Failed to fetch wallet data'
+  };
 }
 
 /**
