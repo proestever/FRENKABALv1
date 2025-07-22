@@ -1,0 +1,51 @@
+[vite] connecting...
+[vite] connected.
+Module "buffer" has been externalized for browser compatibility. Cannot access "buffer.Buffer" in client code. See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+Detected wallet address in URL params: 0x29309BB0c13BeDbD556fCaefbECc34f00A90E11b
+Searching wallet address, clearing cache to ensure fresh data: 0x29309BB0c13BeDbD556fCaefbECc34f00A90E11b
+Preloading HEX stakes data for wallet: 0x29309BB0c13BeDbD556fCaefbECc34f00A90E11b
+Wallet data changed: undefined
+isLoading: false isFetching: false isError: false
+Waiting for ongoing HEX price request...
+Wallet data changed: undefined
+isLoading: true isFetching: true isError: false
+No RPC providers available
+Smart contract price fetch failed, trying DexScreener...
+Server health check: 
+Object {status: "healthy", uptime: 121319, uptimeFormatted: "0h 2m", memory: {…}, lastHealthCheck: "2025-07-22T13:18:54.146Z", …}
+Fetched HEX price from DexScreener: 0.006921
+Detected 1 HEX stakes for wallet: 0x29309BB0c13BeDbD556fCaefbECc34f00A90E11b
+Found stake 0 with 461960.44 HEX, interest: 5695.40 HEX
+Fetched HEX stakes for single wallet 0x29309BB0c13BeDbD556fCaefbECc34f00A90E11b: 
+Object {totalStakedHex: "461960.44", totalInterestHex: "5695.40", totalCombinedHex: "467655.84", totalStakeValueUsd: 3197.228176685892, totalInterestValueUsd: 39.417881630374005, …}
+Found stake 0 with 461960.44 HEX, interest: 5695.40 HEX
+Server health check: 
+Object {status: "healthy", uptime: 151333, uptimeFormatted: "0h 2m", memory: {…}, lastHealthCheck: "2025-07-22T13:19:24.146Z", …}
+Using cached HEX price: 0.006921
+Added HEX stakes value (multi wallet): 3236.646058316266
+Starting background logo fetch for 11 tokens
+Wallet data changed: 
+Object {address: "0x29309BB0c13BeDbD556fCaefbECc34f00A90E11b", tokens: Array(85), totalValue: 88999833361.64336, tokenCount: 85, plsBalance: 195148507.78516522, …}
+address: "0x29309BB0c13BeDbD556fCaefbECc34f00A90E11b"
+fetchMethod: "scanner"
+networkCount: 1
+plsBalance: 195148507.78516522
+plsPriceChange: undefined
+tokenCount: 85
+tokens: Array(85)
+0: Object
+address: "0xb6b57227150a7097723e0c013752001aad01248f"
+balance: "50386195764821491859778909209"
+balanceFormatted: 50386195764.821495
+decimals: 18
+logo: "/assets/100xfrenlogo.png"
+name: "PulseReflections"
+price: 1.766352173263379
+priceData: Object
+dexId: "pulsex"
+liquidityUsd: 0.000002
+logo: "/assets/100xfrenlogo.png"
+pairAddress: "0x8Eca5B89eC604878fBb3f6De237478d005d2B425"
+price: 1.766352173263379
+priceChange24h: 0
+volumeUsd24h: 0

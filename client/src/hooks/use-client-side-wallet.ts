@@ -71,8 +71,8 @@ export function useClientSideWallet(walletAddress: string | null) {
     refetchOnMount: false,
     refetchInterval: false,
     refetchIntervalInBackground: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
+    staleTime: 0, // Always consider data stale
+    gcTime: 0,    // Don't keep in cache
     queryFn: async () => {
       if (!walletAddress) return null;
       

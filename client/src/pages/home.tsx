@@ -94,11 +94,12 @@ export default function Home() {
     // Clear any existing wallet cache
     if (searchedAddress) {
       // Invalidate the previous wallet's cache
-      queryClient.invalidateQueries({ queryKey: [`wallet-all-${searchedAddress}`] });
+      queryClient.invalidateQueries({ queryKey: [`client-wallet-${searchedAddress}`] });
     }
     
     // Always invalidate the new wallet's cache to ensure fresh data
-    queryClient.invalidateQueries({ queryKey: [`wallet-all-${address}`] });
+    queryClient.invalidateQueries({ queryKey: [`client-wallet-${address}`] });
+    queryClient.removeQueries({ queryKey: [`client-wallet-${address}`] }); // Force remove from cache
     
     // Clear any other relevant caches
     queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
