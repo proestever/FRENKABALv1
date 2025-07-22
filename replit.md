@@ -201,6 +201,15 @@ Required environment variables:
 - **Scanner service updated** - Added special handling for stablecoin addresses to return proper logos
 - **Result** - USDC, DAI, and USDT from Ethereum now display their authentic logos
 
+### July 22, 2025 - Enhanced Fast Scanner with LP Detection and Logo Inclusion
+- **Added LP token detection to fast scanner** - Fast scanner now identifies LP tokens based on symbol/name patterns (PLP, -LP, PulseX LP, Liquidity)
+- **Integrated logo fetching in fast scanner** - Fast scanner endpoint now fetches and includes logos for all tokens in the initial response
+- **Eliminated individual logo API calls** - Portfolios no longer make hundreds of individual /api/token-logo/ calls, improving performance dramatically
+- **LP tokens now appear in portfolios** - LP tokens are properly marked with isLp flag so they display correctly in portfolio view
+- **Logo batch processing** - Fast scanner uses existing logo storage and fetches missing logos from DexScreener in the initial load
+- **Performance improvement** - Portfolios with many tokens load much faster without individual logo requests
+- **Result** - Portfolios now show LP tokens correctly and load significantly faster with pre-fetched logos
+
 ### July 22, 2025 - Verified Wallet Holdings Tracking Implementation
 - **Wallet holdings tracking confirmed working** - Each token shows which wallets hold it (e.g., "3 wallets")
 - **Interactive wallet breakdown** - Hovering shows detailed holdings with addresses and amounts

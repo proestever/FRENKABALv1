@@ -298,7 +298,8 @@ export async function getFastScannerTokenBalances(walletAddress: string): Promis
         price: 0, // Will be fetched client-side
         value: 0, // Will be calculated client-side
         isNative: true,
-        verified: true
+        verified: true,
+        logo: getDefaultLogo('PLS', 'native')
       });
     }
     
@@ -313,6 +314,14 @@ export async function getFastScannerTokenBalances(walletAddress: string): Promis
         return;
       }
       
+      // Check if this is an LP token based on symbol/name
+      const symbol = tokenData.token.symbol || "";
+      const name = tokenData.token.name || "";
+      const isLp = symbol.includes("PLP") || 
+                   symbol.includes("-LP") || 
+                   name.includes("PulseX LP") ||
+                   name.includes("Liquidity");
+      
       tokens.push({
         address: tokenData.token.address,
         symbol: tokenData.token.symbol,
@@ -322,7 +331,9 @@ export async function getFastScannerTokenBalances(walletAddress: string): Promis
         balanceFormatted: amount,
         price: 0, // Will be fetched client-side
         value: 0, // Will be calculated client-side
-        verified: tokenData.token.type === 'verified'
+        verified: tokenData.token.type === 'verified',
+        logo: getDefaultLogo(tokenData.token.symbol, tokenData.token.address),
+        isLp: isLp
       });
     });
     
