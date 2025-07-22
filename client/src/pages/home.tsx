@@ -182,76 +182,69 @@ export default function Home() {
         message: `Loading ${addresses.length} wallets and HEX stakes in parallel...`
       });
       
-      // Start ALL async operations but with controlled concurrency for wallet fetching
+      // Start ALL async operations but load wallets one by one to avoid timeouts
       const [walletResults, hexStakesData, individualHexResults] = await Promise.all([
-        // Fetch wallet data with controlled concurrency to avoid rate limiting
+        // Fetch wallet data one by one sequentially
         (async () => {
           const results = [];
-          const BATCH_SIZE = 3; // Process 3 wallets at a time with retry logic
-          const DELAY_BETWEEN_BATCHES = 500; // 500ms delay between batches
+          const DELAY_BETWEEN_WALLETS = 100; // 100ms delay between each wallet
           
-          for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
-            const batch = addresses.slice(i, i + BATCH_SIZE);
+          for (let i = 0; i < addresses.length; i++) {
+            const address = addresses[i];
             
             // Update progress
             setMultiWalletProgress({
-              currentBatch: i + batch.length,
+              currentBatch: i + 1,
               totalBatches: addresses.length,
               status: 'loading',
-              message: `Loading wallets ${i + 1} to ${Math.min(i + batch.length, addresses.length)} of ${addresses.length}...`
+              message: `Loading wallet ${i + 1} of ${addresses.length}...`
             });
             
-            // Add delay between batches (except for the first batch)
+            // Add delay between wallets (except for the first wallet)
             if (i > 0) {
-              await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+              await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_WALLETS));
             }
             
-            const batchResults = await Promise.all(
-              batch.map(async (address) => {
-                try {
-                  // Fetch wallet data with smart contract prices
-                  const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
-                  const dataWithPrices = await fetchWalletDataWithContractPrices(address);
-                  
-                  // Check if wallet had an error
-                  if (dataWithPrices.error) {
-                    console.warn(`Wallet ${address} loaded with error: ${dataWithPrices.error}`);
-                  } else {
-                    console.log(`Successfully fetched wallet ${address}:`, {
-                      tokenCount: dataWithPrices.tokens.length,
-                      totalValue: dataWithPrices.totalValue,
-                      lpCount: dataWithPrices.tokens.filter(t => t.isLp).length
-                    });
-                  }
-                  
-                  return { [address]: dataWithPrices };
-                } catch (error) {
-                  console.error(`Error fetching wallet ${address}:`, error);
-                  // Return wallet data with error flag instead of empty data
-                  return { 
-                    [address]: {
-                      address,
-                      tokens: [],
-                      totalValue: 0,
-                      tokenCount: 0,
-                      plsBalance: 0,
-                      networkCount: 1,
-                      error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
-                    }
-                  };
+            try {
+              // Use fast scanner for portfolios
+              const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
+              const dataWithPrices = await fetchWalletDataFast(address);
+              
+              // Check if wallet had an error
+              if (dataWithPrices.error) {
+                console.warn(`Wallet ${address} loaded with error: ${dataWithPrices.error}`);
+              } else {
+                console.log(`Successfully fetched wallet ${address} using fast scanner:`, {
+                  tokenCount: dataWithPrices.tokens.length,
+                  totalValue: dataWithPrices.totalValue,
+                  lpCount: dataWithPrices.tokens.filter((t: any) => t.isLp).length
+                });
+              }
+              
+              results.push({ [address]: dataWithPrices });
+            } catch (error) {
+              console.error(`Error fetching wallet ${address}:`, error);
+              // Return wallet data with error flag instead of empty data
+              results.push({ 
+                [address]: {
+                  address,
+                  tokens: [],
+                  totalValue: 0,
+                  tokenCount: 0,
+                  plsBalance: 0,
+                  networkCount: 1,
+                  error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
                 }
-              })
-            );
+              });
+            }
             
-            results.push(...batchResults);
-            
-            // Update progress
-            const progress = Math.round((i + batch.length) / addresses.length * 100);
+            // Update progress percentage
+            const progress = Math.round((i + 1) / addresses.length * 100);
             setMultiWalletProgress({
-              currentBatch: i + batch.length,
+              currentBatch: i + 1,
               totalBatches: addresses.length,
               status: 'loading',
-              message: `Loading wallets... (${i + batch.length}/${addresses.length})`
+              message: `Loading wallets... (${i + 1}/${addresses.length})`
             });
           }
           
@@ -286,7 +279,7 @@ export default function Home() {
       // Filter out null results and combine into a single object
       const walletData = walletResults
         .filter(result => result !== null)
-        .reduce((acc, result) => ({ ...acc, ...result }), {});
+        .reduce((acc: any, result: any) => ({ ...acc, ...result }), {});
       
       // Log summary of fetched data
       console.log('Portfolio fetch summary:', {
@@ -792,6 +785,12 @@ export default function Home() {
             // Generate the combined wallet data
             const combinedWallet = combineWalletData(multiWalletData);
             
+            // Ensure tokens array exists even if all wallets failed
+            if (!combinedWallet.tokens || !Array.isArray(combinedWallet.tokens)) {
+              console.warn('Combined wallet has no tokens array, initializing empty array');
+              combinedWallet.tokens = [];
+            }
+            
             // Override the address property with portfolio name if available
             if (portfolioName) {
               console.log(`Setting combined wallet address to Portfolio:${portfolioName}`);
@@ -847,9 +846,11 @@ export default function Home() {
                         }
                         
                         // Get top 3 tokens for this wallet
-                        const top3Tokens = wallet.tokens
+                        const top3Tokens = (wallet.tokens || [])
                           .sort((a, b) => (b.value || 0) - (a.value || 0))
                           .slice(0, 3);
+                        
+                        const walletWithError = wallet as any;
                         
                         return (
                           <div key={address} className="border border-white/10 rounded-md p-3">
@@ -867,25 +868,34 @@ export default function Home() {
                               </Button>
                             </div>
                             
-                            <div className="text-xs mb-1">
-                              <span className="opacity-70">Value (with HEX Stakes):</span>{' '}
-                              ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              {hexStakeValue > 0 && (
-                                <span className="text-xs text-purple-300 ml-1">
-                                  (includes ${hexStakeValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} in HEX stakes)
-                                </span>
-                              )}
-                            </div>
-                            
-                            <div className="text-xs mb-2">
-                              <span className="opacity-70">Tokens:</span>{' '}
-                              {wallet.tokenCount}
-                              {walletHexStakes && walletHexStakes.stakeCount > 0 && (
-                                <span className="text-purple-300 ml-2">
-                                  + {walletHexStakes.stakeCount} HEX {walletHexStakes.stakeCount === 1 ? 'stake' : 'stakes'}
-                                </span>
-                              )}
-                            </div>
+                            {walletWithError.error ? (
+                              // Show error state for failed wallets
+                              <div className="text-xs text-red-400 mb-2">
+                                <span>⚠️ Failed to load: {walletWithError.error}</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="text-xs mb-1">
+                                  <span className="opacity-70">Value (with HEX Stakes):</span>{' '}
+                                  ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  {hexStakeValue > 0 && (
+                                    <span className="text-xs text-purple-300 ml-1">
+                                      (includes ${hexStakeValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} in HEX stakes)
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                <div className="text-xs mb-2">
+                                  <span className="opacity-70">Tokens:</span>{' '}
+                                  {wallet.tokenCount}
+                                  {walletHexStakes && walletHexStakes.stakeCount > 0 && (
+                                    <span className="text-purple-300 ml-2">
+                                      + {walletHexStakes.stakeCount} HEX {walletHexStakes.stakeCount === 1 ? 'stake' : 'stakes'}
+                                    </span>
+                                  )}
+                                </div>
+                              </>
+                            )}
                             
                             {/* Top 3 tokens */}
                             {top3Tokens.length > 0 && (
@@ -950,9 +960,11 @@ export default function Home() {
                         }
                         
                         // Get top 3 tokens for this wallet
-                        const top3Tokens = wallet.tokens
+                        const top3Tokens = (wallet.tokens || [])
                           .sort((a, b) => (b.value || 0) - (a.value || 0))
                           .slice(0, 3);
+                        
+                        const walletWithError = wallet as any;
                         
                         return (
                           <div key={address} className="border border-white/10 rounded-md p-3">
@@ -970,20 +982,29 @@ export default function Home() {
                               </Button>
                             </div>
                             
-                            <div className="text-xs mb-2">
-                              <span className="opacity-70">Value:</span>{' '}
-                              ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </div>
-                            
-                            <div className="text-xs mb-2">
-                              <span className="opacity-70">Tokens:</span>{' '}
-                              {wallet.tokenCount}
-                              {walletHexStakes && walletHexStakes.stakeCount > 0 && (
-                                <span className="text-purple-300 ml-2">
-                                  + {walletHexStakes.stakeCount} HEX {walletHexStakes.stakeCount === 1 ? 'stake' : 'stakes'}
-                                </span>
-                              )}
-                            </div>
+                            {walletWithError.error ? (
+                              // Show error state for failed wallets
+                              <div className="text-xs text-red-400 mb-2">
+                                <span>⚠️ Failed to load: {walletWithError.error}</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="text-xs mb-2">
+                                  <span className="opacity-70">Value:</span>{' '}
+                                  ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
+                                
+                                <div className="text-xs mb-2">
+                                  <span className="opacity-70">Tokens:</span>{' '}
+                                  {wallet.tokenCount}
+                                  {walletHexStakes && walletHexStakes.stakeCount > 0 && (
+                                    <span className="text-purple-300 ml-2">
+                                      + {walletHexStakes.stakeCount} HEX {walletHexStakes.stakeCount === 1 ? 'stake' : 'stakes'}
+                                    </span>
+                                  )}
+                                </div>
+                              </>
+                            )}
                             
                             {/* Top 3 tokens */}
                             {top3Tokens.length > 0 && (

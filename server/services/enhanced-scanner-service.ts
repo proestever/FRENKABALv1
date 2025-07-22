@@ -233,15 +233,31 @@ export class EnhancedPulseChainScanner {
       });
     }
 
-    // Process each token
-    for (const [address, tokenInfo] of Array.from(uniqueTokens)) {
-      try {
-        const processed = await this.processToken(address, tokenInfo, walletAddress);
-        if (processed && processed.balanceFormatted > 0) {
-          processedTokens.push(processed);
+    // Process tokens in parallel batches
+    const tokenArray = Array.from(uniqueTokens);
+    const BATCH_SIZE = 10; // Process 10 tokens at a time
+    
+    for (let i = 0; i < tokenArray.length; i += BATCH_SIZE) {
+      const batch = tokenArray.slice(i, i + BATCH_SIZE);
+      console.log(`  Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(tokenArray.length/BATCH_SIZE)} (${batch.length} tokens)...`);
+      
+      const batchResults = await Promise.all(
+        batch.map(async ([address, tokenInfo]) => {
+          try {
+            const processed = await this.processToken(address, tokenInfo, walletAddress);
+            return processed;
+          } catch (error) {
+            console.error(`Failed to process token ${address}:`, error);
+            return null;
+          }
+        })
+      );
+      
+      // Add successful results to processedTokens
+      for (const result of batchResults) {
+        if (result && result.balanceFormatted > 0) {
+          processedTokens.push(result);
         }
-      } catch (error) {
-        console.error(`Failed to process token ${address}:`, error);
       }
     }
 
@@ -669,66 +685,86 @@ export class EnhancedPulseChainScanner {
 
   // Process all LP tokens in a token list
   private async processLPTokens(tokens: ProcessedToken[], walletAddress: string): Promise<ProcessedToken[]> {
+    const BATCH_SIZE = 5; // Process 5 LP tokens at a time
     const processedTokens: ProcessedToken[] = [];
     
-    for (const token of tokens) {
-      // Check if it's an LP token
-      if (await this.isLiquidityPair(token.address, token)) {
-        console.log(`\n💧 Found LP token: ${token.symbol}`);
-        
-        // Make sure we have the balance
-        let balance = ethers.BigNumber.from(token.balance || "0");
-        
-        // Skip if balance is 0
-        if (balance.eq(0)) {
-          console.log(`  Skipping LP token with zero balance: ${token.symbol}`);
-          processedTokens.push(token);
-          continue;
-        }
-        
-        // Analyze it
-        const lpAnalysis = await this.analyzeLPToken(
-          token.address, 
-          balance,
-          walletAddress
-        );
-        
-        if (lpAnalysis) {
-          // Merge existing token data with LP analysis
-          const enhancedToken: ProcessedToken = {
-            ...token,
-            symbol: lpAnalysis.symbol,
-            name: lpAnalysis.name,
-            decimals: lpAnalysis.decimals,
-            balanceFormatted: lpAnalysis.amount,
-            price: lpAnalysis.price,
-            value: lpAnalysis.value,
-            isLp: true,
-            // Map LP analysis to existing LP fields
-            lpToken0Symbol: lpAnalysis.pairInfo?.token0.symbol,
-            lpToken1Symbol: lpAnalysis.pairInfo?.token1.symbol,
-            lpToken0Name: lpAnalysis.pairInfo?.token0.name,
-            lpToken1Name: lpAnalysis.pairInfo?.token1.name,
-            lpToken0Address: lpAnalysis.pairInfo?.token0.address,
-            lpToken1Address: lpAnalysis.pairInfo?.token1.address,
-            lpToken0BalanceFormatted: lpAnalysis.pairInfo?.token0.amount,
-            lpToken1BalanceFormatted: lpAnalysis.pairInfo?.token1.amount,
-            lpToken0Price: lpAnalysis.pairInfo?.token0.price,
-            lpToken1Price: lpAnalysis.pairInfo?.token1.price,
-            lpToken0Value: lpAnalysis.pairInfo?.token0.value,
-            lpToken1Value: lpAnalysis.pairInfo?.token1.value
-          };
-          // Store the full pairInfo for later use
-          (enhancedToken as any).lpDetails = lpAnalysis.pairInfo;
-          processedTokens.push(enhancedToken);
-        } else {
-          // If analysis failed, keep original token data
-          processedTokens.push({ ...token, isLp: true });
-        }
-      } else {
-        // Not an LP token, keep as is
-        processedTokens.push(token);
-      }
+    // First, check which tokens are LP tokens in parallel
+    console.log(`\n  Checking ${tokens.length} tokens for LP pairs...`);
+    const lpCheckResults = await Promise.all(
+      tokens.map(async (token) => ({
+        token,
+        isLp: await this.isLiquidityPair(token.address, token)
+      }))
+    );
+    
+    const lpTokens = lpCheckResults.filter(r => r.isLp).map(r => r.token);
+    const nonLpTokens = lpCheckResults.filter(r => !r.isLp).map(r => r.token);
+    
+    console.log(`  Found ${lpTokens.length} LP tokens`);
+    
+    // Add non-LP tokens immediately
+    processedTokens.push(...nonLpTokens);
+    
+    // Process LP tokens in batches
+    for (let i = 0; i < lpTokens.length; i += BATCH_SIZE) {
+      const batch = lpTokens.slice(i, i + BATCH_SIZE);
+      console.log(`  Processing LP batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(lpTokens.length/BATCH_SIZE)} (${batch.length} tokens)...`);
+      
+      const batchResults = await Promise.all(
+        batch.map(async (token) => {
+          // Make sure we have the balance
+          let balance = ethers.BigNumber.from(token.balance || "0");
+          
+          // Skip if balance is 0
+          if (balance.eq(0)) {
+            console.log(`  Skipping LP token with zero balance: ${token.symbol}`);
+            return { ...token, isLp: true };
+          }
+          
+          // Analyze it
+          const lpAnalysis = await this.analyzeLPToken(
+            token.address, 
+            balance,
+            walletAddress
+          );
+          
+          if (lpAnalysis) {
+            // Merge existing token data with LP analysis
+            const enhancedToken: ProcessedToken = {
+              ...token,
+              symbol: lpAnalysis.symbol,
+              name: lpAnalysis.name,
+              decimals: lpAnalysis.decimals,
+              balanceFormatted: lpAnalysis.amount,
+              price: lpAnalysis.price,
+              value: lpAnalysis.value,
+              isLp: true,
+              // Map LP analysis to existing LP fields
+              lpToken0Symbol: lpAnalysis.pairInfo?.token0.symbol,
+              lpToken1Symbol: lpAnalysis.pairInfo?.token1.symbol,
+              lpToken0Name: lpAnalysis.pairInfo?.token0.name,
+              lpToken1Name: lpAnalysis.pairInfo?.token1.name,
+              lpToken0Address: lpAnalysis.pairInfo?.token0.address,
+              lpToken1Address: lpAnalysis.pairInfo?.token1.address,
+              lpToken0BalanceFormatted: lpAnalysis.pairInfo?.token0.amount,
+              lpToken1BalanceFormatted: lpAnalysis.pairInfo?.token1.amount,
+              lpToken0Price: lpAnalysis.pairInfo?.token0.price,
+              lpToken1Price: lpAnalysis.pairInfo?.token1.price,
+              lpToken0Value: lpAnalysis.pairInfo?.token0.value,
+              lpToken1Value: lpAnalysis.pairInfo?.token1.value
+            };
+            // Store the full pairInfo for later use
+            (enhancedToken as any).lpDetails = lpAnalysis.pairInfo;
+            return enhancedToken;
+          } else {
+            // If analysis failed, keep original token data
+            return { ...token, isLp: true };
+          }
+        })
+      );
+      
+      // Add batch results
+      processedTokens.push(...batchResults);
     }
     
     return processedTokens;
