@@ -61,15 +61,17 @@ interface TokenWithPrice extends ProcessedToken {
  * Fetch wallet balances using scanner API (gets ALL tokens, not just recent)
  * Includes retry logic for better reliability
  */
-async function fetchWalletBalancesFromScanner(address: string, retries = 3): Promise<Wallet> {
+async function fetchWalletBalancesFromScanner(address: string, retries = 3, useFastEndpoint = false): Promise<Wallet> {
   let lastError: Error | null = null;
+  const endpoint = useFastEndpoint ? `/api/wallet/${address}/fast-balances` : `/api/wallet/${address}/scanner-balances`;
+  const timeoutMs = useFastEndpoint ? 30000 : 600000; // 30 seconds for fast, 10 minutes for enhanced
   
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minute timeout for enhanced scanner
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       
-      const response = await fetch(`/api/wallet/${address}/scanner-balances`, {
+      const response = await fetch(endpoint, {
         signal: controller.signal
       });
       
@@ -89,7 +91,7 @@ async function fetchWalletBalancesFromScanner(address: string, retries = 3): Pro
       }
       
       const data = await response.json();
-      console.log(`Successfully fetched wallet ${address} on attempt ${attempt}`);
+      console.log(`Successfully fetched wallet ${address} on attempt ${attempt} using ${useFastEndpoint ? 'fast' : 'enhanced'} scanner`);
       return data;
       
     } catch (error) {
@@ -239,6 +241,55 @@ export async function fetchWalletDataClientSide(
     console.error('Error fetching wallet data client-side:', error);
     throw error;
   }
+}
+
+/**
+ * Fetches wallet data using fast scanner (for portfolios)
+ * Returns basic token data without enhanced features for quick loading
+ */
+export async function fetchWalletDataFast(address: string): Promise<Wallet> {
+  const walletData = await fetchWalletBalancesFromScanner(address, 3, true); // Use fast endpoint
+  if (walletData.error) {
+    return walletData;
+  }
+  
+  // Prepare token addresses for batch price fetching
+  const tokenAddresses = walletData.tokens.map(token => {
+    // For PLS native token, use WPLS price
+    if (token.address.toLowerCase() === 'native' || token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+      return '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
+    }
+    return token.address;
+  });
+  
+  // Fetch all prices in batches from smart contracts
+  const priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
+  
+  // Apply prices to tokens
+  const tokensWithPrices = walletData.tokens.map((token, index) => {
+    const addressForPrice = tokenAddresses[index];
+    const priceData = priceMap.get(addressForPrice.toLowerCase());
+    
+    if (priceData) {
+      return {
+        ...token,
+        price: priceData.price,
+        value: token.balanceFormatted * priceData.price,
+        priceData
+      };
+    }
+    
+    return token;
+  });
+  
+  // Recalculate total value
+  const totalValue = tokensWithPrices.reduce((sum, token) => sum + (token.value || 0), 0);
+  
+  return {
+    ...walletData,
+    tokens: tokensWithPrices,
+    totalValue
+  };
 }
 
 /**

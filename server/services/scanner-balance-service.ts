@@ -241,6 +241,68 @@ async function getTokenBalanceFromContract(tokenAddress: string, walletAddress: 
 }
 
 /**
+ * Fast scanner function for portfolios - uses only PulseChain Scan API without enhanced features
+ */
+export async function getFastScannerTokenBalances(walletAddress: string): Promise<ProcessedToken[]> {
+  try {
+    console.log(`Getting fast token balances from PulseChain Scan for ${walletAddress}`);
+    const startTime = Date.now();
+    
+    // Fetch token balances from scanner API
+    const scannerBalances = await fetchTokenBalancesFromScanner(walletAddress);
+    
+    // Get PLS balance
+    const plsBalance = await executeWithFailover(async (provider) => {
+      return await provider.getBalance(walletAddress);
+    });
+    
+    // Convert scanner balances to ProcessedToken format
+    const tokens: ProcessedToken[] = [];
+    
+    // Add PLS as first token if balance > 0
+    if (plsBalance && plsBalance.gt(0)) {
+      const plsAmount = parseFloat(ethers.utils.formatEther(plsBalance));
+      tokens.push({
+        address: 'native',
+        symbol: 'PLS',
+        name: 'PulseChain',
+        decimals: 18,
+        balance: plsBalance.toString(),
+        balanceFormatted: plsAmount,
+        price: 0, // Will be fetched client-side
+        value: 0, // Will be calculated client-side
+        isNative: true,
+        verified: true
+      });
+    }
+    
+    // Process scanner tokens
+    Array.from(scannerBalances).forEach(([tokenAddress, tokenData]) => {
+      const amount = parseFloat(ethers.utils.formatUnits(tokenData.value, tokenData.token.decimals));
+      tokens.push({
+        address: tokenData.token.address,
+        symbol: tokenData.token.symbol,
+        name: tokenData.token.name,
+        decimals: parseInt(tokenData.token.decimals),
+        balance: tokenData.value,
+        balanceFormatted: amount,
+        price: 0, // Will be fetched client-side
+        value: 0, // Will be calculated client-side
+        verified: tokenData.token.type === 'verified'
+      });
+    });
+    
+    const endTime = Date.now();
+    console.log(`Fast scanner fetch completed in ${endTime - startTime}ms - found ${tokens.length} tokens`);
+    
+    return tokens;
+  } catch (error) {
+    console.error('Error in fast scanner token fetch:', error);
+    throw error;
+  }
+}
+
+/**
  * Main function to get token balances using Enhanced Scanner
  */
 export async function getScannerTokenBalances(walletAddress: string): Promise<ProcessedToken[]> {

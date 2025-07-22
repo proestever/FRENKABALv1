@@ -206,15 +206,15 @@ export default function Home() {
             }
             
             try {
-              // Fetch wallet data with smart contract prices
-              const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
-              const dataWithPrices = await fetchWalletDataWithContractPrices(address);
+              // Use fast scanner for portfolios
+              const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
+              const dataWithPrices = await fetchWalletDataFast(address);
               
               // Check if wallet had an error
               if (dataWithPrices.error) {
                 console.warn(`Wallet ${address} loaded with error: ${dataWithPrices.error}`);
               } else {
-                console.log(`Successfully fetched wallet ${address}:`, {
+                console.log(`Successfully fetched wallet ${address} using fast scanner:`, {
                   tokenCount: dataWithPrices.tokens.length,
                   totalValue: dataWithPrices.totalValue,
                   lpCount: dataWithPrices.tokens.filter((t: any) => t.isLp).length
