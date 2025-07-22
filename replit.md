@@ -319,6 +319,15 @@ Required environment variables:
 - **Manual blacklist management** - Dust tokens must be explicitly added to the blacklist by their contract address
 - **Result** - Full control over which tokens to exclude, no tokens are automatically filtered out based on liquidity thresholds
 
+### July 22, 2025 - Implemented Token Blacklist System
+- **Added BLACKLISTED_TOKENS constant** - Created unified blacklist constant across all token services with problematic tokens
+- **Enhanced scanner service** - Added blacklist filtering to enhanced-scanner-service.ts in both API fetching and token processing
+- **Scanner balance service** - Implemented blacklist filtering when fetching tokens from PulseChain Scan API
+- **Direct balance service** - Added blacklist filtering when scanning blockchain logs for token interactions
+- **First blacklisted token** - Added 0xd3ab6b7203c417c2b71c36aeade50020c1f6e41a (ultlotto) to prevent astronomical value issues
+- **Comprehensive coverage** - All token fetching paths now filter out blacklisted tokens before processing
+- **Result** - Problematic tokens are now completely excluded from wallet displays and calculations
+
 ### July 20, 2025 - Fixed Token Fetching to Use Scanner API for Complete Token Lists
 - **Identified issue** - Client was using limited endpoint that only scanned last 1 million blocks (~3 months)
 - **Updated client endpoint** - Changed from `/api/wallet/:address/balances-no-prices` to `/api/wallet/:address/scanner-balances`

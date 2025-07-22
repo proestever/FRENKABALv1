@@ -14,6 +14,11 @@ const PLS_DECIMALS = 18;
 const PLS_TOKEN_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 const WPLS_CONTRACT_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27';
 
+// Blacklisted tokens that cause issues
+const BLACKLISTED_TOKENS = new Set([
+  "0xd3ab6b7203c417c2b71c36aeade50020c1f6e41a" // ultlotto - causes astronomical values
+]);
+
 // Standard ERC20 ABI for getting token metadata and balance
 const ERC20_ABI = [
   {"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},
@@ -89,7 +94,13 @@ async function getWalletTokens(walletAddress: string): Promise<Set<string>> {
     // Extract unique token addresses
     const tokenAddresses = new Set<string>();
     allLogs.forEach(log => {
-      tokenAddresses.add(log.address.toLowerCase());
+      const tokenAddress = log.address.toLowerCase();
+      // Skip blacklisted tokens
+      if (BLACKLISTED_TOKENS.has(tokenAddress)) {
+        console.log(`Skipping blacklisted token from logs: ${tokenAddress}`);
+        return;
+      }
+      tokenAddresses.add(tokenAddress);
     });
     
     const endTime = Date.now();

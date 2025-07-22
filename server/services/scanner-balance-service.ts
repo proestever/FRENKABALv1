@@ -21,6 +21,11 @@ const PLS_TOKEN_ADDRESS = '0x0000000000000000000000000000000000000000';
 const WPLS_CONTRACT_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27';
 const PLS_DECIMALS = 18;
 
+// Blacklisted tokens that cause issues
+const BLACKLISTED_TOKENS = new Set([
+  "0xd3ab6b7203c417c2b71c36aeade50020c1f6e41a" // ultlotto - causes astronomical values
+]);
+
 /**
  * Get default logo for known tokens
  */
@@ -86,7 +91,13 @@ async function fetchTokenBalancesFromScanner(walletAddress: string, retries: num
       
       items.forEach((item: any) => {
         if (item.token && item.value && item.value !== '0') {
-          balances.set(item.token.address.toLowerCase(), item);
+          // Skip blacklisted tokens
+          const tokenAddress = item.token.address.toLowerCase();
+          if (BLACKLISTED_TOKENS.has(tokenAddress)) {
+            console.log(`Filtering out blacklisted token from scanner: ${tokenAddress} (${item.token.symbol})`);
+            return;
+          }
+          balances.set(tokenAddress, item);
         }
       });
       

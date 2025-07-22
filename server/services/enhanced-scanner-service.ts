@@ -8,6 +8,11 @@ const PULSEX_V1_FACTORY = "0x29eA7545DEf87022BAdc76323F373EA1e707C523";
 const PLS_DECIMALS = 18;
 const PLS_TOKEN_ADDRESS = "native";
 
+// Blacklisted tokens that cause issues
+const BLACKLISTED_TOKENS = new Set([
+  "0xd3ab6b7203c417c2b71c36aeade50020c1f6e41a" // ultlotto - causes astronomical values
+]);
+
 // Cache type
 interface CacheEntry<T> {
   data: T;
@@ -159,7 +164,15 @@ export class EnhancedPulseChainScanner {
       if (!items || items.length === 0) return [];
       
       return items
-        .filter((item: any) => item.value && item.value !== "0")
+        .filter((item: any) => {
+          // Filter out zero balances and blacklisted tokens
+          if (!item.value || item.value === "0") return false;
+          if (BLACKLISTED_TOKENS.has(item.token.address.toLowerCase())) {
+            console.log(`Filtering out blacklisted token: ${item.token.address} (${item.token.symbol})`);
+            return false;
+          }
+          return true;
+        })
         .map((item: any) => ({
           address: item.token.address.toLowerCase(),
           symbol: item.token.symbol || "Unknown",
@@ -247,6 +260,11 @@ export class EnhancedPulseChainScanner {
       const batchResults = await Promise.all(
         batch.map(async ([address, tokenInfo]) => {
           try {
+            // Skip blacklisted tokens
+            if (BLACKLISTED_TOKENS.has(address.toLowerCase())) {
+              console.log(`Skipping blacklisted token during processing: ${address}`);
+              return null;
+            }
             const processed = await this.processToken(address, tokenInfo, walletAddress);
             return processed;
           } catch (error) {
