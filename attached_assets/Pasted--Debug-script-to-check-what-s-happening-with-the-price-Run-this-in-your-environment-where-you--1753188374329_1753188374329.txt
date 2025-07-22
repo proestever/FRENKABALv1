@@ -1,0 +1,116 @@
+// Debug script to check what's happening with the price
+// Run this in your environment where you have the price service
+
+async function debugTokenPrice() {
+  const tokenAddress = "0xb6B57227150a7097723e0C013752001AaD01248F";
+  
+  console.log("=== Debugging Token Price ===");
+  console.log("Token:", tokenAddress);
+  
+  // If using the client-side service
+  const priceService = new PulseChainPriceService();
+  
+  // First, let's check WPLS price
+  console.log("\n1. Checking WPLS price...");
+  const wplsPrice = await priceService.getWPLSPrice();
+  console.log("WPLS Price: $", wplsPrice);
+  
+  // Clear cache to force fresh data
+  priceService.clearCache();
+  
+  // Now get token price with detailed logging
+  console.log("\n2. Getting token price...");
+  
+  // You might need to modify the service to add more logging
+  // For now, let's get the price and see what we get
+  const priceData = await priceService.getTokenPrice(tokenAddress);
+  
+  if (priceData) {
+    console.log("\n=== PRICE DATA ===");
+    console.log("USD Price: $", priceData.price);
+    console.log("WPLS Price:", priceData.priceInWPLS);
+    console.log("Liquidity: $", priceData.liquidity);
+    console.log("Pair Address:", priceData.pairAddress);
+    console.log("Token0:", priceData.token0);
+    console.log("Token1:", priceData.token1);
+    
+    // Calculate what the USD price should be
+    console.log("\nCalculation check:");
+    console.log("WPLS Price * Token WPLS Price =", wplsPrice * priceData.priceInWPLS);
+    console.log("Should equal USD Price:", priceData.price);
+  } else {
+    console.log("ERROR: No price data returned!");
+  }
+  
+  // Also try to get raw pair data
+  console.log("\n3. Checking raw pair data...");
+  
+  // You'd need to add this to your service or use ethers directly
+  const provider = priceService.provider;
+  const FACTORY_ABI = ["function getPair(address tokenA, address tokenB) view returns (address)"];
+  const PAIR_ABI = [
+    "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32)",
+    "function token0() view returns (address)",
+    "function token1() view returns (address)",
+  ];
+  
+  const WPLS = "0xa1077a294dde1b09bb078844df40758a5d0f9a27";
+  const factories = [
+    { address: "0x1715a3E4A142d8b698131108995174F37aEBA10D", name: "V2" },
+    { address: "0x29eA7545DEf87022BAdc76323F373EA1e707C523", name: "V1" }
+  ];
+  
+  for (const factory of factories) {
+    try {
+      const factoryContract = new ethers.Contract(factory.address, FACTORY_ABI, provider);
+      const pairAddress = await factoryContract.getPair(tokenAddress, WPLS);
+      
+      if (pairAddress !== ethers.constants.AddressZero) {
+        console.log(`\n${factory.name} Factory - Pair found:`, pairAddress);
+        
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserves, token0, token1] = await Promise.all([
+          pairContract.getReserves(),
+          pairContract.token0(),
+          pairContract.token1()
+        ]);
+        
+        console.log("Token0:", token0);
+        console.log("Token1:", token1);
+        console.log("Reserve0:", ethers.utils.formatUnits(reserves[0], 18));
+        console.log("Reserve1:", ethers.utils.formatUnits(reserves[1], 18));
+        
+        // Determine which is which
+        const isToken0 = token0.toLowerCase() === tokenAddress.toLowerCase();
+        console.log("Our token is:", isToken0 ? "token0" : "token1");
+        
+        // Get decimals
+        const ERC20_ABI = ["function decimals() view returns (uint8)"];
+        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+        const decimals = await tokenContract.decimals();
+        console.log("Token decimals:", decimals);
+        
+        // Calculate price manually
+        const tokenReserve = isToken0 ? reserves[0] : reserves[1];
+        const wplsReserve = isToken0 ? reserves[1] : reserves[0];
+        
+        const tokenAmount = parseFloat(ethers.utils.formatUnits(tokenReserve, decimals));
+        const wplsAmount = parseFloat(ethers.utils.formatUnits(wplsReserve, 18));
+        
+        console.log("Token amount in pool:", tokenAmount);
+        console.log("WPLS amount in pool:", wplsAmount);
+        
+        const priceInWPLS = wplsAmount / tokenAmount;
+        const priceInUSD = priceInWPLS * wplsPrice;
+        
+        console.log("Calculated WPLS price:", priceInWPLS);
+        console.log("Calculated USD price:", priceInUSD);
+      }
+    } catch (error) {
+      console.error(`Error checking ${factory.name}:`, error.message);
+    }
+  }
+}
+
+// Run it
+debugTokenPrice().catch(console.error);

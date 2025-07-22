@@ -123,7 +123,7 @@ export async function fetchWalletDataClientSide(
       batches.push(tokensWithPrices.slice(i, i + BATCH_SIZE));
     }
     
-    if (onProgress) onProgress('Fetching token logos and prices from DexScreener...', 30);
+    if (onProgress) onProgress('Fetching token logos...', 30);
     
     // Process each batch
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
@@ -138,24 +138,15 @@ export async function fetchWalletDataClientSide(
               tokenAddressForDex = '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
             }
             
-            // Always fetch from DexScreener to get logos, even if we have prices
+            // Only fetch logos from DexScreener, NOT prices
+            // Prices come from smart contracts via the server
             const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
             
-            if (priceData) {
-              // Only update price if we don't have one from scanner
-              if (!token.price || token.price === 0) {
-                token.price = priceData.price;
-                token.value = token.balanceFormatted * priceData.price;
-              }
-              token.priceData = priceData;
+            if (priceData && priceData.logo && (!token.logo || token.logo === '')) {
+              token.logo = priceData.logo;
               
-              // Always check for logo updates
-              if (priceData.logo && (!token.logo || token.logo === '')) {
-                token.logo = priceData.logo;
-                
-                // Save logo to server in background
-                saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
-              }
+              // Save logo to server in background
+              saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
             }
           } catch (error) {
             console.error(`Failed to fetch data for ${token.symbol}:`, error);
@@ -163,7 +154,7 @@ export async function fetchWalletDataClientSide(
           
           processedCount++;
           const progress = Math.round(30 + (processedCount / totalTokens) * 60); // 30% to 90%
-          if (onProgress) onProgress(`Fetching logos and prices... (${processedCount}/${totalTokens})`, progress);
+          if (onProgress) onProgress(`Fetching logos... (${processedCount}/${totalTokens})`, progress);
         })
       );
       
