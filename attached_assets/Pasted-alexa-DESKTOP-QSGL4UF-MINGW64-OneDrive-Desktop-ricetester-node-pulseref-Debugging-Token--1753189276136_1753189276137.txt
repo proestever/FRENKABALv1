@@ -1,0 +1,85 @@
+alexa@DESKTOP-QSGL4UF MINGW64 ~/OneDrive/Desktop/ricetester
+$ node pulseref
+
+=== Debugging Token Price ===
+Token: 0xb6B57227150a7097723e0C013752001AaD01248F
+Token Info: PulseReflections (PRS), Decimals: 18
+
+1. Checking WPLS price...
+Getting WPLS price from stablecoin pairs...
+  V2 WPLS/Stable pair:
+    Reserves: 34580836489.89 WPLS / 1110583.09 Stable
+    Price: $0.000032, Liquidity: $2221166
+  V2 WPLS/Stable pair:
+    Reserves: 75962785481.87 WPLS / 2437467.70 Stable
+    Price: $0.000032, Liquidity: $4874935
+  V2 WPLS/Stable pair:
+    Reserves: 30014015675.56 WPLS / 961606.62 Stable
+    Price: $0.000032, Liquidity: $1923213
+  V1 WPLS/Stable pair:
+    Reserves: 1525958641.92 WPLS / 48956.36 Stable
+    Price: $0.000032, Liquidity: $97913
+  V1 WPLS/Stable pair:
+    Reserves: 19249423647.52 WPLS / 617643.43 Stable
+    Price: $0.000032, Liquidity: $1235287
+  V1 WPLS/Stable pair:
+    Reserves: 345163246.37 WPLS / 11062.20 Stable
+    Price: $0.000032, Liquidity: $22124
+Best WPLS price: $0.000032 from V2
+
+2. Looking for WPLS pairs...
+
+V2 Factory - Pair found: 0x53264c3eE2e1B1f470C9884e7f9AE03613868a96
+  Token0: 0xA1077a294dDE1B09bB078844df40758a5D0f9a27 (WPLS)
+  Token1: 0xb6B57227150a7097723e0C013752001AaD01248F (Our Token)
+  Raw Reserve0: 80503488958639356270218016
+  Raw Reserve1: 453458049089369460568154951415
+  Formatted Reserve0: 80503488.958639356270218016
+  Formatted Reserve1: 453458049089.369460568154951415
+
+  === Price Calculation ===
+  Token amount in pool: 453458049089.37 PRS
+  WPLS amount in pool: 80503488.96 WPLS
+  Price in WPLS: 0.00017753 WPLS per PRS
+  WPLS price: $0.000032
+  Price in USD: $0.0000000057
+  Total liquidity: $5166.34
+
+  === Comparison with DexScreener ===
+  DexScreener WPLS price: 0.0001775 WPLS
+  Our WPLS price: 0.00017753 WPLS
+  Difference: 0.02%
+  Expected USD price (at $0.000032/WPLS): $0.0000000057
+  Our USD price: $0.0000000057
+
+V1 Factory - Pair found: 0xd5997cd46e5D6CCC170739D584919EBd454Ae995
+  Token0: 0xA1077a294dDE1B09bB078844df40758a5D0f9a27 (WPLS)
+  Token1: 0xb6B57227150a7097723e0C013752001AaD01248F (Our Token)
+  Raw Reserve0: 310496606332201527983000
+  Raw Reserve1: 1905153596652937355515900516
+  Formatted Reserve0: 310496.606332201527983
+  Formatted Reserve1: 1905153596.652937355515900516
+
+  === Price Calculation ===
+  Token amount in pool: 1905153596.65 PRS
+  WPLS amount in pool: 310496.61 WPLS
+  Price in WPLS: 0.00016298 WPLS per PRS
+  WPLS price: $0.000032
+  Price in USD: $0.0000000052
+  Total liquidity: $19.93
+
+  === Comparison with DexScreener ===
+  DexScreener WPLS price: 0.0001775 WPLS
+  Our WPLS price: 0.00016298 WPLS
+  Difference: -8.18%
+  Expected USD price (at $0.000032/WPLS): $0.0000000057
+  Our USD price: $0.0000000052
+
+=== SUMMARY ===
+Found pairs:
+  V2: $0.0000000057 (Liquidity: $5166.34)
+  V1: $0.0000000052 (Liquidity: $19.93)
+
+Best pair (highest liquidity): V2 at $0.0000000057
+Price in WPLS: 0.00017753
+

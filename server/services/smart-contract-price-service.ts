@@ -39,6 +39,10 @@ const PULSEX_V2_FACTORY = "0x1715a3E4A142d8b698131108995174F37aEBA10D";
 const PULSEX_V1_FACTORY = "0x29eA7545DEf87022BAdc76323F373EA1e707C523";
 const WPLS_ADDRESS = "0xa1077a294dde1b09bb078844df40758a5d0f9a27";
 
+// WPLS/DAI pair - foundation for all price calculations
+const WPLS_DAI_PAIR = "0xe56043671df55de5cdf8459710433c10324de0ae";
+const DAI_ADDRESS = "0xefD766cCb38EaF1dfd701853BFCe31359239F305"; // DAI from Ethereum
+
 // Stablecoin addresses on PulseChain
 const STABLECOINS = [
   "0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07", // USDC from Ethereum
@@ -213,11 +217,7 @@ async function getWPLSPairPrice(
       const price = priceInWPLS * wplsPrice;
       const liquidity = wplsAmount * wplsPrice * 2; // Total liquidity in USD
 
-      // Require minimum $1000 liquidity to prevent manipulation
-      if (liquidity < 1000) {
-        console.log(`Skipping ${tokenAddress} ${factory.name} - insufficient liquidity: $${liquidity.toFixed(2)}`);
-        continue;
-      }
+      // Don't filter by liquidity - we'll select the highest liquidity pair later
 
       console.log(`Found ${tokenAddress} WPLS pair on ${factory.name}: $${price.toFixed(8)}, liquidity: $${liquidity.toFixed(2)}, pair: ${pairAddress}`);
       
@@ -306,14 +306,38 @@ async function getWPLSPrice(
     return wplsCache.price;
   }
 
-  // Get WPLS price from stablecoin pairs
-  const priceData = await getStablecoinPairPrice(WPLS_ADDRESS, provider);
-  const price = priceData ? priceData.price : 0.0027; // Fallback price
+  try {
+    // Always use the WPLS/DAI pair as the foundation for WPLS price
+    const pairContract = new ethers.Contract(WPLS_DAI_PAIR, PAIR_ABI, provider);
+    const [reserves, token0] = await Promise.all([
+      pairContract.getReserves(),
+      pairContract.token0(),
+    ]);
 
-  // Cache the result
-  wplsCache = { price, timestamp: Date.now() };
+    // Both WPLS and DAI have 18 decimals
+    const isWPLSToken0 = token0.toLowerCase() === WPLS_ADDRESS.toLowerCase();
+    const wplsReserve = isWPLSToken0 ? reserves[0] : reserves[1];
+    const daiReserve = isWPLSToken0 ? reserves[1] : reserves[0];
 
-  return price;
+    const wplsAmount = parseFloat(ethers.utils.formatUnits(wplsReserve, 18));
+    const daiAmount = parseFloat(ethers.utils.formatUnits(daiReserve, 18));
+
+    if (wplsAmount === 0) {
+      console.error('WPLS amount is 0 in WPLS/DAI pair');
+      return 0.000032; // Fallback price
+    }
+
+    const price = daiAmount / wplsAmount;
+    console.log(`WPLS price from WPLS/DAI pair: $${price.toFixed(6)} (${wplsAmount.toFixed(2)} WPLS / ${daiAmount.toFixed(2)} DAI)`);
+
+    // Cache the result
+    wplsCache = { price, timestamp: Date.now() };
+
+    return price;
+  } catch (error) {
+    console.error('Error fetching WPLS price from WPLS/DAI pair:', error);
+    return 0.000032; // Fallback price
+  }
 }
 
 export async function getTokenPriceFromContract(
@@ -405,15 +429,14 @@ export async function getTokenPriceFromContract(
           console.log(`    Calculated price: $${price}, Liquidity: $${liquidity}`);
         }
         
-        if (liquidity >= 1000) { // Min liquidity check
-          allPairs.push({
-            price,
-            liquidity,
-            pairAddress: pairInfo.pairAddress,
-            token0: pairData.token0,
-            token1: pairData.token1,
-          });
-        }
+        // Add all pairs without liquidity filter - we'll select highest liquidity
+        allPairs.push({
+          price,
+          liquidity,
+          pairAddress: pairInfo.pairAddress,
+          token0: pairData.token0,
+          token1: pairData.token1,
+        });
       } catch (error) {
         console.error(`Error processing pair ${pairInfo.pairAddress}:`, error);
       }

@@ -1,0 +1,234 @@
+// pulseref_fixed.js - Fixed script with proper WPLS price calculation
+const { ethers } = require("ethers");
+
+// Constants
+const PULSEX_V2_FACTORY = "0x1715a3E4A142d8b698131108995174F37aEBA10D";
+const PULSEX_V1_FACTORY = "0x29eA7545DEf87022BAdc76323F373EA1e707C523";
+const WPLS_ADDRESS = "0xa1077a294dde1b09bb078844df40758a5d0f9a27";
+
+// Stablecoin addresses on PulseChain
+const STABLECOINS = [
+  "0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07", // USDC from Ethereum
+  "0xefD766cCb38EaF1dfd701853BFCe31359239F305", // DAI from Ethereum
+  "0x0Cb6F5a34ad42ec934882A05265A7d5F59b51A2f", // USDT from Ethereum
+];
+
+// ABIs
+const FACTORY_ABI = ["function getPair(address tokenA, address tokenB) view returns (address)"];
+const PAIR_ABI = [
+  "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32)",
+  "function token0() view returns (address)",
+  "function token1() view returns (address)",
+];
+const ERC20_ABI = [
+  "function decimals() view returns (uint8)",
+  "function symbol() view returns (string)",
+  "function name() view returns (string)"
+];
+
+// Initialize provider
+const provider = new ethers.providers.JsonRpcProvider("https://rpc.pulsechain.com");
+
+async function getTokenDecimals(tokenAddress) {
+  try {
+    const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+    return await tokenContract.decimals();
+  } catch (error) {
+    return 18; // Default
+  }
+}
+
+async function getWPLSPrice() {
+  console.log("Getting WPLS price from stablecoin pairs...");
+  
+  const factories = [
+    { address: PULSEX_V2_FACTORY, name: "V2" },
+    { address: PULSEX_V1_FACTORY, name: "V1" }
+  ];
+  
+  let bestPrice = 0;
+  let bestLiquidity = 0;
+  let bestPair = null;
+
+  for (const factory of factories) {
+    const factoryContract = new ethers.Contract(factory.address, FACTORY_ABI, provider);
+    
+    for (const stablecoin of STABLECOINS) {
+      try {
+        const pairAddress = await factoryContract.getPair(WPLS_ADDRESS, stablecoin);
+        if (pairAddress === ethers.constants.AddressZero) continue;
+        
+        const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+        const [reserves, token0, token1] = await Promise.all([
+          pairContract.getReserves(),
+          pairContract.token0(),
+          pairContract.token1()
+        ]);
+        
+        // Get decimals for the stablecoin
+        const stableDecimals = await getTokenDecimals(stablecoin);
+        
+        const isWPLSToken0 = token0.toLowerCase() === WPLS_ADDRESS.toLowerCase();
+        const wplsReserve = isWPLSToken0 ? reserves[0] : reserves[1];
+        const stableReserve = isWPLSToken0 ? reserves[1] : reserves[0];
+        
+        const wplsAmount = parseFloat(ethers.utils.formatUnits(wplsReserve, 18));
+        const stableAmount = parseFloat(ethers.utils.formatUnits(stableReserve, stableDecimals));
+        
+        if (wplsAmount === 0) continue;
+        
+        const price = stableAmount / wplsAmount;
+        const liquidity = stableAmount * 2;
+        
+        console.log(`  ${factory.name} WPLS/Stable pair:`);
+        console.log(`    Reserves: ${wplsAmount.toFixed(2)} WPLS / ${stableAmount.toFixed(2)} Stable`);
+        console.log(`    Price: $${price.toFixed(6)}, Liquidity: $${liquidity.toFixed(0)}`);
+        
+        if (liquidity > bestLiquidity) {
+          bestPrice = price;
+          bestLiquidity = liquidity;
+          bestPair = { factory: factory.name, stablecoin, price, liquidity };
+        }
+      } catch (error) {
+        console.log(`  Error checking ${factory.name} with stablecoin ${stablecoin}:`, error.message);
+      }
+    }
+  }
+  
+  // If no price found, use fallback
+  if (bestPrice === 0) {
+    console.log("No stablecoin pairs found, using fallback price");
+    bestPrice = 0.000032; // Current approximate WPLS price
+  }
+  
+  console.log(`Best WPLS price: $${bestPrice.toFixed(6)} from ${bestPair?.factory || 'Fallback'}`);
+  return bestPrice;
+}
+
+async function debugTokenPrice(tokenAddress) {
+  console.log("\n=== Debugging Token Price ===");
+  console.log("Token:", tokenAddress);
+  
+  try {
+    // Get token info
+    const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+    const [decimals, symbol, name] = await Promise.all([
+      tokenContract.decimals(),
+      tokenContract.symbol().catch(() => "Unknown"),
+      tokenContract.name().catch(() => "Unknown")
+    ]);
+    
+    console.log(`Token Info: ${name} (${symbol}), Decimals: ${decimals}`);
+    
+    // Get WPLS price first
+    console.log("\n1. Checking WPLS price...");
+    const wplsPrice = await getWPLSPrice();
+    
+    // Check both factories for WPLS pairs
+    console.log("\n2. Looking for WPLS pairs...");
+    const factories = [
+      { address: PULSEX_V2_FACTORY, name: "V2" },
+      { address: PULSEX_V1_FACTORY, name: "V1" }
+    ];
+    
+    const pairs = [];
+    
+    for (const factory of factories) {
+      try {
+        const factoryContract = new ethers.Contract(factory.address, FACTORY_ABI, provider);
+        const pairAddress = await factoryContract.getPair(tokenAddress, WPLS_ADDRESS);
+        
+        if (pairAddress !== ethers.constants.AddressZero) {
+          console.log(`\n${factory.name} Factory - Pair found:`, pairAddress);
+          
+          const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+          const [reserves, token0, token1] = await Promise.all([
+            pairContract.getReserves(),
+            pairContract.token0(),
+            pairContract.token1()
+          ]);
+          
+          const isToken0 = token0.toLowerCase() === tokenAddress.toLowerCase();
+          console.log("  Token0:", token0, isToken0 ? "(Our Token)" : "(WPLS)");
+          console.log("  Token1:", token1, !isToken0 ? "(Our Token)" : "(WPLS)");
+          
+          // Display raw reserves
+          console.log("  Raw Reserve0:", reserves[0].toString());
+          console.log("  Raw Reserve1:", reserves[1].toString());
+          
+          console.log("  Formatted Reserve0:", ethers.utils.formatUnits(reserves[0], isToken0 ? decimals : 18));
+          console.log("  Formatted Reserve1:", ethers.utils.formatUnits(reserves[1], !isToken0 ? decimals : 18));
+          
+          // Calculate price
+          const tokenReserve = isToken0 ? reserves[0] : reserves[1];
+          const wplsReserve = isToken0 ? reserves[1] : reserves[0];
+          
+          const tokenAmount = parseFloat(ethers.utils.formatUnits(tokenReserve, decimals));
+          const wplsAmount = parseFloat(ethers.utils.formatUnits(wplsReserve, 18));
+          
+          if (tokenAmount > 0) {
+            const priceInWPLS = wplsAmount / tokenAmount;
+            const priceInUSD = priceInWPLS * wplsPrice;
+            const liquidityInUSD = wplsAmount * wplsPrice * 2;
+            
+            console.log(`\n  === Price Calculation ===`);
+            console.log(`  Token amount in pool: ${tokenAmount.toFixed(2)} ${symbol}`);
+            console.log(`  WPLS amount in pool: ${wplsAmount.toFixed(2)} WPLS`);
+            console.log(`  Price in WPLS: ${priceInWPLS.toFixed(8)} WPLS per ${symbol}`);
+            console.log(`  WPLS price: $${wplsPrice.toFixed(6)}`);
+            console.log(`  Price in USD: $${priceInUSD.toFixed(10)}`);
+            console.log(`  Total liquidity: $${liquidityInUSD.toFixed(2)}`);
+            
+            // Compare with expected
+            const expectedWPLSPrice = 0.0001775;
+            const expectedUSDPrice = expectedWPLSPrice * 0.000032;
+            console.log(`\n  === Comparison with DexScreener ===`);
+            console.log(`  DexScreener WPLS price: ${expectedWPLSPrice} WPLS`);
+            console.log(`  Our WPLS price: ${priceInWPLS.toFixed(8)} WPLS`);
+            console.log(`  Difference: ${((priceInWPLS - expectedWPLSPrice) / expectedWPLSPrice * 100).toFixed(2)}%`);
+            console.log(`  Expected USD price (at $0.000032/WPLS): $${expectedUSDPrice.toFixed(10)}`);
+            console.log(`  Our USD price: $${priceInUSD.toFixed(10)}`);
+            
+            pairs.push({
+              factory: factory.name,
+              pairAddress,
+              priceInWPLS,
+              priceInUSD,
+              liquidity: liquidityInUSD,
+              tokenAmount,
+              wplsAmount
+            });
+          }
+        } else {
+          console.log(`${factory.name} Factory - No pair found`);
+        }
+      } catch (error) {
+        console.error(`Error checking ${factory.name}:`, error.message);
+      }
+    }
+    
+    // Summary
+    console.log("\n=== SUMMARY ===");
+    if (pairs.length > 0) {
+      console.log("Found pairs:");
+      pairs.forEach(pair => {
+        console.log(`  ${pair.factory}: $${pair.priceInUSD.toFixed(10)} (Liquidity: $${pair.liquidity.toFixed(2)})`);
+      });
+      
+      const bestPair = pairs.reduce((best, current) => 
+        current.liquidity > best.liquidity ? current : best
+      );
+      console.log(`\nBest pair (highest liquidity): ${bestPair.factory} at $${bestPair.priceInUSD.toFixed(10)}`);
+      console.log(`Price in WPLS: ${bestPair.priceInWPLS.toFixed(8)}`);
+    } else {
+      console.log("No WPLS pairs found for this token!");
+    }
+    
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
+// Run the debug
+const TOKEN_TO_CHECK = "0xb6B57227150a7097723e0C013752001AaD01248F";
+debugTokenPrice(TOKEN_TO_CHECK).catch(console.error);

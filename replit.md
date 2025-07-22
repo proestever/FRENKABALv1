@@ -178,6 +178,14 @@ Required environment variables:
 - **DexScreener now only used for logos** - Price fetching primarily from smart contracts, DexScreener only provides token logos as fallback
 - **Result** - PulseReflection and all other tokens now show accurate real-time prices from highest liquidity pools
 
+### July 22, 2025 - Implemented WPLS/DAI Pair as Foundation for All Price Calculations
+- **WPLS price foundation** - All WPLS prices now come from the WPLS/DAI pair at 0xe56043671df55de5cdf8459710433c10324de0ae
+- **Reliable price source** - DAI is a stablecoin providing reliable USD value, both tokens have 18 decimals
+- **Removed DexScreener price fetching from client** - Client now only fetches logos from DexScreener, not prices
+- **No liquidity filters** - Removed all minimum liquidity requirements, system selects highest liquidity pair
+- **Direct blockchain reading** - All prices calculated from smart contract reserves using WPLS/DAI as the base
+- **Result** - PulseReflection now correctly shows $0.000000005676 instead of $1.77
+
 ### July 22, 2025 - PLS Token Integration in Main Token List
 - **PLS in Token List** - Native PLS balance now appears in the main token list alongside other tokens
 - **Single Wallet View** - PLS is added as a virtual token at the beginning of the token list when viewing single wallets
