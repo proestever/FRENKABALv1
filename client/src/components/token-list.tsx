@@ -444,8 +444,8 @@ export function TokenList({
                                 tokenSymbol={token.symbol}
                               >
                                 <div className="cursor-pointer text-base font-bold text-foreground hover:text-gray-300 transition-colors">
-                                  <span title={token.name}>
-                                    {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
+                                  <span title={token.name || ''}>
+                                    {token.name && token.name.length > 15 ? `${token.name.substring(0, 15)}...` : (token.name || 'Unknown')}
                                   </span>
                                 </div>
                               </TokenActionsMenu>
@@ -459,8 +459,8 @@ export function TokenList({
                             )}
                           </div>
                           <div className="flex gap-1 items-center justify-start">
-                            <div className="text-sm text-muted-foreground font-medium" title={token.symbol}>
-                              {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                            <div className="text-sm text-muted-foreground font-medium" title={token.symbol || ''}>
+                              {token.symbol && token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : (token.symbol || 'Unknown')}
                             </div>
                             <div className="text-xs text-gray-400">
                               • {formatTokenAmount(token.balanceFormatted || 0)}
@@ -477,15 +477,15 @@ export function TokenList({
                                   <TooltipContent className="bg-black/90 border-white/20 p-3 max-w-xs">
                                     <div className="space-y-1">
                                       <div className="text-xs font-semibold text-white mb-2">Wallet Breakdown</div>
-                                      {(token as any).walletHoldings?.slice(0, 10).map((holding: any, idx: number) => (
+                                      {(token as any).walletHoldings?.slice(0, 10).map((holding: any, idx: number) => holding && (
                                         <div key={idx} className="flex justify-between text-xs text-white/80">
-                                          <span className="font-mono">{holding.address.slice(0, 8)}...</span>
+                                          <span className="font-mono">{holding.address?.slice(0, 8) || ''}...</span>
                                           <span className="ml-2">
-                                            {formatTokenAmount(holding.amount)} ({formatCurrency(holding.value)})
+                                            {formatTokenAmount(holding.amount || 0)} ({formatCurrency(holding.value || 0)})
                                           </span>
                                         </div>
                                       ))}
-                                      {(token as any).walletHoldings?.length > 10 && (
+                                      {(token as any).walletHoldings && (token as any).walletHoldings.length > 10 && (
                                         <div className="text-xs text-white/60 pt-1">
                                           ...and {(token as any).walletHoldings.length - 10} more
                                         </div>
@@ -632,8 +632,8 @@ export function TokenList({
                                   tokenSymbol={token.symbol}
                                 >
                                   <div className="cursor-pointer text-base font-bold text-foreground hover:text-gray-300 transition-colors">
-                                    <span title={token.name}>
-                                      {token.name.length > 15 ? `${token.name.substring(0, 15)}...` : token.name}
+                                    <span title={token.name || ''}>
+                                      {token.name && token.name.length > 15 ? `${token.name.substring(0, 15)}...` : (token.name || 'Unknown')}
                                     </span>
                                   </div>
                                 </TokenActionsMenu>
@@ -648,8 +648,8 @@ export function TokenList({
                             </div>
                             <div className="flex items-center gap-2 overflow-hidden">
                               {!token.isLp && (
-                                <div className="text-sm text-muted-foreground" title={token.symbol}>
-                                  {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                                <div className="text-sm text-muted-foreground" title={token.symbol || ''}>
+                                  {token.symbol && token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : (token.symbol || 'Unknown')}
                                 </div>
                               )}
                               {token.exchange && (
@@ -665,8 +665,8 @@ export function TokenList({
                         <td className="px-4 py-3 whitespace-nowrap text-right">
                           <div className="text-base font-bold text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
                           {!token.isLp && (
-                            <div className="text-sm text-muted-foreground" title={token.symbol}>
-                              {token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : token.symbol}
+                            <div className="text-sm text-muted-foreground" title={token.symbol || ''}>
+                              {token.symbol && token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : (token.symbol || 'Unknown')}
                             </div>
                           )}
                         </td>
