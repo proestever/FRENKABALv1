@@ -47,13 +47,13 @@ const STABLECOINS = [
   "0xe9e7cea3dedca5984780bafc599bd69add087d56", // BUSD
 ];
 
-// Cache for token prices (5 minute TTL)
+// No caching - always fetch fresh prices from blockchain
 const priceCache = new Map<string, { data: PriceData; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 0; // Disabled - always fetch fresh
 
-// Special cache for WPLS price (1 minute TTL)
+// No caching for WPLS price either
 let wplsCache: { price: number; timestamp: number } | null = null;
-const WPLS_CACHE_TTL = 60 * 1000; // 1 minute
+const WPLS_CACHE_TTL = 0; // Disabled - always fetch fresh
 
 async function getTokenDecimals(
   tokenAddress: string,
@@ -167,13 +167,18 @@ async function getWPLSPairPrice(
   tokenAddress: string,
   provider: ethers.providers.Provider,
 ): Promise<PriceData | null> {
-  // Try both v2 and v1 factories
-  const factories = [PULSEX_V2_FACTORY, PULSEX_V1_FACTORY];
+  // Find ALL WPLS pairs from both v2 and v1 factories
+  const factories = [
+    { address: PULSEX_V2_FACTORY, name: 'V2' },
+    { address: PULSEX_V1_FACTORY, name: 'V1' }
+  ];
   
-  for (const factoryAddress of factories) {
+  const allPairs: PriceData[] = [];
+  
+  for (const factory of factories) {
     try {
-      const factory = new ethers.Contract(factoryAddress, FACTORY_ABI, provider);
-      const pairAddress = await factory.getPair(tokenAddress, WPLS_ADDRESS);
+      const factoryContract = new ethers.Contract(factory.address, FACTORY_ABI, provider);
+      const pairAddress = await factoryContract.getPair(tokenAddress, WPLS_ADDRESS);
 
       if (pairAddress === ethers.constants.AddressZero) continue;
 
@@ -210,20 +215,35 @@ async function getWPLSPairPrice(
 
       // Require minimum $1000 liquidity to prevent manipulation
       if (liquidity < 1000) {
-        console.log(`Skipping ${tokenAddress} - insufficient liquidity: $${liquidity.toFixed(2)}`);
+        console.log(`Skipping ${tokenAddress} ${factory.name} - insufficient liquidity: $${liquidity.toFixed(2)}`);
         continue;
       }
 
-      return {
+      console.log(`Found ${tokenAddress} WPLS pair on ${factory.name}: $${price.toFixed(8)}, liquidity: $${liquidity.toFixed(2)}, pair: ${pairAddress}`);
+      
+      allPairs.push({
         price,
         liquidity,
         pairAddress,
         token0: pairData.token0,
         token1: pairData.token1,
-      };
+      });
     } catch (error) {
-      console.error(`Error getting WPLS pair price for ${tokenAddress}:`, error);
+      console.error(`Error getting WPLS pair price for ${tokenAddress} on ${factory.name}:`, error);
     }
+  }
+  
+  // If we found multiple pairs, return the one with highest liquidity
+  if (allPairs.length > 0) {
+    const bestPair = allPairs.reduce((best, current) => 
+      current.liquidity > best.liquidity ? current : best
+    );
+    
+    if (allPairs.length > 1) {
+      console.log(`Selected highest liquidity pair for ${tokenAddress}: $${bestPair.liquidity.toFixed(2)}, price: $${bestPair.price.toFixed(8)}`);
+    }
+    
+    return bestPair;
   }
   
   return null;

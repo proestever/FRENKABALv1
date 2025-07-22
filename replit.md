@@ -161,6 +161,16 @@ Required environment variables:
 - **HEX Stakes Integration** - HEX stakes appear with actual HEX logo, positioned based on dollar value
 - **Native PLS Support** - Includes native PLS balance in portfolio total and token list using WPLS price
 
+### July 22, 2025 - Complete Migration to Smart Contract Prices & Removal of DexScreener
+- **Removed all DexScreener dependencies** - Completely deleted `dexscreener-client.ts` and all references to DexScreener API
+- **Pure smart contract price fetching** - All token prices now come directly from PulseX liquidity pool smart contracts 
+- **Highest liquidity WPLS pair selection** - Modified `getWPLSPairPrice` to find ALL WPLS pairs across both PulseX v1 and v2 factories and select the one with highest liquidity
+- **Real-time price updates** - Disabled all caching (CACHE_TTL = 0) to ensure prices are always fetched fresh from blockchain
+- **No external API dependencies** - Application now only reads directly from PulseChain blockchain, no reliance on third-party price APIs
+- **Factory coverage** - Searches both PulseX v2 (0x1715a3E4A142d8b698131108995174F37aEBA10D) and v1 (0x29eA7545DEf87022BAdc76323F373EA1e707C523) for comprehensive pair discovery
+- **Enhanced logging** - Added detailed console logging showing which factory/pair was selected for each token with liquidity values
+- **PulseReflection fix** - Correct pricing now achieved by selecting highest liquidity WPLS pair instead of first found
+
 ### July 22, 2025 - PLS Token Integration in Main Token List
 - **PLS in Token List** - Native PLS balance now appears in the main token list alongside other tokens
 - **Single Wallet View** - PLS is added as a virtual token at the beginning of the token list when viewing single wallets

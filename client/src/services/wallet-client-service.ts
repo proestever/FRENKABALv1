@@ -3,7 +3,7 @@
  * and prices/logos from DexScreener directly in the browser
  */
 
-import { getTokenPriceFromDexScreener, TokenPriceData } from './dexscreener-client';
+// Removed DexScreener dependency - using smart contract prices directly
 import { getTokenPriceFromContract, getMultipleTokenPricesFromContract } from './smart-contract-price-service';
 
 // Blacklist of known dust tokens to filter out

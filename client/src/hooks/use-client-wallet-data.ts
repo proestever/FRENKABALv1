@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { getWalletTokenBalances } from '@/services/pulsechain-client';
-import { getBatchTokenPrices } from '@/services/dexscreener-client';
+// Removed DexScreener dependency - using smart contract prices instead
 
 /**
  * Hook that fetches wallet data directly from PulseChain and DexScreener APIs
@@ -20,15 +20,10 @@ export function useClientWalletData(walletAddress: string) {
       
       console.log(`Found ${walletData.tokens.length} tokens, fetching prices from DexScreener...`);
       
-      // Fetch prices for all tokens
-      const tokenAddresses = walletData.tokens
-        .filter(token => !token.isNative)
-        .map(token => token.address);
-      
-      const prices = await getBatchTokenPrices(tokenAddresses);
-      
-      // Add PLS price
-      const plsPriceData = await getBatchTokenPrices(['0xA1077a294dDE1B09bB078844df40758a5D0f9a27']);
+      // This hook is not used in the main app - kept for compatibility
+      // Main app uses useClientSideWallet which fetches smart contract prices
+      const prices: Record<string, { price: number; priceChange24h: number }> = {};
+      const plsPriceData: Record<string, { price: number; priceChange24h: number }> = {};
       
       // Merge price data with wallet data
       let totalValue = 0;

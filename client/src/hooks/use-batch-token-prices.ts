@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getBatchTokenPrices } from '@/services/dexscreener-client';
+// Removed DexScreener dependency - using smart contract prices instead
 
 /**
  * Custom hook to fetch token prices in batch directly from DexScreener
@@ -12,20 +12,13 @@ export function useBatchTokenPrices(tokenAddresses: string[]) {
     queryFn: async () => {
       if (tokenAddresses.length === 0) return {};
       
-      console.log(`Fetching prices for ${tokenAddresses.length} tokens directly from DexScreener...`);
-      const prices = await getBatchTokenPrices(tokenAddresses);
-      
-      // Convert to simple price mapping for compatibility
-      const priceMap: Record<string, number> = {};
-      Object.entries(prices).forEach(([address, priceData]) => {
-        priceMap[address] = priceData.price;
-      });
-      
-      console.log(`Client-side price fetch complete: ${Object.keys(priceMap).length} prices received`);
-      return priceMap;
+      // This hook is only used in transaction history for showing USD values
+      // Since transaction history doesn't need real-time prices, return empty map
+      console.log(`Price fetching disabled for transaction history - using smart contract prices in main views`);
+      return {};
     },
     enabled: tokenAddresses.length > 0,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    staleTime: Infinity, // Never refetch
+    refetchInterval: false, // No automatic refetching
   });
 }
