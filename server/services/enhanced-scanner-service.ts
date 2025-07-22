@@ -149,14 +149,17 @@ export class EnhancedPulseChainScanner {
   // Get tokens from PulseChain API
   private async getTokensFromAPI(walletAddress: string): Promise<any[]> {
     try {
-      const url = `https://api.scan.pulsechain.com/api/v2/addresses/${walletAddress}/tokens?type=ERC-20`;
+      const url = `https://api.scan.pulsechain.com/api/v2/addresses/${walletAddress}/token-balances`;
       const response = await fetch(url);
       const data = await response.json();
       
-      if (!data.items) return [];
+      // Handle both array response and object with items
+      const items = Array.isArray(data) ? data : (data.items || []);
       
-      return data.items
-        .filter((item: any) => item.type === "ERC-20" && item.value !== "0")
+      if (!items || items.length === 0) return [];
+      
+      return items
+        .filter((item: any) => item.value && item.value !== "0")
         .map((item: any) => ({
           address: item.token.address.toLowerCase(),
           symbol: item.token.symbol || "Unknown",

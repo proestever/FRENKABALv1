@@ -287,8 +287,13 @@ export function combineWalletData(wallets: Record<string, any>): any {
   // Convert the token map back to an array (no filtering)
   let combinedTokens = Object.values(tokenMap);
   
-  // Add native PLS as a virtual token if there's a combined balance
-  if (totalPlsBalance > 0) {
+  // Check if PLS is already in the combined tokens (scanner includes it as native token)
+  const plsAlreadyIncluded = combinedTokens.some((t: any) => 
+    t.address === 'native' || t.address === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+  );
+  
+  // Only add PLS if it's not already included and there's a combined balance
+  if (totalPlsBalance > 0 && !plsAlreadyIncluded) {
     // Find WPLS token to get PLS price
     const wplsToken = combinedTokens.find((t: any) => 
       t.address.toLowerCase() === '0xa1077a294dde1b09bb078844df40758a5d0f9a27'

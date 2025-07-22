@@ -708,36 +708,8 @@ export default function Home() {
   const allTokens = (() => {
     if (!walletData) return manualTokens;
     
-    // Start with wallet tokens
+    // Start with wallet tokens - scanner already includes PLS if present
     let tokens = [...walletData.tokens];
-    
-    // Add native PLS as a virtual token if it has value
-    if (walletData.plsBalance && walletData.plsBalance > 0) {
-      // Get WPLS price from tokens
-      const wplsToken = walletData.tokens.find((t: any) => 
-        t.address.toLowerCase() === '0xa1077a294dde1b09bb078844df40758a5d0f9a27'
-      );
-      const plsPrice = wplsToken?.price || 0;
-      const plsPriceChange24h = wplsToken?.priceChange24h || 0;
-      
-      const plsToken = {
-        address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', // Native PLS address convention
-        symbol: 'PLS',
-        name: 'PulseChain',
-        balance: walletData.plsBalance.toString(),
-        value: walletData.plsBalance * plsPrice,
-        price: plsPrice,
-        priceChange24h: plsPriceChange24h,
-        balanceFormatted: walletData.plsBalance,
-        decimals: 18,
-        logo: '', // Will be handled by TokenLogo component
-        isLp: false,
-        isNative: true
-      };
-      
-      // Add PLS to the beginning of the token list
-      tokens.unshift(plsToken);
-    }
     
     // Add manual tokens that aren't already in the list
     const manualTokensToAdd = manualTokens.filter(t => 
