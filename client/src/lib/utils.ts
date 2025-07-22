@@ -195,12 +195,23 @@ export function combineWalletData(wallets: Record<string, any>): any {
         // Calculate combined value
         const newValue = (existingToken.value || 0) + (token.value || 0);
         
+        // Track which wallets hold this token
+        if (!existingToken.walletHoldings) {
+          existingToken.walletHoldings = [];
+        }
+        existingToken.walletHoldings.push({
+          address: wallet.address,
+          amount: token.balanceFormatted || 0,
+          value: token.value || 0
+        });
+        
         // Update the token in our map
         tokenMap[tokenAddress] = {
           ...existingToken,
           balance: newBalance.toString(),
           balanceFormatted: newBalanceFormatted,
-          value: newValue
+          value: newValue,
+          walletCount: (existingToken.walletCount || 1) + 1
         };
         
         // For LP tokens, also combine the underlying token values
@@ -229,7 +240,15 @@ export function combineWalletData(wallets: Record<string, any>): any {
         }
       } else {
         // If token doesn't exist yet, add it to the map
-        tokenMap[tokenAddress] = { ...token };
+        tokenMap[tokenAddress] = { 
+          ...token,
+          walletCount: 1,
+          walletHoldings: [{
+            address: wallet.address,
+            amount: token.balanceFormatted || 0,
+            value: token.value || 0
+          }]
+        };
       }
     });
   });

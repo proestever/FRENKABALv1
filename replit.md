@@ -163,10 +163,18 @@ Required environment variables:
 ### July 22, 2025 - Fixed Portfolio Balance Discrepancies with Rate Limiting and Retry Logic
 - **Added retry logic to Scanner API** - Scanner API calls now retry up to 3 times with exponential backoff on failure
 - **Rate limit handling** - Special handling for 429 (rate limit) errors with longer wait times between retries
-- **Controlled concurrency for portfolios** - Portfolio wallet fetching now processes in batches of 3 with 500ms delays
+- **Controlled concurrency for portfolios** - Portfolio wallet fetching now processes in batches of 2 with 1000ms delays for better stability
 - **Graceful failure handling** - Failed wallet fetches return empty data instead of throwing errors
 - **10-second timeout protection** - All Scanner API calls have timeout protection to prevent hanging
 - **Progressive loading feedback** - Portfolio loading now shows real-time progress as wallets are fetched
+
+### July 22, 2025 - Enhanced Portfolio Aggregation with Wallet Holdings Tracking
+- **Added wallet holdings tracking** - Each token in portfolio view now tracks which wallets hold it and their individual contributions
+- **Wallet breakdown display** - Portfolio tokens show wallet count indicator (e.g., "3 wallets") when held across multiple addresses
+- **Interactive wallet tooltip** - Hovering over wallet count shows detailed breakdown with addresses and amounts
+- **Complete aggregation data** - Token aggregation includes walletCount and walletHoldings array with address, amount, and value
+- **Multi-wallet scanner parity** - Portfolio feature now matches capabilities of reference multi-wallet scanner script
+- **Improved concurrency** - Reduced from 3 to 2 concurrent wallet fetches with increased delays for better reliability
 
 ### July 21, 2025 - Wallet Share Feature Enhanced with Modal and Responsive Design
 - **Share Modal** - Converted share feature from full page to popup modal for better UX

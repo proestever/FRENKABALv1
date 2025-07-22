@@ -14,6 +14,12 @@ import { useBatchTokenLogos } from '@/hooks/use-batch-token-logos';
 import { TransactionHistory } from '@/components/transaction-history';
 import { TokenActionsMenu } from '@/components/token-actions-menu';
 import { HexStakes } from '@/components/hex-stakes';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TokenListProps {
   tokens: Token[];
@@ -436,6 +442,36 @@ export function TokenList({
                             <div className="text-xs text-gray-400">
                               • {formatTokenAmount(token.balanceFormatted || 0)}
                             </div>
+                            {/* Show wallet count for multi-wallet mode */}
+                            {isMultiWallet && (token as any).walletCount > 1 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="text-xs text-purple-400 cursor-help">
+                                      • {(token as any).walletCount} wallets
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="bg-black/90 border-white/20 p-3 max-w-xs">
+                                    <div className="space-y-1">
+                                      <div className="text-xs font-semibold text-white mb-2">Wallet Breakdown</div>
+                                      {(token as any).walletHoldings?.slice(0, 10).map((holding: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between text-xs text-white/80">
+                                          <span className="font-mono">{holding.address.slice(0, 8)}...</span>
+                                          <span className="ml-2">
+                                            {formatTokenAmount(holding.amount)} ({formatCurrency(holding.value)})
+                                          </span>
+                                        </div>
+                                      ))}
+                                      {(token as any).walletHoldings?.length > 10 && (
+                                        <div className="text-xs text-white/60 pt-1">
+                                          ...and {(token as any).walletHoldings.length - 10} more
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                           <div className="flex items-center gap-1 mt-0.5 justify-start">
                             <div className="text-xs text-white font-medium">
