@@ -144,7 +144,8 @@ async function processBatchQueue() {
         
         // Only process if we have better liquidity or no existing data
         if (!existingData || (pair.liquidity?.usd || 0) > (existingData.price ? pair.liquidity?.usd || 0 : 0)) {
-          if (pair.priceUsd && pair.liquidity?.usd && pair.liquidity.usd >= 1000) {
+          // Require minimum $5000 liquidity to prevent manipulation
+          if (pair.priceUsd && pair.liquidity?.usd && pair.liquidity.usd >= 5000) {
             processedTokens.set(tokenAddress, {
               price: parseFloat(pair.priceUsd),
               priceChange24h: pair.priceChange?.h24 || 0,
