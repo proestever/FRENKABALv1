@@ -199,7 +199,7 @@ export function TokenList({
             title="View all token holdings"
           >
             <Wallet size={18} />
-            <span className="text-sm font-medium">Tokens{!showLiquidity && !showTransactions && !showHexStakes ? ` (${sortedTokens.length})` : ''}</span>
+            <span className="text-sm font-medium">Tokens{!showLiquidity && !showTransactions && !showHexStakes ? ` (${sortedTokens?.length || 0})` : ''}</span>
           </button>
           
           <button 
@@ -215,7 +215,7 @@ export function TokenList({
             title="View liquidity positions"
           >
             <Droplets size={18} />
-            <span className="text-sm font-medium">Liquidity{lpTokens.length > 0 ? ` (${lpTokens.length})` : ''}</span>
+            <span className="text-sm font-medium">Liquidity{lpTokens?.length > 0 ? ` (${lpTokens.length})` : ''}</span>
           </button>
           
           <button
@@ -264,7 +264,7 @@ export function TokenList({
                 <h3 className="text-lg md:text-xl font-semibold text-white flex items-center">
                   <Wallet size={18} className="mr-2 text-blue-300" />
                   <span>Tokens</span>
-                  <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens.length})</span>
+                  <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens?.length || 0})</span>
                 </h3>
                 <p className="text-xs md:text-sm text-white/70 mt-1">
                   All tokens in this wallet
@@ -276,7 +276,7 @@ export function TokenList({
                 <h3 className="text-lg md:text-xl font-semibold text-white flex items-center">
                   <Droplets size={18} className="mr-2 text-sky-300" />
                   <span>Liquidity Positions</span>
-                  <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens.length})</span>
+                  <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens?.length || 0})</span>
                 </h3>
                 <p className="text-xs md:text-sm text-white/70 mt-1">
                   PulseX tokens representing your liquidity positions
