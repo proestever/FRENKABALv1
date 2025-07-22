@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 22, 2025 - Unified Client-Side Price Fetching & Removed Server-Side Duplication
+- **Removed server-side smart contract price fetching** - Scanner API no longer fetches prices, returns only token balances
+- **LP tokens simplified** - Server no longer calculates LP token prices, client handles all price calculations
+- **Fixed PulseReflection price bug** - Client now checks ALL factories (v1 and v2) and selects highest liquidity pair
+- **Eliminated duplicate price services** - Single unified client-side smart contract price service handles all pricing
+- **Server role reduced** - Server only provides token balances and logos, client calculates all prices
+- **Result** - Consistent, accurate pricing with PulseReflection showing correct ~$0.000000005955 instead of $1.77
+
 ### July 22, 2025 - Removed All Caching for Wallets and Portfolios
 - **Token Cache Removal** - Deleted `server/services/token-cache.ts` and removed all its usage from `direct-balance-service.ts`
 - **Portfolio Cache Removal** - Removed sessionStorage caching from `home.tsx` for portfolio data

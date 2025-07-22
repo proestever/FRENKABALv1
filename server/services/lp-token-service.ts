@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import { ethers } from 'ethers';
 import { ProcessedToken } from '../types';
 import { getTokenPrice } from './api';
-import { getTokenPriceFromContract } from './smart-contract-price-service';
+// Removed price fetching - client handles it now
 
 /**
  * Check if a token address is a liquidity pool token by trying to call LP-specific functions
@@ -224,23 +224,13 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
     const token0BalanceFormatted = Number(ethers.utils.formatUnits(token0Balance, token0Decimals));
     const token1BalanceFormatted = Number(ethers.utils.formatUnits(token1Balance, token1Decimals));
     
-    // 8. Get prices for tokens using smart contract service
-    const [token0PriceData, token1PriceData] = await Promise.all([
-      getTokenPriceFromContract(token0Address),
-      getTokenPriceFromContract(token1Address)
-    ]);
+    // 8. Don't fetch prices here - client will handle it
+    // Client will calculate values based on its own price fetching
     
-    // Convert to API format for compatibility
-    const token0Price = token0PriceData ? { usdPrice: token0PriceData.price } : null;
-    const token1Price = token1PriceData ? { usdPrice: token1PriceData.price } : null;
-    
-    // 9. Calculate values
-    const token0Value = token0Price ? token0BalanceFormatted * token0Price.usdPrice : undefined;
-    const token1Value = token1Price ? token1BalanceFormatted * token1Price.usdPrice : undefined;
-    
-    // 9. Calculate combined value
-    const combinedValue = 
-      (token0Value || 0) + (token1Value || 0);
+    // 9. Set values to 0 - client will calculate these
+    const token0Value = 0;
+    const token1Value = 0;
+    const combinedValue = 0;
     
     // 10. Update the token with LP details
     return {
@@ -262,11 +252,11 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
       lpToken1Balance: token1Balance,
       lpToken0BalanceFormatted: token0BalanceFormatted,
       lpToken1BalanceFormatted: token1BalanceFormatted,
-      // Add price and value data
-      lpToken0Price: token0Price?.usdPrice,
-      lpToken1Price: token1Price?.usdPrice,
-      lpToken0Value: token0Value,
-      lpToken1Value: token1Value,
+      // Add price and value data - client will calculate these
+      lpToken0Price: 0,
+      lpToken1Price: 0,
+      lpToken0Value: 0,
+      lpToken1Value: 0,
       // Update the overall token value to be the sum of underlying token values
       value: combinedValue > 0 ? combinedValue : token.value,
       // Add supply and reserve data

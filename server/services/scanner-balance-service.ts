@@ -369,20 +369,8 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
             
             if (tokenInfo.balanceFormatted === 0) return null;
             
-            // Get price from smart contract service ONLY
-            let price = 0;
-            try {
-              const { getTokenPriceFromContract } = await import('./smart-contract-price-service');
-              const contractPriceData = await getTokenPriceFromContract(tokenAddress);
-              if (contractPriceData) {
-                price = contractPriceData.price;
-                console.log(`Got smart contract price for ${tokenInfo.symbol}: $${price}`);
-              }
-            } catch (error) {
-              console.error(`Failed to get smart contract price for ${tokenAddress}:`, error);
-            }
-            
-            // Only get logo from DexScreener, NOT price
+            // Don't fetch prices here - client will handle it
+            // Only get logo from DexScreener
             let logoUrl = null;
             try {
               const priceData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
@@ -412,8 +400,8 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
               decimals: tokenInfo.decimals,
               balance: tokenInfo.balance,
               balanceFormatted: tokenInfo.balanceFormatted,
-              price: price,
-              value: tokenInfo.balanceFormatted * price,
+              price: 0, // Client will fetch this
+              value: 0, // Client will calculate this
               logo: logoUrl,
               verified: scannerData?.token.type === 'ERC-20'
             };
