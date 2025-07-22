@@ -313,6 +313,32 @@ export async function getFastScannerTokenBalances(walletAddress: string): Promis
         return;
       }
       
+      // Check if this is likely an LP token based on symbol/name
+      const symbol = tokenData.token.symbol || "";
+      const name = tokenData.token.name || "";
+      const isLpToken = symbol.includes("PLP") || 
+                       symbol.includes("-LP") || 
+                       name.includes("PulseX LP") ||
+                       name.includes("Liquidity");
+      
+      if (isLpToken) {
+        console.log(`Found LP token: ${symbol} (${name}) at ${tokenAddress}`);
+      }
+      
+      // Try to extract token pair info from name for common patterns
+      let lpToken0Symbol: string | undefined;
+      let lpToken1Symbol: string | undefined;
+      
+      if (isLpToken) {
+        // Common patterns: "PulseX LP Token - HEX/WPLS", "HEX-WPLS PLP", etc.
+        const pairMatch = name.match(/(\w+)[\/\-](\w+)/);
+        if (pairMatch) {
+          lpToken0Symbol = pairMatch[1];
+          lpToken1Symbol = pairMatch[2];
+          console.log(`  Detected pair: ${lpToken0Symbol}/${lpToken1Symbol}`);
+        }
+      }
+      
       tokens.push({
         address: tokenData.token.address,
         symbol: tokenData.token.symbol,
@@ -322,7 +348,13 @@ export async function getFastScannerTokenBalances(walletAddress: string): Promis
         balanceFormatted: amount,
         price: 0, // Will be fetched client-side
         value: 0, // Will be calculated client-side
-        verified: tokenData.token.type === 'verified'
+        verified: tokenData.token.type === 'verified',
+        isLp: isLpToken, // Mark LP tokens for client-side display
+        // Add basic LP info if detected
+        ...(lpToken0Symbol && lpToken1Symbol ? {
+          lpToken0Symbol,
+          lpToken1Symbol
+        } : {})
       });
     });
     

@@ -160,6 +160,14 @@ Required environment variables:
 - **Real-time Data** - All wallet and portfolio data now fetches fresh from the blockchain and database on every request
 - **Performance Impact** - Trading some performance for always having the most up-to-date data without any caching delays
 
+### July 22, 2025 - Added PLP Token Detection to Fast Scanner for Portfolios
+- **PLP Token Detection** - Enhanced fast scanner to detect liquidity pair tokens (PLP, -LP, PulseX LP) based on symbol/name patterns
+- **Basic LP Info** - Fast scanner now marks detected LP tokens with `isLp: true` flag for client-side display
+- **Token Pair Extraction** - Attempts to extract token pair symbols from LP token names (e.g., "HEX/WPLS" pattern)
+- **Maintains Performance** - LP detection is lightweight and doesn't slow down portfolio loading
+- **Console Logging** - Added logging when LP tokens are found to help with debugging
+- **Backward Compatible** - Uses existing ProcessedToken interface which already supports LP token fields
+
 ### July 22, 2025 - Fixed Portfolio Balance Discrepancies with Rate Limiting and Retry Logic
 - **Added retry logic to Scanner API** - Scanner API calls now retry up to 3 times with exponential backoff on failure
 - **Rate limit handling** - Special handling for 429 (rate limit) errors with longer wait times between retries
