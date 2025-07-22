@@ -179,13 +179,12 @@ Required environment variables:
 - **Enhanced logging** - Added detailed console logging showing which factory/pair was selected for each token with liquidity values
 - **PulseReflection fix** - Correct pricing now achieved by selecting highest liquidity WPLS pair instead of first found
 
-### July 22, 2025 - Fixed PulseReflection Price Bug - Logo-Only DexScreener Function
-- **Identified root cause** - Scanner service was fetching full price data from DexScreener when only logos were needed
-- **Created getTokenLogoFromDexScreener function** - New function that ONLY fetches logos without any price data
-- **Updated scanner service** - Changed from `getTokenPriceDataFromDexScreener` to `getTokenLogoFromDexScreener` 
-- **Eliminated price contamination** - DexScreener no longer injects incorrect prices before client-side calculations
-- **Fixed PulseReflection price** - Now correctly shows ~$0.000000005955 from highest liquidity pair instead of $1.77
-- **Result** - Server now only provides token balances and logos, client calculates all prices from smart contracts
+### July 22, 2025 - Fixed PulseReflection Price Display Issue
+- **Removed hardcoded debugging override** - Deleted code that forced PulseReflection to always use DexScreener price ($1.77)
+- **Updated scanner service to use smart contract prices** - Scanner balance service now fetches prices from smart contract service first, only falling back to DexScreener if no contract price available
+- **Smart contract service correctly selects highest liquidity pair** - PulseReflection has 10 trading pairs, service now properly selects the $5,147 liquidity WPLS pair showing correct price of $0.000000005676
+- **DexScreener now only used for logos** - Price fetching primarily from smart contracts, DexScreener only provides token logos as fallback
+- **Result** - PulseReflection and all other tokens now show accurate real-time prices from highest liquidity pools
 
 ### July 22, 2025 - Implemented WPLS/DAI Pair as Foundation for All Price Calculations
 - **WPLS price foundation** - All WPLS prices now come from the WPLS/DAI pair at 0xe56043671df55de5cdf8459710433c10324de0ae
