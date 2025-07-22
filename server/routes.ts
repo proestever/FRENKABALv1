@@ -2258,6 +2258,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint for token price
+  app.get('/api/debug/token-price/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+      const { getTokenPriceFromContract } = await import('./services/smart-contract-price-service');
+      const ethers = await import('ethers');
+      
+      console.log("=== Debugging Token Price ===");
+      console.log("Token:", address);
+      
+      // Get the price data with all details
+      const priceData = await getTokenPriceFromContract(address);
+      
+      // Also get raw pair data for both factories
+      const { getRpcProvider } = await import('./services/rpc-provider');
+      const provider = getRpcProvider();
+      const FACTORY_ABI = ["function getPair(address tokenA, address tokenB) view returns (address)"];
+      const PAIR_ABI = [
+        "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32)",
+        "function token0() view returns (address)",
+        "function token1() view returns (address)",
+      ];
+      
+      const WPLS = "0xa1077a294dde1b09bb078844df40758a5d0f9a27";
+      const factories = [
+        { address: "0x1715a3E4A142d8b698131108995174F37aEBA10D", name: "V2" },
+        { address: "0x29eA7545DEf87022BAdc76323F373EA1e707C523", name: "V1" }
+      ];
+      
+      const pairDetails = [];
+      
+      for (const factory of factories) {
+        try {
+          const factoryContract = new ethers.Contract(factory.address, FACTORY_ABI, provider);
+          const pairAddress = await factoryContract.getPair(address, WPLS);
+          
+          if (pairAddress !== ethers.constants.AddressZero) {
+            const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+            const [reserves, token0, token1] = await Promise.all([
+              pairContract.getReserves(),
+              pairContract.token0(),
+              pairContract.token1()
+            ]);
+            
+            const isToken0 = token0.toLowerCase() === address.toLowerCase();
+            
+            // Get decimals
+            const ERC20_ABI = ["function decimals() view returns (uint8)"];
+            const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
+            const decimals = await tokenContract.decimals();
+            
+            // Calculate price manually
+            const tokenReserve = isToken0 ? reserves[0] : reserves[1];
+            const wplsReserve = isToken0 ? reserves[1] : reserves[0];
+            
+            const tokenAmount = parseFloat(ethers.utils.formatUnits(tokenReserve, decimals));
+            const wplsAmount = parseFloat(ethers.utils.formatUnits(wplsReserve, 18));
+            
+            // Get WPLS price
+            const wplsPrice = 0.00001554; // Current WPLS price
+            
+            const priceInWPLS = wplsAmount / tokenAmount;
+            const priceInUSD = priceInWPLS * wplsPrice;
+            const liquidity = wplsAmount * wplsPrice * 2;
+            
+            pairDetails.push({
+              factory: factory.name,
+              pairAddress,
+              token0,
+              token1,
+              isToken0,
+              reserves: {
+                token: tokenAmount,
+                wpls: wplsAmount
+              },
+              decimals,
+              priceInWPLS,
+              priceInUSD,
+              liquidity
+            });
+          }
+        } catch (error: any) {
+          console.error(`Error checking ${factory.name}:`, error.message);
+        }
+      }
+      
+      res.json({
+        token: address,
+        servicePrice: priceData,
+        pairDetails,
+        debug: {
+          wplsPrice: 0.00001554,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error: any) {
+      console.error('Debug token price error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
