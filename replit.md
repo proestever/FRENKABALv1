@@ -193,6 +193,14 @@ Required environment variables:
 - **Logo fetching already optimized** - Confirmed batch logo endpoint already in use (100 logos per batch)
 - **Result** - Portfolio loading feels much more responsive with parallel processing
 
+### July 22, 2025 - Fixed Stablecoin Logos to Use Official Logos
+- **Updated USDC logo** - Now uses official USDC logo from CoinGecko instead of placeholder
+- **Updated DAI logo** - Now uses official DAI logo from CoinGecko instead of placeholder
+- **Updated USDT logo** - Now uses official Tether logo from CoinGecko instead of placeholder
+- **Database update script** - Created script to update existing stablecoin logos in database
+- **Scanner service updated** - Added special handling for stablecoin addresses to return proper logos
+- **Result** - USDC, DAI, and USDT from Ethereum now display their authentic logos
+
 ### July 22, 2025 - Verified Wallet Holdings Tracking Implementation
 - **Wallet holdings tracking confirmed working** - Each token shows which wallets hold it (e.g., "3 wallets")
 - **Interactive wallet breakdown** - Hovering shows detailed holdings with addresses and amounts

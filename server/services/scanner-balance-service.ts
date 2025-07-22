@@ -29,8 +29,23 @@ const BLACKLISTED_TOKENS = new Set([
 /**
  * Get default logo for known tokens
  */
-function getDefaultLogo(symbol: string): string {
+function getDefaultLogo(symbol: string, address?: string): string {
   const symbolLower = symbol.toLowerCase();
+  const addressLower = address?.toLowerCase();
+  
+  // Special handling for stablecoins
+  if (addressLower === '0x15d38573d2feeb82e7ad5187ab8c5d52810b6f40') {
+    // USDC from Ethereum
+    return 'https://tokens.coingecko.com/images/6319/large/usdc.png';
+  }
+  if (addressLower === '0xefd766ccb38eaf1dfd701853bfce31359239f305') {
+    // DAI from Ethereum
+    return 'https://tokens.coingecko.com/images/9956/large/Badge_Dai.png';
+  }
+  if (addressLower === '0x0cb6f5a34ad42ec934882a05265a7d5f59b51a2f') {
+    // USDT from Ethereum
+    return 'https://tokens.coingecko.com/images/325/large/Tether.png';
+  }
   
   const logoMap: Record<string, string> = {
     'pls': 'https://tokens.app.pulsex.com/images/tokens/0xA1077a294dDE1B09bB078844df40758a5D0f9a27.png',
@@ -382,7 +397,7 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
         
         // Use default logo if still no logo
         if (!logoUrl) {
-          logoUrl = getDefaultLogo(token.symbol);
+          logoUrl = getDefaultLogo(token.symbol, token.address);
         }
         
         return {
