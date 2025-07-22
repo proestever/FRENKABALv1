@@ -241,6 +241,16 @@ Required environment variables:
 - **Dust token filtering** - Added filter to skip tokens with amounts less than 0.000001 to prevent calculation errors from broken liquidity pools
 - **Value sanity checks** - Added checks to cap any token values over $10 million to prevent astronomical values from breaking the UI
 
+### July 22, 2025 - Comprehensive Fix for Astronomical Value Bug
+- **Identified issue** - Wallet 0x592139a3f8cf019f628a152fc1262b8aef5b7199 had tokens with astronomical values causing portfolio crashes
+- **Multi-layer protection implemented**:
+  - **Server-side dust filtering** - Skip tokens with balances < 0.000001 in scanner-balance-service.ts
+  - **Server-side value cap** - Cap token values at $10M in routes.ts for fast-balances endpoint
+  - **Client-side portfolio cap** - Cap individual wallet totalValues at $10M when combining in utils.ts
+  - **Client-side price calculation cap** - Cap calculated values at $10M in wallet-client-service.ts for both fetchWalletDataFast and fetchWalletDataWithContractPrices
+- **Root cause** - Likely broken liquidity pools or tokens with extreme price/balance combinations
+- **Result** - Portfolios now load reliably without crashes, suspicious values are logged and capped
+
 ### July 22, 2025 - Implemented WPLS/DAI Pair as Foundation for All Price Calculations
 - **WPLS price foundation** - All WPLS prices now come from the WPLS/DAI pair at 0xe56043671df55de5cdf8459710433c10324de0ae
 - **Reliable price source** - DAI is a stablecoin providing reliable USD value, both tokens have 18 decimals
