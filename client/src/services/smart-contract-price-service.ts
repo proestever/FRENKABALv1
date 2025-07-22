@@ -27,8 +27,11 @@ const FACTORY_ABI = [
   'function getPair(address tokenA, address tokenB) external view returns (address pair)'
 ];
 
-// Known addresses
-const PULSEX_FACTORY = '0x29eA7545DEf87022BAdc76323F373EA1e707C523';
+// Known addresses - Multiple factories for finding best liquidity pairs
+const PULSEX_FACTORIES = [
+  '0x1715a3E4A142d8b698131108995174F37aEBA10D', // PulseX v2 Factory
+  '0x29eA7545DEf87022BAdc76323F373EA1e707C523'  // PulseX v1 Factory
+];
 const WPLS_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27';
 
 // Stablecoin addresses for price calculation
@@ -146,14 +149,16 @@ class SmartContractPriceService {
   private async getStablecoinPairPrice(tokenAddress: string): Promise<PriceData | null> {
     const provider = this.getProvider();
     if (!provider) return null;
-    const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
 
     // Try each stablecoin
     for (const [stableAddress, stableInfo] of Object.entries(STABLECOINS)) {
-      try {
-        const pairAddress = await factory.getPair(tokenAddress, stableAddress);
-        
-        if (pairAddress === ethers.constants.AddressZero) continue;
+      // Check all factories
+      for (const factoryAddress of PULSEX_FACTORIES) {
+        try {
+          const factory = new ethers.Contract(factoryAddress, FACTORY_ABI, provider);
+          const pairAddress = await factory.getPair(tokenAddress, stableAddress);
+          
+          if (pairAddress === ethers.constants.AddressZero) continue;
 
         const reserves = await this.getPairReserves(pairAddress, tokenAddress, stableAddress);
         if (!reserves) continue;
@@ -180,9 +185,10 @@ class SmartContractPriceService {
           liquidity,
           lastUpdate: Date.now()
         };
-      } catch (error) {
-        // Continue to next stablecoin
-        continue;
+        } catch (error) {
+          // Continue to next factory
+          continue;
+        }
       }
     }
 
@@ -199,39 +205,67 @@ class SmartContractPriceService {
 
     const provider = this.getProvider();
     if (!provider) return null;
-    const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
 
-    try {
-      const pairAddress = await factory.getPair(tokenAddress, WPLS_ADDRESS);
-      if (pairAddress === ethers.constants.AddressZero) return null;
+    // Find ALL WPLS pairs across all factories and select the one with highest liquidity
+    const allPairs: PriceData[] = [];
 
-      const reserves = await this.getPairReserves(pairAddress, tokenAddress, WPLS_ADDRESS);
-      if (!reserves) return null;
+    for (const factoryAddress of PULSEX_FACTORIES) {
+      try {
+        const factory = new ethers.Contract(factoryAddress, FACTORY_ABI, provider);
+        const pairAddress = await factory.getPair(tokenAddress, WPLS_ADDRESS);
+        
+        if (pairAddress === ethers.constants.AddressZero) continue;
 
-      // Calculate price in WPLS
-      const isToken0 = reserves.token0Address.toLowerCase() === tokenAddress.toLowerCase();
-      const tokenReserve = isToken0 ? reserves.reserve0 : reserves.reserve1;
-      const wplsReserve = isToken0 ? reserves.reserve1 : reserves.reserve0;
-      const tokenDecimals = isToken0 ? reserves.decimals0 : reserves.decimals1;
-      const wplsDecimals = isToken0 ? reserves.decimals1 : reserves.decimals0;
+        const reserves = await this.getPairReserves(pairAddress, tokenAddress, WPLS_ADDRESS);
+        if (!reserves) continue;
 
-      const priceInWPLS = Number(wplsReserve) / Number(tokenReserve) * 
-                          Math.pow(10, tokenDecimals - wplsDecimals);
+        // Calculate price in WPLS
+        const isToken0 = reserves.token0Address.toLowerCase() === tokenAddress.toLowerCase();
+        const tokenReserve = isToken0 ? reserves.reserve0 : reserves.reserve1;
+        const wplsReserve = isToken0 ? reserves.reserve1 : reserves.reserve0;
+        const tokenDecimals = isToken0 ? reserves.decimals0 : reserves.decimals1;
+        const wplsDecimals = isToken0 ? reserves.decimals1 : reserves.decimals0;
 
-      // Calculate liquidity in WPLS
-      const wplsLiquidity = Number(wplsReserve) / Math.pow(10, wplsDecimals);
+        const priceInWPLS = Number(wplsReserve) / Number(tokenReserve) * 
+                            Math.pow(10, tokenDecimals - wplsDecimals);
 
-      return {
-        price: priceInWPLS, // Will be converted to USD by caller
-        pairAddress,
-        pairedTokenSymbol: 'WPLS',
-        liquidity: wplsLiquidity * 2,
-        lastUpdate: Date.now()
-      };
-    } catch (error) {
-      console.error('Error getting WPLS pair price:', error);
-      return null;
+        // Calculate liquidity in WPLS
+        const wplsLiquidity = Number(wplsReserve) / Math.pow(10, wplsDecimals);
+        const liquidity = wplsLiquidity * 2;
+
+        allPairs.push({
+          price: priceInWPLS, // Will be converted to USD by caller
+          pairAddress,
+          pairedTokenSymbol: 'WPLS',
+          liquidity: liquidity,
+          lastUpdate: Date.now()
+        });
+
+        // Debug logging for PulseReflection
+        if (tokenAddress.toLowerCase() === '0xb6b57227150a7097723e0c013752001aad01248f') {
+          console.log(`Found WPLS pair in factory ${factoryAddress}: ${pairAddress}, liquidity: ${liquidity} WPLS`);
+        }
+      } catch (error) {
+        // Continue to next factory
+        continue;
+      }
     }
+
+    // Select the pair with highest liquidity
+    if (allPairs.length > 0) {
+      const bestPair = allPairs.reduce((best, current) => 
+        current.liquidity > best.liquidity ? current : best
+      );
+
+      // Debug logging for PulseReflection
+      if (tokenAddress.toLowerCase() === '0xb6b57227150a7097723e0c013752001aad01248f') {
+        console.log(`Selected best WPLS pair: ${bestPair.pairAddress} with liquidity ${bestPair.liquidity} WPLS`);
+      }
+
+      return bestPair;
+    }
+
+    return null;
   }
 
   /**
