@@ -359,52 +359,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use the regular scanner API service instead of enhanced scanner
       const tokens = await getFastScannerTokenBalances(address);
       
-      // Fetch logos for tokens that don't have them
-      const tokensWithLogos = await Promise.all(
-        tokens.map(async (token) => {
-          // Skip if token already has a logo
-          if (token.logo) {
-            return token;
-          }
-          
-          // Try to get logo from storage or DexScreener
-          try {
-            // Check storage first
-            const storedLogo = await storage.getTokenLogo(token.address.toLowerCase()).catch(() => null);
-            if (storedLogo?.logoUrl) {
-              return {
-                ...token,
-                logo: storedLogo.logoUrl
-              };
-            }
-            
-            // If not in storage and not native token, try DexScreener
-            if (!token.isNative) {
-              const priceData = await getTokenPriceDataFromDexScreener(token.address);
-              if (priceData?.logo) {
-                // Save logo for future use
-                await storage.saveTokenLogo({
-                  tokenAddress: token.address.toLowerCase(),
-                  logoUrl: priceData.logo,
-                  symbol: token.symbol,
-                  name: token.name,
-                  lastUpdated: new Date().toISOString()
-                }).catch(err => console.error(`Failed to save logo for ${token.address}:`, err));
-                
-                return {
-                  ...token,
-                  logo: priceData.logo
-                };
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to fetch logo for ${token.address}:`, error);
-          }
-          
-          return token;
-        })
-      );
-      
       const endTime = Date.now();
       
       console.log(`Fast balance fetch completed in ${endTime - startTime}ms`);
@@ -414,8 +368,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let totalValue = 0;
       
       // Just in case any values are set, apply sanity checks
-      if (tokensWithLogos.some(t => t.value && t.value > 0)) {
-        totalValue = tokensWithLogos.reduce((sum, token) => {
+      if (tokens.some(t => t.value && t.value > 0)) {
+        totalValue = tokens.reduce((sum, token) => {
           // Skip if value is 0 or undefined (client will calculate)
           if (!token.value || token.value === 0) return sum;
           // Ensure value is a valid number and not astronomical
@@ -430,15 +384,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Find PLS balance
-      const plsToken = tokensWithLogos.find(t => t.isNative);
+      const plsToken = tokens.find(t => t.isNative);
       const plsBalance = plsToken ? plsToken.balanceFormatted : 0;
       const plsPriceChange = plsToken ? plsToken.priceChange24h : null;
       
       return res.json({
         address,
-        tokens: tokensWithLogos,
+        tokens,
         totalValue,
-        tokenCount: tokensWithLogos.length,
+        tokenCount: tokens.length,
         plsBalance,
         plsPriceChange,
         networkCount: 1,
