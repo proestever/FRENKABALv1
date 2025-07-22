@@ -171,6 +171,13 @@ Required environment variables:
 - **Enhanced logging** - Added detailed console logging showing which factory/pair was selected for each token with liquidity values
 - **PulseReflection fix** - Correct pricing now achieved by selecting highest liquidity WPLS pair instead of first found
 
+### July 22, 2025 - Fixed PulseReflection Price Display Issue
+- **Removed hardcoded debugging override** - Deleted code that forced PulseReflection to always use DexScreener price ($1.77)
+- **Updated scanner service to use smart contract prices** - Scanner balance service now fetches prices from smart contract service first, only falling back to DexScreener if no contract price available
+- **Smart contract service correctly selects highest liquidity pair** - PulseReflection has 10 trading pairs, service now properly selects the $5,147 liquidity WPLS pair showing correct price of $0.000000005676
+- **DexScreener now only used for logos** - Price fetching primarily from smart contracts, DexScreener only provides token logos as fallback
+- **Result** - PulseReflection and all other tokens now show accurate real-time prices from highest liquidity pools
+
 ### July 22, 2025 - PLS Token Integration in Main Token List
 - **PLS in Token List** - Native PLS balance now appears in the main token list alongside other tokens
 - **Single Wallet View** - PLS is added as a virtual token at the beginning of the token list when viewing single wallets

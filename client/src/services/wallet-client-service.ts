@@ -142,11 +142,8 @@ export async function fetchWalletDataClientSide(
             const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
             
             if (priceData) {
-              // For PulseReflection, always use DexScreener price (debugging)
-              const isPulseReflection = token.address.toLowerCase() === '0xb6b57227150a7097723e0c013752001aad01248f';
-              
-              // Only update price if we don't have one from scanner OR if it's PulseReflection
-              if (!token.price || token.price === 0 || isPulseReflection) {
+              // Only update price if we don't have one from scanner
+              if (!token.price || token.price === 0) {
                 token.price = priceData.price;
                 token.value = token.balanceFormatted * priceData.price;
               }

@@ -358,8 +358,25 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
             
             if (tokenInfo.balanceFormatted === 0) return null;
             
-            // Get price and logo data
+            // Get price from smart contract service first
+            let price = 0;
+            try {
+              const { getTokenPriceFromContract } = await import('./smart-contract-price-service');
+              const contractPriceData = await getTokenPriceFromContract(tokenAddress);
+              if (contractPriceData) {
+                price = contractPriceData.price;
+              }
+            } catch (error) {
+              console.error(`Failed to get smart contract price for ${tokenAddress}:`, error);
+            }
+            
+            // Get logo data from DexScreener (and price as fallback)
             const priceData = await getTokenPriceDataFromDexScreener(tokenAddress).catch(() => null);
+            
+            // Use DexScreener price only if no smart contract price
+            if (!price && priceData?.price) {
+              price = priceData.price;
+            }
             
             let logoUrl = null;
             if (priceData?.logo) {
@@ -385,8 +402,8 @@ export async function getScannerTokenBalances(walletAddress: string): Promise<Pr
               decimals: tokenInfo.decimals,
               balance: tokenInfo.balance,
               balanceFormatted: tokenInfo.balanceFormatted,
-              price: priceData?.price || 0,
-              value: tokenInfo.balanceFormatted * (priceData?.price || 0),
+              price: price,
+              value: tokenInfo.balanceFormatted * price,
               logo: logoUrl,
               verified: scannerData?.token.type === 'ERC-20'
             };
