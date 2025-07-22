@@ -167,7 +167,7 @@ export function combineWalletData(wallets: Record<string, any>): any {
   Object.values(wallets).forEach(wallet => {
     // Add to the total value
     totalValue += wallet.totalValue || 0;
-    console.log('Processing wallet:', wallet.address, 'with totalValue:', wallet.totalValue);
+    console.log('Processing wallet:', wallet.address, 'with totalValue:', wallet.totalValue, 'tokenCount:', wallet.tokens?.length || 0);
     
     // Add up PLS balances
     if (wallet.plsBalance && wallet.plsBalance > 0) {
@@ -181,6 +181,7 @@ export function combineWalletData(wallets: Record<string, any>): any {
       // Count LP tokens
       if (token.isLp) {
         totalLpTokens++;
+        console.log('Found LP token:', token.symbol, 'value:', token.value);
       }
       
       if (tokenMap[tokenAddress]) {
@@ -295,7 +296,13 @@ export function combineWalletData(wallets: Record<string, any>): any {
     }
   }
   
-  console.log('Combined wallet total value:', totalValue);
+  console.log('Combined wallet summary:', {
+    totalValue,
+    totalTokens: combinedTokens.length,
+    totalLpTokens,
+    totalPlsBalance,
+    walletsProcessed: walletAddresses.length
+  });
   
   return combinedWallet;
 }
