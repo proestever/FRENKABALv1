@@ -13,6 +13,7 @@ import { useHexStakes, fetchHexStakesSummary, HexStakeSummary } from '@/hooks/us
 import { LastUpdatedInfo } from '@/components/last-updated-info';
 import { WalletShareModal } from '@/components/wallet-share-modal';
 import { PortfolioShareModal } from '@/components/portfolio-share-modal';
+import { PortfolioExport } from '@/components/portfolio-export';
 
 interface WalletOverviewProps {
   wallet: Wallet;
@@ -268,6 +269,15 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                 <Share2 className="h-4 w-4 mr-1" />
                 Share
               </Button>
+            )}
+            
+            {/* Export button - show only for portfolios */}
+            {wallet.address.startsWith("Portfolio:") && (
+              <PortfolioExport
+                portfolioName={portfolioName || wallet.address.replace("Portfolio:", "")}
+                walletData={wallet}
+                hexStakesData={manualHexSummary}
+              />
             )}
             
             {/* Only show for single wallet, not for portfolio or combined views */}
