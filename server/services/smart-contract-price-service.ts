@@ -33,7 +33,8 @@ const FACTORY_ABI = [
 ];
 
 // Constants
-const PULSEX_FACTORY = "0x1715a3E4A142d8b698131108995174F37aEBA10D";
+const PULSEX_V2_FACTORY = "0x1715a3E4A142d8b698131108995174F37aEBA10D";
+const PULSEX_V1_FACTORY = "0x29eA7545DEf87022BAdc76323F373EA1e707C523";
 const WPLS_ADDRESS = "0xa1077a294dde1b09bb078844df40758a5d0f9a27";
 
 // Stablecoin addresses on PulseChain
@@ -102,12 +103,16 @@ async function getStablecoinPairPrice(
   tokenAddress: string,
   provider: ethers.providers.Provider,
 ): Promise<PriceData | null> {
-  const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
-
-  for (const stablecoin of STABLECOINS) {
-    try {
-      const pairAddress = await factory.getPair(tokenAddress, stablecoin);
-      if (pairAddress === ethers.constants.AddressZero) continue;
+  // Try both v2 and v1 factories
+  const factories = [PULSEX_V2_FACTORY, PULSEX_V1_FACTORY];
+  
+  for (const factoryAddress of factories) {
+    const factory = new ethers.Contract(factoryAddress, FACTORY_ABI, provider);
+    
+    for (const stablecoin of STABLECOINS) {
+      try {
+        const pairAddress = await factory.getPair(tokenAddress, stablecoin);
+        if (pairAddress === ethers.constants.AddressZero) continue;
 
       const pairData = await getPairReserves(pairAddress, provider);
       if (!pairData) continue;
@@ -144,11 +149,12 @@ async function getStablecoinPairPrice(
         token0: pairData.token0,
         token1: pairData.token1,
       };
-    } catch (error) {
-      console.error(
-        `Error checking stablecoin pair with ${stablecoin}:`,
-        error,
-      );
+      } catch (error) {
+        console.error(
+          `Error checking stablecoin pair with ${stablecoin}:`,
+          error,
+        );
+      }
     }
   }
 
@@ -159,60 +165,66 @@ async function getWPLSPairPrice(
   tokenAddress: string,
   provider: ethers.providers.Provider,
 ): Promise<PriceData | null> {
-  try {
-    const factory = new ethers.Contract(PULSEX_FACTORY, FACTORY_ABI, provider);
-    const pairAddress = await factory.getPair(tokenAddress, WPLS_ADDRESS);
+  // Try both v2 and v1 factories
+  const factories = [PULSEX_V2_FACTORY, PULSEX_V1_FACTORY];
+  
+  for (const factoryAddress of factories) {
+    try {
+      const factory = new ethers.Contract(factoryAddress, FACTORY_ABI, provider);
+      const pairAddress = await factory.getPair(tokenAddress, WPLS_ADDRESS);
 
-    if (pairAddress === ethers.constants.AddressZero) return null;
+      if (pairAddress === ethers.constants.AddressZero) continue;
 
-    const pairData = await getPairReserves(pairAddress, provider);
-    if (!pairData) return null;
+      const pairData = await getPairReserves(pairAddress, provider);
+      if (!pairData) continue;
 
-    const [tokenDecimals, wplsDecimals] = await Promise.all([
-      getTokenDecimals(tokenAddress, provider),
-      getTokenDecimals(WPLS_ADDRESS, provider),
-    ]);
+      const [tokenDecimals, wplsDecimals] = await Promise.all([
+        getTokenDecimals(tokenAddress, provider),
+        getTokenDecimals(WPLS_ADDRESS, provider),
+      ]);
 
-    // Determine which token is which
-    const isToken0 =
-      pairData.token0.toLowerCase() === tokenAddress.toLowerCase();
-    const tokenReserve = isToken0 ? pairData.reserve0 : pairData.reserve1;
-    const wplsReserve = isToken0 ? pairData.reserve1 : pairData.reserve0;
+      // Determine which token is which
+      const isToken0 =
+        pairData.token0.toLowerCase() === tokenAddress.toLowerCase();
+      const tokenReserve = isToken0 ? pairData.reserve0 : pairData.reserve1;
+      const wplsReserve = isToken0 ? pairData.reserve1 : pairData.reserve0;
 
-    // Calculate price in WPLS
-    const tokenAmount = parseFloat(
-      ethers.utils.formatUnits(tokenReserve, tokenDecimals),
-    );
-    const wplsAmount = parseFloat(
-      ethers.utils.formatUnits(wplsReserve, wplsDecimals),
-    );
+      // Calculate price in WPLS
+      const tokenAmount = parseFloat(
+        ethers.utils.formatUnits(tokenReserve, tokenDecimals),
+      );
+      const wplsAmount = parseFloat(
+        ethers.utils.formatUnits(wplsReserve, wplsDecimals),
+      );
 
-    if (tokenAmount === 0) return null;
+      if (tokenAmount === 0) continue;
 
-    const priceInWPLS = wplsAmount / tokenAmount;
+      const priceInWPLS = wplsAmount / tokenAmount;
 
-    // Get WPLS price in USD
-    const wplsPrice = await getWPLSPrice(provider);
-    const price = priceInWPLS * wplsPrice;
-    const liquidity = wplsAmount * wplsPrice * 2; // Total liquidity in USD
+      // Get WPLS price in USD
+      const wplsPrice = await getWPLSPrice(provider);
+      const price = priceInWPLS * wplsPrice;
+      const liquidity = wplsAmount * wplsPrice * 2; // Total liquidity in USD
 
-    // Require minimum $5000 liquidity to prevent manipulation
-    if (liquidity < 5000) {
-      console.log(`Skipping ${tokenAddress} - insufficient liquidity: $${liquidity.toFixed(2)}`);
-      return null;
+      // Require minimum $5000 liquidity to prevent manipulation
+      if (liquidity < 5000) {
+        console.log(`Skipping ${tokenAddress} - insufficient liquidity: $${liquidity.toFixed(2)}`);
+        continue;
+      }
+
+      return {
+        price,
+        liquidity,
+        pairAddress,
+        token0: pairData.token0,
+        token1: pairData.token1,
+      };
+    } catch (error) {
+      console.error(`Error getting WPLS pair price for ${tokenAddress}:`, error);
     }
-
-    return {
-      price,
-      liquidity,
-      pairAddress,
-      token0: pairData.token0,
-      token1: pairData.token1,
-    };
-  } catch (error) {
-    console.error(`Error getting WPLS pair price for ${tokenAddress}:`, error);
-    return null;
   }
+  
+  return null;
 }
 
 async function getWPLSPrice(
