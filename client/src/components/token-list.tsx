@@ -93,9 +93,9 @@ export function TokenList({
   const filteredTokens = useMemo(() => {
     // First apply the general filters
     const filtered = tokens.filter(token => 
-      // Text filter
-      (token.name.toLowerCase().includes(filterText.toLowerCase()) || 
-       token.symbol.toLowerCase().includes(filterText.toLowerCase())) &&
+      // Text filter - check for null/undefined values
+      ((token.name?.toLowerCase() || '').includes(filterText.toLowerCase()) || 
+       (token.symbol?.toLowerCase() || '').includes(filterText.toLowerCase())) &&
       // Hidden filter
       (showHidden || !hiddenTokens.includes(token.address))
     );
