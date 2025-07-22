@@ -187,7 +187,7 @@ export default function Home() {
         // Fetch wallet data one by one sequentially
         (async () => {
           const results = [];
-          const DELAY_BETWEEN_WALLETS = 1000; // 1 second delay between each wallet
+          const DELAY_BETWEEN_WALLETS = 100; // 100ms delay between each wallet
           
           for (let i = 0; i < addresses.length; i++) {
             const address = addresses[i];
