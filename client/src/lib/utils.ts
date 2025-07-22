@@ -174,7 +174,12 @@ export function combineWalletData(wallets: Record<string, any>): any {
       totalPlsBalance += wallet.plsBalance;
     }
     
-    // Process each token
+    // Process each token - check if tokens array exists
+    if (!wallet.tokens || !Array.isArray(wallet.tokens)) {
+      console.warn('Wallet has no tokens array:', wallet.address);
+      return; // Skip this wallet if no tokens
+    }
+    
     wallet.tokens.forEach((token: any) => {
       const tokenAddress = token.address.toLowerCase();
       
