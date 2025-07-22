@@ -14,7 +14,7 @@ import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
 import { executeWithFailover } from './rpc-provider';
 
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
-const RECENT_BLOCKS_TO_SCAN = 1000; // Last ~20 minutes of blocks
+const RECENT_BLOCKS_TO_SCAN = 100000; // Last ~33 hours of blocks for near real-time updates
 const TRANSFER_EVENT_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const PLS_TOKEN_ADDRESS = '0x0000000000000000000000000000000000000000';
 const WPLS_CONTRACT_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27';
@@ -147,33 +147,56 @@ async function scanRecentBlocks(walletAddress: string, blocksToScan: number = RE
     const normalizedAddress = walletAddress.toLowerCase();
     const paddedAddress = ethers.utils.hexZeroPad(normalizedAddress, 32);
     
-    // Fetch incoming and outgoing transfers in parallel
-    const [incomingLogs, outgoingLogs] = await Promise.all([
-      executeWithFailover(async (provider) => {
-        return await provider.getLogs({
-          fromBlock,
-          toBlock: currentBlock,
-          topics: [TRANSFER_EVENT_TOPIC, null, paddedAddress]
-        });
-      }),
-      executeWithFailover(async (provider) => {
-        return await provider.getLogs({
-          fromBlock,
-          toBlock: currentBlock,
-          topics: [TRANSFER_EVENT_TOPIC, paddedAddress, null]
-        });
-      })
-    ]);
+    // Split into chunks for large block ranges to avoid RPC limits
+    const CHUNK_SIZE = 10000;
+    const chunks: { from: number; to: number }[] = [];
     
-    // Collect unique token addresses
+    for (let i = fromBlock; i < currentBlock; i += CHUNK_SIZE) {
+      chunks.push({
+        from: i,
+        to: Math.min(i + CHUNK_SIZE - 1, currentBlock)
+      });
+    }
+    
+    console.log(`Scanning ${chunks.length} chunks of blocks`);
+    
+    // Process chunks in parallel
+    const allLogs = await Promise.all(
+      chunks.map(async (chunk) => {
+        try {
+          const [incomingLogs, outgoingLogs] = await Promise.all([
+            executeWithFailover(async (provider) => {
+              return await provider.getLogs({
+                fromBlock: chunk.from,
+                toBlock: chunk.to,
+                topics: [TRANSFER_EVENT_TOPIC, null, paddedAddress]
+              });
+            }),
+            executeWithFailover(async (provider) => {
+              return await provider.getLogs({
+                fromBlock: chunk.from,
+                toBlock: chunk.to,
+                topics: [TRANSFER_EVENT_TOPIC, paddedAddress, null]
+              });
+            })
+          ]);
+          return [...incomingLogs, ...outgoingLogs];
+        } catch (error) {
+          console.error(`Error scanning chunk ${chunk.from}-${chunk.to}:`, error);
+          return [];
+        }
+      })
+    );
+    
+    // Collect unique token addresses from all chunks
     const recentTokens = new Set<string>();
-    [...incomingLogs, ...outgoingLogs].forEach(log => {
+    allLogs.flat().forEach(log => {
       if (log.address) {
         recentTokens.add(log.address.toLowerCase());
       }
     });
     
-    console.log(`Found ${recentTokens.size} tokens in recent blocks`);
+    console.log(`Found ${recentTokens.size} tokens in recent ${blocksToScan} blocks`);
     return recentTokens;
   } catch (error) {
     console.error('Error scanning recent blocks:', error);
