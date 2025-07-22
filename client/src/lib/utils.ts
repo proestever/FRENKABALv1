@@ -156,6 +156,21 @@ export function getTokenExternalLink(tokenAddress: string, platform: 'dexscreene
  * This merges tokens, balances, and values to create a unified view
  */
 export function combineWalletData(wallets: Record<string, any>): any {
+  // Early return with safe defaults if no wallets provided
+  if (!wallets || Object.keys(wallets).length === 0) {
+    console.warn('combineWalletData called with no wallets');
+    return {
+      address: 'Combined (0 wallets)',
+      tokens: [],
+      totalValue: 0,
+      tokenCount: 0,
+      plsBalance: 0,
+      plsPriceChange: 0,
+      networkCount: 1,
+      lpTokenCount: 0
+    };
+  }
+
   // Create a map to track combined tokens by address
   const tokenMap: Record<string, any> = {};
   let totalValue = 0;
@@ -327,7 +342,7 @@ export function combineWalletData(wallets: Record<string, any>): any {
   // Create the combined wallet object
   const combinedWallet = {
     address: `Combined (${walletAddresses.length} wallets)`,
-    tokens: combinedTokens,
+    tokens: combinedTokens || [], // Ensure tokens is always an array
     totalValue: totalValue,
     tokenCount: combinedTokens.length,
     plsBalance: totalPlsBalance,

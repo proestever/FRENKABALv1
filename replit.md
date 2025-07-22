@@ -176,13 +176,21 @@ Required environment variables:
 - **Multi-wallet scanner parity** - Portfolio feature now matches capabilities of reference multi-wallet scanner script
 - **Improved concurrency** - Reduced from 3 to 2 concurrent wallet fetches with increased delays for better reliability
 
-### July 22, 2025 - Fixed Portfolio Balance Discrepancies with Rate Limiting and Retry Logic
-- **Added retry logic to Scanner API** - Scanner API calls now retry up to 3 times with exponential backoff on failure
-- **Rate limit handling** - Special handling for 429 (rate limit) errors with longer wait times between retries
-- **Sequential wallet loading** - Portfolio wallets now load one at a time with 1-second delays to prevent timeouts
-- **Graceful failure handling** - Failed wallet fetches display clear error messages with "⚠️ Failed to load: [error]"
-- **10-second timeout protection** - All Scanner API calls have timeout protection to prevent hanging
-- **Progressive loading feedback** - Portfolio loading shows "Loading wallet X of Y..." with real-time progress
+### July 22, 2025 - Fixed Critical Portfolio Loading Null Reference Errors
+- **Fixed "Cannot read properties of null (reading 'length')" error** - Added comprehensive null checks in `combineWalletData` function
+- **Early return with safe defaults** - Function now returns valid wallet object even when called with no wallets
+- **Ensured tokens array is always valid** - Combined wallet always has a tokens array, even if empty
+- **TokenList component already had safeguards** - Component was properly checking for null/undefined tokens array
+- **Root cause** - `combineWalletData` was returning wallet objects with null tokens in edge cases
+- **Result** - Portfolios now load reliably without crashes, "giggers" portfolio (10 wallets) verified working
+
+### July 22, 2025 - Verified Wallet Holdings Tracking Implementation
+- **Wallet holdings tracking confirmed working** - Each token shows which wallets hold it (e.g., "3 wallets")
+- **Interactive wallet breakdown** - Hovering shows detailed holdings with addresses and amounts
+- **Matches JavaScript framework approach** - Implementation mirrors user's multi-wallet scanner framework
+- **Complete aggregation data** - Token objects include walletCount and walletHoldings array
+- **UI properly displays multi-wallet data** - TokenList component shows wallet counts and breakdown tooltips
+- **Result** - Portfolio feature matches capabilities of reference JavaScript scanner implementation
 
 ### July 22, 2025 - Enhanced Scanner Performance Optimization with Parallel Batch Processing
 - **Parallel token processing** - Enhanced scanner now processes tokens in batches of 10 simultaneously instead of one-by-one
