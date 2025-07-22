@@ -321,35 +321,16 @@ export default function Home() {
       
       const fetchPortfolioByCode = async () => {
         try {
-          // Check cache first for portfolio data
-          const cacheKey = `portfolio_cache_${params.publicCode}`;
-          const cachedData = sessionStorage.getItem(cacheKey);
-          const cacheExpiry = sessionStorage.getItem(`${cacheKey}_expiry`);
-          
-          let portfolio, addresses;
-          
-          // Use cache if valid (5 minutes)
-          if (cachedData && cacheExpiry && Number(cacheExpiry) > Date.now()) {
-            console.log('Using cached portfolio data');
-            const cached = JSON.parse(cachedData);
-            portfolio = cached.portfolio;
-            addresses = cached.addresses;
-          } else {
-            // Fetch portfolio by public code
-            const portfolioResponse = await fetch(`/api/portfolios/public/${params.publicCode}`);
-            if (!portfolioResponse.ok) {
-              throw new Error('Portfolio not found');
-            }
-            portfolio = await portfolioResponse.json();
-            
-            // Then fetch the wallet addresses
-            const addressesResponse = await fetch(`/api/portfolios/${portfolio.id}/addresses`);
-            addresses = await addressesResponse.json();
-            
-            // Cache the results for 5 minutes
-            sessionStorage.setItem(cacheKey, JSON.stringify({ portfolio, addresses }));
-            sessionStorage.setItem(`${cacheKey}_expiry`, String(Date.now() + 5 * 60 * 1000));
+          // Fetch portfolio by public code
+          const portfolioResponse = await fetch(`/api/portfolios/public/${params.publicCode}`);
+          if (!portfolioResponse.ok) {
+            throw new Error('Portfolio not found');
           }
+          const portfolio = await portfolioResponse.json();
+          
+          // Then fetch the wallet addresses
+          const addressesResponse = await fetch(`/api/portfolios/${portfolio.id}/addresses`);
+          const addresses = await addressesResponse.json();
           
           if (addresses && addresses.length > 0) {
             setPortfolioName(portfolio.name);

@@ -132,24 +132,7 @@ const PortfoliosPage = () => {
           return;
         }
         
-        // For multiple portfolios, use local storage cache first if available
-        const cacheKey = `portfolio_address_counts_${portfolios.map(p => p.id).join('_')}`;
-        const cachedData = localStorage.getItem(cacheKey);
-        const cacheExpiry = localStorage.getItem(`${cacheKey}_expiry`);
-        
-        // Check if cache is still valid (5 minutes)
-        if (cachedData && cacheExpiry && Number(cacheExpiry) > Date.now()) {
-          try {
-            const counts = JSON.parse(cachedData);
-            setPortfolioAddressCounts(counts);
-            return;
-          } catch (e) {
-            console.error('Error parsing cached address counts:', e);
-            // Continue to fetch if parse fails
-          }
-        }
-        
-        // Otherwise fetch address counts for multiple portfolios
+        // Fetch address counts for multiple portfolios
         // Get only the data we need to show initially, then fetch more as needed
         const counts: Record<number, number> = {};
         
@@ -180,9 +163,7 @@ const PortfoliosPage = () => {
           }
         }
         
-        // Cache the results for 5 minutes
-        localStorage.setItem(cacheKey, JSON.stringify(counts));
-        localStorage.setItem(`${cacheKey}_expiry`, String(Date.now() + 5 * 60 * 1000));
+
       } catch (error) {
         console.error('Error fetching portfolio address counts:', error);
       }

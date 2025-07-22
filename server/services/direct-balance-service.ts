@@ -6,7 +6,7 @@ import { storage } from '../storage';
 import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
 import { updateLoadingProgress } from '../routes';
 import { getProvider, executeWithFailover } from './rpc-provider';
-import { tokenCache } from './token-cache';
+
 
 // Constants
 const TRANSFER_EVENT_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
@@ -32,15 +32,6 @@ async function getWalletTokens(walletAddress: string): Promise<Set<string>> {
     
     // Normalize wallet address
     const normalizedAddress = walletAddress.toLowerCase();
-    
-    // Check cache first
-    const cachedTokens = tokenCache.getWalletTokens(normalizedAddress);
-    if (cachedTokens) {
-      console.log(`Using cached tokens for ${walletAddress}: ${cachedTokens.size} tokens found in cache`);
-      const endTime = Date.now();
-      console.log(`Cache hit saved ${endTime - startTime}ms`);
-      return cachedTokens;
-    }
     const paddedAddress = ethers.utils.hexZeroPad(normalizedAddress, 32);
     
     // Get current block with failover
@@ -104,10 +95,6 @@ async function getWalletTokens(walletAddress: string): Promise<Set<string>> {
     const endTime = Date.now();
     console.log(`Found ${tokenAddresses.size} unique tokens in ${endTime - startTime}ms`);
     
-    // Cache the results for future lookups
-    tokenCache.setWalletTokens(normalizedAddress, tokenAddresses);
-    console.log(`Cached ${tokenAddresses.size} tokens for wallet ${walletAddress}`);
-    
     return tokenAddresses;
   } catch (error) {
     console.error('Error getting wallet tokens:', error);
@@ -130,38 +117,13 @@ async function getTokenInfo(tokenAddress: string, walletAddress: string): Promis
     return await executeWithFailover(async (provider) => {
       const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
       
-      // Check metadata cache first
-      const cachedMetadata = tokenCache.getTokenMetadata(tokenAddress);
-      let decimals: number;
-      let symbol: string;
-      let name: string;
-      let balance: ethers.BigNumber;
-      
-      if (cachedMetadata) {
-        // Use cached metadata
-        decimals = cachedMetadata.decimals;
-        symbol = cachedMetadata.symbol;
-        name = cachedMetadata.name;
-        
-        // Only fetch balance
-        balance = await contract.balanceOf(walletAddress).catch(() => ethers.BigNumber.from(0));
-      } else {
-        // Get metadata and balance in parallel
-        const [decimalsRaw, symbolRaw, nameRaw, balanceRaw] = await Promise.all([
-          contract.decimals().catch(() => 18),
-          contract.symbol().catch(() => 'UNKNOWN'),
-          contract.name().catch(() => 'Unknown Token'),
-          contract.balanceOf(walletAddress).catch(() => ethers.BigNumber.from(0))
-        ]);
-        
-        decimals = decimalsRaw;
-        symbol = symbolRaw;
-        name = nameRaw;
-        balance = balanceRaw;
-        
-        // Cache the metadata
-        tokenCache.setTokenMetadata(tokenAddress, { decimals, symbol, name });
-      }
+      // Get metadata and balance in parallel
+      const [decimals, symbol, name, balance] = await Promise.all([
+        contract.decimals().catch(() => 18),
+        contract.symbol().catch(() => 'UNKNOWN'),
+        contract.name().catch(() => 'Unknown Token'),
+        contract.balanceOf(walletAddress).catch(() => ethers.BigNumber.from(0))
+      ]);
     
       const balanceFormatted = parseFloat(ethers.utils.formatUnits(balance, decimals));
       
@@ -225,7 +187,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
         balanceFormatted: plsBalanceFormatted,
         price: plsPrice,
         value: plsBalanceFormatted * plsPrice,
-        logo: getDefaultLogo('PLS'),
+        logo: getDefaultLogo('PLS') || undefined,
         isNative: true,
         verified: true
       });
@@ -310,7 +272,7 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
               balanceFormatted: tokenInfo.balanceFormatted,
               price: priceData?.price || 0,
               value: tokenInfo.balanceFormatted * (priceData?.price || 0),
-              logo: logoUrl,
+              logo: logoUrl || undefined,
               verified: false
             };
           } catch (error) {

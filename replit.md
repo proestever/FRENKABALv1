@@ -132,6 +132,14 @@ Required environment variables:
 
 ## Recent Changes
 
+### July 22, 2025 - Removed All Caching for Wallets and Portfolios
+- **Token Cache Removal** - Deleted `server/services/token-cache.ts` and removed all its usage from `direct-balance-service.ts`
+- **Portfolio Cache Removal** - Removed sessionStorage caching from `home.tsx` for portfolio data
+- **Address Count Cache Removal** - Removed localStorage caching from `portfolios.tsx` and `portfolios-new.tsx` for portfolio address counts
+- **React Query Cache Disabled** - Set staleTime and gcTime to 0 in `use-direct-wallet-balances.ts` to disable React Query caching
+- **Real-time Data** - All wallet and portfolio data now fetches fresh from the blockchain and database on every request
+- **Performance Impact** - Trading some performance for always having the most up-to-date data without any caching delays
+
 ### July 21, 2025 - Wallet Share Feature Enhanced with Modal and Responsive Design
 - **Share Modal** - Converted share feature from full page to popup modal for better UX
 - **Top 5 Tokens** - Changed from top 10 to top 5 tokens for cleaner, more focused display

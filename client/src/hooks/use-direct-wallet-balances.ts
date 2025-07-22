@@ -41,8 +41,8 @@ export function useDirectWalletBalances(walletAddress: string | null, enabled: b
         });
     },
     enabled: !!walletAddress && enabled,
-    staleTime: 5000, // Consider data fresh for just 5 seconds
-    gcTime: 30000,   // Keep in cache for 30 seconds
+    staleTime: 0, // No caching - always refetch
+    gcTime: 0,    // Don't keep in cache
     retry: 1,
     refetchOnWindowFocus: false,
   });
