@@ -49,41 +49,64 @@ interface TokenBalanceFromScanner {
 }
 
 /**
- * Fetch token balances from PulseChain Scan API
+ * Fetch token balances from PulseChain Scan API with retry logic
  */
-async function fetchTokenBalancesFromScanner(walletAddress: string): Promise<Map<string, TokenBalanceFromScanner>> {
-  try {
-    console.log(`Fetching token balances from PulseChain Scan for ${walletAddress}`);
-    
-    const url = `${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/token-balances`;
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json'
+async function fetchTokenBalancesFromScanner(walletAddress: string, retries: number = 3): Promise<Map<string, TokenBalanceFromScanner>> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      // Add delay between retries to avoid rate limiting
+      if (attempt > 0) {
+        const delay = attempt * 1000; // 1s, 2s, 3s
+        console.log(`Retry attempt ${attempt + 1} for ${walletAddress} after ${delay}ms delay`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Scanner API error: ${response.status} ${response.statusText}`);
+      
+      console.log(`Fetching token balances from PulseChain Scan for ${walletAddress} (attempt ${attempt + 1})`);
+      
+      const url = `${PULSECHAIN_SCAN_API_BASE}/addresses/${walletAddress}/token-balances`;
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json'
+        },
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Scanner API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const balances = new Map<string, TokenBalanceFromScanner>();
+      
+      // Process the response - it could be an array or object with items
+      const items = Array.isArray(data) ? data : (data.items || []);
+      
+      items.forEach((item: any) => {
+        if (item.token && item.value && item.value !== '0') {
+          balances.set(item.token.address.toLowerCase(), item);
+        }
+      });
+      
+      console.log(`Found ${balances.size} tokens from scanner for ${walletAddress}`);
+      return balances;
+    } catch (error) {
+      lastError = error as Error;
+      console.error(`Error fetching token balances from scanner (attempt ${attempt + 1}):`, error);
+      
+      // If this is a rate limit error (429), wait longer before retry
+      if (error instanceof Error && error.message.includes('429')) {
+        const rateLimitDelay = (attempt + 1) * 5000; // 5s, 10s, 15s for rate limits
+        console.log(`Rate limited, waiting ${rateLimitDelay}ms before retry`);
+        await new Promise(resolve => setTimeout(resolve, rateLimitDelay));
+      }
     }
-    
-    const data = await response.json();
-    const balances = new Map<string, TokenBalanceFromScanner>();
-    
-    // Process the response - it could be an array or object with items
-    const items = Array.isArray(data) ? data : (data.items || []);
-    
-    items.forEach((item: any) => {
-      if (item.token && item.value && item.value !== '0') {
-        balances.set(item.token.address.toLowerCase(), item);
-      }
-    });
-    
-    console.log(`Found ${balances.size} tokens from scanner`);
-    return balances;
-  } catch (error) {
-    console.error('Error fetching token balances from scanner:', error);
-    throw error;
   }
+  
+  // If all retries failed, log the error but return empty map instead of throwing
+  console.error(`Failed to fetch scanner balances for ${walletAddress} after ${retries} attempts:`, lastError);
+  return new Map<string, TokenBalanceFromScanner>();
 }
 
 /**

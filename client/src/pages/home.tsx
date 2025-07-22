@@ -181,23 +181,51 @@ export default function Home() {
         message: `Loading ${addresses.length} wallets and HEX stakes in parallel...`
       });
       
-      // Start ALL async operations in parallel for maximum speed
+      // Start ALL async operations but with controlled concurrency for wallet fetching
       const [walletResults, hexStakesData, individualHexResults] = await Promise.all([
-        // Fetch all wallet data in parallel
-        Promise.all(
-          addresses.map(async (address) => {
-            try {
-              // Fetch wallet data with smart contract prices
-              const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
-              const dataWithPrices = await fetchWalletDataWithContractPrices(address);
-              
-              return { [address]: dataWithPrices };
-            } catch (error) {
-              console.error(`Error fetching wallet ${address}:`, error);
-              return null;
+        // Fetch wallet data with controlled concurrency to avoid rate limiting
+        (async () => {
+          const results = [];
+          const BATCH_SIZE = 3; // Process 3 wallets at a time
+          const DELAY_BETWEEN_BATCHES = 500; // 500ms delay between batches
+          
+          for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
+            const batch = addresses.slice(i, i + BATCH_SIZE);
+            
+            // Add delay between batches (except for the first batch)
+            if (i > 0) {
+              await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
             }
-          })
-        ),
+            
+            const batchResults = await Promise.all(
+              batch.map(async (address) => {
+                try {
+                  // Fetch wallet data with smart contract prices
+                  const { fetchWalletDataWithContractPrices } = await import('@/services/wallet-client-service');
+                  const dataWithPrices = await fetchWalletDataWithContractPrices(address);
+                  
+                  return { [address]: dataWithPrices };
+                } catch (error) {
+                  console.error(`Error fetching wallet ${address}:`, error);
+                  return null;
+                }
+              })
+            );
+            
+            results.push(...batchResults);
+            
+            // Update progress
+            const progress = Math.round((i + batch.length) / addresses.length * 100);
+            setMultiWalletProgress({
+              currentBatch: i + batch.length,
+              totalBatches: addresses.length,
+              status: 'loading',
+              message: `Loading wallets... (${i + batch.length}/${addresses.length})`
+            });
+          }
+          
+          return results;
+        })(),
         // Fetch combined HEX stakes data
         fetchCombinedHexStakes(addresses).catch(error => {
           console.error('Error fetching combined HEX stakes:', error);

@@ -140,6 +140,14 @@ Required environment variables:
 - **Real-time Data** - All wallet and portfolio data now fetches fresh from the blockchain and database on every request
 - **Performance Impact** - Trading some performance for always having the most up-to-date data without any caching delays
 
+### July 22, 2025 - Fixed Portfolio Balance Discrepancies with Rate Limiting and Retry Logic
+- **Added retry logic to Scanner API** - Scanner API calls now retry up to 3 times with exponential backoff on failure
+- **Rate limit handling** - Special handling for 429 (rate limit) errors with longer wait times between retries
+- **Controlled concurrency for portfolios** - Portfolio wallet fetching now processes in batches of 3 with 500ms delays
+- **Graceful failure handling** - Failed wallet fetches return empty data instead of throwing errors
+- **10-second timeout protection** - All Scanner API calls have timeout protection to prevent hanging
+- **Progressive loading feedback** - Portfolio loading now shows real-time progress as wallets are fetched
+
 ### July 21, 2025 - Wallet Share Feature Enhanced with Modal and Responsive Design
 - **Share Modal** - Converted share feature from full page to popup modal for better UX
 - **Top 5 Tokens** - Changed from top 10 to top 5 tokens for cleaner, more focused display
