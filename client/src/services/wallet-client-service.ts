@@ -42,6 +42,16 @@ interface Wallet {
   pricesNeeded?: boolean;
 }
 
+interface TokenPriceData {
+  price: number;
+  priceChange24h: number;
+  liquidityUsd: number;
+  volumeUsd24h: number;
+  dexId: string;
+  pairAddress: string;
+  logo?: string;
+}
+
 interface TokenWithPrice extends ProcessedToken {
   priceData?: TokenPriceData;
 }
@@ -138,16 +148,8 @@ export async function fetchWalletDataClientSide(
               tokenAddressForDex = '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
             }
             
-            // Only fetch logos from DexScreener, NOT prices
-            // Prices come from smart contracts via the server
-            const priceData = await getTokenPriceFromDexScreener(tokenAddressForDex);
-            
-            if (priceData && priceData.logo && (!token.logo || token.logo === '')) {
-              token.logo = priceData.logo;
-              
-              // Save logo to server in background
-              saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
-            }
+            // Skip DexScreener entirely - logos come from server
+            // Prices already come from smart contracts via the server
           } catch (error) {
             console.error(`Failed to fetch data for ${token.symbol}:`, error);
           }
@@ -352,13 +354,7 @@ export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): P
       await Promise.all(
         chunk.map(async (token) => {
           try {
-            const priceData = await getTokenPriceFromDexScreener(token.address);
-            
-            if (priceData?.logo) {
-              // Save logo to server
-              await saveLogoToServer(token.address, priceData.logo, token.symbol, token.name);
-              console.log(`Saved logo for ${token.symbol}`);
-            }
+            // Skip DexScreener - logos should already be fetched from server
           } catch (error) {
             console.error(`Failed to fetch logo for ${token.symbol}:`, error);
           }
