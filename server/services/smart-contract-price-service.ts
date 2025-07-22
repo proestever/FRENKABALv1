@@ -206,8 +206,8 @@ async function getWPLSPairPrice(
       const price = priceInWPLS * wplsPrice;
       const liquidity = wplsAmount * wplsPrice * 2; // Total liquidity in USD
 
-      // Require minimum $5000 liquidity to prevent manipulation
-      if (liquidity < 5000) {
+      // Require minimum $1000 liquidity to prevent manipulation
+      if (liquidity < 1000) {
         console.log(`Skipping ${tokenAddress} - insufficient liquidity: $${liquidity.toFixed(2)}`);
         continue;
       }
