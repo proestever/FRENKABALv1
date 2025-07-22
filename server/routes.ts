@@ -363,8 +363,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Fast balance fetch completed in ${endTime - startTime}ms`);
       
-      // Calculate total value
-      const totalValue = tokens.reduce((sum, token) => sum + (token.value || 0), 0);
+      // Calculate total value - skip if values are 0 (client-side calculation)
+      const totalValue = tokens.reduce((sum, token) => {
+        // Skip if value is 0 or undefined (client will calculate)
+        if (!token.value || token.value === 0) return sum;
+        // Ensure value is a valid number and not astronomical
+        const value = parseFloat(token.value.toString());
+        if (isNaN(value) || !isFinite(value) || value > 1e12) { // Skip values over 1 trillion
+          console.warn(`Skipping token ${token.symbol} with invalid value: ${token.value}`);
+          return sum;
+        }
+        return sum + value;
+      }, 0);
       
       // Find PLS balance
       const plsToken = tokens.find(t => t.isNative);
