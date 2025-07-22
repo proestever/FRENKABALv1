@@ -74,7 +74,7 @@ export interface TokenPriceData {
 
 // Client-side cache
 const priceCache = new Map<string, { data: TokenPriceData; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 0; // Disabled for debugging
 
 // Known stablecoin addresses on PulseChain (from Ethereum bridge)
 const STABLECOINS: Record<string, { name: string; logo: string }> = {
@@ -138,13 +138,34 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
       return null;
     }
 
-    // Filter for PulseChain pairs only where our token is the BASE token
-    const validPairs = data.pairs.filter(pair => 
-      pair.chainId === 'pulsechain' && 
-      pair.baseToken.address.toLowerCase() === normalizedAddress && // Only pairs where token is base
-      pair.priceUsd && 
-      pair.liquidity?.usd
-    );
+    // Debug for PulseReflection
+    if (normalizedAddress === '0xb6b57227150a7097723e0c013752001aad01248f') {
+      console.log(`=== All pairs for PulseReflection from DexScreener ===`);
+      console.log(`Total pairs found: ${data.pairs.length}`);
+      data.pairs.forEach(pair => {
+        console.log(`Pair: ${pair.pairAddress}`);
+        console.log(`  Base: ${pair.baseToken.symbol} (${pair.baseToken.address})`);
+        console.log(`  Quote: ${pair.quoteToken.symbol} (${pair.quoteToken.address})`);
+        console.log(`  Price USD: $${pair.priceUsd}`);
+        console.log(`  Liquidity: $${pair.liquidity?.usd}`);
+        console.log(`  Chain: ${pair.chainId}`);
+        
+        // Check if this is the specific pair mentioned
+        if (pair.pairAddress.toLowerCase() === '0x53264c3ee2e1b1f470c9884e7f9ae03613868a96') {
+          console.log(`  *** THIS IS THE MAIN PAIR ***`);
+        }
+      });
+    }
+
+    // Filter for PulseChain pairs - include pairs where token can be either BASE or QUOTE
+    const validPairs = data.pairs.filter(pair => {
+      const isOurToken = pair.baseToken.address.toLowerCase() === normalizedAddress || 
+                        pair.quoteToken.address.toLowerCase() === normalizedAddress;
+      return pair.chainId === 'pulsechain' && 
+             isOurToken &&
+             pair.priceUsd && 
+             pair.liquidity?.usd;
+    });
 
     if (validPairs.length === 0) {
       console.log(`No valid PulseChain pairs found for token ${tokenAddress}`);
@@ -214,6 +235,36 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
       return null;
     }
 
+    // Calculate the correct price based on whether token is base or quote
+    let finalPrice: number;
+    const isBase = bestPair.baseToken.address.toLowerCase() === normalizedAddress;
+    
+    if (isBase) {
+      // Token is the base token, price is already correct
+      finalPrice = parseFloat(bestPair.priceUsd!);
+    } else {
+      // Token is the quote token, we need to calculate the price
+      // If base token price is X USD and 1 base = Y quote tokens
+      // Then 1 quote token = X/Y USD
+      const basePrice = parseFloat(bestPair.priceUsd!);
+      const priceNative = parseFloat(bestPair.priceNative);
+      
+      if (priceNative > 0) {
+        finalPrice = basePrice / priceNative;
+      } else {
+        console.error(`Invalid priceNative for pair ${bestPair.pairAddress}`);
+        return null;
+      }
+    }
+
+    // Debug for PulseReflection
+    if (normalizedAddress === '0xb6b57227150a7097723e0c013752001aad01248f') {
+      console.log(`Selected pair: ${bestPair.pairAddress}`);
+      console.log(`Token is ${isBase ? 'BASE' : 'QUOTE'} in this pair`);
+      console.log(`Base price: $${bestPair.priceUsd}, Native price: ${bestPair.priceNative}`);
+      console.log(`Final calculated price: $${finalPrice}`);
+    }
+
     // Try to get logo from the token info
     let logo: string | undefined;
     if (bestPair.baseToken.address.toLowerCase() === normalizedAddress) {
@@ -223,7 +274,7 @@ export async function getTokenPriceFromDexScreener(tokenAddress: string): Promis
     }
 
     const result: TokenPriceData = {
-      price: parseFloat(bestPair.priceUsd!),
+      price: finalPrice,
       priceChange24h: bestPair.priceChange?.h24 || 0,
       liquidityUsd: bestPair.liquidity!.usd,
       volumeUsd24h: bestPair.volume?.h24 || 0,
