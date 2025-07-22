@@ -73,9 +73,13 @@ class SmartContractPriceService {
     // Initialize multiple providers for redundancy with network detection
     for (const url of RPC_ENDPOINTS) {
       try {
-        const provider = new ethers.providers.JsonRpcProvider(url);
+        const provider = new ethers.providers.JsonRpcProvider(url, {
+          chainId: 369,
+          name: 'pulsechain',
+          ensAddress: null // Disable ENS resolution on PulseChain
+        });
         // Set a timeout for network detection
-        const networkPromise = provider.getNetwork();
+        const networkPromise = provider.detectNetwork();
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Network detection timeout')), 5000)
         );

@@ -282,7 +282,11 @@ export async function fetchHexStakesSummary(address: string): Promise<HexStakeSu
     
     // Get RPC provider for PulseChain (we only use PulseChain now)
     const rpcUrl = 'https://rpc-pulsechain.g4mm4.io';
-    const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+    const provider = new ethers.providers.JsonRpcProvider(rpcUrl, {
+      chainId: 369,
+      name: 'pulsechain',
+      ensAddress: null // Disable ENS resolution on PulseChain
+    });
     const hexContract = new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);
     
     let count = 0;

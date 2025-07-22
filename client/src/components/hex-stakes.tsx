@@ -146,7 +146,11 @@ export function HexStakes({ walletAddress, otherWalletAddresses = [], isMultiWal
         // Always use PulseChain RPC
         const rpcUrl = 'https://rpc-pulsechain.g4mm4.io'; // PulseChain
         
-        const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+        const provider = new ethers.providers.JsonRpcProvider(rpcUrl, {
+          chainId: 369,
+          name: 'pulsechain',
+          ensAddress: null // Disable ENS resolution on PulseChain
+        });
         const hexContract = new ethers.Contract(HEX_CONTRACT_ADDRESS, HEX_ABI, provider);
         
         // Import the cached price function to avoid duplicate API calls

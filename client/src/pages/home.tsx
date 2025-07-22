@@ -184,68 +184,69 @@ export default function Home() {
       
       // Start ALL async operations but load wallets one by one to avoid timeouts
       const [walletResults, hexStakesData, individualHexResults] = await Promise.all([
-        // Fetch wallet data one by one sequentially
+        // Fetch wallet data in parallel batches for faster loading
         (async () => {
+          const BATCH_SIZE = 3; // Process 3 wallets simultaneously
           const results = [];
-          const DELAY_BETWEEN_WALLETS = 100; // 100ms delay between each wallet
           
-          for (let i = 0; i < addresses.length; i++) {
-            const address = addresses[i];
+          // Process wallets in batches
+          for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
+            const batch = addresses.slice(i, i + BATCH_SIZE);
+            const batchIndex = Math.floor(i / BATCH_SIZE) + 1;
+            const totalBatches = Math.ceil(addresses.length / BATCH_SIZE);
             
             // Update progress
             setMultiWalletProgress({
-              currentBatch: i + 1,
+              currentBatch: i + batch.length,
               totalBatches: addresses.length,
               status: 'loading',
-              message: `Loading wallet ${i + 1} of ${addresses.length}...`
+              message: `Loading wallets ${i + 1} to ${Math.min(i + batch.length, addresses.length)} of ${addresses.length}...`
             });
             
-            // Add delay between wallets (except for the first wallet)
-            if (i > 0) {
-              await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_WALLETS));
-            }
-            
-            try {
-              // Use fast scanner for portfolios
-              const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
-              const dataWithPrices = await fetchWalletDataFast(address);
-              
-              // Check if wallet had an error
-              if (dataWithPrices.error) {
-                console.warn(`Wallet ${address} loaded with error: ${dataWithPrices.error}`);
-              } else {
-                console.log(`Successfully fetched wallet ${address} using fast scanner:`, {
-                  tokenCount: dataWithPrices.tokens.length,
-                  totalValue: dataWithPrices.totalValue,
-                  lpCount: dataWithPrices.tokens.filter((t: any) => t.isLp).length
-                });
-              }
-              
-              results.push({ [address]: dataWithPrices });
-            } catch (error) {
-              console.error(`Error fetching wallet ${address}:`, error);
-              // Return wallet data with error flag instead of empty data
-              results.push({ 
-                [address]: {
-                  address,
-                  tokens: [],
-                  totalValue: 0,
-                  tokenCount: 0,
-                  plsBalance: 0,
-                  networkCount: 1,
-                  error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
+            // Process batch in parallel
+            const batchPromises = batch.map(async (address) => {
+              try {
+                // Use fast scanner for portfolios
+                const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
+                const dataWithPrices = await fetchWalletDataFast(address);
+                
+                // Check if wallet had an error
+                if (dataWithPrices.error) {
+                  console.warn(`Wallet ${address} loaded with error: ${dataWithPrices.error}`);
+                } else {
+                  console.log(`Successfully fetched wallet ${address} using fast scanner:`, {
+                    tokenCount: dataWithPrices.tokens.length,
+                    totalValue: dataWithPrices.totalValue,
+                    lpCount: dataWithPrices.tokens.filter((t: any) => t.isLp).length
+                  });
                 }
-              });
-            }
-            
-            // Update progress percentage
-            const progress = Math.round((i + 1) / addresses.length * 100);
-            setMultiWalletProgress({
-              currentBatch: i + 1,
-              totalBatches: addresses.length,
-              status: 'loading',
-              message: `Loading wallets... (${i + 1}/${addresses.length})`
+                
+                return { [address]: dataWithPrices };
+              } catch (error) {
+                console.error(`Error fetching wallet ${address}:`, error);
+                // Return wallet data with error flag instead of empty data
+                return { 
+                  [address]: {
+                    address,
+                    tokens: [],
+                    totalValue: 0,
+                    tokenCount: 0,
+                    plsBalance: 0,
+                    networkCount: 1,
+                    error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
+                  }
+                };
+              }
             });
+            
+            // Wait for batch to complete
+            const batchResults = await Promise.all(batchPromises);
+            results.push(...batchResults);
+            
+            // Small delay between batches to avoid overwhelming the server
+            if (i + BATCH_SIZE < addresses.length) {
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
           }
           
           return results;
