@@ -184,6 +184,14 @@ Required environment variables:
 - **10-second timeout protection** - All Scanner API calls have timeout protection to prevent hanging
 - **Progressive loading feedback** - Portfolio loading shows "Loading wallet X of Y..." with real-time progress
 
+### July 22, 2025 - Enhanced Scanner Performance Optimization with Parallel Batch Processing
+- **Parallel token processing** - Enhanced scanner now processes tokens in batches of 10 simultaneously instead of one-by-one
+- **Parallel LP token analysis** - LP tokens checked for pair status all at once, then analyzed in batches of 5
+- **10-minute timeout increase** - Client-side timeout increased from 10 seconds to 10 minutes to handle complex wallets
+- **Performance improvements** - Complex wallets with many tokens/LP positions now scan significantly faster
+- **Batch logging** - Added detailed batch progress logging to track processing status
+- **Maintained accuracy** - Parallel processing maintains same data accuracy while improving speed
+
 ### July 21, 2025 - Wallet Share Feature Enhanced with Modal and Responsive Design
 - **Share Modal** - Converted share feature from full page to popup modal for better UX
 - **Top 5 Tokens** - Changed from top 10 to top 5 tokens for cleaner, more focused display
