@@ -867,25 +867,34 @@ export default function Home() {
                               </Button>
                             </div>
                             
-                            <div className="text-xs mb-1">
-                              <span className="opacity-70">Value (with HEX Stakes):</span>{' '}
-                              ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              {hexStakeValue > 0 && (
-                                <span className="text-xs text-purple-300 ml-1">
-                                  (includes ${hexStakeValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} in HEX stakes)
-                                </span>
-                              )}
-                            </div>
-                            
-                            <div className="text-xs mb-2">
-                              <span className="opacity-70">Tokens:</span>{' '}
-                              {wallet.tokenCount}
-                              {walletHexStakes && walletHexStakes.stakeCount > 0 && (
-                                <span className="text-purple-300 ml-2">
-                                  + {walletHexStakes.stakeCount} HEX {walletHexStakes.stakeCount === 1 ? 'stake' : 'stakes'}
-                                </span>
-                              )}
-                            </div>
+                            {wallet.error ? (
+                              // Show error state for failed wallets
+                              <div className="text-xs text-red-400 mb-2">
+                                <span>⚠️ Failed to load: {wallet.error}</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="text-xs mb-1">
+                                  <span className="opacity-70">Value (with HEX Stakes):</span>{' '}
+                                  ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  {hexStakeValue > 0 && (
+                                    <span className="text-xs text-purple-300 ml-1">
+                                      (includes ${hexStakeValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} in HEX stakes)
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                <div className="text-xs mb-2">
+                                  <span className="opacity-70">Tokens:</span>{' '}
+                                  {wallet.tokenCount}
+                                  {walletHexStakes && walletHexStakes.stakeCount > 0 && (
+                                    <span className="text-purple-300 ml-2">
+                                      + {walletHexStakes.stakeCount} HEX {walletHexStakes.stakeCount === 1 ? 'stake' : 'stakes'}
+                                    </span>
+                                  )}
+                                </div>
+                              </>
+                            )}
                             
                             {/* Top 3 tokens */}
                             {top3Tokens.length > 0 && (
@@ -970,20 +979,29 @@ export default function Home() {
                               </Button>
                             </div>
                             
-                            <div className="text-xs mb-2">
-                              <span className="opacity-70">Value:</span>{' '}
-                              ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </div>
-                            
-                            <div className="text-xs mb-2">
-                              <span className="opacity-70">Tokens:</span>{' '}
-                              {wallet.tokenCount}
-                              {walletHexStakes && walletHexStakes.stakeCount > 0 && (
-                                <span className="text-purple-300 ml-2">
-                                  + {walletHexStakes.stakeCount} HEX {walletHexStakes.stakeCount === 1 ? 'stake' : 'stakes'}
-                                </span>
-                              )}
-                            </div>
+                            {wallet.error ? (
+                              // Show error state for failed wallets
+                              <div className="text-xs text-red-400 mb-2">
+                                <span>⚠️ Failed to load: {wallet.error}</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="text-xs mb-2">
+                                  <span className="opacity-70">Value:</span>{' '}
+                                  ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
+                                
+                                <div className="text-xs mb-2">
+                                  <span className="opacity-70">Tokens:</span>{' '}
+                                  {wallet.tokenCount}
+                                  {walletHexStakes && walletHexStakes.stakeCount > 0 && (
+                                    <span className="text-purple-300 ml-2">
+                                      + {walletHexStakes.stakeCount} HEX {walletHexStakes.stakeCount === 1 ? 'stake' : 'stakes'}
+                                    </span>
+                                  )}
+                                </div>
+                              </>
+                            )}
                             
                             {/* Top 3 tokens */}
                             {top3Tokens.length > 0 && (
