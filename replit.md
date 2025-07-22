@@ -231,6 +231,12 @@ Required environment variables:
 - **DexScreener now only used for logos** - Price fetching primarily from smart contracts, DexScreener only provides token logos as fallback
 - **Result** - PulseReflection and all other tokens now show accurate real-time prices from highest liquidity pools
 
+### July 22, 2025 - Fixed Portfolio Loading Null Reference Error
+- **Fixed "Cannot read properties of null (reading 'length')" error** - Added null check in `combineWalletData` function to handle wallets without tokens array
+- **Graceful error handling** - When loading portfolios, wallets that fail to load or have no tokens array are now skipped instead of crashing the app
+- **Added warning logs** - System now logs warnings when encountering wallets without tokens arrays for better debugging
+- **Portfolio stability** - Portfolios now load reliably even when some wallet data fails to fetch
+
 ### July 22, 2025 - Implemented WPLS/DAI Pair as Foundation for All Price Calculations
 - **WPLS price foundation** - All WPLS prices now come from the WPLS/DAI pair at 0xe56043671df55de5cdf8459710433c10324de0ae
 - **Reliable price source** - DAI is a stablecoin providing reliable USD value, both tokens have 18 decimals
