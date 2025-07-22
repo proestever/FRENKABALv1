@@ -165,9 +165,15 @@ export function combineWalletData(wallets: Record<string, any>): any {
   
   // Iterate through each wallet to aggregate PLS balances
   Object.values(wallets).forEach(wallet => {
-    // Add to the total value
-    totalValue += wallet.totalValue || 0;
-    console.log('Processing wallet:', wallet.address, 'with totalValue:', wallet.totalValue, 'tokenCount:', wallet.tokens?.length || 0);
+    // Add to the total value with sanity check
+    const walletValue = wallet.totalValue || 0;
+    // Cap individual wallet values at $10 million to prevent calculation errors
+    const cappedValue = Math.min(walletValue, 10_000_000);
+    if (walletValue > 10_000_000) {
+      console.warn(`Wallet ${wallet.address} has suspicious totalValue of ${walletValue}, capping at $10M`);
+    }
+    totalValue += cappedValue;
+    console.log('Processing wallet:', wallet.address, 'with totalValue:', cappedValue, 'tokenCount:', wallet.tokens?.length || 0);
     
     // Add up PLS balances
     if (wallet.plsBalance && wallet.plsBalance > 0) {
