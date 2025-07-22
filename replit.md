@@ -232,7 +232,9 @@ Required environment variables:
 - **Result** - PulseReflection and all other tokens now show accurate real-time prices from highest liquidity pools
 
 ### July 22, 2025 - Fixed Portfolio Loading Null Reference Error
-- **Fixed "Cannot read properties of null (reading 'length')" error** - Added null check in `combineWalletData` function to handle wallets without tokens array
+- **Fixed "Cannot read properties of null (reading 'length')" error** - Added null checks in both `combineWalletData` function and `TokenList` component
+- **TokenList component hardening** - Added comprehensive null checks when mapping, filtering, and accessing the tokens array
+- **Combined wallet safety** - Ensures combined wallet always has a tokens array even if all wallets fail to load
 - **Graceful error handling** - When loading portfolios, wallets that fail to load or have no tokens array are now skipped instead of crashing the app
 - **Added warning logs** - System now logs warnings when encountering wallets without tokens arrays for better debugging
 - **Portfolio stability** - Portfolios now load reliably even when some wallet data fails to fetch

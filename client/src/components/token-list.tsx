@@ -62,8 +62,8 @@ export function TokenList({
   // and use onPageChange callback to request page changes from the parent
 
   // Extract token addresses and symbols for batch logo loading
-  const tokenAddresses = useMemo(() => tokens.map(t => t.address), [tokens]);
-  const tokenSymbols = useMemo(() => tokens.map(t => t.symbol), [tokens]);
+  const tokenAddresses = useMemo(() => tokens ? tokens.map(t => t.address) : [], [tokens]);
+  const tokenSymbols = useMemo(() => tokens ? tokens.map(t => t.symbol) : [], [tokens]);
   
   // Use a useState to store the logo URLs
   const [logoUrls, setLogoUrls] = useState<Record<string, string>>({});
@@ -86,11 +86,13 @@ export function TokenList({
 
   // LP tokens only
   const lpTokens = useMemo(() => {
-    return tokens.filter(token => token.isLp === true);
+    return tokens ? tokens.filter(token => token.isLp === true) : [];
   }, [tokens]);
   
   // Filter tokens based on view and search
   const filteredTokens = useMemo(() => {
+    if (!tokens || !Array.isArray(tokens)) return [];
+    
     // First apply the general filters
     const filtered = tokens.filter(token => 
       // Text filter - check for null/undefined values
@@ -169,7 +171,7 @@ export function TokenList({
   }
 
   // If no tokens and not loading, show empty state
-  if (tokens.length === 0 && !isLoading) {
+  if ((!tokens || tokens.length === 0) && !isLoading) {
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm bg-card/70">
         <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">No tokens found</h3>

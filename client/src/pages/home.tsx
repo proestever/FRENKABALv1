@@ -785,6 +785,12 @@ export default function Home() {
             // Generate the combined wallet data
             const combinedWallet = combineWalletData(multiWalletData);
             
+            // Ensure tokens array exists even if all wallets failed
+            if (!combinedWallet.tokens || !Array.isArray(combinedWallet.tokens)) {
+              console.warn('Combined wallet has no tokens array, initializing empty array');
+              combinedWallet.tokens = [];
+            }
+            
             // Override the address property with portfolio name if available
             if (portfolioName) {
               console.log(`Setting combined wallet address to Portfolio:${portfolioName}`);
