@@ -165,104 +165,77 @@ export function combineWalletData(wallets: Record<string, any>): any {
   
   // Iterate through each wallet to aggregate PLS balances
   Object.values(wallets).forEach(wallet => {
-    // Add to the total value with sanity check
-    const walletValue = wallet.totalValue || 0;
-    // Cap individual wallet values at $10 million to prevent calculation errors
-    const cappedValue = Math.min(walletValue, 10_000_000);
-    if (walletValue > 10_000_000) {
-      console.warn(`Wallet ${wallet.address} has suspicious totalValue of ${walletValue}, capping at $10M`);
-    }
-    totalValue += cappedValue;
-    console.log('Processing wallet:', wallet.address, 'with totalValue:', cappedValue, 'tokenCount:', wallet.tokens?.length || 0);
+    // Add to the total value
+    totalValue += wallet.totalValue || 0;
+    console.log('Processing wallet:', wallet.address, 'with totalValue:', wallet.totalValue, 'tokenCount:', wallet.tokens?.length || 0);
     
     // Add up PLS balances
     if (wallet.plsBalance && wallet.plsBalance > 0) {
       totalPlsBalance += wallet.plsBalance;
     }
     
-    // Process each token - check if tokens array exists
-    if (!wallet.tokens || !Array.isArray(wallet.tokens)) {
-      console.warn('Wallet has no tokens array:', wallet.address);
-      return; // Skip this wallet if no tokens
-    }
-    
+    // Process each token
     wallet.tokens.forEach((token: any) => {
-      try {
-        const tokenAddress = token.address.toLowerCase();
+      const tokenAddress = token.address.toLowerCase();
+      
+      // Count LP tokens
+      if (token.isLp) {
+        totalLpTokens++;
+        console.log('Found LP token:', token.symbol, 'value:', token.value);
+      }
+      
+      if (tokenMap[tokenAddress]) {
+        // If token already exists in our map, combine the values
+        const existingToken = tokenMap[tokenAddress];
         
-        // Count LP tokens
-        if (token.isLp) {
-          totalLpTokens++;
-          console.log('Found LP token:', token.symbol, 'value:', token.value);
+        // Add the balances (raw and formatted)
+        const newBalance = BigInt(existingToken.balance || '0') + BigInt(token.balance || '0');
+        const newBalanceFormatted = (existingToken.balanceFormatted || 0) + (token.balanceFormatted || 0);
+        
+        // Calculate combined value
+        const newValue = (existingToken.value || 0) + (token.value || 0);
+        
+        // Track which wallets hold this token
+        if (!existingToken.walletHoldings) {
+          existingToken.walletHoldings = [];
         }
+        existingToken.walletHoldings.push({
+          address: wallet.address,
+          amount: token.balanceFormatted || 0,
+          value: token.value || 0
+        });
         
-        if (tokenMap[tokenAddress]) {
-          // If token already exists in our map, combine the values
-          const existingToken = tokenMap[tokenAddress];
-          
-          // Add the balances (raw and formatted) with error handling for BigInt
-          let newBalance = '0';
-          try {
-            newBalance = (BigInt(existingToken.balance || '0') + BigInt(token.balance || '0')).toString();
-          } catch (bigIntError) {
-            console.error('BigInt conversion error for token:', token.symbol, bigIntError);
-            newBalance = existingToken.balance || token.balance || '0';
-          }
-          
-          const newBalanceFormatted = (existingToken.balanceFormatted || 0) + (token.balanceFormatted || 0);
-          
-          // Calculate combined value with sanity check
-          const newValue = Math.min((existingToken.value || 0) + (token.value || 0), 10_000_000);
-          
-          // Track which wallets hold this token
-          if (!existingToken.walletHoldings) {
-            existingToken.walletHoldings = [];
-          }
-          existingToken.walletHoldings.push({
-            address: wallet.address,
-            amount: token.balanceFormatted || 0,
-            value: token.value || 0
-          });
-          
-          // Update the token in our map
-          tokenMap[tokenAddress] = {
-            ...existingToken,
-            balance: newBalance,
-            balanceFormatted: newBalanceFormatted,
-            value: newValue,
-            walletCount: (existingToken.walletCount || 1) + 1
+        // Update the token in our map
+        tokenMap[tokenAddress] = {
+          ...existingToken,
+          balance: newBalance.toString(),
+          balanceFormatted: newBalanceFormatted,
+          value: newValue,
+          walletCount: (existingToken.walletCount || 1) + 1
         };
         
         // For LP tokens, also combine the underlying token values
         if (token.isLp) {
           // Combine LP token0 data
           if (token.lpToken0Balance && token.lpToken0BalanceFormatted) {
-            try {
-              const newToken0Balance = BigInt(existingToken.lpToken0Balance || '0') + BigInt(token.lpToken0Balance || '0');
-              const newToken0BalanceFormatted = (existingToken.lpToken0BalanceFormatted || 0) + (token.lpToken0BalanceFormatted || 0);
-              const newToken0Value = (existingToken.lpToken0Value || 0) + (token.lpToken0Value || 0);
-              
-              tokenMap[tokenAddress].lpToken0Balance = newToken0Balance.toString();
-              tokenMap[tokenAddress].lpToken0BalanceFormatted = newToken0BalanceFormatted;
-              tokenMap[tokenAddress].lpToken0Value = newToken0Value;
-            } catch (lpError) {
-              console.error('Error combining LP token0 data:', lpError);
-            }
+            const newToken0Balance = BigInt(existingToken.lpToken0Balance || '0') + BigInt(token.lpToken0Balance || '0');
+            const newToken0BalanceFormatted = (existingToken.lpToken0BalanceFormatted || 0) + (token.lpToken0BalanceFormatted || 0);
+            const newToken0Value = (existingToken.lpToken0Value || 0) + (token.lpToken0Value || 0);
+            
+            tokenMap[tokenAddress].lpToken0Balance = newToken0Balance.toString();
+            tokenMap[tokenAddress].lpToken0BalanceFormatted = newToken0BalanceFormatted;
+            tokenMap[tokenAddress].lpToken0Value = newToken0Value;
           }
           
           // Combine LP token1 data
           if (token.lpToken1Balance && token.lpToken1BalanceFormatted) {
-            try {
-              const newToken1Balance = BigInt(existingToken.lpToken1Balance || '0') + BigInt(token.lpToken1Balance || '0');
-              const newToken1BalanceFormatted = (existingToken.lpToken1BalanceFormatted || 0) + (token.lpToken1BalanceFormatted || 0);
-              const newToken1Value = (existingToken.lpToken1Value || 0) + (token.lpToken1Value || 0);
-              
-              tokenMap[tokenAddress].lpToken1Balance = newToken1Balance.toString();
-              tokenMap[tokenAddress].lpToken1BalanceFormatted = newToken1BalanceFormatted;
-              tokenMap[tokenAddress].lpToken1Value = newToken1Value;
-            } catch (lpError) {
-              console.error('Error combining LP token1 data:', lpError);
-            }
+            const newToken1Balance = BigInt(existingToken.lpToken1Balance || '0') + BigInt(token.lpToken1Balance || '0');
+            const newToken1BalanceFormatted = (existingToken.lpToken1BalanceFormatted || 0) + (token.lpToken1BalanceFormatted || 0);
+            const newToken1Value = (existingToken.lpToken1Value || 0) + (token.lpToken1Value || 0);
+            
+            tokenMap[tokenAddress].lpToken1Balance = newToken1Balance.toString();
+            tokenMap[tokenAddress].lpToken1BalanceFormatted = newToken1BalanceFormatted;
+            tokenMap[tokenAddress].lpToken1Value = newToken1Value;
           }
         }
       } else {
@@ -276,10 +249,6 @@ export function combineWalletData(wallets: Record<string, any>): any {
             value: token.value || 0
           }]
         };
-      }
-      } catch (tokenError) {
-        console.error(`Error processing token ${token?.symbol || 'unknown'} from wallet ${wallet.address}:`, tokenError);
-        // Continue processing other tokens
       }
     });
   });

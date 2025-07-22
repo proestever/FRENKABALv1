@@ -49,14 +49,6 @@ export function TokenList({
   pagination, 
   onPageChange 
 }: TokenListProps) {
-  // Ensure tokens is always an array
-  const safeTokens = useMemo(() => {
-    if (!tokens || !Array.isArray(tokens)) {
-      console.warn('TokenList received invalid tokens prop:', tokens);
-      return [];
-    }
-    return tokens;
-  }, [tokens]);
   const [filterText, setFilterText] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('value');
   const [showHidden, setShowHidden] = useState(false);
@@ -70,8 +62,8 @@ export function TokenList({
   // and use onPageChange callback to request page changes from the parent
 
   // Extract token addresses and symbols for batch logo loading
-  const tokenAddresses = useMemo(() => safeTokens.map(t => t.address), [safeTokens]);
-  const tokenSymbols = useMemo(() => safeTokens.map(t => t.symbol), [safeTokens]);
+  const tokenAddresses = useMemo(() => tokens.map(t => t.address), [tokens]);
+  const tokenSymbols = useMemo(() => tokens.map(t => t.symbol), [tokens]);
   
   // Use a useState to store the logo URLs
   const [logoUrls, setLogoUrls] = useState<Record<string, string>>({});
@@ -94,46 +86,31 @@ export function TokenList({
 
   // LP tokens only
   const lpTokens = useMemo(() => {
-    return safeTokens.filter(token => token.isLp === true);
-  }, [safeTokens]);
+    return tokens.filter(token => token.isLp === true);
+  }, [tokens]);
   
   // Filter tokens based on view and search
   const filteredTokens = useMemo(() => {
-    try {
-      // First apply the general filters
-      const filtered = safeTokens.filter(token => {
-        try {
-          // Text filter - check for null/undefined values
-          const nameMatch = (token.name?.toLowerCase() || '').includes(filterText.toLowerCase());
-          const symbolMatch = (token.symbol?.toLowerCase() || '').includes(filterText.toLowerCase());
-          const textMatch = nameMatch || symbolMatch;
-          
-          // Hidden filter
-          const isHidden = hiddenTokens.includes(token.address);
-          const shouldShow = showHidden || !isHidden;
-          
-          return textMatch && shouldShow;
-        } catch (filterError) {
-          console.error('Error filtering token:', token?.symbol || 'unknown', filterError);
-          return false;
-        }
-      });
-      
-      // Then apply the view-specific filter
-      if (showLiquidity) {
-        // Only return LP tokens when in liquidity view
-        return filtered.filter(token => token.isLp === true);
-      } else if (!showTransactions) {
-        // In all tokens view, return all tokens
-        return filtered;
-      }
-      
+    // First apply the general filters
+    const filtered = tokens.filter(token => 
+      // Text filter
+      (token.name.toLowerCase().includes(filterText.toLowerCase()) || 
+       token.symbol.toLowerCase().includes(filterText.toLowerCase())) &&
+      // Hidden filter
+      (showHidden || !hiddenTokens.includes(token.address))
+    );
+    
+    // Then apply the view-specific filter
+    if (showLiquidity) {
+      // Only return LP tokens when in liquidity view
+      return filtered.filter(token => token.isLp === true);
+    } else if (!showTransactions) {
+      // In all tokens view, return all tokens
       return filtered;
-    } catch (error) {
-      console.error('Error in filteredTokens:', error);
-      return [];
     }
-  }, [safeTokens, filterText, hiddenTokens, showHidden, showLiquidity, showTransactions]);
+    
+    return filtered;
+  }, [tokens, filterText, hiddenTokens, showHidden, showLiquidity, showTransactions]);
 
   // Sort tokens
   const sortedTokens = useMemo(() => {
@@ -192,7 +169,7 @@ export function TokenList({
   }
 
   // If no tokens and not loading, show empty state
-  if (safeTokens.length === 0 && !isLoading) {
+  if (tokens.length === 0 && !isLoading) {
     return (
       <Card className="p-6 text-center border-border shadow-lg backdrop-blur-sm bg-card/70">
         <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">No tokens found</h3>
@@ -202,7 +179,7 @@ export function TokenList({
   }
 
   // Use prop wallet address or extract from token if needed
-  const effectiveWalletAddress = walletAddress || (safeTokens.length > 0 ? safeTokens[0].address.split(':')[0] : '');
+  const effectiveWalletAddress = walletAddress || (tokens.length > 0 ? tokens[0].address.split(':')[0] : '');
 
   return (
     <Card className="shadow-lg glass-card">
@@ -222,7 +199,7 @@ export function TokenList({
             title="View all token holdings"
           >
             <Wallet size={18} />
-            <span className="text-sm font-medium">Tokens{!showLiquidity && !showTransactions && !showHexStakes ? ` (${sortedTokens?.length || 0})` : ''}</span>
+            <span className="text-sm font-medium">Tokens{!showLiquidity && !showTransactions && !showHexStakes ? ` (${sortedTokens.length})` : ''}</span>
           </button>
           
           <button 
@@ -238,7 +215,7 @@ export function TokenList({
             title="View liquidity positions"
           >
             <Droplets size={18} />
-            <span className="text-sm font-medium">Liquidity{lpTokens?.length > 0 ? ` (${lpTokens.length})` : ''}</span>
+            <span className="text-sm font-medium">Liquidity{lpTokens.length > 0 ? ` (${lpTokens.length})` : ''}</span>
           </button>
           
           <button
@@ -287,7 +264,7 @@ export function TokenList({
                 <h3 className="text-lg md:text-xl font-semibold text-white flex items-center">
                   <Wallet size={18} className="mr-2 text-blue-300" />
                   <span>Tokens</span>
-                  <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens?.length || 0})</span>
+                  <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens.length})</span>
                 </h3>
                 <p className="text-xs md:text-sm text-white/70 mt-1">
                   All tokens in this wallet
@@ -299,7 +276,7 @@ export function TokenList({
                 <h3 className="text-lg md:text-xl font-semibold text-white flex items-center">
                   <Droplets size={18} className="mr-2 text-sky-300" />
                   <span>Liquidity Positions</span>
-                  <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens?.length || 0})</span>
+                  <span className="ml-2 text-sm md:text-md text-white/60">({sortedTokens.length})</span>
                 </h3>
                 <p className="text-xs md:text-sm text-white/70 mt-1">
                   PulseX tokens representing your liquidity positions

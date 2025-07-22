@@ -16,7 +16,7 @@ import { calculateBalancesFromTransferHistory, getTransferHistoryWithBalances } 
 import { getDirectTokenBalances as getDirectBalances } from "./services/direct-balance-service";
 import { getDirectTokenBalancesNoPrices } from "./services/direct-balance-no-prices";
 import { getProviderHealth, switchToProvider, resetFailedProviders } from "./services/rpc-provider";
-import { getScannerTokenBalances, getFastScannerTokenBalances } from "./services/scanner-balance-service";
+import { getScannerTokenBalances } from "./services/scanner-balance-service";
 import { getScannerTransactionHistory, getFullScannerTransactionHistory } from "./services/scanner-transaction-service";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
@@ -332,76 +332,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching scanner balances:", error);
       return res.status(500).json({ 
         message: "Failed to fetch scanner balances",
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
-  
-  // API route for fast wallet balances (for portfolios) - uses original scanner without enhanced features
-  app.get("/api/wallet/:address/fast-balances", async (req, res) => {
-    try {
-      const { address } = req.params;
-      
-      if (!address || typeof address !== 'string') {
-        return res.status(400).json({ message: "Invalid wallet address" });
-      }
-      
-      // Validate ethereum address format
-      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-      if (!addressRegex.test(address)) {
-        return res.status(400).json({ message: "Invalid wallet address format" });
-      }
-      
-      console.log(`Getting fast balances for ${address}`);
-      
-      const startTime = Date.now();
-      
-      // Use the regular scanner API service instead of enhanced scanner
-      const tokens = await getFastScannerTokenBalances(address);
-      
-      const endTime = Date.now();
-      
-      console.log(`Fast balance fetch completed in ${endTime - startTime}ms`);
-      
-      // Calculate total value - for fast scanner this should always be 0
-      // since prices are calculated client-side
-      let totalValue = 0;
-      
-      // Just in case any values are set, apply sanity checks
-      if (tokens.some(t => t.value && t.value > 0)) {
-        totalValue = tokens.reduce((sum, token) => {
-          // Skip if value is 0 or undefined (client will calculate)
-          if (!token.value || token.value === 0) return sum;
-          // Ensure value is a valid number and not astronomical
-          const value = parseFloat(token.value.toString());
-          // Skip values over $10 million per token (sanity check)
-          if (isNaN(value) || !isFinite(value) || value > 10_000_000) {
-            console.warn(`Skipping token ${token.symbol} with suspicious value: ${token.value}`);
-            return sum;
-          }
-          return sum + value;
-        }, 0);
-      }
-      
-      // Find PLS balance
-      const plsToken = tokens.find(t => t.isNative);
-      const plsBalance = plsToken ? plsToken.balanceFormatted : 0;
-      const plsPriceChange = plsToken ? plsToken.priceChange24h : null;
-      
-      return res.json({
-        address,
-        tokens,
-        totalValue,
-        tokenCount: tokens.length,
-        plsBalance,
-        plsPriceChange,
-        networkCount: 1,
-        fetchMethod: 'fast-scanner'
-      });
-    } catch (error) {
-      console.error("Error fetching fast balances:", error);
-      return res.status(500).json({ 
-        message: "Failed to fetch fast balances",
         error: error instanceof Error ? error.message : "Unknown error" 
       });
     }

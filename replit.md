@@ -179,27 +179,10 @@ Required environment variables:
 ### July 22, 2025 - Fixed Portfolio Balance Discrepancies with Rate Limiting and Retry Logic
 - **Added retry logic to Scanner API** - Scanner API calls now retry up to 3 times with exponential backoff on failure
 - **Rate limit handling** - Special handling for 429 (rate limit) errors with longer wait times between retries
-- **Sequential wallet loading** - Portfolio wallets now load one at a time with 1-second delays to prevent timeouts
-- **Graceful failure handling** - Failed wallet fetches display clear error messages with "⚠️ Failed to load: [error]"
+- **Controlled concurrency for portfolios** - Portfolio wallet fetching now processes in batches of 3 with 500ms delays for better stability
+- **Graceful failure handling** - Failed wallet fetches return empty data instead of throwing errors
 - **10-second timeout protection** - All Scanner API calls have timeout protection to prevent hanging
-- **Progressive loading feedback** - Portfolio loading shows "Loading wallet X of Y..." with real-time progress
-
-### July 22, 2025 - Enhanced Scanner Performance Optimization with Parallel Batch Processing
-- **Parallel token processing** - Enhanced scanner now processes tokens in batches of 10 simultaneously instead of one-by-one
-- **Parallel LP token analysis** - LP tokens checked for pair status all at once, then analyzed in batches of 5
-- **10-minute timeout increase** - Client-side timeout increased from 10 seconds to 10 minutes to handle complex wallets
-- **Performance improvements** - Complex wallets with many tokens/LP positions now scan significantly faster
-- **Batch logging** - Added detailed batch progress logging to track processing status
-- **Maintained accuracy** - Parallel processing maintains same data accuracy while improving speed
-
-### July 22, 2025 - Implemented Dual Scanner Approach for Optimal Performance
-- **Created fast scanner endpoint** - New `/api/wallet/:address/fast-balances` endpoint that uses only PulseChain Scan API without enhanced features
-- **Dual scanner strategy** - Portfolios use fast scanner (2-4 seconds), individual wallets use enhanced scanner for detailed analysis
-- **Fast scanner function** - Added `getFastScannerTokenBalances` function that skips LP analysis and enhanced features for speed
-- **Portfolio optimization** - Updated portfolio loading to use `fetchWalletDataFast` function for all portfolio wallet fetches
-- **Enhanced scanner reserved** - Individual wallet searches still use enhanced scanner for LP token details and comprehensive analysis
-- **Performance results** - Portfolio loading reduced from 5-10 minutes to under 30 seconds for 10 wallets
-- **Backwards compatible** - Both scanner types use same data format, seamlessly switching based on use case
+- **Progressive loading feedback** - Portfolio loading now shows real-time progress as wallets are fetched
 
 ### July 21, 2025 - Wallet Share Feature Enhanced with Modal and Responsive Design
 - **Share Modal** - Converted share feature from full page to popup modal for better UX
@@ -230,26 +213,6 @@ Required environment variables:
 - **Smart contract service correctly selects highest liquidity pair** - PulseReflection has 10 trading pairs, service now properly selects the $5,147 liquidity WPLS pair showing correct price of $0.000000005676
 - **DexScreener now only used for logos** - Price fetching primarily from smart contracts, DexScreener only provides token logos as fallback
 - **Result** - PulseReflection and all other tokens now show accurate real-time prices from highest liquidity pools
-
-### July 22, 2025 - Fixed Portfolio Loading Null Reference Error & Dust Token Filtering
-- **Fixed "Cannot read properties of null (reading 'length')" error** - Added null checks in both `combineWalletData` function and `TokenList` component
-- **TokenList component hardening** - Added comprehensive null checks when mapping, filtering, and accessing the tokens array
-- **Combined wallet safety** - Ensures combined wallet always has a tokens array even if all wallets fail to load
-- **Graceful error handling** - When loading portfolios, wallets that fail to load or have no tokens array are now skipped instead of crashing the app
-- **Added warning logs** - System now logs warnings when encountering wallets without tokens arrays for better debugging
-- **Portfolio stability** - Portfolios now load reliably even when some wallet data fails to fetch
-- **Dust token filtering** - Added filter to skip tokens with amounts less than 0.000001 to prevent calculation errors from broken liquidity pools
-- **Value sanity checks** - Added checks to cap any token values over $10 million to prevent astronomical values from breaking the UI
-
-### July 22, 2025 - Comprehensive Fix for Astronomical Value Bug
-- **Identified issue** - Wallet 0x592139a3f8cf019f628a152fc1262b8aef5b7199 had tokens with astronomical values causing portfolio crashes
-- **Multi-layer protection implemented**:
-  - **Server-side dust filtering** - Skip tokens with balances < 0.000001 in scanner-balance-service.ts
-  - **Server-side value cap** - Cap token values at $10M in routes.ts for fast-balances endpoint
-  - **Client-side portfolio cap** - Cap individual wallet totalValues at $10M when combining in utils.ts
-  - **Client-side price calculation cap** - Cap calculated values at $10M in wallet-client-service.ts for both fetchWalletDataFast and fetchWalletDataWithContractPrices
-- **Root cause** - Likely broken liquidity pools or tokens with extreme price/balance combinations
-- **Result** - Portfolios now load reliably without crashes, suspicious values are logged and capped
 
 ### July 22, 2025 - Implemented WPLS/DAI Pair as Foundation for All Price Calculations
 - **WPLS price foundation** - All WPLS prices now come from the WPLS/DAI pair at 0xe56043671df55de5cdf8459710433c10324de0ae
