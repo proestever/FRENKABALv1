@@ -186,7 +186,7 @@ export default function Home() {
       const [walletResults, hexStakesData, individualHexResults] = await Promise.all([
         // Fetch wallet data in parallel batches for faster loading
         (async () => {
-          const BATCH_SIZE = 3; // Process 3 wallets simultaneously
+          const BATCH_SIZE = 10; // Process 10 wallets simultaneously for much faster loading
           const results = [];
           
           // Process wallets in batches
@@ -195,13 +195,15 @@ export default function Home() {
             const batchIndex = Math.floor(i / BATCH_SIZE) + 1;
             const totalBatches = Math.ceil(addresses.length / BATCH_SIZE);
             
-            // Update progress
-            setMultiWalletProgress({
-              currentBatch: i + batch.length,
-              totalBatches: addresses.length,
-              status: 'loading',
-              message: `Loading wallets ${i + 1} to ${Math.min(i + batch.length, addresses.length)} of ${addresses.length}...`
-            });
+            // Update progress less frequently - only at batch boundaries
+            if (i === 0 || (i + batch.length) === addresses.length || i % 20 === 0) {
+              setMultiWalletProgress({
+                currentBatch: i + batch.length,
+                totalBatches: addresses.length,
+                status: 'loading',
+                message: `Loading wallets ${i + 1} to ${Math.min(i + batch.length, addresses.length)} of ${addresses.length}...`
+              });
+            }
             
             // Process batch in parallel
             const batchPromises = batch.map(async (address) => {
@@ -287,10 +289,10 @@ export default function Home() {
         totalWallets: addresses.length,
         successfulWallets: Object.keys(walletData).length,
         failedWallets: addresses.length - Object.keys(walletData).length,
-        walletDetails: Object.entries(walletData).map(([addr, data]) => ({
+        walletDetails: Object.entries(walletData).map(([addr, data]: [string, any]) => ({
           address: addr,
           tokenCount: data.tokens?.length || 0,
-          lpCount: data.tokens?.filter(t => t.isLp).length || 0,
+          lpCount: data.tokens?.filter((t: any) => t.isLp).length || 0,
           value: data.totalValue || 0
         }))
       });

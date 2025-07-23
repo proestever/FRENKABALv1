@@ -63,7 +63,7 @@ class SmartContractPriceService {
   private currentProviderIndex = 0;
   private priceCache = new Map<string, { data: PriceData; timestamp: number }>();
   private wplsPriceCache: { price: number; timestamp: number } | null = null;
-  private CACHE_TTL = 2000; // 2 seconds cache for rapid updates
+  private CACHE_TTL = 30000; // 30 seconds cache to reduce redundant fetches
 
   constructor() {
     this.initializeProviders().catch(console.error);
@@ -76,7 +76,7 @@ class SmartContractPriceService {
         const provider = new ethers.providers.JsonRpcProvider(url, {
           chainId: 369,
           name: 'pulsechain',
-          ensAddress: null // Disable ENS resolution on PulseChain
+          ensAddress: undefined // Disable ENS resolution on PulseChain
         });
         // Set a timeout for network detection
         const networkPromise = provider.detectNetwork();
@@ -409,7 +409,7 @@ class SmartContractPriceService {
     const results = new Map<string, PriceData | null>();
     
     // Process all tokens in parallel with rate limiting
-    const BATCH_SIZE = 100; // Massive parallelization for fast processing
+    const BATCH_SIZE = 200; // Increased parallelization for even faster processing
     const batches: string[][] = [];
     
     // Create batches

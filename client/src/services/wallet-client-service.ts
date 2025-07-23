@@ -487,3 +487,119 @@ export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): P
   
   console.log('Background logo fetch completed');
 }
+
+/**
+ * Optimized wallet data fetching for portfolios
+ * Pre-fetches and caches prices for all unique tokens across multiple wallets
+ */
+export async function fetchPortfolioWalletsOptimized(
+  addresses: string[],
+  onProgress?: (message: string, progress: number) => void
+): Promise<Record<string, Wallet>> {
+  try {
+    const results: Record<string, Wallet> = {};
+    
+    // Step 1: Fetch all wallet data in parallel (without prices)
+    if (onProgress) onProgress(`Fetching data for ${addresses.length} wallets...`, 10);
+    
+    const walletDataPromises = addresses.map(async (address) => {
+      try {
+        const response = await fetch(`/api/wallet/${address}/scanner-balances`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch wallet ${address}`);
+        }
+        const data = await response.json();
+        return { address, data };
+      } catch (error) {
+        console.error(`Error fetching wallet ${address}:`, error);
+        return { address, data: null };
+      }
+    });
+    
+    const walletDataResults = await Promise.all(walletDataPromises);
+    
+    // Step 2: Collect all unique token addresses
+    const uniqueTokenAddresses = new Set<string>();
+    const validWallets: Array<{ address: string; data: Wallet }> = [];
+    
+    for (const { address, data } of walletDataResults) {
+      if (data && data.tokens) {
+        validWallets.push({ address, data });
+        data.tokens.forEach((token: ProcessedToken) => {
+          if (!token.isNative && !token.price && !token.isLp) {
+            uniqueTokenAddresses.add(token.address.toLowerCase());
+          }
+        });
+      } else {
+        // Add error wallet to results
+        results[address] = {
+          address,
+          tokens: [],
+          totalValue: 0,
+          tokenCount: 0,
+          plsBalance: undefined,
+          plsPriceChange: undefined,
+          networkCount: 1,
+          error: 'Failed to load wallet data'
+        };
+      }
+    }
+    
+    if (onProgress) onProgress(`Fetching prices for ${uniqueTokenAddresses.size} unique tokens...`, 30);
+    
+    // Step 3: Fetch all prices at once
+    const tokenAddressArray = Array.from(uniqueTokenAddresses);
+    const priceMap = await getMultipleTokenPricesFromContract(tokenAddressArray);
+    
+    if (onProgress) onProgress(`Applying prices to ${validWallets.length} wallets...`, 70);
+    
+    // Step 4: Apply prices to all wallets
+    for (const { address, data } of validWallets) {
+      // Apply prices to tokens
+      const tokensWithPrices = data.tokens.map((token: ProcessedToken) => {
+        if (token.isNative || token.price || token.isLp) {
+          return token;
+        }
+        
+        const priceData = priceMap.get(token.address.toLowerCase());
+        if (priceData) {
+          const value = token.balanceFormatted * priceData.price;
+          return {
+            ...token,
+            price: priceData.price,
+            value,
+            priceData: {
+              price: priceData.price,
+              priceChange24h: 0,
+              liquidityUsd: priceData.liquidity,
+              volumeUsd24h: 0,
+              dexId: 'pulsex',
+              pairAddress: priceData.pairAddress,
+              logo: token.logo
+            }
+          };
+        }
+        return token;
+      });
+      
+      // Calculate total value
+      const totalValue = tokensWithPrices.reduce((sum, token) => sum + (token.value || 0), 0);
+      
+      // Sort by value
+      tokensWithPrices.sort((a, b) => (b.value || 0) - (a.value || 0));
+      
+      results[address] = {
+        ...data,
+        tokens: tokensWithPrices,
+        totalValue
+      };
+    }
+    
+    if (onProgress) onProgress('Portfolio loading complete', 100);
+    
+    return results;
+  } catch (error) {
+    console.error('Error in optimized portfolio fetch:', error);
+    throw error;
+  }
+}

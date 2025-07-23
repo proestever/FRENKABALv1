@@ -1,5 +1,15 @@
 # FrenKabal - PulseChain Wallet Tracker
 
+## Recent Changes
+
+### July 23, 2025 - Optimized Portfolio and Wallet Loading Performance
+- **Increased parallel wallet loading** - Portfolios now load 10 wallets simultaneously (up from 3) for 3x faster loading
+- **Extended price cache duration** - Smart contract price cache extended from 2 to 30 seconds to reduce redundant fetches
+- **Reduced progress update frequency** - Updates only at batch boundaries to minimize UI re-renders during loading
+- **Increased token price parallelization** - Token prices now fetch 200 at a time (up from 100) for faster processing
+- **Added optimized portfolio function** - New `fetchPortfolioWalletsOptimized` pre-fetches prices for all unique tokens
+- **Result** - Portfolio loading times reduced significantly, especially for large portfolios with many shared tokens
+
 ## Overview
 
 FrenKabal is a comprehensive PulseChain wallet tracking application that provides real-time blockchain insights, portfolio management, and advanced wallet analytics. The application allows users to track multiple PulseChain wallet addresses, monitor token balances, view transaction history, and manage portfolios with advanced features like LP token support and price tracking.
