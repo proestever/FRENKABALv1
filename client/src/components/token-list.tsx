@@ -14,7 +14,6 @@ import { useBatchTokenLogos } from '@/hooks/use-batch-token-logos';
 import { TransactionHistory } from '@/components/transaction-history';
 import { TokenActionsMenu } from '@/components/token-actions-menu';
 import { HexStakes } from '@/components/hex-stakes';
-import { VirtualizedTokenList } from '@/components/virtualized-token-list';
 import {
   Tooltip,
   TooltipContent,
@@ -563,189 +562,172 @@ export function TokenList({
           )}
           
           {/* Desktop View - Only shown on medium screens and up */}
-          <div className="hidden md:block">
-            {/* Check if we should use virtualized list based on token count */}
-            {sortedTokens.length >= 100 && !showLiquidity ? (
-              // Use virtualized list for large token lists
-              <VirtualizedTokenList
-                tokens={sortedTokens}
-                hiddenTokens={hiddenTokens}
-                logoUrls={logoUrls}
-                onToggleVisibility={handleToggleVisibility}
-                walletAddress={effectiveWalletAddress}
-                isMultiWallet={isMultiWallet}
-                showLiquidity={showLiquidity}
-              />
-            ) : (
-              // Use regular table for smaller lists or liquidity view
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-white/10">
-                  <thead className="bg-black/20 backdrop-blur-md">
-                    <tr>
-                      <th scope="col" className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/5 first:rounded-tl-md">
-                        Token
-                      </th>
-                      {!showLiquidity && (
-                        <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
-                          Balance
-                        </th>
-                      )}
-                      {!showLiquidity && (
-                        <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/5">
-                          Price (24h)
-                        </th>
-                      )}
-                      {!showLiquidity && (
-                        <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
-                          Value
-                        </th>
-                      )}
-                      <th scope="col" className="hidden px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/12">
-                        {/* Hidden column */}
-                      </th>
-                      {!showLiquidity && (
-                        <th scope="col" className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/12 last:rounded-tr-md">
-                          Visibility
-                        </th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/10">
-                    {sortedTokens.map((token, index) => {
-                      const priceChangeClass = getAdvancedChangeClass(token.priceChange24h);
-                      const isHidden = hiddenTokens.includes(token.address);
-                      
-                      // Create a unique key using address and index to avoid duplicate keys
-                      return (
-                        <tr key={`desktop-${token.address}-${index}`} className="hover:bg-black/20 transition-colors">
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center">
-                              {token.isLp && showLiquidity ? (
-                                <div className="w-full">
-                                  <LpTokenDisplay 
-                                    token={token}
-                                    size="md"
-                                    showDetails={showLiquidity}
-                                    expanded={showLiquidity}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="mr-3 flex-shrink-0">
-                                  {token.isLp ? (
-                                    <LpTokenDisplay 
-                                      token={token}
-                                      size="md"
-                                      showDetails={false}
-                                      expanded={false}
-                                    />
-                                  ) : (
-                                    <TokenLogo 
-                                      address={token.address}
-                                      symbol={token.symbol}
-                                      fallbackLogo={token.logo}
-                                      size="md"
-                                    />
-                                  )}
-                                </div>
-                              )}
-                              <div>
-                                <div className="flex items-center gap-1">
-                                  {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
-                                    <span className="text-base font-bold text-foreground" title={token.name}>
-                                      <span></span>
-                                    </span>
-                                  ) : (
-                                    <TokenActionsMenu 
-                                      tokenAddress={token.address} 
-                                      tokenName={token.name} 
-                                      tokenSymbol={token.symbol}
-                                    >
-                                      <div className="cursor-pointer text-base font-bold text-foreground hover:text-gray-300 transition-colors">
-                                        <span title={token.name || ''}>
-                                          {token.name && token.name.length > 15 ? `${token.name.substring(0, 15)}...` : (token.name || 'Unknown')}
-                                        </span>
-                                      </div>
-                                    </TokenActionsMenu>
-                                  )}
-                                  {token.verified && (
-                                    <span className="text-green-400 flex-shrink-0" title="Verified Contract">
-                                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                        <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
-                                      </svg>
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 overflow-hidden">
-                                  {!token.isLp && (
-                                    <div className="text-sm text-muted-foreground" title={token.symbol || ''}>
-                                      {token.symbol && token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : (token.symbol || 'Unknown')}
-                                    </div>
-                                  )}
-                                  {token.exchange && (
-                                    <div className="text-xs bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded-md border border-purple-500/30 flex-shrink-0">
-                                      {token.exchange === "PancakeSwap v3" ? "9mm v3" : token.exchange}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="min-w-full divide-y divide-white/10">
+              <thead className="bg-black/20 backdrop-blur-md">
+                <tr>
+                  <th scope="col" className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/5 first:rounded-tl-md">
+                    Token
+                  </th>
+                  {!showLiquidity && (
+                    <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
+                      Balance
+                    </th>
+                  )}
+                  {!showLiquidity && (
+                    <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/5">
+                      Price (24h)
+                    </th>
+                  )}
+                  {!showLiquidity && (
+                    <th scope="col" className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/6">
+                      Value
+                    </th>
+                  )}
+                  <th scope="col" className="hidden px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/12">
+                    {/* Hidden column */}
+                  </th>
+                  {!showLiquidity && (
+                    <th scope="col" className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-1/12 last:rounded-tr-md">
+                      Visibility
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {sortedTokens.map((token, index) => {
+                  const priceChangeClass = getAdvancedChangeClass(token.priceChange24h);
+                  const isHidden = hiddenTokens.includes(token.address);
+                  
+                  // Create a unique key using address and index to avoid duplicate keys
+                  return (
+                    <tr key={`desktop-${token.address}-${index}`} className="hover:bg-black/20 transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {token.isLp && showLiquidity ? (
+                            <div className="w-full">
+                              <LpTokenDisplay 
+                                token={token}
+                                size="md"
+                                showDetails={showLiquidity}
+                                expanded={showLiquidity}
+                              />
                             </div>
-                          </td>
-                          {!showLiquidity && (
-                            <td className="px-4 py-3 whitespace-nowrap text-right">
-                              <div className="text-base font-bold text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
+                          ) : (
+                            <div className="mr-3 flex-shrink-0">
+                              {token.isLp ? (
+                                <LpTokenDisplay 
+                                  token={token}
+                                  size="md"
+                                  showDetails={false}
+                                  expanded={false}
+                                />
+                              ) : (
+                                <TokenLogo 
+                                  address={token.address}
+                                  symbol={token.symbol}
+                                  fallbackLogo={token.logo}
+                                  size="md"
+                                />
+                              )}
+                            </div>
+                          )}
+                          <div>
+                            <div className="flex items-center gap-1">
+                              {token.isLp && token.lpToken0Symbol && token.lpToken1Symbol ? (
+                                <span className="text-base font-bold text-foreground" title={token.name}>
+                                  <span></span>
+                                </span>
+                              ) : (
+                                <TokenActionsMenu 
+                                  tokenAddress={token.address} 
+                                  tokenName={token.name} 
+                                  tokenSymbol={token.symbol}
+                                >
+                                  <div className="cursor-pointer text-base font-bold text-foreground hover:text-gray-300 transition-colors">
+                                    <span title={token.name || ''}>
+                                      {token.name && token.name.length > 15 ? `${token.name.substring(0, 15)}...` : (token.name || 'Unknown')}
+                                    </span>
+                                  </div>
+                                </TokenActionsMenu>
+                              )}
+                              {token.verified && (
+                                <span className="text-green-400 flex-shrink-0" title="Verified Contract">
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                    <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                                  </svg>
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 overflow-hidden">
                               {!token.isLp && (
                                 <div className="text-sm text-muted-foreground" title={token.symbol || ''}>
                                   {token.symbol && token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : (token.symbol || 'Unknown')}
                                 </div>
                               )}
-                            </td>
-                          )}
-                          {!showLiquidity && (
-                            <td className="px-4 py-3 whitespace-nowrap text-right">
-                              <div className="flex flex-col items-end">
-                                <div className="text-base font-bold text-white">
-                                  {token.price !== undefined 
-                                    ? formatTokenPrice(token.price) 
-                                    : 'N/A'}
+                              {token.exchange && (
+                                <div className="text-xs bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded-md border border-purple-500/30 flex-shrink-0">
+                                  {token.exchange === "PancakeSwap v3" ? "9mm v3" : token.exchange}
                                 </div>
-                                <div className={`text-sm font-medium ${priceChangeClass}`}>
-                                  {token.priceChange24h !== undefined 
-                                    ? `(${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%)` 
-                                    : ''}
-                                </div>
-                              </div>
-                            </td>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      {!showLiquidity && (
+                        <td className="px-4 py-3 whitespace-nowrap text-right">
+                          <div className="text-base font-bold text-white">{formatTokenAmount(token.balanceFormatted || 0)}</div>
+                          {!token.isLp && (
+                            <div className="text-sm text-muted-foreground" title={token.symbol || ''}>
+                              {token.symbol && token.symbol.length > 15 ? `${token.symbol.substring(0, 15)}...` : (token.symbol || 'Unknown')}
+                            </div>
                           )}
-                          {!showLiquidity && (
-                            <td className="px-4 py-3 whitespace-nowrap text-right">
-                              <div className="text-base font-bold text-white">
-                                {token.value !== undefined 
-                                  ? formatCurrency(token.value) 
-                                  : 'N/A'}
-                              </div>
-                            </td>
-                          )}
-                          <td className="hidden px-4 py-3 whitespace-nowrap text-right">
-                            {/* Column hidden but kept for structure */}
-                          </td>
-                          {!showLiquidity && (
-                            <td className="px-4 py-3 whitespace-nowrap text-center">
-                              <button 
-                                onClick={() => handleToggleVisibility(token.address)} 
-                                className={`p-1.5 hover:opacity-80 transition-opacity ${isHidden ? 'text-white/40' : 'text-white/70'}`}
-                                title={isHidden ? "Show token" : "Hide token"}
-                              >
-                                {isHidden ? <EyeOff size={20} /> : <Eye size={20} />}
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                        </td>
+                      )}
+                      {!showLiquidity && (
+                        <td className="px-4 py-3 whitespace-nowrap text-right">
+                          <div className="flex flex-col items-end">
+                            <div className="text-base font-bold text-white">
+                              {token.price !== undefined 
+                                ? formatTokenPrice(token.price) 
+                                : 'N/A'}
+                            </div>
+                            <div className={`text-sm font-medium ${priceChangeClass}`}>
+                              {token.priceChange24h !== undefined 
+                                ? `(${token.priceChange24h > 0 ? '+' : ''}${token.priceChange24h.toFixed(1)}%)` 
+                                : ''}
+                            </div>
+                          </div>
+                        </td>
+                      )}
+                      {!showLiquidity && (
+                        <td className="px-4 py-3 whitespace-nowrap text-right">
+                          <div className="text-base font-bold text-white">
+                            {token.value !== undefined 
+                              ? formatCurrency(token.value) 
+                              : 'N/A'}
+                          </div>
+                        </td>
+                      )}
+                      <td className="hidden px-4 py-3 whitespace-nowrap text-right">
+                        {/* Column hidden but kept for structure */}
+                      </td>
+                      {!showLiquidity && (
+                        <td className="px-4 py-3 whitespace-nowrap text-center">
+                          <button 
+                            onClick={() => handleToggleVisibility(token.address)} 
+                            className={`p-1.5 hover:opacity-80 transition-opacity ${isHidden ? 'text-white/40' : 'text-white/70'}`}
+                            title={isHidden ? "Show token" : "Hide token"}
+                          >
+                            {isHidden ? <EyeOff size={20} /> : <Eye size={20} />}
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
           
           <div className="p-4 border-t border-white/10">

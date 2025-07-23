@@ -2,14 +2,12 @@
 
 ## Recent Changes
 
-### July 23, 2025 - Implemented Virtual Scrolling for Large Token Lists
-- **Added react-window integration** - Created VirtualizedTokenList component that uses virtual scrolling for smooth rendering
-- **Automatic virtualization threshold** - Token lists with 100+ tokens automatically switch to virtualized rendering
-- **Memory efficiency** - Only renders visible tokens in viewport, dramatically reducing DOM nodes and memory usage
-- **Maintained functionality** - All features like token actions, hiding/showing tokens, and multi-wallet support preserved
-- **Performance improvement** - Eliminates lag and sluggishness when viewing wallets with hundreds or thousands of tokens
-- **Seamless integration** - Desktop view automatically switches between table (for <100 tokens) and virtualized list (for 100+ tokens)
-- **Result** - Large portfolios with 400+ tokens now render instantly with smooth scrolling, no lag or freezing
+### July 23, 2025 - Virtual Scrolling Implementation Attempted (Reverted)
+- **Created VirtualizedTokenList component** - Built a react-window based virtual scrolling component for large token lists
+- **Integration issues discovered** - Initial integration caused UI organization problems and broke logo loading functionality
+- **Reverted to table view** - Restored original table implementation to maintain stability
+- **Component preserved** - VirtualizedTokenList component remains available for future optimization efforts
+- **Next steps** - Component needs proper integration with existing table structure and logo loading mechanism
 
 ### July 23, 2025 - Optimized Portfolio and Wallet Loading Performance
 - **Increased parallel wallet loading** - Portfolios now load 10 wallets simultaneously (up from 3) for 3x faster loading
