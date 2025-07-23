@@ -8,9 +8,12 @@ import { Search, ArrowDownUp, Eye, EyeOff, Wallet, History, Droplets, GitCompare
 import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass } from '@/lib/utils';
 import { formatTokenPrice } from '@/lib/format';
 import { TokenLogo } from '@/components/token-logo';
+import { LazyTokenLogo } from '@/components/lazy-token-logo';
 import { LpTokenDisplay } from '@/components/lp-token-display';
 import { getHiddenTokens, toggleHiddenToken, isTokenHidden } from '@/lib/api';
 import { useBatchTokenLogos } from '@/hooks/use-batch-token-logos';
+import { usePagination } from '@/hooks/use-pagination';
+import { useDebounce } from '@/hooks/use-debounce';
 import { TransactionHistory } from '@/components/transaction-history';
 import { TokenActionsMenu } from '@/components/token-actions-menu';
 import { HexStakes } from '@/components/hex-stakes';
@@ -58,6 +61,7 @@ export function TokenList({
     return tokens;
   }, [tokens]);
   const [filterText, setFilterText] = useState('');
+  const debouncedFilterText = useDebounce(filterText, 300);
   const [sortBy, setSortBy] = useState<SortOption>('value');
   const [showHidden, setShowHidden] = useState(false);
   const [hiddenTokens, setHiddenTokens] = useState<string[]>(getHiddenTokens());
@@ -105,15 +109,15 @@ export function TokenList({
         hiddenTokensCount: hiddenTokens.length,
         showHidden,
         showLiquidity,
-        filterText
+        filterText: debouncedFilterText
       });
       
       // First apply the general filters
       const filtered = safeTokens.filter(token => {
         try {
           // Text filter - check for null/undefined values
-          const nameMatch = (token.name?.toLowerCase() || '').includes(filterText.toLowerCase());
-          const symbolMatch = (token.symbol?.toLowerCase() || '').includes(filterText.toLowerCase());
+          const nameMatch = (token.name?.toLowerCase() || '').includes(debouncedFilterText.toLowerCase());
+          const symbolMatch = (token.symbol?.toLowerCase() || '').includes(debouncedFilterText.toLowerCase());
           const textMatch = nameMatch || symbolMatch;
           
           // Hidden filter
@@ -146,7 +150,7 @@ export function TokenList({
       console.error('Error in filteredTokens:', error);
       return [];
     }
-  }, [safeTokens, filterText, hiddenTokens, showHidden, showLiquidity, showTransactions]);
+  }, [safeTokens, debouncedFilterText, hiddenTokens, showHidden, showLiquidity, showTransactions]);
 
   // Sort tokens
   const sortedTokens = useMemo(() => {
@@ -183,6 +187,18 @@ export function TokenList({
       }
     });
   }, [filteredTokens, sortBy, pagination]);
+  
+  // Apply pagination to sorted tokens
+  const { 
+    paginatedData: paginatedTokens, 
+    hasMore, 
+    loadMore, 
+    displayedItems,
+    totalItems 
+  } = usePagination({ 
+    data: sortedTokens, 
+    itemsPerPage: 50 
+  });
 
   // Skip loading state as we already have a progress bar at the top of the page
   // We'll let the parent component handle the loading state entirely
@@ -383,7 +399,7 @@ export function TokenList({
           {/* Mobile View - Only shown on small screens */}
           <div className="block md:hidden">
             <div className="space-y-1">
-              {sortedTokens.map((token, index) => {
+              {paginatedTokens.map((token, index) => {
                 const priceChangeClass = getChangeColorClass(token.priceChange24h);
                 const isHidden = hiddenTokens.includes(token.address);
                 
@@ -433,11 +449,11 @@ export function TokenList({
                               expanded={false}
                             />
                           ) : (
-                            <TokenLogo 
+                            <LazyTokenLogo 
                               address={token.address}
                               symbol={token.symbol}
-                              logo={token.logo}
-                              size="md"
+                              fallbackLogo={token.logo}
+                              size={40}
                             />
                           )}
                         </div>
@@ -595,7 +611,7 @@ export function TokenList({
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {sortedTokens.map((token, index) => {
+                {paginatedTokens.map((token, index) => {
                   const priceChangeClass = getAdvancedChangeClass(token.priceChange24h);
                   const isHidden = hiddenTokens.includes(token.address);
                   
@@ -623,11 +639,11 @@ export function TokenList({
                                   expanded={false}
                                 />
                               ) : (
-                                <TokenLogo 
+                                <LazyTokenLogo 
                                   address={token.address}
                                   symbol={token.symbol}
                                   fallbackLogo={token.logo}
-                                  size="md"
+                                  size={40}
                                 />
                               )}
                             </div>
@@ -732,11 +748,19 @@ export function TokenList({
           
           <div className="p-4 border-t border-white/10">
             <div className="text-muted-foreground text-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div>
-                Showing {sortedTokens.length} token{sortedTokens.length !== 1 ? 's' : ''}
+              <div className="flex items-center gap-4">
+                <span>
+                  Showing {displayedItems} of {totalItems} token{totalItems !== 1 ? 's' : ''}
+                </span>
+                {hasMore && (
+                  <button
+                    onClick={loadMore}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Load More
+                  </button>
+                )}
               </div>
-              
-              {/* Pagination Controls Removed - Now loading all tokens at once */}
               
               {hiddenTokens.length > 0 && (
                 <div className="flex items-center gap-2">
