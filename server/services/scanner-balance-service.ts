@@ -34,17 +34,17 @@ function getDefaultLogo(symbol: string, address?: string): string {
   const addressLower = address?.toLowerCase();
   
   // Special handling for stablecoins
-  if (addressLower === '0x15d38573d2feeb82e7ad5187ab8c5d52810b6f40') {
+  if (addressLower === '0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07') {
     // USDC from Ethereum
-    return 'https://tokens.coingecko.com/images/6319/large/usdc.png';
+    return 'https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png';
   }
   if (addressLower === '0xefd766ccb38eaf1dfd701853bfce31359239f305') {
     // DAI from Ethereum
-    return 'https://tokens.coingecko.com/images/9956/large/Badge_Dai.png';
+    return 'https://assets.coingecko.com/coins/images/9956/large/4943.png';
   }
   if (addressLower === '0x0cb6f5a34ad42ec934882a05265a7d5f59b51a2f') {
     // USDT from Ethereum
-    return 'https://tokens.coingecko.com/images/325/large/Tether.png';
+    return 'https://assets.coingecko.com/coins/images/325/large/Tether.png';
   }
   
   const logoMap: Record<string, string> = {

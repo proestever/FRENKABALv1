@@ -378,6 +378,14 @@ Required environment variables:
 - **Trade-off accepted** - Portfolio loading takes longer but provides complete LP token analysis worth the wait
 - **Result** - Portfolio tool now properly detects and values LP tokens like UniLP.org and PulseX LP pairs
 
+### July 23, 2025 - Fixed Stablecoin Logos to Use Official Logos
+- **Updated USDC logo** - Now uses official USDC logo from CoinGecko instead of placeholder
+- **Updated DAI logo** - Now uses official DAI logo from CoinGecko instead of placeholder
+- **Updated USDT logo** - Now uses official Tether logo from CoinGecko instead of placeholder
+- **Database update script** - Created script to update existing stablecoin logos in database
+- **Scanner service updated** - Added special handling for stablecoin addresses to return proper logos
+- **Result** - USDC, DAI, and USDT from Ethereum now display their authentic logos
+
 ### July 20, 2025 - Fixed Token Fetching to Use Scanner API for Complete Token Lists
 - **Identified issue** - Client was using limited endpoint that only scanned last 1 million blocks (~3 months)
 - **Updated client endpoint** - Changed from `/api/wallet/:address/balances-no-prices` to `/api/wallet/:address/scanner-balances`

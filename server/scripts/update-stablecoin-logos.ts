@@ -1,73 +1,90 @@
-import { db } from '../db';
-import { tokenLogos } from '../../shared/schema';
+import { db, pool } from '../db.js';
+import { tokenLogos } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-// Stablecoin addresses on PulseChain (bridged from Ethereum)
-const STABLECOIN_LOGOS = [
-  {
-    address: '0x15d38573d2feeb82e7ad5187ab8c5d52810b6f40', // USDC from Ethereum
-    logoUrl: 'https://tokens.coingecko.com/images/6319/large/usdc.png',
+// Stablecoin addresses and their official logo URLs
+const STABLECOIN_LOGOS = {
+  // USDC from Ethereum
+  '0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07': {
     symbol: 'USDC',
-    name: 'USD Coin'
+    name: 'USD Coin from Ethereum',
+    logoUrl: 'https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png'
   },
-  {
-    address: '0xefD766cCb38EaF1dfd701853BFCe31359239F305', // DAI from Ethereum  
-    logoUrl: 'https://tokens.coingecko.com/images/9956/large/Badge_Dai.png',
+  // USDT from Ethereum  
+  '0x0cb6f5a34ad42ec934882a05265a7d5f59b51a2f': {
+    symbol: 'USDT',
+    name: 'Tether USD from Ethereum',
+    logoUrl: 'https://assets.coingecko.com/coins/images/325/large/Tether.png'
+  },
+  // DAI from Ethereum
+  '0xefd766ccb38eaf1dfd701853bfce31359239f305': {
     symbol: 'DAI',
-    name: 'Dai Stablecoin'
-  },
-  {
-    address: '0x0cb6f5a34ad42ec934882a05265a7d5f59b51a2f', // USDT from Ethereum
-    logoUrl: 'https://tokens.coingecko.com/images/325/large/Tether.png',
-    symbol: 'USDT', 
-    name: 'Tether USD'
+    name: 'Dai Stablecoin from Ethereum',
+    logoUrl: 'https://assets.coingecko.com/coins/images/9956/large/4943.png'
   }
-];
+};
 
 async function updateStablecoinLogos() {
   console.log('Updating stablecoin logos...');
   
-  for (const stablecoin of STABLECOIN_LOGOS) {
-    try {
-      // Update existing logo or insert new one
-      const existing = await db
+  try {
+    for (const [address, info] of Object.entries(STABLECOIN_LOGOS)) {
+      console.log(`\nUpdating ${info.symbol} (${address})...`);
+      
+      // Check if logo already exists
+      const [existing] = await db
         .select()
         .from(tokenLogos)
-        .where(eq(tokenLogos.tokenAddress, stablecoin.address.toLowerCase()))
-        .limit(1);
+        .where(eq(tokenLogos.tokenAddress, address));
       
-      if (existing.length > 0) {
+      if (existing) {
         // Update existing logo
-        await db
+        const [updated] = await db
           .update(tokenLogos)
           .set({
-            logoUrl: stablecoin.logoUrl,
-            symbol: stablecoin.symbol,
-            name: stablecoin.name,
+            logoUrl: info.logoUrl,
+            symbol: info.symbol,
+            name: info.name,
             lastUpdated: new Date().toISOString()
           })
-          .where(eq(tokenLogos.tokenAddress, stablecoin.address.toLowerCase()));
+          .where(eq(tokenLogos.tokenAddress, address))
+          .returning();
         
-        console.log(`Updated ${stablecoin.symbol} logo`);
+        console.log(`✅ Updated ${info.symbol} logo`);
       } else {
         // Insert new logo
-        await db.insert(tokenLogos).values({
-          tokenAddress: stablecoin.address.toLowerCase(),
-          logoUrl: stablecoin.logoUrl,
-          symbol: stablecoin.symbol,
-          name: stablecoin.name,
-          lastUpdated: new Date().toISOString()
-        });
+        const [inserted] = await db
+          .insert(tokenLogos)
+          .values({
+            tokenAddress: address,
+            logoUrl: info.logoUrl,
+            symbol: info.symbol,
+            name: info.name,
+            lastUpdated: new Date().toISOString()
+          })
+          .returning();
         
-        console.log(`Inserted ${stablecoin.symbol} logo`);
+        console.log(`✅ Inserted ${info.symbol} logo`);
       }
-    } catch (error) {
-      console.error(`Error updating ${stablecoin.symbol} logo:`, error);
     }
+    
+    console.log('\n✨ All stablecoin logos updated successfully!');
+    
+  } catch (error) {
+    console.error('Error updating stablecoin logos:', error);
+    throw error;
+  } finally {
+    await pool.end();
   }
-  
-  console.log('Stablecoin logos updated successfully!');
-  process.exit(0);
 }
 
-updateStablecoinLogos().catch(console.error);
+// Run the update
+updateStablecoinLogos()
+  .then(() => {
+    console.log('\nScript completed successfully');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('\nScript failed:', error);
+    process.exit(1);
+  });
