@@ -359,6 +359,21 @@ export async function getFastScannerTokenBalances(walletAddress: string): Promis
       });
     });
     
+    // Process LP tokens to get their composition and values
+    const lpTokens = tokens.filter(token => token.isLp);
+    
+    if (lpTokens.length > 0) {
+      console.log(`Processing ${lpTokens.length} LP tokens for composition analysis...`);
+      
+      // Process LP tokens to get their underlying token details
+      const processedLpTokens = await processLpTokens(lpTokens, walletAddress);
+      
+      // Replace original LP tokens with processed ones
+      const lpAddresses = new Set(lpTokens.map(t => t.address.toLowerCase()));
+      const nonLpTokens = tokens.filter(t => !lpAddresses.has(t.address.toLowerCase()));
+      tokens = [...nonLpTokens, ...processedLpTokens];
+    }
+    
     const endTime = Date.now();
     console.log(`Fast scanner fetch completed in ${endTime - startTime}ms - found ${tokens.length} tokens`);
     
