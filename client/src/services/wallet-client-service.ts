@@ -5,6 +5,7 @@
 
 // Removed DexScreener dependency - using smart contract prices directly
 import { getTokenPriceFromContract, getMultipleTokenPricesFromContract } from './smart-contract-price-service';
+import { requestDeduplicator } from '@/lib/request-deduplicator';
 
 // Blacklist of known dust tokens to filter out
 const DUST_TOKEN_BLACKLIST = new Set<string>([
