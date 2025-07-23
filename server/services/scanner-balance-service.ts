@@ -283,7 +283,7 @@ export async function getFastScannerTokenBalances(walletAddress: string): Promis
     });
     
     // Convert scanner balances to ProcessedToken format
-    const tokens: ProcessedToken[] = [];
+    let tokens: ProcessedToken[] = [];
     
     // Add PLS as first token if balance > 0
     if (plsBalance && plsBalance.gt(0)) {
