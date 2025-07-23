@@ -284,6 +284,15 @@ Required environment variables:
 - **Root cause** - Likely broken liquidity pools or tokens with extreme price/balance combinations
 - **Result** - Portfolios now load reliably without crashes, suspicious values are logged and capped
 
+### July 23, 2025 - Removed All $10M Value Caps
+- **User request** - User reported PRS token (0xb6b57227150a7097723e0c013752001aad01248f) was being incorrectly capped at $10M when its true value was much higher
+- **Removed all value caps**:
+  - **Client-side** - Removed $10M cap in wallet-client-service.ts for both fetchWalletDataFast and fetchWalletDataWithContractPrices functions
+  - **Server-side** - Removed $10M cap in routes.ts fast-balances endpoint
+  - **Portfolio aggregation** - Removed $10M cap in utils.ts combineWalletData function
+- **Result** - PRS token now correctly shows its full value of ~$89 billion instead of being capped at $10M
+- **Note** - Dust filtering for tokens with balances < 0.000001 remains in place to prevent issues with broken liquidity pools
+
 ### July 22, 2025 - Implemented WPLS/DAI Pair as Foundation for All Price Calculations
 - **WPLS price foundation** - All WPLS prices now come from the WPLS/DAI pair at 0xe56043671df55de5cdf8459710433c10324de0ae
 - **Reliable price source** - DAI is a stablecoin providing reliable USD value, both tokens have 18 decimals

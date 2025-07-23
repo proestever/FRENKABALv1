@@ -272,19 +272,13 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
     const priceData = priceMap.get(addressForPrice.toLowerCase());
     
     if (priceData) {
-      // Calculate value with sanity check
+      // Calculate value without any cap
       const calculatedValue = token.balanceFormatted * priceData.price;
-      
-      // Cap individual token values at $10 million to prevent calculation errors
-      const cappedValue = Math.min(calculatedValue, 10_000_000);
-      if (calculatedValue > 10_000_000) {
-        console.warn(`Token ${token.symbol} has suspicious value of ${calculatedValue}, capping at $10M`);
-      }
       
       return {
         ...token,
         price: priceData.price,
-        value: cappedValue,
+        value: calculatedValue,
         priceData
       };
     }
@@ -397,17 +391,11 @@ export async function fetchWalletDataWithContractPrices(
           token.value = 0;
           token.priceData = undefined;
         } else {
-          // Calculate value with sanity check
+          // Calculate value without any cap
           const calculatedValue = token.balanceFormatted * priceData.price;
           
-          // Cap individual token values at $10 million to prevent calculation errors
-          const cappedValue = Math.min(calculatedValue, 10_000_000);
-          if (calculatedValue > 10_000_000) {
-            console.warn(`Token ${token.symbol} has suspicious value of ${calculatedValue}, capping at $10M`);
-          }
-          
           token.price = priceData.price;
-          token.value = cappedValue;
+          token.value = calculatedValue;
           // Store minimal price data for UI (keep existing logo)
           token.priceData = {
             price: priceData.price,

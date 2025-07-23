@@ -373,6 +373,44 @@ export async function getTokenPriceFromContract(
       return data;
     }
 
+    // Special case for PulseReflection (PRS) - use the correct pair
+    if (normalizedAddress === '0xb6b57227150a7097723e0c013752001aad01248f') {
+      console.log('Using specific pair for PulseReflection');
+      const correctPairAddress = '0x53264c3eE2e1B1f470C9884e7f9AE03613868a96'; // PRS/WPLS pair from DexScreener
+      
+      try {
+        const pairData = await getPairReserves(correctPairAddress, provider);
+        if (pairData) {
+          const isToken0 = pairData.token0.toLowerCase() === normalizedAddress;
+          const tokenReserve = isToken0 ? pairData.reserve0 : pairData.reserve1;
+          const wplsReserve = isToken0 ? pairData.reserve1 : pairData.reserve0;
+          
+          const tokenAmount = parseFloat(ethers.utils.formatUnits(tokenReserve, 18)); // PRS has 18 decimals
+          const wplsAmount = parseFloat(ethers.utils.formatUnits(wplsReserve, 18));
+          
+          if (tokenAmount > 0) {
+            const wplsPrice = await getWPLSPrice(provider);
+            const price = (wplsAmount / tokenAmount) * wplsPrice;
+            const liquidity = wplsAmount * wplsPrice * 2;
+            
+            console.log(`PRS price from correct pair: $${price.toFixed(12)} (liquidity: $${liquidity.toFixed(2)})`);
+            
+            const data: PriceData = {
+              price,
+              liquidity,
+              pairAddress: correctPairAddress,
+              token0: pairData.token0,
+              token1: pairData.token1,
+            };
+            priceCache.set(normalizedAddress, { data, timestamp: Date.now() });
+            return data;
+          }
+        }
+      } catch (error) {
+        console.error('Error getting PRS price from specific pair:', error);
+      }
+    }
+
     // Find ALL pairs for the token
     const allPairsInfo = await findAllPairsForToken(tokenAddress, provider);
     

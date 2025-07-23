@@ -226,8 +226,8 @@ export function combineWalletData(wallets: Record<string, any>): any {
           
           const newBalanceFormatted = (existingToken.balanceFormatted || 0) + (token.balanceFormatted || 0);
           
-          // Calculate combined value with sanity check
-          const newValue = Math.min((existingToken.value || 0) + (token.value || 0), 10_000_000);
+          // Calculate combined value without any cap
+          const newValue = (existingToken.value || 0) + (token.value || 0);
           
           // Track which wallets hold this token
           if (!existingToken.walletHoldings) {

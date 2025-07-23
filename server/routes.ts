@@ -372,11 +372,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalValue = tokens.reduce((sum, token) => {
           // Skip if value is 0 or undefined (client will calculate)
           if (!token.value || token.value === 0) return sum;
-          // Ensure value is a valid number and not astronomical
+          // Ensure value is a valid number
           const value = parseFloat(token.value.toString());
-          // Skip values over $10 million per token (sanity check)
-          if (isNaN(value) || !isFinite(value) || value > 10_000_000) {
-            console.warn(`Skipping token ${token.symbol} with suspicious value: ${token.value}`);
+          if (isNaN(value) || !isFinite(value)) {
+            console.warn(`Skipping token ${token.symbol} with invalid value: ${token.value}`);
             return sum;
           }
           return sum + value;

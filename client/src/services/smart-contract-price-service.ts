@@ -121,6 +121,49 @@ class SmartContractPriceService {
     }
 
     try {
+      // Special case for PulseReflection (PRS) - use the correct pair from DexScreener
+      if (normalizedAddress === '0xb6b57227150a7097723e0c013752001aad01248f') {
+        console.log('Using specific pair for PulseReflection');
+        const correctPairAddress = '0x53264c3eE2e1B1f470C9884e7f9AE03613868a96'; // PRS/WPLS pair from DexScreener
+        
+        const provider = this.getProvider();
+        if (!provider) return null;
+
+        try {
+          const reserves = await this.getPairReserves(correctPairAddress, tokenAddress, WPLS_ADDRESS);
+          if (reserves) {
+            const isToken0 = reserves.token0Address.toLowerCase() === normalizedAddress;
+            const tokenReserve = isToken0 ? reserves.reserve0 : reserves.reserve1;
+            const wplsReserve = isToken0 ? reserves.reserve1 : reserves.reserve0;
+            
+            const tokenAmount = Number(tokenReserve) / Math.pow(10, 18); // PRS has 18 decimals
+            const wplsAmount = Number(wplsReserve) / Math.pow(10, 18);
+            
+            if (tokenAmount > 0) {
+              const wplsPrice = await this.getWPLSPrice();
+              if (wplsPrice) {
+                const price = (wplsAmount / tokenAmount) * wplsPrice;
+                const liquidity = wplsAmount * wplsPrice * 2;
+                
+                console.log(`PRS price from correct pair: $${price.toFixed(12)} (liquidity: $${liquidity.toFixed(2)})`);
+                
+                const priceData: PriceData = {
+                  price,
+                  pairAddress: correctPairAddress,
+                  pairedTokenSymbol: 'WPLS',
+                  liquidity,
+                  lastUpdate: Date.now()
+                };
+                this.cachePrice(normalizedAddress, priceData);
+                return priceData;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error getting PRS price from specific pair:', error);
+        }
+      }
+
       // First, try to find a stablecoin pair for direct USD price
       const stablecoinPrice = await this.getStablecoinPairPrice(tokenAddress);
       if (stablecoinPrice) {
