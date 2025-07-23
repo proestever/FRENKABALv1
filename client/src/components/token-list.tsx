@@ -453,7 +453,7 @@ export function TokenList({
                               address={token.address}
                               symbol={token.symbol}
                               fallbackLogo={token.logo}
-                              size={40}
+                              size="md"
                             />
                           )}
                         </div>
@@ -643,7 +643,7 @@ export function TokenList({
                                   address={token.address}
                                   symbol={token.symbol}
                                   fallbackLogo={token.logo}
-                                  size={40}
+                                  size="md"
                                 />
                               )}
                             </div>
