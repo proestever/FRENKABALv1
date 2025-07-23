@@ -758,6 +758,15 @@ export default function Home() {
             // Generate the combined wallet data
             const combinedWallet = combineWalletData(multiWalletData);
             
+            // Debug log the combined wallet
+            console.log('Combined wallet created:', {
+              address: combinedWallet.address,
+              tokenCount: combinedWallet.tokens?.length || 0,
+              totalValue: combinedWallet.totalValue,
+              lpTokenCount: combinedWallet.lpTokenCount,
+              tokens: combinedWallet.tokens?.slice(0, 5) // Show first 5 tokens for debugging
+            });
+            
             // Ensure tokens array exists even if all wallets failed
             if (!combinedWallet.tokens || !Array.isArray(combinedWallet.tokens)) {
               console.warn('Combined wallet has no tokens array, initializing empty array');

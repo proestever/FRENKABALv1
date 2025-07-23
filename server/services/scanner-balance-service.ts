@@ -313,16 +313,17 @@ export async function getFastScannerTokenBalances(walletAddress: string): Promis
         return;
       }
       
-      // Check if this is likely an LP token based on symbol/name
-      const symbol = tokenData.token.symbol || "";
-      const name = tokenData.token.name || "";
+      // Check if this is likely an LP token based on symbol/name (case-insensitive)
+      const symbol = (tokenData.token.symbol || "").toUpperCase();
+      const name = (tokenData.token.name || "").toUpperCase();
       const isLpToken = symbol.includes("PLP") || 
-                       symbol.includes("-LP") || 
-                       name.includes("PulseX LP") ||
-                       name.includes("Liquidity");
+                       symbol.includes("LP") || 
+                       name.includes("PULSEX LP") ||
+                       name.includes("LIQUIDITY") ||
+                       name.includes("PLP");
       
       if (isLpToken) {
-        console.log(`Found LP token: ${symbol} (${name}) at ${tokenAddress}`);
+        console.log(`Found LP token: ${tokenData.token.symbol} (${tokenData.token.name}) at ${tokenAddress}`);
       }
       
       // Try to extract token pair info from name for common patterns
