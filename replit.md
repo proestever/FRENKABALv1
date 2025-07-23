@@ -370,6 +370,14 @@ Required environment variables:
 - **LP token support** - Successfully analyzes LP tokens and calculates underlying token values and compositions
 - **Result** - Enhanced scanner is now more reliable with automatic RPC failover and better error recovery
 
+### July 23, 2025 - Applied LP Token Analysis to Portfolio/Bundle Tool
+- **Enabled LP analysis for portfolios** - Changed fetchWalletDataFast to use enhanced scanner instead of fast scanner
+- **Portfolio LP detection** - Multi-wallet portfolios now properly analyze LP tokens and calculate underlying values
+- **Unified approach** - Both individual wallet and portfolio views now use the same enhanced scanner with LP analysis
+- **LP composition visible** - LP tokens in portfolios show breakdown of underlying token pairs with individual values
+- **Trade-off accepted** - Portfolio loading takes longer but provides complete LP token analysis worth the wait
+- **Result** - Portfolio tool now properly detects and values LP tokens like UniLP.org and PulseX LP pairs
+
 ### July 20, 2025 - Fixed Token Fetching to Use Scanner API for Complete Token Lists
 - **Identified issue** - Client was using limited endpoint that only scanned last 1 million blocks (~3 months)
 - **Updated client endpoint** - Changed from `/api/wallet/:address/balances-no-prices` to `/api/wallet/:address/scanner-balances`

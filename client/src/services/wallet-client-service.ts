@@ -244,11 +244,12 @@ export async function fetchWalletDataClientSide(
 }
 
 /**
- * Fetches wallet data using fast scanner (for portfolios)
- * Returns basic token data without enhanced features for quick loading
+ * Fetches wallet data using enhanced scanner (for portfolios)
+ * Returns complete token data with LP token analysis
  */
 export async function fetchWalletDataFast(address: string): Promise<Wallet> {
-  const walletData = await fetchWalletBalancesFromScanner(address, 3, true); // Use fast endpoint
+  // Use enhanced scanner instead of fast endpoint to get LP token analysis
+  const walletData = await fetchWalletBalancesFromScanner(address, 3, false); // Use enhanced endpoint
   if (walletData.error) {
     return walletData;
   }
