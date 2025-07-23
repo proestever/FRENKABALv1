@@ -422,8 +422,10 @@ export async function getTokenPriceFromContract(
       });
     }
     
-    // Get price data for all pairs
-    const allPairs: PriceData[] = [];
+    // Get price data for all pairs and separate by type
+    const wplsPairs: Array<{ pair: PriceData; wplsAmount: number }> = [];
+    const stablecoinPairs: PriceData[] = [];
+    const otherPairs: PriceData[] = [];
     
     for (const pairInfo of allPairsInfo) {
       try {
@@ -445,12 +447,16 @@ export async function getTokenPriceFromContract(
         
         if (tokenAmount === 0) continue;
         
-        // Get price of the other token
+        // Get price of the other token and categorize the pair
         let otherTokenPrice = 0;
+        let pairType: 'wpls' | 'stablecoin' | 'other' = 'other';
+        
         if (otherTokenAddress.toLowerCase() === WPLS_ADDRESS.toLowerCase()) {
           otherTokenPrice = await getWPLSPrice(provider);
+          pairType = 'wpls';
         } else if (STABLECOINS.includes(otherTokenAddress.toLowerCase())) {
           otherTokenPrice = 1.0; // Stablecoins
+          pairType = 'stablecoin';
         } else {
           // Skip pairs with tokens we can't price
           continue;
@@ -465,16 +471,25 @@ export async function getTokenPriceFromContract(
           console.log(`    Token amount: ${tokenAmount}, Other amount: ${otherAmount}`);
           console.log(`    Other token price: $${otherTokenPrice}`);
           console.log(`    Calculated price: $${price}, Liquidity: $${liquidity}`);
+          console.log(`    Pair type: ${pairType}`);
         }
         
-        // Add all pairs without liquidity filter - we'll select highest liquidity
-        allPairs.push({
+        const priceData: PriceData = {
           price,
           liquidity,
           pairAddress: pairInfo.pairAddress,
           token0: pairData.token0,
           token1: pairData.token1,
-        });
+        };
+        
+        // Categorize pairs by type
+        if (pairType === 'wpls') {
+          wplsPairs.push({ pair: priceData, wplsAmount: otherAmount });
+        } else if (pairType === 'stablecoin') {
+          stablecoinPairs.push(priceData);
+        } else {
+          otherPairs.push(priceData);
+        }
       } catch (error) {
         console.error(`Error processing pair ${pairInfo.pairAddress}:`, error);
       }
@@ -482,18 +497,35 @@ export async function getTokenPriceFromContract(
     
     // Debug for PulseReflection
     if (normalizedAddress === '0xb6b57227150a7097723e0c013752001aad01248f') {
-      console.log(`Valid pairs with prices for PulseReflection: ${allPairs.length}`);
-      allPairs.forEach(pair => {
-        console.log(`  - Pair: ${pair.pairAddress}, Price: $${pair.price}, Liquidity: $${pair.liquidity}`);
-      });
+      console.log(`Valid pairs for PulseReflection: ${wplsPairs.length} WPLS, ${stablecoinPairs.length} stablecoin, ${otherPairs.length} other`);
     }
     
-    // Select the pair with highest liquidity
-    if (allPairs.length > 0) {
-      const bestPair = allPairs.reduce((best, current) => 
+    // Select the best pair - prioritize WPLS pairs with highest WPLS liquidity
+    let bestPair: PriceData | null = null;
+    
+    if (wplsPairs.length > 0) {
+      // Sort WPLS pairs by WPLS amount (liquidity) and select the highest
+      const bestWplsPair = wplsPairs.reduce((best, current) => 
+        current.wplsAmount > best.wplsAmount ? current : best
+      );
+      bestPair = bestWplsPair.pair;
+      
+      if (normalizedAddress === '0xb6b57227150a7097723e0c013752001aad01248f') {
+        console.log(`Selected WPLS pair with ${bestWplsPair.wplsAmount} WPLS liquidity`);
+      }
+    } else if (stablecoinPairs.length > 0) {
+      // If no WPLS pairs, use stablecoin pair with highest liquidity
+      bestPair = stablecoinPairs.reduce((best, current) => 
         current.liquidity > best.liquidity ? current : best
       );
-      
+    } else if (otherPairs.length > 0) {
+      // Last resort: use other pairs with highest liquidity
+      bestPair = otherPairs.reduce((best, current) => 
+        current.liquidity > best.liquidity ? current : best
+      );
+    }
+    
+    if (bestPair) {
       if (normalizedAddress === '0xb6b57227150a7097723e0c013752001aad01248f') {
         console.log(`Selected best pair for PulseReflection: ${bestPair.pairAddress} with price $${bestPair.price}`);
       }

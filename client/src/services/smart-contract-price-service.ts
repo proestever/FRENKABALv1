@@ -253,8 +253,8 @@ class SmartContractPriceService {
     const provider = this.getProvider();
     if (!provider) return null;
 
-    // Find ALL WPLS pairs across all factories and select the one with highest liquidity
-    const allPairs: PriceData[] = [];
+    // Find ALL WPLS pairs across all factories and select the one with highest WPLS liquidity
+    const allPairs: Array<{ data: PriceData; wplsAmount: number }> = [];
 
     for (const factoryAddress of PULSEX_FACTORIES) {
       try {
@@ -277,26 +277,29 @@ class SmartContractPriceService {
                             Math.pow(10, tokenDecimals - wplsDecimals);
 
         // Calculate liquidity in WPLS
-        const wplsLiquidity = Number(wplsReserve) / Math.pow(10, wplsDecimals);
-        const liquidity = wplsLiquidity * 2;
+        const wplsAmount = Number(wplsReserve) / Math.pow(10, wplsDecimals);
+        const liquidity = wplsAmount * 2;
 
         // Skip pairs with less than 1,000,000 WPLS liquidity
-        if (wplsLiquidity < 1_000_000) {
-          console.log(`Skipping low liquidity pair for ${tokenAddress}: ${wplsLiquidity.toFixed(2)} WPLS`);
+        if (wplsAmount < 1_000_000) {
+          console.log(`Skipping low liquidity pair for ${tokenAddress}: ${wplsAmount.toFixed(2)} WPLS`);
           continue;
         }
 
         allPairs.push({
-          price: priceInWPLS, // Will be converted to USD by caller
-          pairAddress,
-          pairedTokenSymbol: 'WPLS',
-          liquidity: liquidity,
-          lastUpdate: Date.now()
+          data: {
+            price: priceInWPLS, // Will be converted to USD by caller
+            pairAddress,
+            pairedTokenSymbol: 'WPLS',
+            liquidity: liquidity,
+            lastUpdate: Date.now()
+          },
+          wplsAmount: wplsAmount
         });
 
         // Debug logging for PulseReflection
         if (tokenAddress.toLowerCase() === '0xb6b57227150a7097723e0c013752001aad01248f') {
-          console.log(`Found WPLS pair in factory ${factoryAddress}: ${pairAddress}, liquidity: ${liquidity} WPLS`);
+          console.log(`Found WPLS pair in factory ${factoryAddress}: ${pairAddress}, WPLS amount: ${wplsAmount.toFixed(2)}`);
         }
       } catch (error) {
         // Continue to next factory
@@ -304,18 +307,18 @@ class SmartContractPriceService {
       }
     }
 
-    // Select the pair with highest liquidity
+    // Select the pair with highest WPLS amount (not total liquidity)
     if (allPairs.length > 0) {
       const bestPair = allPairs.reduce((best, current) => 
-        current.liquidity > best.liquidity ? current : best
+        current.wplsAmount > best.wplsAmount ? current : best
       );
 
       // Debug logging for PulseReflection
       if (tokenAddress.toLowerCase() === '0xb6b57227150a7097723e0c013752001aad01248f') {
-        console.log(`Selected best WPLS pair: ${bestPair.pairAddress} with liquidity ${bestPair.liquidity} WPLS`);
+        console.log(`Selected best WPLS pair: ${bestPair.data.pairAddress} with ${bestPair.wplsAmount.toFixed(2)} WPLS`);
       }
 
-      return bestPair;
+      return bestPair.data;
     }
 
     return null;
