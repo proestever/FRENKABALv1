@@ -405,6 +405,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // API route to force refresh wallet balances with real-time data
+  app.get("/api/wallet/:address/refresh-balances", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      console.log(`Force refreshing balances for ${address} with real-time data`);
+      
+      const startTime = Date.now();
+      
+      // Use enhanced scanner which now includes improved recent block scanning
+      const tokens = await getScannerTokenBalances(address);
+      
+      const endTime = Date.now();
+      console.log(`Real-time refresh completed in ${endTime - startTime}ms`);
+      
+      // Calculate total value
+      const totalValue = tokens.reduce((sum, token) => sum + (token.value || 0), 0);
+      
+      // Find PLS balance
+      const plsToken = tokens.find(t => t.isNative);
+      const plsBalance = plsToken ? plsToken.balanceFormatted : 0;
+      const plsPriceChange = plsToken ? plsToken.priceChange24h : null;
+      
+      return res.json({
+        address,
+        tokens,
+        totalValue,
+        tokenCount: tokens.length,
+        plsBalance,
+        plsPriceChange,
+        networkCount: 1,
+        fetchMethod: 'real-time-refresh',
+        refreshedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error in real-time refresh:", error);
+      return res.status(500).json({
+        message: "Failed to refresh wallet balances",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
   
   // API route to get transaction history using PulseChain Scanner API + recent blocks
   app.get("/api/wallet/:address/scanner-transactions", async (req, res) => {

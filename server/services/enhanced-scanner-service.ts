@@ -174,23 +174,67 @@ export class EnhancedPulseChainScanner {
     try {
       return await executeWithFailover(async (provider) => {
         const currentBlock = await provider.getBlockNumber();
-        const fromBlock = currentBlock - 28800; // Last 24 hours
+        // Scan last 2000 blocks (~10 minutes) for very recent activity
+        const fromBlock = currentBlock - 2000;
         
         // Normalize address for log filtering
         const normalizedAddress = ethers.utils.getAddress(walletAddress);
         const transferTopic = ethers.utils.id("Transfer(address,address,uint256)");
         const addressTopic = ethers.utils.hexZeroPad(normalizedAddress, 32);
         
-        // Get incoming transfers
-        const logs = await provider.getLogs({
-          fromBlock,
-          toBlock: currentBlock,
-          topics: [transferTopic, null, addressTopic]
-        });
+        // Get both incoming AND outgoing transfers to catch all activity
+        const [incomingLogs, outgoingLogs] = await Promise.all([
+          provider.getLogs({
+            fromBlock,
+            toBlock: currentBlock,
+            topics: [transferTopic, null, addressTopic] // TO this address
+          }),
+          provider.getLogs({
+            fromBlock,
+            toBlock: currentBlock,
+            topics: [transferTopic, addressTopic, null] // FROM this address
+          })
+        ]);
         
-        // Extract unique token addresses
-        const tokenSet = new Set(logs.map(log => log.address.toLowerCase()));
-        return Array.from(tokenSet).map(address => ({ address }));
+        // Combine and extract unique token addresses
+        const allLogs = [...incomingLogs, ...outgoingLogs];
+        const tokenSet = new Set(allLogs.map(log => log.address.toLowerCase()));
+        
+        console.log(`Found ${tokenSet.size} tokens with recent activity in last ${currentBlock - fromBlock} blocks`);
+        
+        // For each token, fetch current balance to ensure we have latest data
+        const tokensWithBalances = await Promise.all(
+          Array.from(tokenSet).map(async (address) => {
+            try {
+              const contract = new ethers.Contract(address, [
+                'function balanceOf(address) view returns (uint256)',
+                'function decimals() view returns (uint8)',
+                'function symbol() view returns (string)',
+                'function name() view returns (string)'
+              ], provider);
+              
+              const [balance, decimals, symbol, name] = await Promise.all([
+                contract.balanceOf(walletAddress),
+                contract.decimals().catch(() => 18),
+                contract.symbol().catch(() => 'UNKNOWN'),
+                contract.name().catch(() => 'Unknown Token')
+              ]);
+              
+              return {
+                address,
+                symbol,
+                name,
+                decimals,
+                balance: balance
+              };
+            } catch (error) {
+              console.error(`Error fetching data for recent token ${address}:`, error);
+              return { address };
+            }
+          })
+        );
+        
+        return tokensWithBalances;
       });
     } catch (error) {
       console.error("Recent activity error:", error);
@@ -208,10 +252,11 @@ export class EnhancedPulseChainScanner {
       }
     });
 
-    // Get native PLS balance
+    // Always get fresh native PLS balance from blockchain (not from API cache)
     const { plsBalance, plsAmount } = await executeWithFailover(async (provider) => {
       const balance = await provider.getBalance(walletAddress);
       const amount = parseFloat(ethers.utils.formatEther(balance));
+      console.log(`Fresh PLS balance for ${walletAddress}: ${amount} PLS`);
       return { plsBalance: balance, plsAmount: amount };
     });
     

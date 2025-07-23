@@ -54,7 +54,7 @@ export function fetchAllWalletTokens(address: string, forceRefresh: boolean = fa
  * @param address - Wallet address to fetch data for
  */
 export function forceRefreshWalletData(address: string): Promise<Wallet> {
-  return fetch(`/api/wallet/${address}/force-refresh`)
+  return fetch(`/api/wallet/${address}/refresh-balances`)
     .then(response => {
       if (!response.ok) {
         return response.json().then(errorData => {

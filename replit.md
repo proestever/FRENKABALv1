@@ -234,6 +234,15 @@ Required environment variables:
 - **Performance results** - Portfolio loading reduced from 5-10 minutes to under 30 seconds for 10 wallets
 - **Backwards compatible** - Both scanner types use same data format, seamlessly switching based on use case
 
+### July 23, 2025 - Implemented Real-Time Wallet Balance Updates
+- **Improved recent block scanning** - Enhanced `getRecentTokens` to scan both incoming AND outgoing transfers (was only scanning incoming)
+- **Reduced scan window** - Now scans last 2000 blocks (~10 minutes) for very recent activity to catch swaps within minutes
+- **Fetch updated balances** - For each recently active token, now fetches current balance to ensure real-time accuracy
+- **Always fresh native balance** - PLS/ETH native balance always fetched directly from blockchain, not from cached API
+- **New refresh endpoint** - Created `/api/wallet/:address/refresh-balances` endpoint for real-time data refresh
+- **Updated refresh button** - Wallet refresh button now uses new endpoint that bypasses all caching
+- **Result** - Recent swaps (like USDC to ETH) now appear within seconds when refresh button is clicked
+
 ### July 21, 2025 - Wallet Share Feature Enhanced with Modal and Responsive Design
 - **Share Modal** - Converted share feature from full page to popup modal for better UX
 - **Top 5 Tokens** - Changed from top 10 to top 5 tokens for cleaner, more focused display
