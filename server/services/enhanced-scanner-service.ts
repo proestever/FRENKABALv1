@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { ProcessedToken } from '../types';
+import { executeWithFailover } from './rpc-provider';
 
 // Constants
 const WPLS_ADDRESS = "0xa1077a294dde1b09bb078844df40758a5d0f9a27";
@@ -63,25 +64,7 @@ interface EnhancedProcessedToken extends ProcessedToken {
 }
 
 export class EnhancedPulseChainScanner {
-  private providers: ethers.providers.JsonRpcProvider[];
-  private currentProvider: number = 0;
   private cache: Map<string, CacheEntry<any>> = new Map();
-
-  constructor() {
-    // Setup RPC providers for load balancing
-    this.providers = [
-      "https://rpc.pulsechain.com",
-      "https://rpc-pulsechain.g4mm4.io",
-      "https://pulsechain.publicnode.com"
-    ].map(url => new ethers.providers.JsonRpcProvider(url));
-  }
-
-  // Get next provider (for load balancing)
-  private getProvider(): ethers.providers.JsonRpcProvider {
-    const provider = this.providers[this.currentProvider];
-    this.currentProvider = (this.currentProvider + 1) % this.providers.length;
-    return provider;
-  }
 
   // Main scan method
   async scan(walletAddress: string, options: { analyzeLPs?: boolean } = {}): Promise<{
@@ -189,26 +172,26 @@ export class EnhancedPulseChainScanner {
   // Get tokens from recent blockchain activity
   private async getRecentTokens(walletAddress: string): Promise<any[]> {
     try {
-      const provider = this.getProvider();
-      const currentBlock = await provider.getBlockNumber();
-      const fromBlock = currentBlock - 28800; // Last 24 hours
-      
-      // Normalize address for log filtering
-      const normalizedAddress = ethers.utils.getAddress(walletAddress);
-      const transferTopic = ethers.utils.id("Transfer(address,address,uint256)");
-      const addressTopic = ethers.utils.hexZeroPad(normalizedAddress, 32);
-      
-      // Get incoming transfers
-      const logs = await provider.getLogs({
-        fromBlock,
-        toBlock: currentBlock,
-        topics: [transferTopic, null, addressTopic]
+      return await executeWithFailover(async (provider) => {
+        const currentBlock = await provider.getBlockNumber();
+        const fromBlock = currentBlock - 28800; // Last 24 hours
+        
+        // Normalize address for log filtering
+        const normalizedAddress = ethers.utils.getAddress(walletAddress);
+        const transferTopic = ethers.utils.id("Transfer(address,address,uint256)");
+        const addressTopic = ethers.utils.hexZeroPad(normalizedAddress, 32);
+        
+        // Get incoming transfers
+        const logs = await provider.getLogs({
+          fromBlock,
+          toBlock: currentBlock,
+          topics: [transferTopic, null, addressTopic]
+        });
+        
+        // Extract unique token addresses
+        const tokenSet = new Set(logs.map(log => log.address.toLowerCase()));
+        return Array.from(tokenSet).map(address => ({ address }));
       });
-      
-      // Extract unique token addresses
-      const tokenSet = new Set(logs.map(log => log.address.toLowerCase()));
-      return Array.from(tokenSet).map(address => ({ address }));
-      
     } catch (error) {
       console.error("Recent activity error:", error);
       return [];
@@ -226,15 +209,19 @@ export class EnhancedPulseChainScanner {
     });
 
     // Get native PLS balance
-    const provider = this.getProvider();
-    const plsBalance = await provider.getBalance(walletAddress);
-    const plsAmount = parseFloat(ethers.utils.formatEther(plsBalance));
+    const { plsBalance, plsAmount } = await executeWithFailover(async (provider) => {
+      const balance = await provider.getBalance(walletAddress);
+      const amount = parseFloat(ethers.utils.formatEther(balance));
+      return { plsBalance: balance, plsAmount: amount };
+    });
     
     const processedTokens: ProcessedToken[] = [];
     
     // Add PLS if has balance
     if (plsAmount > 0) {
+      console.log("  Getting WPLS price...");
       const wplsPrice = await this.getWPLSPrice();
+      console.log(`  WPLS price: $${wplsPrice}`);
       processedTokens.push({
         address: PLS_TOKEN_ADDRESS,
         symbol: "PLS",
@@ -288,34 +275,50 @@ export class EnhancedPulseChainScanner {
 
   // Process a single token
   private async processToken(tokenAddress: string, tokenInfo: any, walletAddress: string): Promise<ProcessedToken | null> {
-    const provider = this.getProvider();
-    const abi = [
-      "function balanceOf(address) view returns (uint256)",
-      "function decimals() view returns (uint8)",
-      "function symbol() view returns (string)",
-      "function name() view returns (string)"
-    ];
-    
-    const contract = new ethers.Contract(tokenAddress, abi, provider);
-    
-    // Get token data
-    let balance = tokenInfo.balance;
-    if (!balance) {
-      balance = await contract.balanceOf(walletAddress);
-      if (balance.eq(0)) return null;
-    }
-    
-    const [symbol, name, decimals] = await Promise.all([
-      tokenInfo.symbol || contract.symbol().catch(() => "Unknown"),
-      tokenInfo.name || contract.name().catch(() => "Unknown"),
-      tokenInfo.decimals !== undefined ? tokenInfo.decimals : contract.decimals().catch(() => 18)
-    ]);
-    
-    const amount = parseFloat(ethers.utils.formatUnits(balance, decimals));
-    
-    // Special handling for WPLS - same price as PLS
-    if (tokenAddress.toLowerCase() === WPLS_ADDRESS.toLowerCase()) {
-      const wplsPrice = await this.getWPLSPrice();
+    return await executeWithFailover(async (provider) => {
+      const abi = [
+        "function balanceOf(address) view returns (uint256)",
+        "function decimals() view returns (uint8)",
+        "function symbol() view returns (string)",
+        "function name() view returns (string)"
+      ];
+      
+      const contract = new ethers.Contract(tokenAddress, abi, provider);
+      
+      // Get token data
+      let balance = tokenInfo.balance;
+      if (!balance) {
+        balance = await contract.balanceOf(walletAddress);
+        if (balance.eq(0)) return null;
+      }
+      
+      const [symbol, name, decimals] = await Promise.all([
+        tokenInfo.symbol || contract.symbol().catch(() => "Unknown"),
+        tokenInfo.name || contract.name().catch(() => "Unknown"),
+        tokenInfo.decimals !== undefined ? tokenInfo.decimals : contract.decimals().catch(() => 18)
+      ]);
+      
+      const amount = parseFloat(ethers.utils.formatUnits(balance, decimals));
+      
+      // Special handling for WPLS - same price as PLS
+      if (tokenAddress.toLowerCase() === WPLS_ADDRESS.toLowerCase()) {
+        const wplsPrice = await this.getWPLSPrice();
+        return {
+          address: tokenAddress,
+          symbol,
+          name,
+          decimals,
+          balance: balance.toString(),
+          balanceFormatted: amount,
+          price: wplsPrice,
+          value: amount * wplsPrice,
+          verified: true
+        };
+      }
+      
+      // Get price for other tokens
+      const priceData = await this.getTokenPrice(tokenAddress, decimals);
+      
       return {
         address: tokenAddress,
         symbol,
@@ -323,25 +326,10 @@ export class EnhancedPulseChainScanner {
         decimals,
         balance: balance.toString(),
         balanceFormatted: amount,
-        price: wplsPrice,
-        value: amount * wplsPrice,
-        verified: true
+        price: priceData.price || 0,
+        value: amount * (priceData.price || 0)
       };
-    }
-    
-    // Get price for other tokens
-    const priceData = await this.getTokenPrice(tokenAddress, decimals);
-    
-    return {
-      address: tokenAddress,
-      symbol,
-      name,
-      decimals,
-      balance: balance.toString(),
-      balanceFormatted: amount,
-      price: priceData.price || 0,
-      value: amount * (priceData.price || 0)
-    };
+    });
   }
 
   // Get token price from liquidity pools
@@ -354,18 +342,18 @@ export class EnhancedPulseChainScanner {
 
     try {
       const wplsPrice = await this.getWPLSPrice();
-      const provider = this.getProvider();
       
-      // Try both factories
-      for (const factory of [PULSEX_V2_FACTORY, PULSEX_V1_FACTORY]) {
-        const factoryContract = new ethers.Contract(
-          factory,
-          ["function getPair(address,address) view returns (address)"],
-          provider
-        );
-        
-        const pairAddress = await factoryContract.getPair(tokenAddress, WPLS_ADDRESS);
-        if (pairAddress === ethers.constants.AddressZero) continue;
+      return await executeWithFailover(async (provider) => {
+        // Try both factories
+        for (const factory of [PULSEX_V2_FACTORY, PULSEX_V1_FACTORY]) {
+          const factoryContract = new ethers.Contract(
+            factory,
+            ["function getPair(address,address) view returns (address)"],
+            provider
+          );
+          
+          const pairAddress = await factoryContract.getPair(tokenAddress, WPLS_ADDRESS);
+          if (pairAddress === ethers.constants.AddressZero) continue;
         
         // Get reserves
         const pairContract = new ethers.Contract(
@@ -405,11 +393,14 @@ export class EnhancedPulseChainScanner {
           return result;
         }
       }
+      
+      // No valid pair found
+      return { price: 0, hasPrice: false, liquidity: 0 };
+    });
     } catch (error) {
       console.error(`Price fetch failed for ${tokenAddress}:`, error);
+      return { price: 0, hasPrice: false, liquidity: 0 };
     }
-    
-    return { price: 0, hasPrice: false, liquidity: 0 };
   }
 
   // Get WPLS price from stablecoin pairs
@@ -421,24 +412,24 @@ export class EnhancedPulseChainScanner {
     }
 
     try {
-      const provider = this.getProvider();
-      const stablecoins = [
-        "0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07", // USDC
-        "0xefD766cCb38EaF1dfd701853BFCe31359239F305", // DAI
-        "0x0Cb6F5a34ad42ec934882A05265A7d5F59b51A2f"  // USDT
-      ];
-      
-      let bestPrice = 0;
-      let bestLiquidity = 0;
-      
-      for (const factory of [PULSEX_V2_FACTORY, PULSEX_V1_FACTORY]) {
-        for (const stable of stablecoins) {
-          try {
-            const factoryContract = new ethers.Contract(
-              factory,
-              ["function getPair(address,address) view returns (address)"],
-              provider
-            );
+      return await executeWithFailover(async (provider) => {
+        const stablecoins = [
+          "0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07", // USDC
+          "0xefD766cCb38EaF1dfd701853BFCe31359239F305", // DAI
+          "0x0Cb6F5a34ad42ec934882A05265A7d5F59b51A2f"  // USDT
+        ];
+        
+        let bestPrice = 0;
+        let bestLiquidity = 0;
+        
+        for (const factory of [PULSEX_V2_FACTORY, PULSEX_V1_FACTORY]) {
+          for (const stable of stablecoins) {
+            try {
+              const factoryContract = new ethers.Contract(
+                factory,
+                ["function getPair(address,address) view returns (address)"],
+                provider
+              );
             
             const pairAddress = await factoryContract.getPair(WPLS_ADDRESS, stable);
             if (pairAddress === ethers.constants.AddressZero) continue;
@@ -485,7 +476,7 @@ export class EnhancedPulseChainScanner {
       const finalPrice = bestPrice > 0 ? bestPrice : 0.000032; // Fallback
       this.cache.set('wpls-price', { data: finalPrice, time: Date.now() });
       return finalPrice;
-      
+    });
     } catch (error) {
       return 0.000032; // Fallback price
     }
@@ -507,20 +498,21 @@ export class EnhancedPulseChainScanner {
     
     // Additional check: LP tokens have specific methods
     try {
-      const provider = this.getProvider();
-      const pairContract = new ethers.Contract(
-        tokenAddress,
-        [
-          "function token0() view returns (address)",
-          "function token1() view returns (address)",
-          "function getReserves() view returns (uint112, uint112, uint32)"
-        ],
-        provider
-      );
-      
-      // Try to call token0() - if it works, it's likely a pair
-      await pairContract.token0();
-      return true;
+      return await executeWithFailover(async (provider) => {
+        const pairContract = new ethers.Contract(
+          tokenAddress,
+          [
+            "function token0() view returns (address)",
+            "function token1() view returns (address)",
+            "function getReserves() view returns (uint112, uint112, uint32)"
+          ],
+          provider
+        );
+        
+        // Try to call token0() - if it works, it's likely a pair
+        await pairContract.token0();
+        return true;
+      });
     } catch (error) {
       return false;
     }
@@ -531,135 +523,134 @@ export class EnhancedPulseChainScanner {
     try {
       console.log(`\n🔍 Analyzing LP token: ${lpTokenAddress}`);
       
-      const provider = this.getProvider();
-      
-      // LP token contract
-      const lpContract = new ethers.Contract(
-        lpTokenAddress,
-        [
-          "function token0() view returns (address)",
-          "function token1() view returns (address)",
-          "function getReserves() view returns (uint112, uint112, uint32)",
-          "function totalSupply() view returns (uint256)",
-          "function decimals() view returns (uint8)",
-          "function symbol() view returns (string)",
-          "function name() view returns (string)",
-          "function balanceOf(address) view returns (uint256)"
-        ],
-        provider
-      );
+      return await executeWithFailover(async (provider) => {
+        // LP token contract
+        const lpContract = new ethers.Contract(
+          lpTokenAddress,
+          [
+            "function token0() view returns (address)",
+            "function token1() view returns (address)",
+            "function getReserves() view returns (uint112, uint112, uint32)",
+            "function totalSupply() view returns (uint256)",
+            "function decimals() view returns (uint8)",
+            "function symbol() view returns (string)",
+            "function name() view returns (string)",
+            "function balanceOf(address) view returns (uint256)"
+          ],
+          provider
+        );
 
-      // Get LP token info
-      const [token0Address, token1Address, reserves, totalSupply, lpDecimals, lpSymbol, lpName] = await Promise.all([
-        lpContract.token0(),
-        lpContract.token1(),
-        lpContract.getReserves(),
-        lpContract.totalSupply(),
-        lpContract.decimals().catch(() => 18),
-        lpContract.symbol().catch(() => "PLP"),
-        lpContract.name().catch(() => "PulseX LP Token")
-      ]);
+        // Get LP token info
+        const [token0Address, token1Address, reserves, totalSupply, lpDecimals, lpSymbol, lpName] = await Promise.all([
+          lpContract.token0(),
+          lpContract.token1(),
+          lpContract.getReserves(),
+          lpContract.totalSupply(),
+          lpContract.decimals().catch(() => 18),
+          lpContract.symbol().catch(() => "PLP"),
+          lpContract.name().catch(() => "PulseX LP Token")
+        ]);
 
-      // If no balance was provided, get it
-      if (!lpBalance || lpBalance.eq(0)) {
-        lpBalance = await lpContract.balanceOf(walletAddress);
-      }
+        // If no balance was provided, get it
+        if (!lpBalance || lpBalance.eq(0)) {
+          lpBalance = await lpContract.balanceOf(walletAddress);
+        }
 
-      // If still no balance, return null
-      if (lpBalance.eq(0)) {
-        console.log(`  No balance for LP token ${lpTokenAddress}`);
-        return null;
-      }
+        // If still no balance, return null
+        if (lpBalance.eq(0)) {
+          console.log(`  No balance for LP token ${lpTokenAddress}`);
+          return null;
+        }
 
-      // Get info about the underlying tokens
-      const [token0Info, token1Info] = await Promise.all([
-        this.getTokenInfo(token0Address),
-        this.getTokenInfo(token1Address)
-      ]);
+        // Get info about the underlying tokens
+        const [token0Info, token1Info] = await Promise.all([
+          this.getTokenInfo(token0Address),
+          this.getTokenInfo(token1Address)
+        ]);
 
-      console.log(`  Pair: ${token0Info.symbol}/${token1Info.symbol}`);
-      console.log(`  LP Balance: ${ethers.utils.formatUnits(lpBalance, lpDecimals)}`);
-      console.log(`  Total Supply: ${ethers.utils.formatUnits(totalSupply, lpDecimals)}`);
+        console.log(`  Pair: ${token0Info.symbol}/${token1Info.symbol}`);
+        console.log(`  LP Balance: ${ethers.utils.formatUnits(lpBalance, lpDecimals)}`);
+        console.log(`  Total Supply: ${ethers.utils.formatUnits(totalSupply, lpDecimals)}`);
 
-      // Calculate user's share of the pool
-      const userLPAmount = parseFloat(ethers.utils.formatUnits(lpBalance, lpDecimals));
-      const totalLPSupply = parseFloat(ethers.utils.formatUnits(totalSupply, lpDecimals));
-      
-      // Prevent division by zero
-      if (totalLPSupply === 0) {
-        console.log(`  Total supply is 0, cannot calculate share`);
-        return null;
-      }
-      
-      const userSharePercent = (userLPAmount / totalLPSupply) * 100;
-
-      // Calculate amounts of each token in the pool
-      const reserve0 = parseFloat(ethers.utils.formatUnits(reserves[0], token0Info.decimals));
-      const reserve1 = parseFloat(ethers.utils.formatUnits(reserves[1], token1Info.decimals));
-
-      console.log(`  Pool reserves: ${reserve0} ${token0Info.symbol} / ${reserve1} ${token1Info.symbol}`);
-
-      // User's share of each token
-      const userToken0Amount = (userLPAmount / totalLPSupply) * reserve0;
-      const userToken1Amount = (userLPAmount / totalLPSupply) * reserve1;
-
-      // Get prices for the tokens
-      const [token0Price, token1Price] = await Promise.all([
-        this.getTokenPriceForLP(token0Address, token0Info),
-        this.getTokenPriceForLP(token1Address, token1Info)
-      ]);
-
-      // Calculate values
-      const token0Value = userToken0Amount * token0Price;
-      const token1Value = userToken1Amount * token1Price;
-      const totalValue = token0Value + token1Value;
-
-      console.log(`  Your share: ${userSharePercent.toFixed(4)}% of pool`);
-      console.log(`  Token 0: ${userToken0Amount.toFixed(4)} ${token0Info.symbol} ($${token0Value.toFixed(2)})`);
-      console.log(`  Token 1: ${userToken1Amount.toFixed(4)} ${token1Info.symbol} ($${token1Value.toFixed(2)})`);
-      console.log(`  Total LP Value: $${totalValue.toFixed(2)}`);
-
-      return {
-        address: lpTokenAddress,
-        symbol: lpSymbol,
-        name: lpName,
-        decimals: lpDecimals,
-        amount: userLPAmount,
-        balance: lpBalance,
-        isLiquidityPair: true,
+        // Calculate user's share of the pool
+        const userLPAmount = parseFloat(ethers.utils.formatUnits(lpBalance, lpDecimals));
+        const totalLPSupply = parseFloat(ethers.utils.formatUnits(totalSupply, lpDecimals));
         
-        // LP specific data
-        pairInfo: {
-          token0: {
-            address: token0Address,
-            symbol: token0Info.symbol,
-            name: token0Info.name,
-            amount: userToken0Amount,
-            price: token0Price,
-            value: token0Value
-          },
-          token1: {
-            address: token1Address,
-            symbol: token1Info.symbol,
-            name: token1Info.name,
-            amount: userToken1Amount,
-            price: token1Price,
-            value: token1Value
-          },
-          userSharePercent,
-          totalReserves: {
-            token0: reserve0,
-            token1: reserve1
-          }
-        },
+        // Prevent division by zero
+        if (totalLPSupply === 0) {
+          console.log(`  Total supply is 0, cannot calculate share`);
+          return null;
+        }
         
-        // Standard token fields
-        price: totalValue / userLPAmount, // Price per LP token
-        value: totalValue,
-        hasPrice: true,
-        liquidity: token0Value + token1Value // Same as total value for LP tokens
-      };
+        const userSharePercent = (userLPAmount / totalLPSupply) * 100;
 
+        // Calculate amounts of each token in the pool
+        const reserve0 = parseFloat(ethers.utils.formatUnits(reserves[0], token0Info.decimals));
+        const reserve1 = parseFloat(ethers.utils.formatUnits(reserves[1], token1Info.decimals));
+
+        console.log(`  Pool reserves: ${reserve0} ${token0Info.symbol} / ${reserve1} ${token1Info.symbol}`);
+
+        // User's share of each token
+        const userToken0Amount = (userLPAmount / totalLPSupply) * reserve0;
+        const userToken1Amount = (userLPAmount / totalLPSupply) * reserve1;
+
+        // Get prices for the tokens
+        const [token0Price, token1Price] = await Promise.all([
+          this.getTokenPriceForLP(token0Address, token0Info),
+          this.getTokenPriceForLP(token1Address, token1Info)
+        ]);
+
+        // Calculate values
+        const token0Value = userToken0Amount * token0Price;
+        const token1Value = userToken1Amount * token1Price;
+        const totalValue = token0Value + token1Value;
+
+        console.log(`  Your share: ${userSharePercent.toFixed(4)}% of pool`);
+        console.log(`  Token 0: ${userToken0Amount.toFixed(4)} ${token0Info.symbol} ($${token0Value.toFixed(2)})`);
+        console.log(`  Token 1: ${userToken1Amount.toFixed(4)} ${token1Info.symbol} ($${token1Value.toFixed(2)})`);
+        console.log(`  Total LP Value: $${totalValue.toFixed(2)}`);
+
+        return {
+          address: lpTokenAddress,
+          symbol: lpSymbol,
+          name: lpName,
+          decimals: lpDecimals,
+          amount: userLPAmount,
+          balance: lpBalance,
+          isLiquidityPair: true,
+          
+          // LP specific data
+          pairInfo: {
+            token0: {
+              address: token0Address,
+              symbol: token0Info.symbol,
+              name: token0Info.name,
+              amount: userToken0Amount,
+              price: token0Price,
+              value: token0Value
+            },
+            token1: {
+              address: token1Address,
+              symbol: token1Info.symbol,
+              name: token1Info.name,
+              amount: userToken1Amount,
+              price: token1Price,
+              value: token1Value
+            },
+            userSharePercent,
+            totalReserves: {
+              token0: reserve0,
+              token1: reserve1
+            }
+          },
+          
+          // Standard token fields
+          price: totalValue / userLPAmount, // Price per LP token
+          value: totalValue,
+          hasPrice: true,
+          liquidity: token0Value + token1Value // Same as total value for LP tokens
+        };
+      });
     } catch (error) {
       console.error(`Failed to analyze LP token ${lpTokenAddress}:`, error);
       return null;
@@ -669,24 +660,25 @@ export class EnhancedPulseChainScanner {
   // Get token info
   private async getTokenInfo(tokenAddress: string): Promise<{ symbol: string; name: string; decimals: number }> {
     try {
-      const provider = this.getProvider();
-      const contract = new ethers.Contract(
-        tokenAddress,
-        [
-          "function symbol() view returns (string)",
-          "function name() view returns (string)",
-          "function decimals() view returns (uint8)"
-        ],
-        provider
-      );
+      return await executeWithFailover(async (provider) => {
+        const contract = new ethers.Contract(
+          tokenAddress,
+          [
+            "function symbol() view returns (string)",
+            "function name() view returns (string)",
+            "function decimals() view returns (uint8)"
+          ],
+          provider
+        );
 
-      const [symbol, name, decimals] = await Promise.all([
-        contract.symbol().catch(() => "Unknown"),
-        contract.name().catch(() => "Unknown"),
-        contract.decimals().catch(() => 18)
-      ]);
+        const [symbol, name, decimals] = await Promise.all([
+          contract.symbol().catch(() => "Unknown"),
+          contract.name().catch(() => "Unknown"),
+          contract.decimals().catch(() => 18)
+        ]);
 
-      return { symbol, name, decimals };
+        return { symbol, name, decimals };
+      });
     } catch (error) {
       return { symbol: "Unknown", name: "Unknown", decimals: 18 };
     }

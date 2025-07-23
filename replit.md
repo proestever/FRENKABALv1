@@ -361,6 +361,15 @@ Required environment variables:
 - **Comprehensive coverage** - All token fetching paths now filter out blacklisted tokens before processing
 - **Result** - Problematic tokens are now completely excluded from wallet displays and calculations
 
+### July 23, 2025 - Migrated Enhanced Scanner to Centralized RPC Provider System
+- **Complete RPC migration** - Enhanced scanner now uses centralized rpc-provider.ts system for all blockchain calls
+- **Replaced all getProvider() calls** - Converted every method to use executeWithFailover pattern with automatic failover
+- **Fixed LP token analysis** - Corrected indentation issues in analyzeLPToken method that were causing runtime errors
+- **Robust error handling** - All blockchain calls now have timeout protection, automatic retries, and provider failover
+- **Performance maintained** - Scanner still processes wallets in 20-30 seconds while gaining reliability
+- **LP token support** - Successfully analyzes LP tokens and calculates underlying token values and compositions
+- **Result** - Enhanced scanner is now more reliable with automatic RPC failover and better error recovery
+
 ### July 20, 2025 - Fixed Token Fetching to Use Scanner API for Complete Token Lists
 - **Identified issue** - Client was using limited endpoint that only scanned last 1 million blocks (~3 months)
 - **Updated client endpoint** - Changed from `/api/wallet/:address/balances-no-prices` to `/api/wallet/:address/scanner-balances`
