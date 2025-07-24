@@ -18,6 +18,7 @@ import { getDirectTokenBalancesNoPrices } from "./services/direct-balance-no-pri
 import { getProviderHealth, switchToProvider, resetFailedProviders } from "./services/rpc-provider";
 import { getScannerTokenBalances, getFastScannerTokenBalances } from "./services/scanner-balance-service";
 import { getScannerTransactionHistory, getFullScannerTransactionHistory } from "./services/scanner-transaction-service";
+import { balanceCacheManager } from "./services/balance-cache-manager";
 import { z } from "zod";
 import { TokenLogo, insertBookmarkSchema, insertUserSchema } from "@shared/schema";
 import { ethers } from "ethers";
@@ -454,6 +455,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error in real-time refresh:", error);
       return res.status(500).json({
         message: "Failed to refresh wallet balances",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // API route to get live-tracked wallet balances with real-time updates
+  app.get("/api/wallet/:address/live-balances", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      // Validate ethereum address format
+      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!addressRegex.test(address)) {
+        return res.status(400).json({ message: "Invalid wallet address format" });
+      }
+      
+      console.log(`Getting live-tracked balances for ${address}`);
+      
+      // Get balances with live updates
+      const tokens = await balanceCacheManager.getBalancesWithLiveUpdates(address);
+      
+      // Calculate total value
+      const totalValue = tokens.reduce((sum, token) => sum + (token.value || 0), 0);
+      
+      // Find PLS balance
+      const plsToken = tokens.find(t => t.isNative);
+      const plsBalance = plsToken ? plsToken.balanceFormatted : 0;
+      const plsPriceChange = plsToken ? plsToken.priceChange24h : null;
+      
+      return res.json({
+        address,
+        tokens,
+        totalValue,
+        tokenCount: tokens.length,
+        plsBalance,
+        plsPriceChange,
+        networkCount: 1,
+        fetchMethod: 'live-websocket',
+        isLiveTracking: true
+      });
+    } catch (error) {
+      console.error("Error getting live balances:", error);
+      return res.status(500).json({
+        message: "Failed to get live balances",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // API route to get WebSocket balance tracking status
+  app.get("/api/websocket-status", (_req, res) => {
+    const status = balanceCacheManager.getStatus();
+    return res.json(status);
+  });
+  
+  // API route to stop tracking a wallet
+  app.delete("/api/wallet/:address/tracking", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ message: "Invalid wallet address" });
+      }
+      
+      await balanceCacheManager.untrackWallet(address);
+      
+      return res.json({ message: "Stopped tracking wallet", address });
+    } catch (error) {
+      console.error("Error stopping wallet tracking:", error);
+      return res.status(500).json({
+        message: "Failed to stop wallet tracking",
         error: error instanceof Error ? error.message : "Unknown error"
       });
     }

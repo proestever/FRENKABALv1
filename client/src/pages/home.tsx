@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { SearchSection } from '@/components/search-section';
@@ -8,7 +8,7 @@ import { TokenLogo } from '@/components/token-logo';
 import { EmptyState } from '@/components/empty-state';
 import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
-
+import { WebSocketStatus } from '@/components/websocket-status';
 
 import ApiStats from '@/components/api-stats';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
 import { useClientSideWallet } from '@/hooks/use-client-side-wallet'; // Client-side wallet hook
 import { useDirectBalance } from '@/hooks/use-direct-balance';
+import { useLiveWalletBalances } from '@/hooks/use-live-wallet-balances'; // Live balance tracking hook
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
 import { combineWalletData } from '@/lib/utils';
@@ -583,6 +584,54 @@ export default function Home() {
     progress
   } = useClientSideWallet(searchedAddress)
   
+  // Use live balance tracking for real-time updates
+  const { 
+    liveData, 
+    connectionStatus,
+    error: liveError 
+  } = useLiveWalletBalances(searchedAddress || undefined);
+  
+  // Merge live balance updates with existing wallet data
+  const displayWalletData = useMemo(() => {
+    if (!walletData) return null;
+    if (!liveData || !liveData.balances || Object.keys(liveData.balances).length === 0) {
+      return walletData;
+    }
+    
+    // Create a new wallet object with updated balances
+    const updatedTokens = walletData.tokens.map(token => {
+      const tokenAddress = token.address.toLowerCase();
+      const liveBalance = liveData.balances[tokenAddress];
+      
+      if (liveBalance !== undefined) {
+        // Update balance and recalculate value
+        const balanceFormatted = parseFloat(liveBalance) / Math.pow(10, token.decimals);
+        const value = balanceFormatted * (token.price || 0);
+        
+        return {
+          ...token,
+          balance: liveBalance,
+          balanceFormatted,
+          value,
+          // Add a flag to indicate this was updated live
+          isLiveUpdate: true
+        };
+      }
+      
+      return token;
+    });
+    
+    // Recalculate total value with live balances
+    const totalValue = updatedTokens.reduce((sum, token) => sum + (token.value || 0), 0);
+    
+    return {
+      ...walletData,
+      tokens: updatedTokens,
+      totalValue,
+      lastLiveUpdate: liveData.lastUpdate
+    };
+  }, [walletData, liveData]);
+  
   // Fetch HEX stakes for single wallet
   const [singleWalletHexStakes, setSingleWalletHexStakes] = useState<HexStakeSummary | null>(null);
   
@@ -709,10 +758,10 @@ export default function Home() {
 
   // Combine all tokens - standard API tokens + manually added tokens
   const allTokens = (() => {
-    if (!walletData) return manualTokens;
+    if (!displayWalletData) return manualTokens;
     
     // Start with wallet tokens - scanner already includes PLS if present
-    let tokens = [...walletData.tokens];
+    let tokens = [...displayWalletData.tokens];
     
     // Add manual tokens that aren't already in the list
     const manualTokensToAdd = manualTokens.filter(t => 
@@ -724,6 +773,13 @@ export default function Home() {
 
   return (
     <main className="container mx-auto px-4 py-6">
+      {/* WebSocket Status Indicator */}
+      {searchedAddress && !multiWalletData && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <WebSocketStatus connectionStatus={connectionStatus} />
+        </div>
+      )}
+      
       {/* Only show the search section at the top if no wallet has been searched yet and not in multi-wallet mode */}
       {!searchedAddress && !multiWalletData && (
         <SearchSection 
@@ -1036,9 +1092,9 @@ export default function Home() {
               <div className="w-full lg:w-1/3 flex flex-col gap-6">
 
                 
-                {walletData && (
+                {displayWalletData && (
                   <WalletOverview 
-                    wallet={walletData} 
+                    wallet={displayWalletData} 
                     isLoading={false} 
                     hexStakesSummary={singleWalletHexStakes}
                     onRefresh={handleRefresh}
