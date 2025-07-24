@@ -305,7 +305,7 @@ Required environment variables:
 - **Root cause analysis**:
   - **No refresh button** - Portfolio views lacked a dedicated refresh button
   - **PulseChain Scan API delay** - The scanner API might have delays in reflecting recent blockchain transactions
-  - **Limited recent block scanning** - Enhanced scanner only scanned last 2000 blocks (~10 minutes)
+  - **Limited recent block scanning** - Enhanced scanner only scanned last 2000 blocks (~10 minutes), not enough to catch older swaps
 - **Solution implemented**:
   - **Added refresh button** - Portfolio views now have a dedicated refresh button in the wallet overview
   - **Force refresh mechanism** - Added force=true parameter to bypass any potential caching
@@ -313,7 +313,8 @@ Required environment variables:
   - **Direct blockchain scanning** - Enhanced scanner scans recent blocks directly on blockchain to catch new transactions
   - **No transfer-based calculations** - System fetches current balances directly, not adding/subtracting transfers
 - **Technical details**:
-  - Scanner fetches from PulseChain Scan API first, then scans recent 2000 blocks for any missed activity
+  - Scanner fetches from PulseChain Scan API first, then scans recent 12000 blocks (~1 hour) for any missed activity
+  - **Extended scan window** - Increased from 2000 blocks (~10 minutes) to 12000 blocks (~1 hour) to catch older swaps
   - On force refresh, portfolios use enhanced scanner with LP token analysis and recent block scanning
   - All token balances are fetched fresh from smart contracts, not calculated from cached values
 - **Result** - Portfolio refresh now combines API data with real-time blockchain scanning for immediate updates

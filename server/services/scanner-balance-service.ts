@@ -15,7 +15,7 @@ import { executeWithFailover } from './rpc-provider';
 import { enhancedScanner } from './enhanced-scanner-service';
 
 const PULSECHAIN_SCAN_API_BASE = 'https://api.scan.pulsechain.com/api/v2';
-const RECENT_BLOCKS_TO_SCAN = 100000; // Last ~33 hours of blocks for near real-time updates
+const RECENT_BLOCKS_TO_SCAN = 12000; // Last ~1 hour of blocks for near real-time updates
 const TRANSFER_EVENT_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const PLS_TOKEN_ADDRESS = '0x0000000000000000000000000000000000000000';
 const WPLS_CONTRACT_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27';
