@@ -174,8 +174,8 @@ export class EnhancedPulseChainScanner {
     try {
       return await executeWithFailover(async (provider) => {
         const currentBlock = await provider.getBlockNumber();
-        // Scan last 12000 blocks (~1 hour) for recent activity to catch all swaps
-        const fromBlock = currentBlock - 12000;
+        // Scan last 2000 blocks (~10 minutes) for very recent activity
+        const fromBlock = currentBlock - 2000;
         
         // Normalize address for log filtering
         const normalizedAddress = ethers.utils.getAddress(walletAddress);

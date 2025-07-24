@@ -137,7 +137,7 @@ export default function Home() {
   };
   
   // Handle multi-wallet search
-  const handleMultiSearch = async (addresses: string[], forceRefresh = false) => {
+  const handleMultiSearch = async (addresses: string[]) => {
     if (!addresses.length) return;
     
     // Reset single wallet view
@@ -210,7 +210,7 @@ export default function Home() {
               try {
                 // Use fast scanner for portfolios
                 const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
-                const dataWithPrices = await fetchWalletDataFast(address, forceRefresh);
+                const dataWithPrices = await fetchWalletDataFast(address);
                 
                 // Check if wallet had an error
                 if (dataWithPrices.error) {
@@ -801,9 +801,9 @@ export default function Home() {
                     hexStakesSummary={multiWalletHexStakes}
                     portfolioName={portfolioName || undefined}
                     onRefresh={() => {
-                      // Refresh all wallets by re-fetching with force refresh
+                      // Refresh all wallets by re-fetching
                       if (multiWalletData) {
-                        handleMultiSearch(Object.keys(multiWalletData), true); // Force refresh to bypass any caching
+                        handleMultiSearch(Object.keys(multiWalletData));
                       }
                     }}
                   />

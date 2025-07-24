@@ -270,19 +270,6 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
               </Button>
             )}
             
-            {/* Refresh button for portfolio/combined views */}
-            {(wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:")) && (
-              <Button
-                variant="outline"
-                onClick={onRefresh}
-                disabled={isLoading}
-                className="glass-card border-white/15 text-sm h-8 hover:bg-black/20 hover:text-white flex items-center"
-              >
-                <RotateCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            )}
-            
             {/* Only show for single wallet, not for portfolio or combined views */}
             {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
               <LastUpdatedInfo
