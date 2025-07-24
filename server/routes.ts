@@ -341,6 +341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/wallet/:address/fast-balances", async (req, res) => {
     try {
       const { address } = req.params;
+      const { force } = req.query; // Add force parameter to bypass any caching
       
       if (!address || typeof address !== 'string') {
         return res.status(400).json({ message: "Invalid wallet address" });
@@ -352,7 +353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid wallet address format" });
       }
       
-      console.log(`Getting fast balances for ${address}`);
+      console.log(`Getting fast balances for ${address}${force === 'true' ? ' (force refresh)' : ''}`);
       
       const startTime = Date.now();
       

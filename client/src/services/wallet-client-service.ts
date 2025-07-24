@@ -62,9 +62,9 @@ interface TokenWithPrice extends ProcessedToken {
  * Fetch wallet balances using scanner API (gets ALL tokens, not just recent)
  * Includes retry logic for better reliability
  */
-async function fetchWalletBalancesFromScanner(address: string, retries = 3, useFastEndpoint = false): Promise<Wallet> {
+async function fetchWalletBalancesFromScanner(address: string, retries = 3, useFastEndpoint = false, forceRefresh = false): Promise<Wallet> {
   let lastError: Error | null = null;
-  const endpoint = useFastEndpoint ? `/api/wallet/${address}/fast-balances` : `/api/wallet/${address}/scanner-balances`;
+  const endpoint = useFastEndpoint ? `/api/wallet/${address}/fast-balances${forceRefresh ? '?force=true' : ''}` : `/api/wallet/${address}/scanner-balances`;
   const timeoutMs = useFastEndpoint ? 30000 : 600000; // 30 seconds for fast, 10 minutes for enhanced
   
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -248,9 +248,9 @@ export async function fetchWalletDataClientSide(
  * Fetches wallet data using enhanced scanner (for portfolios)
  * Returns complete token data with LP token analysis
  */
-export async function fetchWalletDataFast(address: string): Promise<Wallet> {
+export async function fetchWalletDataFast(address: string, forceRefresh = false): Promise<Wallet> {
   // Use enhanced scanner instead of fast endpoint to get LP token analysis
-  const walletData = await fetchWalletBalancesFromScanner(address, 3, false); // Use enhanced endpoint
+  const walletData = await fetchWalletBalancesFromScanner(address, 3, false, forceRefresh); // Use enhanced endpoint
   if (walletData.error) {
     return walletData;
   }

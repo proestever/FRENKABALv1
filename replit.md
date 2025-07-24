@@ -300,6 +300,16 @@ Required environment variables:
 - **Dust token filtering** - Added filter to skip tokens with amounts less than 0.000001 to prevent calculation errors from broken liquidity pools
 - **Value sanity checks** - Added checks to cap any token values over $10 million to prevent astronomical values from breaking the UI
 
+### July 24, 2025 - Fixed Portfolio Refresh Issue
+- **Issue identified** - Portfolios weren't updating after user performed swaps, even after refreshing the page multiple times
+- **Root cause** - No refresh button was available for portfolio views, unlike single wallet views
+- **Solution implemented**:
+  - **Added refresh button** - Portfolio views now have a dedicated refresh button in the wallet overview
+  - **Force refresh mechanism** - Added force=true parameter to fast-balances endpoint to bypass any potential caching
+  - **Updated fetchWalletDataFast** - Function now supports forceRefresh parameter to ensure fresh data from blockchain
+  - **Portfolio refresh callback** - Refresh button now forces re-fetch of all wallet data in portfolio with force refresh enabled
+- **Result** - Users can now click refresh button to immediately update portfolio data after performing swaps
+
 ### July 22, 2025 - Comprehensive Fix for Astronomical Value Bug
 - **Identified issue** - Wallet 0x592139a3f8cf019f628a152fc1262b8aef5b7199 had tokens with astronomical values causing portfolio crashes
 - **Multi-layer protection implemented**:
