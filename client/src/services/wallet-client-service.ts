@@ -249,8 +249,9 @@ export async function fetchWalletDataClientSide(
  * Returns complete token data with LP token analysis
  */
 export async function fetchWalletDataFast(address: string, forceRefresh = false): Promise<Wallet> {
-  // Use enhanced scanner instead of fast endpoint to get LP token analysis
-  const walletData = await fetchWalletBalancesFromScanner(address, 3, false, forceRefresh); // Use enhanced endpoint
+  // When force refreshing, use the enhanced scanner endpoint for real-time data
+  // Otherwise use fast endpoint for speed
+  const walletData = await fetchWalletBalancesFromScanner(address, 3, !forceRefresh, forceRefresh); // Use enhanced when force refreshing
   if (walletData.error) {
     return walletData;
   }
