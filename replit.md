@@ -2,6 +2,14 @@
 
 ## Recent Changes
 
+### July 25, 2025 - Portfolio and Wallet Snapshot Download Feature
+- **Download functionality added** - Users can now download JSON snapshots of their portfolio and wallet data
+- **Comprehensive data export** - Snapshots include all visible tokens, values, balances, HEX stakes, and PLS balance
+- **Smart filtering** - Hidden tokens are automatically excluded from downloaded snapshots
+- **Professional UI** - Gradient-styled download button with icon added to both portfolio and wallet share modals
+- **Descriptive filenames** - Downloads use formatted names like `portfolio_my_wallet_2025-07-25.json`
+- **Result** - Users can easily save and backup their portfolio/wallet state for record-keeping or analysis
+
 ### July 24, 2025 - WebSocket Real-Time Balance Tracking Implemented
 - **WebSocket infrastructure** - Created live-balance-tracker.ts service with WebSocket connection to PulseChain RPC for real-time Transfer event monitoring
 - **Balance cache manager** - Implemented balance-cache-manager.ts for efficient in-memory balance caching with periodic blockchain reconciliation

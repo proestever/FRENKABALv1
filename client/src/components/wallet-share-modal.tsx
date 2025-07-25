@@ -9,6 +9,8 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { TokenLogo } from '@/components/token-logo';
 import { formatCurrency, formatTokenAmount } from '@/lib/utils';
 import { getHiddenTokens } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
 
 
 
@@ -125,6 +127,57 @@ export function WalletShareModal({
     }
   }, [walletData, hexStakesData, hiddenTokens]);
 
+  // Function to download wallet snapshot
+  const downloadSnapshot = () => {
+    if (!walletData) return;
+
+    // Get all visible tokens for the full snapshot (not just top 5)
+    const visibleTokens = walletData.tokens.filter((token: any) => 
+      !hiddenTokens.includes(token.address)
+    );
+
+    // Create snapshot data
+    const snapshot = {
+      wallet: {
+        address: walletAddress,
+        totalValue: totalValue,
+        timestamp: new Date().toISOString(),
+        website: 'frenkabal.com'
+      },
+      tokens: visibleTokens.map((token: any) => ({
+        address: token.address,
+        symbol: token.symbol,
+        name: token.name,
+        balance: token.balanceFormatted,
+        value: token.value || 0,
+        price: token.price || 0,
+        isLp: token.isLp || false,
+        lpToken0Symbol: token.lpToken0Symbol,
+        lpToken1Symbol: token.lpToken1Symbol
+      })),
+      hexStakes: hexStakesData ? {
+        totalStakedHex: hexStakesData.totalStakedHex,
+        totalInterestHex: hexStakesData.totalInterestHex,
+        totalCombinedHex: hexStakesData.totalCombinedHex,
+        totalValueUsd: hexStakesData.totalCombinedValueUsd,
+        stakeCount: hexStakesData.stakeCount,
+        hexPrice: hexStakesData.hexPrice
+      } : null,
+      plsBalance: walletData.plsBalance || 0
+    };
+
+    // Create and download JSON file
+    const dataStr = JSON.stringify(snapshot, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `wallet_${walletAddress.slice(0, 8)}_${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl w-[90vw] max-h-[90vh] bg-gradient-to-b from-black via-gray-950 to-black border-gray-800 text-white p-0 overflow-hidden [&>button]:text-gray-400 [&>button]:hover:text-white [&>button]:absolute [&>button]:right-4 [&>button]:top-4 [&>button]:z-20">
@@ -239,6 +292,17 @@ export function WalletShareModal({
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Download Button */}
+          <div className="flex justify-center mb-4 sm:mb-6">
+            <Button
+              onClick={downloadSnapshot}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg"
+            >
+              <Download className="h-4 w-4" />
+              Download Snapshot
+            </Button>
           </div>
 
           {/* Footer */}
