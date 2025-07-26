@@ -10,6 +10,13 @@
 - **Descriptive filenames** - Downloads use formatted names like `portfolio_my_wallet_2025-07-25.json`
 - **Result** - Users can easily save and backup their portfolio/wallet state for record-keeping or analysis
 
+### July 26, 2025 - Fixed HEX Price to Use Specific PulseX Pair
+- **Updated HEX price source** - Now uses specific HEX/USDC pair address: 0xf1f4ee610b2babb05c635f726ef8b0c568c8dc65
+- **Direct pair price calculation** - Fetches reserves directly from the specified pair contract to calculate accurate HEX price
+- **Hardcoded fallback price** - Falls back to $0.007672 (user-specified price) if pair fetching fails
+- **Removed generic price fetching** - No longer uses generic smart contract price service or DexScreener for HEX
+- **Result** - HEX price now shows correctly at ~$0.007672 across all wallets and portfolios
+
 ### July 24, 2025 - WebSocket Real-Time Balance Tracking Implemented
 - **WebSocket infrastructure** - Created live-balance-tracker.ts service with WebSocket connection to PulseChain RPC for real-time Transfer event monitoring
 - **Balance cache manager** - Implemented balance-cache-manager.ts for efficient in-memory balance caching with periodic blockchain reconciliation

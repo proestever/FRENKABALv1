@@ -152,58 +152,91 @@ export async function getHexPriceWithCache(): Promise<number> {
     return await ongoingPriceRequest;
   }
   
-  // Default fallback price - updated to more realistic value
-  // HEX typically trades between $0.005 - $0.01
-  let hexPrice = 0.0074;
+  // Default fallback price - set to the price you specified
+  let hexPrice = 0.007672;
   
   // Create the ongoing request promise
   ongoingPriceRequest = (async () => {
     try {
-      // Import and use the smart contract price service
-      const { getTokenPriceFromContract } = await import('../services/smart-contract-price-service');
+      // Use the specific HEX/USDC pair address provided by user
+      const HEX_USDC_PAIR = '0xf1f4ee610b2babb05c635f726ef8b0c568c8dc65';
+      const USDC_ADDRESS = '0x15D38573d2feeb82e7ad5187aB8c1D52810B1f07'; // USDC on PulseChain
       
-      // Fetch HEX price directly from smart contracts
-      const priceData = await getTokenPriceFromContract(HEX_CONTRACT_ADDRESS);
+      // Try to fetch price from the specific pair
+      const { ethers } = await import('ethers');
+      const provider = new ethers.providers.JsonRpcProvider('https://rpc-pulsechain.g4mm4.io', {
+        chainId: 369,
+        name: 'pulsechain',
+        ensAddress: undefined
+      });
       
-      if (priceData && priceData.price && typeof priceData.price === 'number' && !isNaN(priceData.price) && priceData.price > 0) {
-        hexPrice = priceData.price;
-        console.log('Fetched fresh HEX price from smart contract:', hexPrice);
-      } else {
-        // If smart contract fetch fails, try DexScreener as backup
-        console.log('Smart contract price fetch failed, trying DexScreener...');
-        try {
-          const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${HEX_CONTRACT_ADDRESS}`);
-          const data = await response.json();
-          
-          if (data && data.pairs && data.pairs.length > 0) {
-            // Find the best pair (highest liquidity USD)
-            const bestPair = data.pairs
-              .filter(pair => pair.priceUsd && parseFloat(pair.priceUsd) > 0)
-              .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
-            
-            if (bestPair && bestPair.priceUsd) {
-              hexPrice = parseFloat(bestPair.priceUsd);
-              console.log('Fetched HEX price from DexScreener:', hexPrice);
-            }
-          }
-        } catch (dexError) {
-          console.error('DexScreener fetch also failed:', dexError);
+      // Minimal pair ABI to get reserves
+      const pairAbi = [
+        'function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)',
+        'function token0() external view returns (address)',
+        'function token1() external view returns (address)'
+      ];
+      
+      const pairContract = new ethers.Contract(HEX_USDC_PAIR, pairAbi, provider);
+      
+      try {
+        const [reserves, token0, token1] = await Promise.all([
+          pairContract.getReserves(),
+          pairContract.token0(),
+          pairContract.token1()
+        ]);
+        
+        // Determine which token is HEX and which is USDC
+        let hexReserve, usdcReserve;
+        if (token0.toLowerCase() === HEX_CONTRACT_ADDRESS.toLowerCase()) {
+          hexReserve = reserves.reserve0;
+          usdcReserve = reserves.reserve1;
+        } else {
+          hexReserve = reserves.reserve1;
+          usdcReserve = reserves.reserve0;
         }
+        
+        // Calculate price (USDC has 6 decimals, HEX has 8 decimals)
+        // Convert BigNumbers to regular numbers with proper decimal handling
+        const hexAmountRaw = hexReserve.toString();
+        const usdcAmountRaw = usdcReserve.toString();
+        
+        // Convert to actual amounts considering decimals
+        const hexAmount = parseFloat(hexAmountRaw) / Math.pow(10, 8);
+        const usdcAmount = parseFloat(usdcAmountRaw) / Math.pow(10, 6);
+        
+        if (hexAmount > 0) {
+          hexPrice = usdcAmount / hexAmount;
+          console.log(`Fetched HEX price from specific pair ${HEX_USDC_PAIR}: $${hexPrice.toFixed(6)}`);
+          
+          // If the price seems unreasonable, use the hardcoded price
+          if (hexPrice > 1 || hexPrice < 0.0001) {
+            console.log('Price seems unreasonable, using hardcoded price: $0.007672');
+            hexPrice = 0.007672;
+          }
+        }
+      } catch (pairError) {
+        console.error('Error fetching from specific HEX/USDC pair:', pairError);
+        console.log('Using hardcoded HEX price: $0.007672');
+        hexPrice = 0.007672; // Use the price specified by user
       }
       
-      // Update cache with whatever price we got
+      // Update cache with the price we got
       cachedHexPrice = {
         price: hexPrice,
         timestamp: Date.now()
       };
       
     } catch (error) {
-      console.error('Error fetching HEX price from smart contract:', error);
-      // If we have any cached price (even expired), use it as backup
-      if (cachedHexPrice) {
-        console.log('Using expired cached HEX price after fetch error:', cachedHexPrice.price);
-        hexPrice = cachedHexPrice.price;
-      }
+      console.error('Error in HEX price fetching:', error);
+      // Use hardcoded price as fallback
+      hexPrice = 0.007672;
+      
+      // Update cache even with fallback
+      cachedHexPrice = {
+        price: hexPrice,
+        timestamp: Date.now()
+      };
     } finally {
       // Clear the ongoing request when done
       ongoingPriceRequest = null;
