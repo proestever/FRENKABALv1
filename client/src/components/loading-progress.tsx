@@ -12,6 +12,9 @@ interface LoadingProgressProps {
     totalBatches: number;
     status: 'idle' | 'loading' | 'complete' | 'error';
     message: string;
+    recentMessages?: string[];
+    walletsProcessed?: number;
+    totalWallets?: number;
   };
 }
 
@@ -298,6 +301,42 @@ export function LoadingProgress({ isLoading, walletAddress, customProgress }: Lo
               {progress.message || LOADING_STAGES[currentStageIndex]?.label || 'Initializing...'}
             </p>
           </div>
+          
+          {/* Real-time Progress Messages */}
+          {progress.recentMessages && progress.recentMessages.length > 0 && (
+            <div className="mt-3 border-t border-white/10 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-semibold text-white/70">Live Progress</h4>
+                {progress.walletsProcessed !== undefined && progress.totalWallets !== undefined && (
+                  <span className="text-xs text-white/50">
+                    {progress.walletsProcessed} of {progress.totalWallets} wallets
+                  </span>
+                )}
+              </div>
+              <div className="bg-black/20 rounded-md p-2 max-h-32 overflow-y-auto">
+                <div className="space-y-1">
+                  {progress.recentMessages.slice(-5).map((msg, idx) => {
+                    // Clean up the message
+                    const cleanMsg = msg
+                      .replace(/Successfully fetched wallet /i, '✓ Wallet ')
+                      .replace(/ using fast scanner.*$/i, '')
+                      .replace(/ on attempt \d+.*$/i, '')
+                      .replace(/Skipping low liquidity pair for /i, '⚠ Low liquidity: ')
+                      .replace(/: [\d.]+ WPLS$/i, '')
+                      .replace(/0x([a-fA-F0-9]{40})/g, (match) => 
+                        `${match.slice(0, 6)}...${match.slice(-4)}`
+                      );
+                    
+                    return (
+                      <p key={idx} className="text-xs text-white/60 font-mono">
+                        {cleanMsg}
+                      </p>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
     </div>

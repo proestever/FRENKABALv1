@@ -41,11 +41,17 @@ export default function Home() {
     totalBatches: number;
     status: 'idle' | 'loading' | 'complete' | 'error';
     message: string;
+    recentMessages: string[];
+    walletsProcessed: number;
+    totalWallets: number;
   }>({
     currentBatch: 0,
     totalBatches: 0,
     status: 'idle',
-    message: ''
+    message: '',
+    recentMessages: [],
+    walletsProcessed: 0,
+    totalWallets: 0
   });
   const params = useParams<{ walletAddress?: string; portfolioId?: string; publicCode?: string }>();
   const [location, setLocation] = useLocation();
@@ -188,45 +194,79 @@ export default function Home() {
       currentBatch: 0,
       totalBatches: addresses.length,
       status: 'loading' as const,
-      message: `Preparing to load ${addresses.length} wallets...`
+      message: `Preparing to load ${addresses.length} wallets...`,
+      recentMessages: [] as string[],
+      walletsProcessed: 0,
+      totalWallets: addresses.length
     };
     
     // Set initial progress
     setMultiWalletProgress(customProgressState);
     
+    // Create a function to add progress messages
+    const addProgressMessage = (message: string) => {
+      setMultiWalletProgress(prev => ({
+        ...prev,
+        recentMessages: [...prev.recentMessages.slice(-9), message] // Keep last 10 messages
+      }));
+    };
+    
+    // Intercept console logs temporarily to capture progress
+    const originalLog = console.log;
+    console.log = (...args: any[]) => {
+      const message = args.join(' ');
+      if (message.includes('Successfully fetched wallet') || 
+          message.includes('Skipping low liquidity pair') ||
+          message.includes('Using specific pair') ||
+          message.includes('price from specific pair')) {
+        addProgressMessage(message);
+      }
+      originalLog(...args);
+    };
+    
     try {
       console.log(`Fetching data for ${addresses.length} wallets individually`);
       
-      // Parallelize all data fetching for maximum speed
-      setMultiWalletProgress({
-        currentBatch: addresses.length,
-        totalBatches: addresses.length,
+      // For large portfolios, implement smaller batches to prevent hanging
+      const BATCH_SIZE = addresses.length > 20 ? 5 : 10; // Smaller batches for large portfolios
+      const batches = [];
+      for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
+        batches.push(addresses.slice(i, i + BATCH_SIZE));
+      }
+      
+      console.log(`Processing ${addresses.length} wallets in ${batches.length} batches of up to ${BATCH_SIZE} wallets each`);
+      
+      setMultiWalletProgress(prev => ({
+        ...prev,
+        currentBatch: 0,
+        totalBatches: batches.length,
         status: 'loading',
-        message: `Loading ${addresses.length} wallets and HEX stakes in parallel...`
-      });
+        message: `Loading ${addresses.length} wallets in ${batches.length} batches...`,
+        walletsProcessed: 0,
+        totalWallets: addresses.length
+      }));
       
       // Start ALL async operations but load wallets one by one to avoid timeouts
       const [walletResults, hexStakesData, individualHexResults] = await Promise.all([
         // Fetch wallet data in parallel batches for faster loading
         (async () => {
-          const BATCH_SIZE = 10; // Process 10 wallets simultaneously for much faster loading
           const results = [];
+          let processedCount = 0;
           
           // Process wallets in batches
-          for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
-            const batch = addresses.slice(i, i + BATCH_SIZE);
-            const batchIndex = Math.floor(i / BATCH_SIZE) + 1;
-            const totalBatches = Math.ceil(addresses.length / BATCH_SIZE);
+          for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+            const batch = batches[batchIdx];
+            const startIdx = batchIdx * BATCH_SIZE;
             
-            // Update progress less frequently - only at batch boundaries
-            if (i === 0 || (i + batch.length) === addresses.length || i % 20 === 0) {
-              setMultiWalletProgress({
-                currentBatch: i + batch.length,
-                totalBatches: addresses.length,
-                status: 'loading',
-                message: `Loading wallets ${i + 1} to ${Math.min(i + batch.length, addresses.length)} of ${addresses.length}...`
-              });
-            }
+            // Update progress for this batch
+            setMultiWalletProgress(prev => ({
+              ...prev,
+              currentBatch: batchIdx + 1,
+              totalBatches: batches.length,
+              status: 'loading',
+              message: `Processing batch ${batchIdx + 1} of ${batches.length} (wallets ${startIdx + 1}-${startIdx + batch.length})...`,
+              walletsProcessed: processedCount
+            }));
             
             // Process batch in parallel
             const batchPromises = batch.map(async (address) => {
@@ -268,9 +308,18 @@ export default function Home() {
             const batchResults = await Promise.all(batchPromises);
             results.push(...batchResults);
             
-            // Small delay between batches to avoid overwhelming the server
-            if (i + BATCH_SIZE < addresses.length) {
-              await new Promise(resolve => setTimeout(resolve, 50));
+            processedCount += batch.length;
+            
+            // Update wallets processed count
+            setMultiWalletProgress(prev => ({
+              ...prev,
+              walletsProcessed: processedCount,
+              message: `Processed ${processedCount} of ${addresses.length} wallets...`
+            }));
+            
+            // Add delay between batches for large portfolios to prevent overwhelming the server
+            if (batchIdx < batches.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, addresses.length > 20 ? 1000 : 100));
             }
           }
           
@@ -370,6 +419,9 @@ export default function Home() {
         variant: "destructive"
       });
     } finally {
+      // Restore console.log
+      console.log = originalLog;
+      
       // Add a slight delay before setting loading to false to ensure progress is visible
       setTimeout(() => {
         setIsMultiWalletLoading(false);
