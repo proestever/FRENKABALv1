@@ -58,6 +58,7 @@
 - **Mobile-friendly wallet table** - Added card-based layout for wallet addresses on mobile instead of table
 - **Responsive dialog content** - Made "Current Addresses" section in dialogs mobile-friendly with break-all text
 - **Full-width cards** - Portfolio cards utilize full screen width on mobile devices
+- **Fixed header card overflow** - Made header flex stack vertically on mobile, added horizontal padding, and reduced button/text sizes
 - **Result** - Portfolio tab now provides excellent user experience on all mobile screen sizes
 
 ### July 24, 2025 - WebSocket Real-Time Balance Tracking Implemented

@@ -467,15 +467,15 @@ const PortfoliosPage = () => {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6 p-4 glass-card rounded-lg border border-white/15 shadow-lg">
-        <h1 className="text-2xl font-bold text-white">My Portfolios</h1>
+    <div className="container mx-auto py-4 sm:py-8 px-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 p-4 glass-card rounded-lg border border-white/15 shadow-lg">
+        <h1 className="text-xl sm:text-2xl font-bold text-white">My Portfolios</h1>
         <div className="flex gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="glass-card border-white/15 bg-black/20 hover:bg-white/10">
-                <ArrowUpDown className="h-4 w-4 mr-2" />
-                Sort
+              <Button variant="outline" className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-xs sm:text-sm">
+                <ArrowUpDown className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Sort</span>
                 {sortField === 'name' && (
                   <span className="ml-1 text-xs">
                     (Name {sortDirection === 'asc' ? '↑' : '↓'})
@@ -520,9 +520,10 @@ const PortfoliosPage = () => {
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <Button onClick={() => setIsCreateDialogOpen(true)} className="glass-card border-white/15 bg-black/20 hover:bg-white/10">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Portfolio
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-xs sm:text-sm">
+            <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Create Portfolio</span>
+            <span className="sm:hidden">Create</span>
           </Button>
         </div>
       </div>
