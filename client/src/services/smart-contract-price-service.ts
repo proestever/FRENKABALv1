@@ -210,6 +210,30 @@ class SmartContractPriceService {
           return priceData;
         }
       }
+      
+      // Special handling for UFO token
+      if (normalizedAddress === '0x456548a9b56efbbd89ca0309edd17a9e20b04018') {
+        console.log('Using specific pair for UFO token');
+        const UFO_PAIR = '0xbea0e55b82eb975280041f3b49c4d0bd937b72d5';
+        
+        const priceData = await this.getSpecificPairPrice(tokenAddress, UFO_PAIR);
+        if (priceData) {
+          this.cachePrice(normalizedAddress, priceData);
+          return priceData;
+        }
+      }
+      
+      // Special handling for PTGC token
+      if (normalizedAddress === '0x94534eeee131840b1c0f61847c572228bdfde93') {
+        console.log('Using specific pair for PTGC token');
+        const PTGC_PAIR = '0xf5a89a6487d62df5308cdda89c566c5b5ef94c11';
+        
+        const priceData = await this.getSpecificPairPrice(tokenAddress, PTGC_PAIR);
+        if (priceData) {
+          this.cachePrice(normalizedAddress, priceData);
+          return priceData;
+        }
+      }
 
       // Special case for PulseReflection (PRS) - use the correct pair from DexScreener
       if (normalizedAddress === '0xb6b57227150a7097723e0c013752001aad01248f') {

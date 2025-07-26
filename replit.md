@@ -26,6 +26,12 @@
 - **TypeScript fix** - Fixed type error when checking if paired token is a stablecoin
 - **Result** - PLSX and WETH now show accurate prices using their designated trading pairs
 
+### July 26, 2025 - Added Special Pair Handling for UFO and PTGC Tokens
+- **UFO token special handling** - Now uses specific pair 0xbea0e55b82eb975280041f3b49c4d0bd937b72d5 for accurate pricing
+- **PTGC token special handling** - Now uses specific pair 0xf5a89a6487d62df5308cdda89c566c5b5ef94c11 for accurate pricing
+- **Extended token coverage** - Six tokens now have specific pair handling: HEX, PLSX, WETH, UFO, and PTGC
+- **Result** - UFO and PTGC tokens now fetch prices from their designated trading pairs for better accuracy
+
 ### July 24, 2025 - WebSocket Real-Time Balance Tracking Implemented
 - **WebSocket infrastructure** - Created live-balance-tracker.ts service with WebSocket connection to PulseChain RPC for real-time Transfer event monitoring
 - **Balance cache manager** - Implemented balance-cache-manager.ts for efficient in-memory balance caching with periodic blockchain reconciliation
