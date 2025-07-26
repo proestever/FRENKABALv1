@@ -457,20 +457,41 @@ router.post("/portfolios/:id/import", async (req: Request, res: Response) => {
         });
       }
       
-      // Add addresses to portfolio
+      // Add or update addresses in portfolio
       const results = [];
       const importErrors = [];
       
       for (const addressData of validAddresses) {
         try {
-          const newAddress = await storage.addAddressToPortfolio(addressData);
-          results.push(newAddress);
+          // Check if address already exists in portfolio
+          const existingAddress = await storage.getPortfolioAddressByWallet(portfolioId, addressData.walletAddress);
           
-          // Also add to bookmarks if user is logged in
+          let resultAddress;
+          if (existingAddress) {
+            // Update existing address with new label
+            resultAddress = await storage.updatePortfolioAddress(existingAddress.id, {
+              label: addressData.label
+            });
+            console.log(`Updated existing address ${addressData.walletAddress} with new label: ${addressData.label}`);
+          } else {
+            // Add new address to portfolio
+            resultAddress = await storage.addAddressToPortfolio(addressData);
+            console.log(`Added new address ${addressData.walletAddress} to portfolio`);
+          }
+          
+          results.push(resultAddress);
+          
+          // Also add to or update bookmarks if user is logged in
           if (portfolio.userId !== null) {
             try {
               const existingBookmark = await storage.getBookmarkByAddress(portfolio.userId, addressData.walletAddress);
-              if (!existingBookmark) {
+              if (existingBookmark) {
+                // Update existing bookmark with new label
+                await storage.updateBookmark(existingBookmark.id, {
+                  label: addressData.label || "Portfolio Address"
+                });
+              } else {
+                // Create new bookmark
                 await storage.createBookmark({
                   userId: portfolio.userId,
                   walletAddress: addressData.walletAddress,
@@ -480,15 +501,11 @@ router.post("/portfolios/:id/import", async (req: Request, res: Response) => {
                 });
               }
             } catch (bookmarkError) {
-              console.error("Error adding bookmark:", bookmarkError);
+              console.error("Error adding/updating bookmark:", bookmarkError);
             }
           }
         } catch (error: any) {
-          if (error?.message?.includes('duplicate key')) {
-            importErrors.push(`Address ${addressData.walletAddress} already exists in portfolio`);
-          } else {
-            importErrors.push(`Failed to add ${addressData.walletAddress}: ${error?.message || 'Unknown error'}`);
-          }
+          importErrors.push(`Failed to process ${addressData.walletAddress}: ${error?.message || 'Unknown error'}`);
         }
       }
       

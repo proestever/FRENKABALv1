@@ -7,11 +7,12 @@
 - **Import functionality** - Added CSV import button with file upload dialog for bulk address import
 - **Smart CSV parsing** - Supports flexible column headers (Address/address/Wallet, Label/label/Name)
 - **Validation** - Validates Ethereum address format and provides detailed error messages for invalid rows
-- **Duplicate handling** - Gracefully handles duplicate addresses with informative error messages
-- **Automatic bookmarking** - Imported addresses are automatically added to user bookmarks for easy access
+- **Smart duplicate handling** - Existing addresses are updated with new labels instead of creating duplicates
+- **Update existing addresses** - Re-importing CSV with updated names updates existing portfolio addresses
+- **Automatic bookmarking** - Imported addresses are automatically added or updated in user bookmarks
 - **User-friendly format** - Provides example CSV format in import dialog for clear guidance
 - **Loading state management** - Import button shows "Importing..." text and disables all inputs during import to prevent multiple clicks
-- **Result** - Users can now quickly export portfolios for backup and import large sets of addresses efficiently with clear loading feedback
+- **Result** - Users can now export portfolios, update labels in CSV, and re-import without creating duplicates
 
 ### July 26, 2025 - Fixed Dormant Wallet Loading with PulseChain API Fallback
 - **Problem identified** - Dormant wallets with no activity in the last 100k blocks (~10 days) were getting stuck during scanning

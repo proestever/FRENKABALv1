@@ -40,6 +40,7 @@ export interface IStorage {
   
   // Portfolio address methods
   getPortfolioAddresses(portfolioId: number): Promise<PortfolioAddress[]>;
+  getPortfolioAddressByWallet(portfolioId: number, walletAddress: string): Promise<PortfolioAddress | undefined>;
   addAddressToPortfolio(address: InsertPortfolioAddress): Promise<PortfolioAddress>;
   removeAddressFromPortfolio(id: number): Promise<boolean>;
   updatePortfolioAddress(id: number, data: Partial<InsertPortfolioAddress>): Promise<PortfolioAddress>;
@@ -411,6 +412,20 @@ export class DatabaseStorage implements IStorage {
       .from(portfolioAddresses)
       .where(eq(portfolioAddresses.portfolioId, portfolioId))
       .orderBy(portfolioAddresses.createdAt);
+  }
+  
+  async getPortfolioAddressByWallet(portfolioId: number, walletAddress: string): Promise<PortfolioAddress | undefined> {
+    const [address] = await db
+      .select()
+      .from(portfolioAddresses)
+      .where(
+        and(
+          eq(portfolioAddresses.portfolioId, portfolioId),
+          eq(portfolioAddresses.walletAddress, walletAddress.toLowerCase())
+        )
+      );
+      
+    return address || undefined;
   }
   
   async addAddressToPortfolio(address: InsertPortfolioAddress): Promise<PortfolioAddress> {
