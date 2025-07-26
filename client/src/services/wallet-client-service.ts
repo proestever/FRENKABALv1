@@ -321,35 +321,18 @@ export async function fetchWalletDataWithContractPrices(
       return walletData;
     }
     
-    // Step 2: Fetch prices from smart contracts directly
+    // Step 2: Batch fetch ALL logos from server first (for immediate display)
     const tokensWithPrices: TokenWithPrice[] = [...walletData.tokens];
     const totalTokens = tokensWithPrices.length;
     
-    if (onProgress) onProgress('Reading prices from blockchain...', 30);
+    if (onProgress) onProgress('Loading saved token logos...', 20);
     
-    // Prepare token addresses for batch price fetching
-    const tokenAddresses = tokensWithPrices.map(token => {
-      // For PLS native token, use WPLS price
-      if (token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-        return '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
-      }
-      return token.address;
-    });
-    
-    // Fetch all prices in batches from smart contracts
-    const priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
-    
-    // Step 3: Fetch logos using batch endpoint
-    if (onProgress) onProgress('Fetching token logos...', 50);
-    
-    // Get tokens without logos
-    const tokensWithoutLogos = tokensWithPrices.filter(t => !t.logo || t.logo === '');
-    
-    if (tokensWithoutLogos.length > 0) {
+    // Batch fetch logos for ALL tokens from server
+    if (tokensWithPrices.length > 0) {
       try {
-        // Use batch endpoint to fetch all logos at once (max 100 per batch)
+        console.log(`Batch loading logos for ${tokensWithPrices.length} tokens from server`);
         const BATCH_SIZE = 100;
-        const addresses = tokensWithoutLogos.map(t => t.address);
+        const addresses = tokensWithPrices.map(t => t.address);
         
         for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
           const batchAddresses = addresses.slice(i, i + BATCH_SIZE);
@@ -363,8 +346,8 @@ export async function fetchWalletDataWithContractPrices(
           if (response.ok) {
             const logoMap = await response.json();
             
-            // Apply logos to tokens
-            tokensWithoutLogos.forEach(token => {
+            // Apply logos to tokens immediately
+            tokensWithPrices.forEach(token => {
               const logoData = logoMap[token.address.toLowerCase()];
               if (logoData?.logoUrl) {
                 token.logo = logoData.logoUrl;
@@ -373,9 +356,24 @@ export async function fetchWalletDataWithContractPrices(
           }
         }
       } catch (error) {
-        console.error('Failed to fetch logos in batch:', error);
+        console.error('Failed to batch fetch logos from server:', error);
       }
     }
+    
+    // Step 3: Fetch prices from smart contracts
+    if (onProgress) onProgress('Reading prices from blockchain...', 40);
+    
+    // Prepare token addresses for batch price fetching
+    const tokenAddresses = tokensWithPrices.map(token => {
+      // For PLS native token, use WPLS price
+      if (token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+        return '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
+      }
+      return token.address;
+    });
+    
+    // Fetch all prices in batches from smart contracts
+    const priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
     
     // Apply prices to tokens
     let processedCount = 0;
@@ -411,7 +409,7 @@ export async function fetchWalletDataWithContractPrices(
       }
       
       processedCount++;
-      const progress = Math.round(30 + (processedCount / totalTokens) * 60); // 30% to 90%
+      const progress = Math.round(50 + (processedCount / totalTokens) * 40); // 50% to 90%
       if (onProgress) onProgress(`Processing prices... (${processedCount}/${totalTokens})`, progress);
     });
     
@@ -438,52 +436,72 @@ export async function fetchWalletDataWithContractPrices(
 
 /**
  * Background batch logo fetcher for tokens without logos
+ * Limited to top 50 tokens by value for performance
  */
 export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): Promise<void> {
-  const tokensWithoutLogos = tokens.filter(t => 
+  // Sort tokens by value and take only top 50
+  const sortedTokens = [...tokens].sort((a, b) => (b.value || 0) - (a.value || 0));
+  const top50Tokens = sortedTokens.slice(0, 50);
+  
+  const tokensWithoutLogos = top50Tokens.filter(t => 
     !t.logo || t.logo === '' || t.logo.includes('placeholder')
   );
   
   if (tokensWithoutLogos.length === 0) return;
   
-  console.log(`Starting background logo fetch for ${tokensWithoutLogos.length} tokens`);
+  console.log(`Starting background logo fetch for ${tokensWithoutLogos.length} tokens (top 50 by value)`);
   
-  // Process tokens in smaller batches with delays to prevent system overload
-  const BATCH_SIZE = 20; // Reduced batch size for better performance
-  const BATCH_DELAY = 2000; // 2 second delay between batches
-  const MAX_CONCURRENT = 5; // Maximum concurrent requests per batch
-  
-  // Process batches sequentially with delays
-  for (let i = 0; i < tokensWithoutLogos.length; i += BATCH_SIZE) {
-    const batch = tokensWithoutLogos.slice(i, i + BATCH_SIZE);
+  try {
+    // First, try to get logos from DexScreener for missing logos
+    const tokenAddresses = tokensWithoutLogos.map(t => t.address);
     
-    // Process tokens within batch with limited concurrency
-    const chunks = [];
-    for (let j = 0; j < batch.length; j += MAX_CONCURRENT) {
-      chunks.push(batch.slice(j, j + MAX_CONCURRENT));
-    }
+    // Fetch from DexScreener API (they support batch requests)
+    const BATCH_SIZE = 30; // DexScreener can handle larger batches
     
-    for (const chunk of chunks) {
-      await Promise.all(
-        chunk.map(async (token) => {
-          try {
-            // Skip DexScreener - logos should already be fetched from server
-          } catch (error) {
-            console.error(`Failed to fetch logo for ${token.symbol}:`, error);
-          }
-        })
-      );
+    for (let i = 0; i < tokenAddresses.length; i += BATCH_SIZE) {
+      const batchAddresses = tokenAddresses.slice(i, i + BATCH_SIZE);
       
-      // Small delay between chunks
-      if (chunks.indexOf(chunk) < chunks.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 200));
+      try {
+        const addressParam = batchAddresses.join(',');
+        const response = await fetch(`https://api.dexscreener.com/tokens/v1/pulsechain/${addressParam}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Update tokens with logos from DexScreener
+          if (data.pairs && Array.isArray(data.pairs)) {
+            for (const pair of data.pairs) {
+              const token = tokensWithoutLogos.find(t => 
+                t.address.toLowerCase() === pair.baseToken?.address?.toLowerCase()
+              );
+              
+              if (token && pair.info?.imageUrl) {
+                token.logo = pair.info.imageUrl;
+                
+                // Also save to server for future use
+                fetch('/api/token-logos/batch', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    addresses: [token.address],
+                    logos: { [token.address.toLowerCase()]: pair.info.imageUrl }
+                  })
+                }).catch(err => console.error('Failed to save logo to server:', err));
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch logos from DexScreener:', error);
+      }
+      
+      // Small delay between batches to avoid rate limiting
+      if (i + BATCH_SIZE < tokenAddresses.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
-    
-    // Delay between batches (except for the last batch)
-    if (i + BATCH_SIZE < tokensWithoutLogos.length) {
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
-    }
+  } catch (error) {
+    console.error('Error in background logo fetch:', error);
   }
   
   console.log('Background logo fetch completed');
