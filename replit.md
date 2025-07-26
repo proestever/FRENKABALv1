@@ -32,6 +32,15 @@
 - **Extended token coverage** - Six tokens now have specific pair handling: HEX, PLSX, WETH, UFO, and PTGC
 - **Result** - UFO and PTGC tokens now fetch prices from their designated trading pairs for better accuracy
 
+### July 26, 2025 - Implemented Comprehensive Background Process Cleanup
+- **Enhanced handleSearch function** - Added cleanup of all background processes when searching new wallets
+- **Stop background batch service** - Calls `backgroundBatchService.stopAll()` to stop all 5-second polling intervals
+- **Invalidate live balance queries** - Clears React Query cache for live balance tracking
+- **Send tracking stop request** - Makes DELETE request to `/api/wallet/${address}/tracking` endpoint
+- **Enhanced handleMultiSearch function** - Also stops all background processes before loading portfolio bundles
+- **Prevents resource leaks** - Ensures no background processes continue running when switching between wallets
+- **Result** - Robust cleanup of all 4 background process types: batch service, real-time prices, live balances, and progress polling
+
 ### July 24, 2025 - WebSocket Real-Time Balance Tracking Implemented
 - **WebSocket infrastructure** - Created live-balance-tracker.ts service with WebSocket connection to PulseChain RPC for real-time Transfer event monitoring
 - **Balance cache manager** - Implemented balance-cache-manager.ts for efficient in-memory balance caching with periodic blockchain reconciliation

@@ -21,6 +21,7 @@ import { useLiveWalletBalances } from '@/hooks/use-live-wallet-balances'; // Liv
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';
 import { combineWalletData } from '@/lib/utils';
+import { backgroundBatchService } from '@/services/background-batch';
 
 // Example wallet address
 const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
@@ -84,6 +85,23 @@ export default function Home() {
   const handleSearch = (address: string) => {
     if (!address) return;
     
+    // Stop all background processes from previous wallet
+    console.log('Stopping all background processes before new search');
+    
+    // Stop background batch service polling for all wallets
+    backgroundBatchService.stopAll();
+    
+    // Stop live balance tracking for previous wallet
+    if (searchedAddress) {
+      // Invalidate live balance queries
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet', searchedAddress, 'live-balances'] });
+      
+      // Send request to stop tracking the previous wallet
+      fetch(`/api/wallet/${searchedAddress}/tracking`, { method: 'DELETE' }).catch(
+        error => console.error('Failed to stop wallet tracking:', error)
+      );
+    }
+    
     // Clear multi-wallet data if we're switching to single wallet view
     if (multiWalletData) {
       setMultiWalletData(null);
@@ -140,6 +158,10 @@ export default function Home() {
   // Handle multi-wallet search
   const handleMultiSearch = async (addresses: string[]) => {
     if (!addresses.length) return;
+    
+    // Stop all background processes before loading portfolio
+    console.log('Stopping all background processes before loading portfolio');
+    backgroundBatchService.stopAll();
     
     // Reset single wallet view
     setSearchedAddress(null);
