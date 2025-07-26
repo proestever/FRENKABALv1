@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import { storage } from "../storage";
 import { portfolios, insertPortfolioSchema, portfolioAddresses, insertPortfolioAddressSchema } from "@shared/schema";
 import { z } from "zod";
+import { parse } from "csv-parse/sync";
+import { stringify } from "csv-stringify/sync";
 
 const router = Router();
 
@@ -354,6 +356,162 @@ router.get("/portfolios/:id/wallet-addresses", async (req: Request, res: Respons
   } catch (error) {
     console.error("Error fetching portfolio wallet addresses:", error);
     return res.status(500).json({ message: "Failed to fetch portfolio wallet addresses" });
+  }
+});
+
+// Export portfolio addresses as CSV
+router.get("/portfolios/:id/export", async (req: Request, res: Response) => {
+  try {
+    const portfolioId = parseInt(req.params.id);
+    if (isNaN(portfolioId)) {
+      return res.status(400).json({ message: "Invalid portfolio ID" });
+    }
+    
+    const portfolio = await storage.getPortfolio(portfolioId);
+    if (!portfolio) {
+      return res.status(404).json({ message: "Portfolio not found" });
+    }
+    
+    const addresses = await storage.getPortfolioAddresses(portfolioId);
+    
+    // Create CSV data
+    const csvData = addresses.map(addr => ({
+      Address: addr.walletAddress,
+      Label: addr.label || ''
+    }));
+    
+    // Generate CSV string
+    const csv = stringify(csvData, {
+      header: true,
+      columns: ['Address', 'Label']
+    });
+    
+    // Set headers for file download
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${portfolio.name.replace(/[^a-z0-9]/gi, '_')}_addresses.csv"`);
+    
+    return res.send(csv);
+  } catch (error) {
+    console.error("Error exporting portfolio addresses:", error);
+    return res.status(500).json({ message: "Failed to export portfolio addresses" });
+  }
+});
+
+// Import addresses from CSV
+router.post("/portfolios/:id/import", async (req: Request, res: Response) => {
+  try {
+    const portfolioId = parseInt(req.params.id);
+    if (isNaN(portfolioId)) {
+      return res.status(400).json({ message: "Invalid portfolio ID" });
+    }
+    
+    const portfolio = await storage.getPortfolio(portfolioId);
+    if (!portfolio) {
+      return res.status(404).json({ message: "Portfolio not found" });
+    }
+    
+    const { csvContent } = req.body;
+    if (!csvContent || typeof csvContent !== 'string') {
+      return res.status(400).json({ message: "CSV content is required" });
+    }
+    
+    try {
+      // Parse CSV
+      const records = parse(csvContent, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true
+      });
+      
+      // Validate and prepare addresses
+      const validAddresses = [];
+      const errors = [];
+      
+      for (let i = 0; i < records.length; i++) {
+        const record = records[i];
+        const address = record.Address || record.address || record.Wallet || record.wallet;
+        const label = record.Label || record.label || record.Name || record.name || '';
+        
+        if (!address) {
+          errors.push(`Row ${i + 2}: Missing address`);
+          continue;
+        }
+        
+        // Basic Ethereum address validation
+        if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+          errors.push(`Row ${i + 2}: Invalid address format "${address}"`);
+          continue;
+        }
+        
+        validAddresses.push({
+          portfolioId,
+          walletAddress: address.toLowerCase(),
+          label: label.trim()
+        });
+      }
+      
+      if (errors.length > 0 && validAddresses.length === 0) {
+        return res.status(400).json({ 
+          message: "No valid addresses found",
+          errors 
+        });
+      }
+      
+      // Add addresses to portfolio
+      const results = [];
+      const importErrors = [];
+      
+      for (const addressData of validAddresses) {
+        try {
+          const newAddress = await storage.addAddressToPortfolio(addressData);
+          results.push(newAddress);
+          
+          // Also add to bookmarks if user is logged in
+          if (portfolio.userId !== null) {
+            try {
+              const existingBookmark = await storage.getBookmarkByAddress(portfolio.userId, addressData.walletAddress);
+              if (!existingBookmark) {
+                await storage.createBookmark({
+                  userId: portfolio.userId,
+                  walletAddress: addressData.walletAddress,
+                  label: addressData.label || "Portfolio Address",
+                  notes: null,
+                  isFavorite: false,
+                });
+              }
+            } catch (bookmarkError) {
+              console.error("Error adding bookmark:", bookmarkError);
+            }
+          }
+        } catch (error: any) {
+          if (error?.message?.includes('duplicate key')) {
+            importErrors.push(`Address ${addressData.walletAddress} already exists in portfolio`);
+          } else {
+            importErrors.push(`Failed to add ${addressData.walletAddress}: ${error?.message || 'Unknown error'}`);
+          }
+        }
+      }
+      
+      return res.json({
+        success: true,
+        imported: results.length,
+        total: validAddresses.length,
+        parseErrors: errors,
+        importErrors,
+        addresses: results
+      });
+      
+    } catch (parseError) {
+      console.error("CSV parse error:", parseError);
+      return res.status(400).json({ 
+        message: "Invalid CSV format",
+        error: parseError instanceof Error ? parseError.message : 'Unknown parse error'
+      });
+    }
+    
+  } catch (error) {
+    console.error("Error importing portfolio addresses:", error);
+    return res.status(500).json({ message: "Failed to import portfolio addresses" });
   }
 });
 

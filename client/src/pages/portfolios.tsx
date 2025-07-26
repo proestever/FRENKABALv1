@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, ExternalLink, Copy, Pencil, ArrowDownAZ, Calendar, Hash, ArrowUpDown } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Copy, Pencil, ArrowDownAZ, Calendar, Hash, ArrowUpDown, Upload, Download } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useWallet } from '@/hooks/use-wallet';
 import { Button } from '@/components/ui/button';
@@ -80,6 +80,11 @@ const PortfoliosPage = () => {
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [portfolioAddressCounts, setPortfolioAddressCounts] = useState<Record<number, number>>({});
+  
+  // State for CSV import dialog
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importingPortfolio, setImportingPortfolio] = useState<Portfolio | null>(null);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
   
   // Query portfolios
   const { data: portfolios, isLoading } = useQuery({
@@ -447,6 +452,107 @@ const PortfoliosPage = () => {
     e.preventDefault();
     updateAddressMutation.mutate();
   };
+  
+  // Handle CSV export
+  const handleExportCSV = async (portfolio: Portfolio) => {
+    try {
+      const response = await apiRequest({
+        url: `/api/portfolios/${portfolio.id}/export`,
+        method: 'GET'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to export CSV');
+      }
+      
+      // Get the blob from response
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${portfolio.name.replace(/[^a-z0-9]/gi, '_')}_addresses.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: 'Export successful',
+        description: `Portfolio addresses exported to CSV`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: 'Export failed',
+        description: 'Failed to export portfolio addresses',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  // Handle CSV import
+  const handleImportCSV = async () => {
+    if (!csvFile || !importingPortfolio) return;
+    
+    try {
+      const csvContent = await csvFile.text();
+      
+      const response = await apiRequest({
+        url: `/api/portfolios/${importingPortfolio.id}/import`,
+        method: 'POST',
+        body: JSON.stringify({ csvContent })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to import CSV');
+      }
+      
+      // Show results
+      if (result.imported > 0) {
+        toast({
+          title: 'Import successful',
+          description: `Imported ${result.imported} of ${result.total} addresses`,
+        });
+        
+        // Refresh portfolio addresses
+        queryClient.invalidateQueries({ queryKey: ['portfolioAddresses', importingPortfolio.id] });
+        queryClient.invalidateQueries({ queryKey: ['portfolios', userId] });
+      }
+      
+      // Show any errors
+      if (result.parseErrors?.length > 0) {
+        toast({
+          title: 'Parse errors',
+          description: result.parseErrors.join(', '),
+          variant: 'destructive',
+        });
+      }
+      
+      if (result.importErrors?.length > 0) {
+        toast({
+          title: 'Import errors',
+          description: result.importErrors.join(', '),
+          variant: 'destructive',
+        });
+      }
+      
+      // Close dialog and reset
+      setIsImportDialogOpen(false);
+      setCsvFile(null);
+      setImportingPortfolio(null);
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({
+        title: 'Import failed',
+        description: error instanceof Error ? error.message : 'Failed to import CSV file',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // If user is not logged in, show message to connect wallet
   if (!userId) {
@@ -627,6 +733,25 @@ const PortfoliosPage = () => {
                         >
                           <Plus className="h-3 w-3 mr-1" />
                           Add
+                        </Button>
+                        <Button
+                          className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white text-xs"
+                          size="sm"
+                          onClick={() => handleExportCSV(portfolio)}
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Export
+                        </Button>
+                        <Button
+                          className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white text-xs"
+                          size="sm"
+                          onClick={() => {
+                            setImportingPortfolio(portfolio);
+                            setIsImportDialogOpen(true);
+                          }}
+                        >
+                          <Upload className="h-3 w-3 mr-1" />
+                          Import
                         </Button>
                         <Button 
                           className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white text-xs"
@@ -950,6 +1075,70 @@ const PortfoliosPage = () => {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Import CSV Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Addresses from CSV</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file with wallet addresses to add to {importingPortfolio?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            handleImportCSV();
+          }}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="csvFile">CSV File</Label>
+                <Input
+                  id="csvFile"
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setCsvFile(file);
+                    }
+                  }}
+                  required
+                />
+                <p className="text-sm text-muted-foreground">
+                  CSV should have columns: Address, Label (optional)
+                </p>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>Example format:</p>
+                  <pre className="bg-muted/20 p-2 rounded">
+{`Address,Label
+0x1234567890123456789012345678901234567890,Main Wallet
+0xabcdefabcdefabcdefabcdefabcdefabcdefabcd,Trading Wallet`}
+                  </pre>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                className="glass-card border-white/15 bg-black/20 hover:bg-white/10"
+                onClick={() => {
+                  setIsImportDialogOpen(false);
+                  setCsvFile(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
+                disabled={!csvFile}
+              >
+                Import Addresses
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
