@@ -640,11 +640,12 @@ export function TokenList({
                                   expanded={false}
                                 />
                               ) : (
-                                <LazyTokenLogo 
+                                <TokenLogo 
                                   address={token.address}
                                   symbol={token.symbol}
                                   fallbackLogo={token.logo}
                                   size="md"
+                                  logo={token.logo}
                                 />
                               )}
                             </div>
