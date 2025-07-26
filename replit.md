@@ -10,7 +10,8 @@
 - **Duplicate handling** - Gracefully handles duplicate addresses with informative error messages
 - **Automatic bookmarking** - Imported addresses are automatically added to user bookmarks for easy access
 - **User-friendly format** - Provides example CSV format in import dialog for clear guidance
-- **Result** - Users can now quickly export portfolios for backup and import large sets of addresses efficiently
+- **Loading state management** - Import button shows "Importing..." text and disables all inputs during import to prevent multiple clicks
+- **Result** - Users can now quickly export portfolios for backup and import large sets of addresses efficiently with clear loading feedback
 
 ### July 26, 2025 - Fixed Dormant Wallet Loading with PulseChain API Fallback
 - **Problem identified** - Dormant wallets with no activity in the last 100k blocks (~10 days) were getting stuck during scanning

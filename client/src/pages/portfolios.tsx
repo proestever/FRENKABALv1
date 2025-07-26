@@ -85,6 +85,7 @@ const PortfoliosPage = () => {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [importingPortfolio, setImportingPortfolio] = useState<Portfolio | null>(null);
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   
   // Query portfolios
   const { data: portfolios, isLoading } = useQuery({
@@ -496,6 +497,8 @@ const PortfoliosPage = () => {
   const handleImportCSV = async () => {
     if (!csvFile || !importingPortfolio) return;
     
+    setIsImporting(true);
+    
     try {
       const csvContent = await csvFile.text();
       
@@ -551,6 +554,8 @@ const PortfoliosPage = () => {
         description: error instanceof Error ? error.message : 'Failed to import CSV file',
         variant: 'destructive',
       });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -1105,6 +1110,7 @@ const PortfoliosPage = () => {
                     }
                   }}
                   required
+                  disabled={isImporting}
                 />
                 <p className="text-sm text-muted-foreground">
                   CSV should have columns: Address, Label (optional)
@@ -1133,9 +1139,9 @@ const PortfoliosPage = () => {
               <Button 
                 type="submit"
                 className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
-                disabled={!csvFile}
+                disabled={!csvFile || isImporting}
               >
-                Import Addresses
+                {isImporting ? 'Importing...' : 'Import Addresses'}
               </Button>
             </DialogFooter>
           </form>
