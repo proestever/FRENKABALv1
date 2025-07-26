@@ -18,6 +18,14 @@
 - **Fixed decimal calculation** - Properly handles HEX (8 decimals) and USDC (6 decimals) conversion
 - **Result** - HEX price now shows correctly at ~$0.007672 in both HEX stakes and token list
 
+### July 26, 2025 - Added Special Pair Handling for PLSX and Wrapped Ethereum
+- **PLSX token special handling** - Now uses specific pair 0x1b45b9148791d3a104184cd5dfe5ce57193a3ee9 for accurate pricing
+- **Wrapped Ethereum special handling** - Now uses specific pair 0x42abdfdb63f3282033c766e72cc4810738571609 for accurate pricing
+- **Created getSpecificPairPrice method** - Generic method for fetching prices from any specific pair address
+- **Automatic price conversion** - Method handles WPLS and stablecoin pairs with automatic USD conversion
+- **TypeScript fix** - Fixed type error when checking if paired token is a stablecoin
+- **Result** - PLSX and WETH now show accurate prices using their designated trading pairs
+
 ### July 24, 2025 - WebSocket Real-Time Balance Tracking Implemented
 - **WebSocket infrastructure** - Created live-balance-tracker.ts service with WebSocket connection to PulseChain RPC for real-time Transfer event monitoring
 - **Balance cache manager** - Implemented balance-cache-manager.ts for efficient in-memory balance caching with periodic blockchain reconciliation

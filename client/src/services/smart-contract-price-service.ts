@@ -121,8 +121,9 @@ class SmartContractPriceService {
     }
 
     try {
-      // Special handling for HEX to use the specific HEX/USDC pair
+      // Special handling for specific tokens with predetermined pairs
       if (normalizedAddress === '0x2b591e99afe9f32eaa6214f7b7629768c40eeb39') {
+        // HEX token - use specific HEX/USDC pair
         console.log('Using specific HEX/USDC pair for HEX token');
         const HEX_USDC_PAIR = '0xf1f4ee610b2babb05c635f726ef8b0c568c8dc65';
         
@@ -181,6 +182,30 @@ class SmartContractPriceService {
             liquidity: 0,
             lastUpdate: Date.now()
           };
+          this.cachePrice(normalizedAddress, priceData);
+          return priceData;
+        }
+      }
+      
+      // Special handling for PLSX token
+      if (normalizedAddress === '0x95b303987a60c71504d99aa1b13b4da07b0790ab') {
+        console.log('Using specific pair for PLSX token');
+        const PLSX_PAIR = '0x1b45b9148791d3a104184cd5dfe5ce57193a3ee9';
+        
+        const priceData = await this.getSpecificPairPrice(tokenAddress, PLSX_PAIR);
+        if (priceData) {
+          this.cachePrice(normalizedAddress, priceData);
+          return priceData;
+        }
+      }
+      
+      // Special handling for Wrapped Ethereum
+      if (normalizedAddress === '0x02dcdd04e3f455d838cd1249292c58f3b79e3c3c') {
+        console.log('Using specific pair for Wrapped Ethereum');
+        const WETH_PAIR = '0x42abdfdb63f3282033c766e72cc4810738571609';
+        
+        const priceData = await this.getSpecificPairPrice(tokenAddress, WETH_PAIR);
+        if (priceData) {
           this.cachePrice(normalizedAddress, priceData);
           return priceData;
         }
@@ -251,6 +276,96 @@ class SmartContractPriceService {
       return null;
     } catch (error) {
       console.error('Error fetching token price from smart contract:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get price from a specific pair address
+   */
+  private async getSpecificPairPrice(tokenAddress: string, pairAddress: string): Promise<PriceData | null> {
+    const provider = this.getProvider();
+    if (!provider) return null;
+
+    try {
+      const pairContract = new ethers.Contract(pairAddress, PAIR_ABI, provider);
+      const [reserves, token0, token1] = await Promise.all([
+        pairContract.getReserves(),
+        pairContract.token0(),
+        pairContract.token1()
+      ]);
+      
+      const normalizedAddress = tokenAddress.toLowerCase();
+      const isToken0 = token0.toLowerCase() === normalizedAddress;
+      
+      if (!isToken0 && token1.toLowerCase() !== normalizedAddress) {
+        console.error(`Token ${tokenAddress} not found in pair ${pairAddress}`);
+        return null;
+      }
+      
+      // Get the paired token address
+      const pairedTokenAddress = isToken0 ? token1 : token0;
+      
+      // Get decimals for both tokens
+      const tokenContract = new ethers.Contract(tokenAddress, ['function decimals() view returns (uint8)'], provider);
+      const pairedTokenContract = new ethers.Contract(pairedTokenAddress, [
+        'function decimals() view returns (uint8)',
+        'function symbol() view returns (string)'
+      ], provider);
+      
+      const [tokenDecimals, pairedTokenDecimals, pairedTokenSymbol] = await Promise.all([
+        tokenContract.decimals(),
+        pairedTokenContract.decimals(),
+        pairedTokenContract.symbol()
+      ]);
+      
+      // Get reserves
+      const tokenReserve = isToken0 ? reserves.reserve0 : reserves.reserve1;
+      const pairedReserve = isToken0 ? reserves.reserve1 : reserves.reserve0;
+      
+      // Calculate amounts
+      const tokenAmount = Number(tokenReserve) / Math.pow(10, tokenDecimals);
+      const pairedAmount = Number(pairedReserve) / Math.pow(10, pairedTokenDecimals);
+      
+      if (tokenAmount === 0) return null;
+      
+      let price = pairedAmount / tokenAmount;
+      
+      // Check if paired token is WPLS and convert to USD
+      if (pairedTokenAddress.toLowerCase() === WPLS_ADDRESS.toLowerCase()) {
+        const wplsPrice = await this.getWPLSPrice();
+        if (wplsPrice) {
+          price = price * wplsPrice;
+        }
+      }
+      // Check if paired token is a stablecoin
+      else if (pairedTokenAddress && STABLECOINS[pairedTokenAddress.toLowerCase() as keyof typeof STABLECOINS]) {
+        // Price is already in USD
+      }
+      // Otherwise, we need to get the paired token's price
+      else {
+        const pairedTokenPrice = await this.getTokenPrice(pairedTokenAddress);
+        if (pairedTokenPrice) {
+          price = price * pairedTokenPrice.price;
+        } else {
+          console.warn(`Could not get price for paired token ${pairedTokenSymbol}`);
+          return null;
+        }
+      }
+      
+      const liquidity = pairedAmount * 2;
+      
+      console.log(`${tokenAddress} price from specific pair ${pairAddress}: $${price.toFixed(6)}`);
+      
+      return {
+        price,
+        pairAddress,
+        pairedTokenSymbol,
+        liquidity,
+        lastUpdate: Date.now()
+      };
+    } catch (error) {
+      console.error(`Error getting price from specific pair ${pairAddress}:`, error);
       return null;
     }
   }
