@@ -536,13 +536,13 @@ const PortfoliosPage = () => {
           {getSortedPortfolios().map((portfolio) => (
             <div key={portfolio.id} className="mb-6">
               <Card className="w-full glass-card border border-white/15 shadow-lg bg-black/10">
-                <CardHeader className="pb-2 flex items-center">
-                  <div className="flex justify-between items-center w-full pb-4">
+                <CardHeader className="pb-2">
+                  <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center w-full pb-4 gap-4">
                     <div className="flex items-center gap-2">
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 p-0 flex-shrink-0"
                         onClick={() => {
                           if (selectedPortfolio?.id === portfolio.id) {
                             setSelectedPortfolio(null);
@@ -568,29 +568,29 @@ const PortfoliosPage = () => {
                           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                         )}
                       </Button>
-                      <div>
-                        <CardTitle className="text-lg">{portfolio.name} Portfolio</CardTitle>
+                      <div className="flex-1">
+                        <CardTitle className="text-base lg:text-lg">{portfolio.name} Portfolio</CardTitle>
                         <CardDescription className="text-xs">Saved Bundle</CardDescription>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-xs text-muted-foreground mr-2">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 ml-10 lg:ml-0">
+                      <div className="text-xs text-muted-foreground">
                         Created {new Date(portfolio.createdAt).toLocaleDateString()}
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1">
                         <Button 
-                          className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
+                          className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white text-xs"
                           size="sm"
                           onClick={() => {
                             setSelectedPortfolio(portfolio);
                             handlePortfolioSearch(portfolio);
                           }}
                         >
-                          <ExternalLink className="h-4 w-4 mr-1" />
+                          <ExternalLink className="h-3 w-3 mr-1" />
                           Load Bundle
                         </Button>
                         <Button
-                          className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
+                          className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white text-xs"
                           size="sm"
                           onClick={() => {
                             // Create the shareable URL using the public code
@@ -613,33 +613,33 @@ const PortfoliosPage = () => {
                             });
                           }}
                         >
-                          <Copy className="h-4 w-4 mr-1" />
+                          <Copy className="h-3 w-3 mr-1" />
                           Share
                         </Button>
+                        <Button 
+                          className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white text-xs"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPortfolio(portfolio);
+                            setIsAddressDialogOpen(true);
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add
+                        </Button>
+                        <Button 
+                          className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white text-xs"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this portfolio?')) {
+                              deletePortfolioMutation.mutate(portfolio.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete
+                        </Button>
                       </div>
-                      <Button 
-                        className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPortfolio(portfolio);
-                          setIsAddressDialogOpen(true);
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add
-                      </Button>
-                      <Button 
-                        className="glass-card border-white/15 bg-black/20 hover:bg-white/10 text-white"
-                        size="sm"
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this portfolio?')) {
-                            deletePortfolioMutation.mutate(portfolio.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
-                      </Button>
                     </div>
                   </div>
                 </CardHeader>
@@ -649,7 +649,8 @@ const PortfoliosPage = () => {
                     <div className="mt-2">
                       {portfolioAddresses && portfolioAddresses.length > 0 ? (
                         <div className="w-full glass-card border border-white/15 rounded-md overflow-hidden bg-black/10">
-                          <table className="w-full table-auto">
+                          {/* Desktop view */}
+                          <table className="hidden md:table w-full table-auto">
                             <thead>
                               <tr className="glass-card border-b border-white/10">
                                 <th className="text-left py-2 px-4 text-sm font-medium text-white">Wallet Address</th>
@@ -696,6 +697,44 @@ const PortfoliosPage = () => {
                               ))}
                             </tbody>
                           </table>
+                          
+                          {/* Mobile view */}
+                          <div className="md:hidden space-y-2 p-2">
+                            {portfolioAddresses.map((address) => (
+                              <div key={address.id} className="glass-card border border-white/10 rounded-md p-3">
+                                <div className="flex flex-col gap-2">
+                                  <div className="font-mono text-xs break-all">
+                                    {address.walletAddress}
+                                  </div>
+                                  {address.label && (
+                                    <Badge variant="outline" className="font-normal self-start text-xs">
+                                      {address.label}
+                                    </Badge>
+                                  )}
+                                  <div className="flex justify-end gap-1 mt-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 px-2"
+                                      onClick={() => handleEditAddress(address)}
+                                      disabled={removeAddressMutation.isPending}
+                                    >
+                                      <Pencil className="h-3 w-3 text-primary" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 px-2"
+                                      onClick={() => removeAddressMutation.mutate(address.id)}
+                                      disabled={removeAddressMutation.isPending}
+                                    >
+                                      <Trash2 className="h-3 w-3 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       ) : (
                         <div className="text-sm text-muted-foreground py-4 text-center border rounded-md">
@@ -831,23 +870,24 @@ const PortfoliosPage = () => {
                   <div className="space-y-3 max-h-60 overflow-y-auto">
                     {portfolioAddresses.map((address) => (
                       <div key={address.id} className="flex items-center justify-between p-2 glass-card border border-white/15 bg-black/10 shadow-sm rounded-md">
-                        <div className="flex flex-col">
-                          <div className="text-sm font-medium truncate max-w-[200px]">
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <div className="text-xs sm:text-sm font-mono break-all">
                             {address.walletAddress}
                           </div>
                           {address.label && (
-                            <Badge variant="outline" className="mt-1">
+                            <Badge variant="outline" className="mt-1 text-xs self-start">
                               {address.label}
                             </Badge>
                           )}
                         </div>
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
+                          className="ml-2 flex-shrink-0 h-8 w-8 p-0"
                           onClick={() => removeAddressMutation.mutate(address.id)}
                           disabled={removeAddressMutation.isPending}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
                       </div>
                     ))}
