@@ -14,8 +14,9 @@
 - **Updated HEX price source** - Now uses specific HEX/USDC pair address: 0xf1f4ee610b2babb05c635f726ef8b0c568c8dc65
 - **Direct pair price calculation** - Fetches reserves directly from the specified pair contract to calculate accurate HEX price
 - **Hardcoded fallback price** - Falls back to $0.007672 (user-specified price) if pair fetching fails
-- **Removed generic price fetching** - No longer uses generic smart contract price service or DexScreener for HEX
-- **Result** - HEX price now shows correctly at ~$0.007672 across all wallets and portfolios
+- **Updated smart contract price service** - Added special handling for HEX token to use specific pair in token list
+- **Fixed decimal calculation** - Properly handles HEX (8 decimals) and USDC (6 decimals) conversion
+- **Result** - HEX price now shows correctly at ~$0.007672 in both HEX stakes and token list
 
 ### July 24, 2025 - WebSocket Real-Time Balance Tracking Implemented
 - **WebSocket infrastructure** - Created live-balance-tracker.ts service with WebSocket connection to PulseChain RPC for real-time Transfer event monitoring
