@@ -41,6 +41,16 @@
 - **Prevents resource leaks** - Ensures no background processes continue running when switching between wallets
 - **Result** - Robust cleanup of all 4 background process types: batch service, real-time prices, live balances, and progress polling
 
+### July 26, 2025 - Fixed Portfolio Share Modal Scrollbar Issue on Mobile
+- **Removed overflow constraints** - Eliminated `overflow-y-auto` and `max-h-[85vh]` from content wrapper to prevent forced scrolling
+- **Comprehensive spacing reduction** - Reduced all margins, padding, and gaps throughout the modal for mobile devices
+- **Smaller text sizes** - Reduced font sizes across all elements: titles (lg→xs), values (2xl→xl), footer (xs→0.65rem)
+- **Compact token cards** - Reduced padding from p-2 to p-1.5 and gaps from gap-2 to gap-1.5 on mobile
+- **Smaller logos** - Reduced Frenkabal logo from h-12 to h-10 and token logos from h-10 to h-8 on mobile
+- **Wider modal on mobile** - Increased modal width from 90vw to 95vw on mobile for better space utilization
+- **Height constraint on dialog** - Added `max-h-[95vh]` to dialog content to prevent overflow while maintaining responsive scaling
+- **Result** - Portfolio share modal now fits properly on all mobile screen sizes without showing scrollbars
+
 ### July 24, 2025 - WebSocket Real-Time Balance Tracking Implemented
 - **WebSocket infrastructure** - Created live-balance-tracker.ts service with WebSocket connection to PulseChain RPC for real-time Transfer event monitoring
 - **Balance cache manager** - Implemented balance-cache-manager.ts for efficient in-memory balance caching with periodic blockchain reconciliation
