@@ -502,7 +502,7 @@ const PortfoliosPage = () => {
       const response = await apiRequest({
         url: `/api/portfolios/${importingPortfolio.id}/import`,
         method: 'POST',
-        body: JSON.stringify({ csvContent })
+        data: { csvContent }
       });
       
       const result = await response.json();
