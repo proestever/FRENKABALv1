@@ -2,6 +2,14 @@
 
 ## Recent Changes
 
+### July 26, 2025 - Fixed Dormant Wallet Loading with PulseChain API Fallback
+- **Problem identified** - Dormant wallets with no activity in the last 100k blocks (~10 days) were getting stuck during scanning
+- **Added fallback mechanism** - When no tokens are found from recent transfer events, system automatically falls back to PulseChain Scan API
+- **Updated getDirectTokenBalances** - Added logic to check if tokenAddresses.size === 0 and fetch from scanner API
+- **Maintains performance** - Active wallets still use fast recent transfer event scanning
+- **Seamless experience** - Users see loading message "No recent activity found. Fetching all token balances from PulseChain Scan..."
+- **Result** - Dormant wallets like 0xE37c41e9434e66Dede4d97386B75820b2fF05791 now load successfully with all token balances
+
 ### July 25, 2025 - Portfolio and Wallet Snapshot Download Feature
 - **Download functionality added** - Users can now download JSON snapshots of their portfolio and wallet data
 - **Comprehensive data export** - Snapshots include all visible tokens, values, balances, HEX stakes, and PLS balance

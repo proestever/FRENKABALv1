@@ -6,6 +6,7 @@ import { storage } from '../storage';
 import { isLiquidityPoolToken, processLpTokens } from './lp-token-service';
 import { updateLoadingProgress } from '../routes';
 import { getProvider, executeWithFailover } from './rpc-provider';
+import { getWalletBalancesFromPulseChainScan } from './dexscreener';
 
 
 // Constants
@@ -175,7 +176,39 @@ export async function getDirectTokenBalances(walletAddress: string): Promise<Pro
     });
     
     // Get all tokens the wallet has interacted with
-    const tokenAddresses = await getWalletTokens(walletAddress);
+    let tokenAddresses = await getWalletTokens(walletAddress);
+    console.log(`Found ${tokenAddresses.size} tokens from recent activity...`);
+    
+    // If no tokens found from recent activity, fall back to PulseChain Scan API
+    if (tokenAddresses.size === 0) {
+      console.log(`No recent activity found for ${walletAddress}, falling back to PulseChain Scan API...`);
+      
+      updateLoadingProgress({
+        status: 'loading',
+        currentBatch: 5,
+        totalBatches: 100,
+        message: 'No recent activity found. Fetching all token balances from PulseChain Scan...'
+      });
+      
+      try {
+        const scannerData = await getWalletBalancesFromPulseChainScan(walletAddress);
+        
+        // Extract token addresses from scanner data
+        tokenAddresses = new Set<string>();
+        scannerData.tokenBalances.forEach(token => {
+          // Skip blacklisted tokens
+          if (!BLACKLISTED_TOKENS.has(token.address.toLowerCase())) {
+            tokenAddresses.add(token.address.toLowerCase());
+          }
+        });
+        
+        console.log(`Found ${tokenAddresses.size} tokens from PulseChain Scan API`);
+      } catch (error) {
+        console.error('Error fetching from PulseChain Scan API:', error);
+        // Continue with empty set if API fails
+      }
+    }
+    
     console.log(`Fetching balances for ${tokenAddresses.size} tokens...`);
     
     // Get native PLS balance first with failover
