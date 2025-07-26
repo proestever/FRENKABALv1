@@ -39,7 +39,6 @@ export function LazyTokenLogo({
         alt={symbol || 'Token'}
         onError={handleError}
         className="w-full h-full object-cover"
-        loading="lazy"
       />
     </div>
   );

@@ -8,7 +8,7 @@ import { Search, ArrowDownUp, Eye, EyeOff, Wallet, History, Droplets, GitCompare
 import { formatCurrency, formatCurrencyWithPrecision, formatTokenAmount, getChangeColorClass, getAdvancedChangeClass } from '@/lib/utils';
 import { formatTokenPrice } from '@/lib/format';
 import { TokenLogo } from '@/components/token-logo';
-import { LazyTokenLogo } from '@/components/lazy-token-logo';
+// Removed LazyTokenLogo import - using TokenLogo for immediate display
 import { LpTokenDisplay } from '@/components/lp-token-display';
 import { getHiddenTokens, toggleHiddenToken, isTokenHidden } from '@/lib/api';
 import { useBatchTokenLogos } from '@/hooks/use-batch-token-logos';
@@ -449,11 +449,12 @@ export function TokenList({
                               expanded={false}
                             />
                           ) : (
-                            <LazyTokenLogo 
+                            <TokenLogo 
                               address={token.address}
                               symbol={token.symbol}
                               fallbackLogo={token.logo}
                               size="md"
+                              logo={token.logo}
                             />
                           )}
                         </div>
