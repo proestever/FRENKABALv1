@@ -501,15 +501,12 @@ export async function fetchWalletDataWithContractPrices(
 
 /**
  * Background batch logo fetcher for tokens without logos
- * Limited to top 50 tokens by value for performance
+ * Processes all tokens, not just top 50
  */
 export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): Promise<void> {
-  // Sort tokens by value and take only top 50
-  const sortedTokens = [...tokens].sort((a, b) => (b.value || 0) - (a.value || 0));
-  const top50Tokens = sortedTokens.slice(0, 50);
-  
-  const tokensWithoutLogos = top50Tokens.filter(t => 
-    !t.logo || t.logo === '' || t.logo.includes('placeholder')
+  // Process all tokens, not just top 50
+  const tokensWithoutLogos = tokens.filter(t => 
+    !t.logo || t.logo === '' || t.logo === null || t.logo.includes('placeholder')
   );
   
   if (tokensWithoutLogos.length === 0) return;
@@ -560,9 +557,9 @@ export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): P
         console.error('Failed to fetch logos from DexScreener:', error);
       }
       
-      // Small delay between batches to avoid rate limiting
+      // Longer delay between batches to avoid rate limiting
       if (i + BATCH_SIZE < tokenAddresses.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
   } catch (error) {

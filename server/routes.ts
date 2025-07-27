@@ -1369,47 +1369,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
               logo = await storage.saveTokenLogo(newLogo);
               console.log(`Saved DexScreener-based logo for token ${address}: ${logoUrl}`);
             } else {
-              console.log(`No DexScreener pairs found for ${address}, saving null logo`);
-              // No pairs found, save null logo
-              const defaultLogo = {
-                tokenAddress: address,
-                logoUrl: null,
-                symbol: "",
-                name: "",
-                lastUpdated: new Date().toISOString()
-              };
-              
-              logo = await storage.saveTokenLogo(defaultLogo);
-              console.log(`Saved null logo for token ${address} - no DexScreener data`);
+              console.log(`No DexScreener pairs found for ${address}, not saving to allow future retries`);
+              // No pairs found, don't save null logo to allow future retries
+              logo = undefined;
             }
           } else {
             console.log(`DexScreener API error for ${address}: ${response.status}`);
-            // DexScreener API error, save null logo
-            const defaultLogo = {
-              tokenAddress: address,
-              logoUrl: null,
-              symbol: "",
-              name: "",
-              lastUpdated: new Date().toISOString()
-            };
-            
-            logo = await storage.saveTokenLogo(defaultLogo);
-            console.log(`Saved null logo for token ${address} after DexScreener API error`);
+            // DexScreener API error, don't save null logo to allow future retries
+            logo = undefined;
           }
         } catch (err) {
           console.error(`Error fetching token data from DexScreener: ${err}`);
           
-          // Even on error, store a null logo to prevent future API calls
-          const defaultLogo = {
-            tokenAddress: address,
-            logoUrl: null,
-            symbol: "",
-            name: "",
-            lastUpdated: new Date().toISOString()
-          };
-          
-          logo = await storage.saveTokenLogo(defaultLogo);
-          console.log(`Saved null logo for token ${address} after DexScreener error`);
+          // Don't save null logo on error to allow future retries
+          logo = undefined;
         }
       }
       
