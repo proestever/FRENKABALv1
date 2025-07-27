@@ -204,12 +204,24 @@ export async function getHexPriceWithCache(): Promise<number> {
         if (hexAmount > 0) {
           // Get WPLS price from WPLS/DAI pair
           const WPLS_DAI_PAIR = '0xe56043671df55de5cdf8459710433c10324de0ae';
+          const DAI_ADDRESS = '0xefd766ccb38eaf1dfd701853bfce31359239f305'; // DAI on PulseChain
           const daiPairContract = new ethers.Contract(WPLS_DAI_PAIR, pairAbi, provider);
-          const [daiReserves] = await daiPairContract.getReserves();
+          const [daiReserves, daiToken0, daiToken1] = await Promise.all([
+            daiPairContract.getReserves(),
+            daiPairContract.token0(),
+            daiPairContract.token1()
+          ]);
           
-          // Both WPLS and DAI have 18 decimals
-          const wplsInDaiPair = parseFloat(ethers.utils.formatUnits(daiReserves.reserve0, 18));
-          const daiInPair = parseFloat(ethers.utils.formatUnits(daiReserves.reserve1, 18));
+          // Determine which token is WPLS and which is DAI
+          let wplsInDaiPair, daiInPair;
+          if (daiToken0.toLowerCase() === WPLS_ADDRESS.toLowerCase()) {
+            wplsInDaiPair = parseFloat(ethers.utils.formatUnits(daiReserves.reserve0, 18));
+            daiInPair = parseFloat(ethers.utils.formatUnits(daiReserves.reserve1, 18));
+          } else {
+            wplsInDaiPair = parseFloat(ethers.utils.formatUnits(daiReserves.reserve1, 18));
+            daiInPair = parseFloat(ethers.utils.formatUnits(daiReserves.reserve0, 18));
+          }
+          
           const wplsPrice = daiInPair / wplsInDaiPair;
           
           // Calculate HEX price in USD = (WPLS per HEX) * (USD per WPLS)
@@ -223,7 +235,7 @@ export async function getHexPriceWithCache(): Promise<number> {
           console.log(`HEX price: $${hexPrice.toFixed(6)}`);
         }
       } catch (pairError) {
-        console.error('Error fetching from specific HEX/USDC pair:', pairError);
+        console.error('Error fetching from specific HEX/WPLS pair:', pairError);
         throw pairError; // Propagate error instead of using hardcoded price
       }
       
