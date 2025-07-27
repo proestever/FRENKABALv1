@@ -2,6 +2,15 @@
 
 ## Recent Changes
 
+### July 27, 2025 - Fixed Portfolio Loading Regression
+- **Problem identified** - Portfolio loading was failing with "tokensWithPrices.reduce is not a function" error
+- **Root cause** - The `timer.measure` function returns a promise that wasn't being awaited, causing type mismatch
+- **Added await to timer.measure** - Made the `apply_prices` timer measurement properly async with await
+- **Added array validation** - Ensured `walletData.tokens` is always validated as an array before processing
+- **Fallback logic implemented** - Added `tokensArray` variable that ensures we always have an array to work with
+- **Fixed all references** - Updated timer.end and return statement to use the validated `tokensArray`
+- **Result** - Portfolio loading now works correctly without crashing, tokens load properly with prices applied
+
 ### July 26, 2025 - CSV Import/Export for Portfolio Management
 - **Export functionality** - Added CSV export button to download all portfolio addresses with labels
 - **Import functionality** - Added CSV import button with file upload dialog for bulk address import

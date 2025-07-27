@@ -259,9 +259,29 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
       return await fetchWalletBalancesFromScanner(address, 3, false); // Use enhanced endpoint
     }, { address });
     
+    // Debug log to see what we're getting
+    console.log('Scanner response for', address, ':', {
+      hasTokens: !!walletData.tokens,
+      isArray: Array.isArray(walletData.tokens),
+      tokenCount: walletData.tokens?.length,
+      sampleToken: walletData.tokens?.[0]
+    });
+    
     if (walletData.error) {
       timer.end(`wallet_service_${address.slice(0, 8)}`, { error: true });
       return walletData;
+    }
+
+    // Ensure tokens is an array
+    if (!walletData.tokens || !Array.isArray(walletData.tokens)) {
+      console.error('Invalid wallet data - tokens is not an array:', walletData);
+      timer.end(`wallet_service_${address.slice(0, 8)}`, { error: true });
+      return {
+        ...walletData,
+        tokens: [],
+        totalValue: 0,
+        error: 'Invalid wallet data received from scanner'
+      };
     }
     
     // Prepare token addresses for batch price fetching
@@ -279,7 +299,7 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
     }, { tokenCount: tokenAddresses.length });
     
     // Apply prices to tokens
-    const tokensWithPrices = timer.measure('apply_prices', () => {
+    const tokensWithPrices = await timer.measure('apply_prices', async () => {
       return walletData.tokens.map((token, index) => {
         const addressForPrice = tokenAddresses[index];
         const priceData = priceMap.get(addressForPrice.toLowerCase());
@@ -300,18 +320,24 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
       });
     }, { tokenCount: walletData.tokens.length });
     
+    // Debug check
+    console.log('tokensWithPrices type:', typeof tokensWithPrices, 'isArray:', Array.isArray(tokensWithPrices), 'value:', tokensWithPrices);
+    
+    // Ensure tokensWithPrices is an array
+    const tokensArray = Array.isArray(tokensWithPrices) ? tokensWithPrices : [];
+    
     // Recalculate total value
-    const totalValue = tokensWithPrices.reduce((sum, token) => sum + (token.value || 0), 0);
+    const totalValue = tokensArray.reduce((sum, token) => sum + (token.value || 0), 0);
     
     timer.end(`wallet_service_${address.slice(0, 8)}`, { 
       success: true,
-      tokenCount: tokensWithPrices.length,
+      tokenCount: tokensArray.length,
       totalValue
     });
     
     return {
       ...walletData,
-      tokens: tokensWithPrices,
+      tokens: tokensArray,
       totalValue
     };
   } catch (error) {
