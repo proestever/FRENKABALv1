@@ -43,6 +43,12 @@ export async function fetchTokenBalancesFromBrowser(
   }>;
   plsBalance: number;
 }> {
+  // Validate address format
+  if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    console.error(`Invalid Ethereum address format: ${address}`);
+    return { tokens: [], plsBalance: 0 };
+  }
+  
   let lastError: Error | null = null;
   
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -70,10 +76,21 @@ export async function fetchTokenBalancesFromBrowser(
           return { tokens: [], plsBalance: 0 };
         }
         
+        if (response.status === 400) {
+          // Bad request - likely invalid address format
+          console.error(`Invalid address format for ${address}`);
+          const errorText = await response.text();
+          console.error(`Scanner API 400 error details:`, errorText);
+          return { tokens: [], plsBalance: 0 };
+        }
+        
+        const errorText = await response.text();
+        console.error(`Scanner API error response:`, errorText);
         throw new Error(`Scanner API error: ${response.status} ${response.statusText}`);
       }
       
       const data: ScannerApiResponse = await response.json();
+      console.log(`Scanner API response for ${address}:`, data);
       
       // Fetch native PLS balance
       let plsBalance = 0;
@@ -86,7 +103,13 @@ export async function fetchTokenBalancesFromBrowser(
         
         if (addressResponse.ok) {
           const addressData = await addressResponse.json();
-          plsBalance = parseFloat(addressData.exchange_rate) * parseFloat(addressData.coin_balance || '0');
+          console.log(`Address data for ${address}:`, addressData);
+          
+          // Updated to match actual API response format
+          const coinBalance = parseFloat(addressData.coin_balance || '0');
+          plsBalance = coinBalance / 1e18; // Convert from wei to PLS
+          
+          console.log(`PLS balance for ${address}: ${plsBalance} PLS`);
         }
       } catch (error) {
         console.error('Error fetching PLS balance:', error);
