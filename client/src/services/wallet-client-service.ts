@@ -264,6 +264,16 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
       return walletData;
     }
     
+    // Check if tokens array exists
+    if (!walletData.tokens || !Array.isArray(walletData.tokens)) {
+      timer.end(`wallet_service_${address.slice(0, 8)}`, { error: true });
+      return {
+        ...walletData,
+        tokens: [],
+        totalValue: 0
+      };
+    }
+    
     // Prepare token addresses for batch price fetching
     const tokenAddresses = walletData.tokens.map(token => {
       // For PLS native token, use WPLS price
