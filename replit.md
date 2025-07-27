@@ -12,6 +12,14 @@
 - **Reduced inter-batch delay** - From 100-1000ms to 50ms between batches
 - **Result** - Portfolio loading is now significantly faster with better error recovery, 504 errors are handled gracefully with automatic fallback
 
+### July 27, 2025 - Fixed Enhanced Scanner Reliability Issues
+- **Problem identified** - Enhanced scanner was failing with 504 timeouts on nearly every request
+- **Root cause** - Enhanced scanner does too much processing: LP token analysis, recent block scanning (2000 blocks), complex price calculations
+- **Changed default scanner** - `fetchWalletDataFast` now uses fast scanner by default instead of enhanced scanner
+- **Fixed retry logic** - Portfolio loading retries now use fast scanner instead of falling back to enhanced scanner
+- **Why enhanced scanner fails** - Server has ~30 second timeout but enhanced scanner often takes 30-60+ seconds with all its analysis
+- **Result** - Portfolio loading should be much more reliable with fast scanner handling all requests
+
 ### July 27, 2025 - Fixed Portfolio Loading Regression
 - **Problem identified** - Portfolio loading was failing with "tokensWithPrices.reduce is not a function" error
 - **Root cause** - The `timer.measure` function returns a promise that wasn't being awaited, causing type mismatch

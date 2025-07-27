@@ -270,9 +270,9 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
   timer.start(`wallet_service_${address.slice(0, 8)}`, { address });
   
   try {
-    // Use enhanced scanner instead of fast endpoint to get LP token analysis
+    // Use fast scanner by default for better reliability
     const walletData = await timer.measure('scanner_balance_fetch', async () => {
-      return await fetchWalletBalancesFromScanner(address, 3, false); // Use enhanced endpoint
+      return await fetchWalletBalancesFromScanner(address, 3, true); // Use fast endpoint by default
     }, { address });
     
     // Debug log to see what we're getting
@@ -641,7 +641,7 @@ export async function fetchPortfolioWalletsOptimized(
       for (const batch of retryBatches) {
         const retryPromises = batch.map(async ({ address }) => {
           try {
-            const walletData = await fetchWalletBalancesFromScanner(address, 2, false); // Enhanced endpoint
+            const walletData = await fetchWalletBalancesFromScanner(address, 2, true); // Use fast endpoint for retries too
             return { address, data: walletData, success: !walletData.error };
           } catch (error) {
             return { 
