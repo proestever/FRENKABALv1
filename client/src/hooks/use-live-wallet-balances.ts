@@ -40,11 +40,38 @@ export function useLiveWalletBalances(address: string | null) {
   useEffect(() => {
     if (!address || !query.data) return;
     
-    // Disabled polling - was causing excessive API calls every 2 seconds
-    // Real-time updates should be handled by WebSocket events, not polling
-    // TODO: Implement proper Server-Sent Events or WebSocket integration
+    // Create an EventSource connection for real-time updates
+    const setupEventSource = () => {
+      // For now, we'll poll the status endpoint to check for updates
+      // In a future enhancement, we could add Server-Sent Events
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch('/api/websocket-status');
+          if (statusResponse.ok) {
+            const status = await statusResponse.json();
+            
+            // If WebSocket is connected and we have cached data, check for updates
+            if (status.isWebSocketConnected && status.trackedWallets > 0) {
+              // Invalidate and refetch data to get latest balances
+              queryClient.invalidateQueries({
+                queryKey: ['/api/wallet', address, 'live-balances']
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check WebSocket status:', error);
+        }
+      }, 2000); // Poll every 2 seconds for real-time feel
+      
+      return () => {
+        clearInterval(pollInterval);
+      };
+    };
+    
+    const cleanup = setupEventSource();
     
     return () => {
+      cleanup();
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
@@ -81,7 +108,6 @@ export function useWebSocketStatus() {
       }
       return response.json();
     },
-    // Disabled refetchInterval - was polling every 5 seconds unnecessarily
-    refetchInterval: false,
+    refetchInterval: 5000, // Check status every 5 seconds
   });
 }
