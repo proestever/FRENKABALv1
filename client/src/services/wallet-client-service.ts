@@ -6,6 +6,7 @@
 // Removed DexScreener dependency - using smart contract prices directly
 import { getTokenPriceFromContract, getMultipleTokenPricesFromContract } from './smart-contract-price-service';
 import { requestDeduplicator } from '@/lib/request-deduplicator';
+import { PerformanceTimer } from '@/utils/performance-timer';
 
 // Blacklist of known dust tokens to filter out
 const DUST_TOKEN_BLACKLIST = new Set<string>([
@@ -249,52 +250,74 @@ export async function fetchWalletDataClientSide(
  * Returns complete token data with LP token analysis
  */
 export async function fetchWalletDataFast(address: string): Promise<Wallet> {
-  // Use enhanced scanner instead of fast endpoint to get LP token analysis
-  const walletData = await fetchWalletBalancesFromScanner(address, 3, false); // Use enhanced endpoint
-  if (walletData.error) {
-    return walletData;
+  const timer = new PerformanceTimer();
+  timer.start(`wallet_service_${address.slice(0, 8)}`, { address });
+  
+  try {
+    // Use enhanced scanner instead of fast endpoint to get LP token analysis
+    const walletData = await timer.measure('scanner_balance_fetch', async () => {
+      return await fetchWalletBalancesFromScanner(address, 3, false); // Use enhanced endpoint
+    }, { address });
+    
+    if (walletData.error) {
+      timer.end(`wallet_service_${address.slice(0, 8)}`, { error: true });
+      return walletData;
+    }
+    
+    // Prepare token addresses for batch price fetching
+    const tokenAddresses = walletData.tokens.map(token => {
+      // For PLS native token, use WPLS price
+      if (token.address.toLowerCase() === 'native' || token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+        return '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
+      }
+      return token.address;
+    });
+    
+    // Fetch all prices in batches from smart contracts
+    const priceMap = await timer.measure('smart_contract_prices', async () => {
+      return await getMultipleTokenPricesFromContract(tokenAddresses);
+    }, { tokenCount: tokenAddresses.length });
+    
+    // Apply prices to tokens
+    const tokensWithPrices = timer.measure('apply_prices', () => {
+      return walletData.tokens.map((token, index) => {
+        const addressForPrice = tokenAddresses[index];
+        const priceData = priceMap.get(addressForPrice.toLowerCase());
+        
+        if (priceData) {
+          // Calculate value without any cap
+          const calculatedValue = token.balanceFormatted * priceData.price;
+          
+          return {
+            ...token,
+            price: priceData.price,
+            value: calculatedValue,
+            priceData
+          };
+        }
+        
+        return token;
+      });
+    }, { tokenCount: walletData.tokens.length });
+    
+    // Recalculate total value
+    const totalValue = tokensWithPrices.reduce((sum, token) => sum + (token.value || 0), 0);
+    
+    timer.end(`wallet_service_${address.slice(0, 8)}`, { 
+      success: true,
+      tokenCount: tokensWithPrices.length,
+      totalValue
+    });
+    
+    return {
+      ...walletData,
+      tokens: tokensWithPrices,
+      totalValue
+    };
+  } catch (error) {
+    timer.end(`wallet_service_${address.slice(0, 8)}`, { error: true });
+    throw error;
   }
-  
-  // Prepare token addresses for batch price fetching
-  const tokenAddresses = walletData.tokens.map(token => {
-    // For PLS native token, use WPLS price
-    if (token.address.toLowerCase() === 'native' || token.address.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
-      return '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS
-    }
-    return token.address;
-  });
-  
-  // Fetch all prices in batches from smart contracts
-  const priceMap = await getMultipleTokenPricesFromContract(tokenAddresses);
-  
-  // Apply prices to tokens
-  const tokensWithPrices = walletData.tokens.map((token, index) => {
-    const addressForPrice = tokenAddresses[index];
-    const priceData = priceMap.get(addressForPrice.toLowerCase());
-    
-    if (priceData) {
-      // Calculate value without any cap
-      const calculatedValue = token.balanceFormatted * priceData.price;
-      
-      return {
-        ...token,
-        price: priceData.price,
-        value: calculatedValue,
-        priceData
-      };
-    }
-    
-    return token;
-  });
-  
-  // Recalculate total value
-  const totalValue = tokensWithPrices.reduce((sum, token) => sum + (token.value || 0), 0);
-  
-  return {
-    ...walletData,
-    tokens: tokensWithPrices,
-    totalValue
-  };
 }
 
 /**

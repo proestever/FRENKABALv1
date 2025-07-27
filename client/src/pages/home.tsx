@@ -22,6 +22,8 @@ import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSu
 import { Wallet, Token } from '@shared/schema';
 import { combineWalletData } from '@/lib/utils';
 import { backgroundBatchService } from '@/services/background-batch';
+import { PerformanceTimer } from '@/utils/performance-timer';
+import { PerformanceDisplay } from '@/components/performance-display';
 
 // Example wallet address
 const EXAMPLE_WALLET = '0x592139a3f8cf019f628a152fc1262b8aef5b7199';
@@ -35,6 +37,7 @@ export default function Home() {
   const [isMultiWalletLoading, setIsMultiWalletLoading] = useState(false);
   const [portfolioName, setPortfolioName] = useState<string | null>(null);
   const [portfolioUrlId, setPortfolioUrlId] = useState<string | null>(null);
+  const [portfolioTimer, setPortfolioTimer] = useState<PerformanceTimer | null>(null);
 
   const [multiWalletProgress, setMultiWalletProgress] = useState<{
     currentBatch: number;
@@ -165,9 +168,28 @@ export default function Home() {
   const handleMultiSearch = async (addresses: string[]) => {
     if (!addresses.length) return;
     
+    // Create performance timer for the entire portfolio loading process
+    const timer = new PerformanceTimer((timers, summary) => {
+      // Update progress with timing information
+      setMultiWalletProgress(prev => ({
+        ...prev,
+        recentMessages: [
+          ...prev.recentMessages.slice(-5),
+          ...summary.slowestTasks.slice(0, 5).map(task => 
+            `⏱️ ${task.name}: ${(task.duration / 1000).toFixed(2)}s`
+          )
+        ]
+      }));
+    });
+    
+    timer.start('total_portfolio_load', { walletCount: addresses.length });
+    setPortfolioTimer(timer); // Store timer in state for display
+    
     // Stop all background processes before loading portfolio
+    timer.start('stop_background_processes');
     console.log('Stopping all background processes before loading portfolio');
     backgroundBatchService.stopAll();
+    timer.end('stop_background_processes');
     
     // Reset single wallet view
     setSearchedAddress(null);
@@ -229,7 +251,7 @@ export default function Home() {
       
       // For large portfolios, implement smaller batches to prevent hanging
       const BATCH_SIZE = addresses.length > 20 ? 5 : 10; // Smaller batches for large portfolios
-      const batches = [];
+      const batches: string[][] = [];
       for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
         batches.push(addresses.slice(i, i + BATCH_SIZE));
       }
@@ -247,9 +269,10 @@ export default function Home() {
       }));
       
       // Start ALL async operations but load wallets one by one to avoid timeouts
-      const [walletResults, hexStakesData, individualHexResults] = await Promise.all([
+      const [walletResults, hexStakesData, individualHexResults] = await timer.measure('all_parallel_operations', async () => {
+        return await Promise.all([
         // Fetch wallet data in parallel batches for faster loading
-        (async () => {
+        timer.measure('wallet_fetching', async () => {
           const results = [];
           let processedCount = 0;
           
@@ -269,43 +292,47 @@ export default function Home() {
             }));
             
             // Process batch in parallel
-            const batchPromises = batch.map(async (address) => {
-              try {
-                // Use fast scanner for portfolios
-                const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
-                const dataWithPrices = await fetchWalletDataFast(address);
-                
-                // Check if wallet had an error
-                if (dataWithPrices.error) {
-                  console.warn(`Wallet ${address} loaded with error: ${dataWithPrices.error}`);
-                } else {
-                  console.log(`Successfully fetched wallet ${address} using fast scanner:`, {
-                    tokenCount: dataWithPrices.tokens.length,
-                    totalValue: dataWithPrices.totalValue,
-                    lpCount: dataWithPrices.tokens.filter((t: any) => t.isLp).length
-                  });
-                }
-                
-                return { [address]: dataWithPrices };
-              } catch (error) {
-                console.error(`Error fetching wallet ${address}:`, error);
-                // Return wallet data with error flag instead of empty data
-                return { 
-                  [address]: {
-                    address,
-                    tokens: [],
-                    totalValue: 0,
-                    tokenCount: 0,
-                    plsBalance: 0,
-                    networkCount: 1,
-                    error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
+            const batchPromises = batch.map(async (address: string) => {
+              return timer.measure(`wallet_${address.slice(0, 8)}`, async () => {
+                try {
+                  // Use fast scanner for portfolios
+                  const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
+                  const dataWithPrices = await fetchWalletDataFast(address);
+                  
+                  // Check if wallet had an error
+                  if (dataWithPrices.error) {
+                    console.warn(`Wallet ${address} loaded with error: ${dataWithPrices.error}`);
+                  } else {
+                    console.log(`Successfully fetched wallet ${address} using fast scanner:`, {
+                      tokenCount: dataWithPrices.tokens.length,
+                      totalValue: dataWithPrices.totalValue,
+                      lpCount: dataWithPrices.tokens.filter((t: any) => t.isLp).length
+                    });
                   }
-                };
-              }
+                  
+                  return { [address]: dataWithPrices };
+                } catch (error) {
+                  console.error(`Error fetching wallet ${address}:`, error);
+                  // Return wallet data with error flag instead of empty data
+                  return { 
+                    [address]: {
+                      address,
+                      tokens: [],
+                      totalValue: 0,
+                      tokenCount: 0,
+                      plsBalance: 0,
+                      networkCount: 1,
+                      error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
+                    }
+                  };
+                }
+              }, { address, batchIdx });
             });
             
             // Wait for batch to complete
-            const batchResults = await Promise.all(batchPromises);
+            const batchResults = await timer.measure(`batch_${batchIdx}_processing`, async () => {
+              return await Promise.all(batchPromises);
+            }, { batchIdx, batchSize: batch.length });
             results.push(...batchResults);
             
             processedCount += batch.length;
@@ -324,24 +351,31 @@ export default function Home() {
           }
           
           return results;
-        })(),
-        // Fetch combined HEX stakes data
-        fetchCombinedHexStakes(addresses).catch(error => {
-          console.error('Error fetching combined HEX stakes:', error);
-          return null;
         }),
+        // Fetch combined HEX stakes data
+        timer.measure('combined_hex_stakes', async () => {
+          return await fetchCombinedHexStakes(addresses).catch(error => {
+            console.error('Error fetching combined HEX stakes:', error);
+            return null;
+          });
+        }, { walletCount: addresses.length }),
         // Fetch individual HEX stakes data for each wallet in parallel
-        Promise.all(
-          addresses.map(address => 
-            fetchHexStakesSummary(address)
-              .then(data => ({ [address]: data }))
-              .catch(error => {
-                console.error(`Error fetching HEX stakes for ${address}:`, error);
-                return null;
-              })
-          )
-        )
+        timer.measure('individual_hex_stakes', async () => {
+          return await Promise.all(
+            addresses.map(address => 
+              timer.measure(`hex_stakes_${address.slice(0, 8)}`, async () => {
+                return await fetchHexStakesSummary(address)
+                  .then(data => ({ [address]: data }))
+                  .catch(error => {
+                    console.error(`Error fetching HEX stakes for ${address}:`, error);
+                    return null;
+                  });
+              }, { address })
+            )
+          );
+        }, { walletCount: addresses.length })
       ]);
+      }, { totalWallets: addresses.length, batches: batches.length });
       
       // Process individual HEX stakes data
       const individualHexData = individualHexResults
@@ -388,14 +422,26 @@ export default function Home() {
       }
       
       // Update progress to show we're in the final steps
-      setMultiWalletProgress({
+      setMultiWalletProgress(prev => ({
+        ...prev,
         currentBatch: addresses.length,
         totalBatches: addresses.length,
         status: 'complete',
-        message: `Successfully loaded ${Object.keys(walletData).length} wallets with ${individualHexResults.filter(r => r !== null).length} HEX stake summaries`
-      });
+        message: `Successfully loaded ${Object.keys(walletData).length} wallets with ${individualHexResults.filter((r: any) => r !== null).length} HEX stake summaries`,
+        walletsProcessed: addresses.length,
+        totalWallets: addresses.length
+      }));
       
       setMultiWalletData(walletData);
+      
+      // End total timing and log summary
+      timer.end('total_portfolio_load', { 
+        successfulWallets: Object.keys(walletData).length,
+        failedWallets: addresses.length - Object.keys(walletData).length
+      });
+      
+      // Log timing summary
+      timer.logSummary();
       
       toast({
         title: "Multi-wallet search completed",
@@ -406,12 +452,15 @@ export default function Home() {
       console.error('Error fetching multiple wallets:', error);
       
       // Update progress to show error
-      setMultiWalletProgress({
+      setMultiWalletProgress(prev => ({
+        ...prev,
         currentBatch: 0,
         totalBatches: addresses.length,
         status: 'error',
-        message: error instanceof Error ? error.message : "An unknown error occurred when loading wallets"
-      });
+        message: error instanceof Error ? error.message : "An unknown error occurred when loading wallets",
+        walletsProcessed: 0,
+        totalWallets: addresses.length
+      }));
       
       toast({
         title: "Error fetching wallet data",
@@ -425,6 +474,7 @@ export default function Home() {
       // Add a slight delay before setting loading to false to ensure progress is visible
       setTimeout(() => {
         setIsMultiWalletLoading(false);
+        setPortfolioTimer(null); // Clear the timer
       }, 1000);
     }
   };
@@ -870,6 +920,13 @@ export default function Home() {
         walletAddress={searchedAddress || (multiWalletData ? 'Multiple wallets' : undefined)}
         customProgress={isMultiWalletLoading ? multiWalletProgress : progress}
       />
+      
+      {/* Performance Display - shows real-time timing during portfolio loading */}
+      {isMultiWalletLoading && portfolioTimer && (
+        <div className="mt-4">
+          <PerformanceDisplay timer={portfolioTimer} />
+        </div>
+      )}
       
       {/* Multi-wallet results section */}
       {multiWalletData && !isMultiWalletLoading && (
