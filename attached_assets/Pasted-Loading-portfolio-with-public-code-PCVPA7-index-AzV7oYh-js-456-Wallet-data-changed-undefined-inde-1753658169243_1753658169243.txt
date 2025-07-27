@@ -1,0 +1,130 @@
+Loading portfolio with public code: PCVPA7
+index--AzV7oYh.js:456 Wallet data changed: undefined
+index--AzV7oYh.js:456 isLoading: false isFetching: false isError: false
+index--AzV7oYh.js:456 Portfolio name: giggers
+index--AzV7oYh.js:456 Stopping all background processes before loading portfolio
+index--AzV7oYh.js:456 Fetching data for 9 wallets individually
+index--AzV7oYh.js:456 Processing 9 wallets in 1 batches of up to 10 wallets each
+index--AzV7oYh.js:456 Fetching HEX stakes for 9 wallets...
+9index--AzV7oYh.js:456 Waiting for ongoing HEX price request...
+index--AzV7oYh.js:456 HEX/WPLS pair calculation:
+index--AzV7oYh.js:456 HEX reserve: 160678064.4976824 HEX
+index--AzV7oYh.js:456 WPLS reserve: 42815067803.342735 WPLS
+index--AzV7oYh.js:456 WPLS price: $0.00004111323611736302
+index--AzV7oYh.js:456 HEX price: $0.010955
+9index--AzV7oYh.js:456 Using cached HEX price: 0.010955235224439282
+index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0x30b90694a33f4d0a336f4b2544ad64c0bbe86997
+index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0xec9e02fddb59ce41956cc20f6de55e5c976c0f8e
+index--AzV7oYh.js:456 Detected 23 HEX stakes for wallet: 0x459af0b9933eab4921555a44d3692cad964408c5
+index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0xec9e02fddb59ce41956cc20f6de55e5c976c0f8e
+index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0x1241f365d35fa4de8ab9cf1f441e99ddf0606d88
+index--AzV7oYh.js:456 Detected 23 HEX stakes for wallet: 0x459af0b9933eab4921555a44d3692cad964408c5
+index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0xa6ce637987d82dab2cab1bc776d5afde8cadbebf
+index--AzV7oYh.js:456 Detected 4 HEX stakes for wallet: 0x9be83826afdf22a88027f8e5b79f428178bd9635
+index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0x592139a3f8cf019f628a152fc1262b8aef5b7199
+index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0xa6ce637987d82dab2cab1bc776d5afde8cadbebf
+2index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0xf3fae8675073e9590e89e90377b0bad96cc7dfed
+index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0x592139a3f8cf019f628a152fc1262b8aef5b7199
+index--AzV7oYh.js:456 Detected 4 HEX stakes for wallet: 0x9be83826afdf22a88027f8e5b79f428178bd9635
+index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0x1241f365d35fa4de8ab9cf1f441e99ddf0606d88
+index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0x30b90694a33f4d0a336f4b2544ad64c0bbe86997
+2index--AzV7oYh.js:456 Detected 0 HEX stakes for wallet: 0x7153c05d359801b03a4a5e62a28d59b453de24bf
+index--AzV7oYh.js:456 Found stake 0 with 1.00 HEX, interest: 0.15 HEX
+index--AzV7oYh.js:456 Found stake 1 with 1.00 HEX, interest: 0.15 HEX
+index--AzV7oYh.js:456 Found stake 2 with 2.00 HEX, interest: 0.30 HEX
+index--AzV7oYh.js:456 Found stake 3 with 1.00 HEX, interest: 0.15 HEX
+index--AzV7oYh.js:456 Found stake 0 with 10000.00 HEX, interest: 17813.15 HEX
+index--AzV7oYh.js:456 Found stake 1 with 10000.00 HEX, interest: 17625.75 HEX
+index--AzV7oYh.js:456 Found stake 2 with 10000.00 HEX, interest: 17459.18 HEX
+index--AzV7oYh.js:456 Found stake 3 with 10000.00 HEX, interest: 17781.92 HEX
+index--AzV7oYh.js:456 Found stake 4 with 10000.00 HEX, interest: 21057.53 HEX
+index--AzV7oYh.js:456 Found stake 5 with 20000.00 HEX, interest: 41301.37 HEX
+index--AzV7oYh.js:456 Found stake 6 with 80000.00 HEX, interest: 162443.84 HEX
+index--AzV7oYh.js:456 Found stake 7 with 100000.00 HEX, interest: 173654.79 HEX
+index--AzV7oYh.js:456 Found stake 8 with 10000.00 HEX, interest: 17584.11 HEX
+index--AzV7oYh.js:456 Found stake 9 with 20000.00 HEX, interest: 40635.62 HEX
+index--AzV7oYh.js:456 Found stake 10 with 20000.00 HEX, interest: 41202.74 HEX
+index--AzV7oYh.js:456 Found stake 11 with 5000.63 HEX, interest: 8699.44 HEX
+index--AzV7oYh.js:456 Found stake 12 with 10000.00 HEX, interest: 17667.40 HEX
+index--AzV7oYh.js:456 Found stake 13 with 10000.00 HEX, interest: 20700.00 HEX
+index--AzV7oYh.js:456 Found stake 14 with 80000.00 HEX, interest: 162542.47 HEX
+index--AzV7oYh.js:456 Found stake 15 with 20000.00 HEX, interest: 40709.59 HEX
+index--AzV7oYh.js:456 Found stake 16 with 100000.00 HEX, interest: 173863.01 HEX
+index--AzV7oYh.js:456 Found stake 17 with 100000.00 HEX, interest: 175945.21 HEX
+index--AzV7oYh.js:456 Found stake 18 with 350000.00 HEX, interest: 701630.14 HEX
+index--AzV7oYh.js:456 Found stake 19 with 10000.00 HEX, interest: 20971.23 HEX
+index--AzV7oYh.js:456 Found stake 20 with 41098.00 HEX, interest: 93793.52 HEX
+index--AzV7oYh.js:456 Found stake 21 with 100000.00 HEX, interest: 173238.36 HEX
+index--AzV7oYh.js:456 Found stake 22 with 85434.17 HEX, interest: 148805.26 HEX
+index--AzV7oYh.js:456 Found stake 0 with 10000.00 HEX, interest: 17813.15 HEX
+index--AzV7oYh.js:456 Found stake 1 with 10000.00 HEX, interest: 17625.75 HEX
+index--AzV7oYh.js:456 Found stake 2 with 10000.00 HEX, interest: 17459.18 HEX
+index--AzV7oYh.js:456 Found stake 3 with 10000.00 HEX, interest: 17781.92 HEX
+index--AzV7oYh.js:456 Found stake 4 with 10000.00 HEX, interest: 21057.53 HEX
+index--AzV7oYh.js:456 Found stake 5 with 20000.00 HEX, interest: 41301.37 HEX
+index--AzV7oYh.js:456 Found stake 6 with 80000.00 HEX, interest: 162443.84 HEX
+index--AzV7oYh.js:456 Found stake 7 with 100000.00 HEX, interest: 173654.79 HEX
+index--AzV7oYh.js:456 Found stake 8 with 10000.00 HEX, interest: 17584.11 HEX
+index--AzV7oYh.js:456 Found stake 9 with 20000.00 HEX, interest: 40635.62 HEX
+index--AzV7oYh.js:456 Found stake 10 with 20000.00 HEX, interest: 41202.74 HEX
+index--AzV7oYh.js:456 Found stake 11 with 5000.63 HEX, interest: 8699.44 HEX
+index--AzV7oYh.js:456 Found stake 12 with 10000.00 HEX, interest: 17667.40 HEX
+index--AzV7oYh.js:456 Found stake 13 with 10000.00 HEX, interest: 20700.00 HEX
+index--AzV7oYh.js:456 Found stake 14 with 80000.00 HEX, interest: 162542.47 HEX
+index--AzV7oYh.js:456 Found stake 15 with 20000.00 HEX, interest: 40709.59 HEX
+index--AzV7oYh.js:456 Found stake 16 with 100000.00 HEX, interest: 173863.01 HEX
+index--AzV7oYh.js:456 Found stake 17 with 100000.00 HEX, interest: 175945.21 HEX
+index--AzV7oYh.js:456 Found stake 18 with 350000.00 HEX, interest: 701630.14 HEX
+index--AzV7oYh.js:456 Found stake 19 with 10000.00 HEX, interest: 20971.23 HEX
+index--AzV7oYh.js:456 Found stake 20 with 41098.00 HEX, interest: 93793.52 HEX
+index--AzV7oYh.js:456 Found stake 21 with 100000.00 HEX, interest: 173238.36 HEX
+index--AzV7oYh.js:456 Found stake 22 with 85434.17 HEX, interest: 148805.26 HEX
+index--AzV7oYh.js:456 Found stake 0 with 1.00 HEX, interest: 0.15 HEX
+index--AzV7oYh.js:456 Found stake 1 with 1.00 HEX, interest: 0.15 HEX
+index--AzV7oYh.js:456 Found stake 2 with 2.00 HEX, interest: 0.30 HEX
+index--AzV7oYh.js:456 Found stake 3 with 1.00 HEX, interest: 0.15 HEX
+index--AzV7oYh.js:456 Combined HEX stakes: 1211537.80 HEX, interest: 2307126.38 HEX
+index--AzV7oYh.js:456 Successfully fetched wallet 0xf3fae8675073e9590e89e90377b0bad96cc7dfed on attempt 1 using enhanced scanner
+index--AzV7oYh.js:456 Using specific pair for PLSX token
+index--AzV7oYh.js:456 Using specific pair for Wrapped Ethereum
+index--AzV7oYh.js:456 0x95b303987a60c71504d99aa1b13b4da07b0790ab price from specific pair 0x1b45b9148791d3a104184cd5dfe5ce57193a3ee9: $0.000032
+index--AzV7oYh.js:456 0x02dcdd04e3f455d838cd1249292c58f3b79e3c3c price from specific pair 0x42abdfdb63f3282033c766e72cc4810738571609: $3831.256909
+index--AzV7oYh.js:456 Skipping low liquidity pair for 0xb89bbb52e26a0f16815444856b59e0fafbd40fe1: 1806.33 WPLS
+index--AzV7oYh.js:456 Skipping low liquidity pair for 0x539170a6c89a80abfba4b37db5aca7ef53296e33: 49.78 WPLS
+index--AzV7oYh.js:456 Skipping low liquidity pair for 0xc9b19853e1ac248925a5b879edf335348c0ccc3d: 212.18 WPLS
+index--AzV7oYh.js:456 Skipping low liquidity pair for 0x382287006551dbc5b515c9abca759f378fdd56d8: 276106.78 WPLS
+index--AzV7oYh.js:456 Skipping low liquidity pair for 0x83541318c5bcd840e92f9a3a7d171710002c9ef0: 272.82 WPLS
+index--AzV7oYh.js:456 Skipping low liquidity pair for 0x9ed0ff80d0bb03c6f33f891a71fa821985e33589: 27.15 WPLS
+index--AzV7oYh.js:456 Successfully fetched wallet 0xf3fae8675073e9590e89e90377b0bad96cc7dfed using fast scanner: Object
+scanner-balances:1  Failed to load resource: the server responded with a status of 504 ()Understand this error
+index--AzV7oYh.js:456 Error on attempt 1 for wallet 0x30b90694a33f4d0a336f4b2544ad64c0bbe86997: SyntaxError: Unexpected token 'u', "upstream r"... is not valid JSON
+BF @ index--AzV7oYh.js:456Understand this error
+index--AzV7oYh.js:456 Retrying wallet 0x30b90694a33f4d0a336f4b2544ad64c0bbe86997 after 1000ms...
+scanner-balances:1  Failed to load resource: the server responded with a status of 504 ()Understand this error
+index--AzV7oYh.js:456 Error on attempt 1 for wallet 0xa6ce637987d82dab2cab1bc776d5afde8cadbebf: SyntaxError: Unexpected token 'u', "upstream r"... is not valid JSON
+BF @ index--AzV7oYh.js:456Understand this error
+index--AzV7oYh.js:456 Retrying wallet 0xa6ce637987d82dab2cab1bc776d5afde8cadbebf after 1000ms...
+scanner-balances:1  Failed to load resource: the server responded with a status of 504 ()Understand this error
+scanner-balances:1  Failed to load resource: the server responded with a status of 504 ()Understand this error
+index--AzV7oYh.js:456 Error on attempt 1 for wallet 0x9be83826afdf22a88027f8e5b79f428178bd9635: SyntaxError: Unexpected token 'u', "upstream r"... is not valid JSON
+BF @ index--AzV7oYh.js:456Understand this error
+index--AzV7oYh.js:456 Retrying wallet 0x9be83826afdf22a88027f8e5b79f428178bd9635 after 1000ms...
+index--AzV7oYh.js:456 Error on attempt 1 for wallet 0x459af0b9933eab4921555a44d3692cad964408c5: SyntaxError: Unexpected token 'u', "upstream r"... is not valid JSON
+BF @ index--AzV7oYh.js:456Understand this error
+index--AzV7oYh.js:456 Retrying wallet 0x459af0b9933eab4921555a44d3692cad964408c5 after 1000ms...
+scanner-balances:1  Failed to load resource: the server responded with a status of 504 ()Understand this error
+index--AzV7oYh.js:456 Error on attempt 1 for wallet 0x7153c05d359801b03a4a5e62a28d59b453de24bf: SyntaxError: Unexpected token 'u', "upstream r"... is not valid JSON
+BF @ index--AzV7oYh.js:456Understand this error
+index--AzV7oYh.js:456 Retrying wallet 0x7153c05d359801b03a4a5e62a28d59b453de24bf after 1000ms...
+scanner-balances:1  Failed to load resource: the server responded with a status of 504 ()Understand this error
+index--AzV7oYh.js:456 Error on attempt 1 for wallet 0x1241f365d35fa4de8ab9cf1f441e99ddf0606d88: SyntaxError: Unexpected token 'u', "upstream r"... is not valid JSON
+BF @ index--AzV7oYh.js:456Understand this error
+index--AzV7oYh.js:456 Retrying wallet 0x1241f365d35fa4de8ab9cf1f441e99ddf0606d88 after 1000ms...
+scanner-balances:1  Failed to load resource: the server responded with a status of 504 ()Understand this error
+index--AzV7oYh.js:456 Error on attempt 1 for wallet 0x592139a3f8cf019f628a152fc1262b8aef5b7199: SyntaxError: Unexpected token 'u', "upstream r"... is not valid JSON
+BF @ index--AzV7oYh.js:456Understand this error
+index--AzV7oYh.js:456 Retrying wallet 0x592139a3f8cf019f628a152fc1262b8aef5b7199 after 1000ms...
+scanner-balances:1  Failed to load resource: the server responded with a status of 504 ()Understand this error
+index--AzV7oYh.js:456 Error on attempt 1 for wallet 0xec9e02fddb59ce41956cc20f6de55e5c976c0f8e: SyntaxError: Unexpected token 'u', "upstream r"... is not valid JSON
+BF @ index--AzV7oYh.js:456Understand this error
+index--AzV7oYh.js:456 Retrying wallet 0xec9e02fddb59ce41956cc20f6de55e5c976c0f8e after 1000ms...
