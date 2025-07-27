@@ -7,6 +7,8 @@
 import { getTokenPriceFromContract, getMultipleTokenPricesFromContract } from './smart-contract-price-service';
 import { requestDeduplicator } from '@/lib/request-deduplicator';
 import { PerformanceTimer } from '@/utils/performance-timer';
+import { fetchTokenBalancesFromBrowser } from './scanner-client-service';
+import { fetchMultipleTokenLogos } from './dexscreener-logo-service';
 
 // Blacklist of known dust tokens to filter out
 const DUST_TOKEN_BLACKLIST = new Set<string>([
@@ -60,88 +62,38 @@ interface TokenWithPrice extends ProcessedToken {
 }
 
 /**
- * Fetch wallet balances using scanner API (gets ALL tokens, not just recent)
- * Includes retry logic with fallback to fast endpoint for better reliability
+ * Fetch wallet balances directly from browser using PulseChain Scan API
+ * This distributes load across users' IPs instead of server
  */
 async function fetchWalletBalancesFromScanner(address: string, retries = 3, useFastEndpoint = false): Promise<Wallet> {
-  let lastError: Error | null = null;
-  let currentEndpoint = useFastEndpoint ? 'fast' : 'enhanced';
-  const timeoutMs = useFastEndpoint ? 15000 : 30000; // 15 seconds for fast, 30 seconds for enhanced (reduced from 30s/10min)
-  
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const endpoint = currentEndpoint === 'fast' ? `/api/wallet/${address}/fast-balances` : `/api/wallet/${address}/scanner-balances`;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-      
-      const response = await fetch(endpoint, {
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        // Special handling for rate limit errors
-        if (response.status === 429) {
-          const waitTime = Math.min(500 * attempt, 2000); // Reduced: 500ms, 1s, 2s max
-          console.log(`Rate limited on attempt ${attempt} for wallet ${address}, waiting ${waitTime}ms`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-          continue;
-        }
-        
-        // For 504 Gateway Timeout, immediately try fast endpoint
-        if (response.status === 504 && currentEndpoint === 'enhanced' && attempt < retries) {
-          console.log(`Gateway timeout for ${address}, switching to fast endpoint`);
-          currentEndpoint = 'fast';
-          continue; // Retry immediately with fast endpoint
-        }
-        
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to fetch wallet balances (status: ${response.status})`);
-      }
-      
-      const data = await response.json();
-      console.log(`Successfully fetched wallet ${address} on attempt ${attempt} using ${currentEndpoint} scanner`);
-      return data;
-      
-    } catch (error) {
-      lastError = error as Error;
-      
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.error(`Timeout on attempt ${attempt} for wallet ${address} using ${currentEndpoint} endpoint`);
-        
-        // If enhanced endpoint times out, try fast endpoint
-        if (currentEndpoint === 'enhanced' && attempt < retries) {
-          console.log(`Switching to fast endpoint for ${address} after timeout`);
-          currentEndpoint = 'fast';
-          continue; // Retry immediately with fast endpoint
-        }
-      } else {
-        console.error(`Error on attempt ${attempt} for wallet ${address}:`, error);
-      }
-      
-      // Wait before retrying (except on last attempt)
-      if (attempt < retries) {
-        // Reduced wait times: 200ms, 400ms, 600ms instead of 1s, 2s, 3s
-        const waitTime = Math.min(200 * attempt, 600); 
-        console.log(`Retrying wallet ${address} after ${waitTime}ms...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
-    }
+  try {
+    // Fetch token balances directly from browser
+    const { tokens, plsBalance } = await fetchTokenBalancesFromBrowser(address, retries);
+    
+    // Transform to wallet format
+    return {
+      address,
+      tokens,
+      totalValue: 0, // Will be calculated after prices are fetched
+      tokenCount: tokens.length,
+      plsBalance: plsBalance || 0,
+      plsPriceChange: 0,
+      networkCount: 1,
+      pricesNeeded: true
+    };
+  } catch (error) {
+    console.error(`Failed to fetch wallet ${address}:`, error);
+    return {
+      address,
+      tokens: [],
+      totalValue: 0,
+      tokenCount: 0,
+      plsBalance: 0,
+      plsPriceChange: 0,
+      networkCount: 1,
+      error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
+    };
   }
-  
-  // All retries failed, return empty wallet data instead of throwing
-  console.error(`Failed to fetch wallet ${address} after ${retries} attempts:`, lastError);
-  return {
-    address,
-    tokens: [],
-    totalValue: 0,
-    tokenCount: 0,
-    plsBalance: 0,
-    plsPriceChange: 0,
-    networkCount: 1,
-    error: lastError?.message || 'Failed to fetch wallet data'
-  };
 }
 
 /**
@@ -336,6 +288,58 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
       });
     }, { tokenCount: walletData.tokens.length });
     
+    // Fetch logos from server first
+    await timer.measure('fetch_server_logos', async () => {
+      try {
+        const BATCH_SIZE = 100;
+        const addresses = walletData.tokens.map(t => t.address);
+        
+        for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
+          const batchAddresses = addresses.slice(i, i + BATCH_SIZE);
+          
+          const response = await fetch('/api/token-logos/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ addresses: batchAddresses })
+          });
+          
+          if (response.ok) {
+            const logoMap = await response.json();
+            
+            // Apply logos to tokens
+            tokensWithPrices.forEach(token => {
+              const logoData = logoMap[token.address.toLowerCase()];
+              if (logoData?.logoUrl) {
+                token.logo = logoData.logoUrl;
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching logos from server:', error);
+      }
+    }, { tokenCount: walletData.tokens.length });
+    
+    // Fetch missing logos from DexScreener
+    await timer.measure('fetch_dexscreener_logos', async () => {
+      const tokensWithoutLogos = tokensWithPrices.filter(token => !token.logo && token.address !== 'native');
+      
+      if (tokensWithoutLogos.length > 0) {
+        console.log(`Fetching logos from DexScreener for ${tokensWithoutLogos.length} tokens`);
+        const logoMap = await fetchMultipleTokenLogos(tokensWithoutLogos.map(t => t.address));
+        
+        // Apply DexScreener logos
+        tokensWithoutLogos.forEach(token => {
+          const logo = logoMap.get(token.address.toLowerCase());
+          if (logo) {
+            token.logo = logo;
+            // Save to server for future use
+            saveLogoToServer(token.address, logo, token.symbol, token.name);
+          }
+        });
+      }
+    }, { missingLogos: tokensWithPrices.filter(t => !t.logo && t.address !== 'native').length });
+    
     // Debug check
     console.log('tokensWithPrices type:', typeof tokensWithPrices, 'isArray:', Array.isArray(tokensWithPrices), 'value:', tokensWithPrices);
     
@@ -422,6 +426,29 @@ export async function fetchWalletDataWithContractPrices(
         }
       } catch (error) {
         console.error('Failed to batch fetch logos from server:', error);
+      }
+    }
+    
+    // Step 2.5: Fetch missing logos from DexScreener
+    const tokensWithoutLogos = tokensWithPrices.filter(token => !token.logo && token.address !== 'native');
+    if (tokensWithoutLogos.length > 0) {
+      if (onProgress) onProgress(`Fetching logos for ${tokensWithoutLogos.length} tokens...`, 30);
+      
+      try {
+        console.log(`Fetching logos from DexScreener for ${tokensWithoutLogos.length} tokens`);
+        const logoMap = await fetchMultipleTokenLogos(tokensWithoutLogos.map(t => t.address));
+        
+        // Apply DexScreener logos
+        tokensWithoutLogos.forEach(token => {
+          const logo = logoMap.get(token.address.toLowerCase());
+          if (logo) {
+            token.logo = logo;
+            // Save to server for future use
+            saveLogoToServer(token.address, logo, token.symbol, token.name);
+          }
+        });
+      } catch (error) {
+        console.error('Failed to fetch logos from DexScreener:', error);
       }
     }
     

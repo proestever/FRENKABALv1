@@ -2,6 +2,16 @@
 
 ## Recent Changes
 
+### July 27, 2025 - Complete Migration to Client-Side API Architecture
+- **Problem identified** - Server was making all PulseChain Scan API calls, creating bottlenecks and server load issues
+- **Created client-side scanner service** - New `scanner-client-service.ts` that calls PulseChain Scan API directly from user browsers
+- **Updated wallet fetching** - `fetchWalletBalancesFromScanner` now uses browser-based scanner instead of server endpoints
+- **Fixed missing logos issue** - Added DexScreener logo fetching with `dexscreener-logo-service.ts` for tokens without server-cached logos
+- **Complete client-side architecture** - All API calls now happen in browser: PulseChain Scan (token balances), smart contracts (prices), DexScreener (logos)
+- **Load distribution achieved** - Server load is now fully distributed across users' IP addresses for all external API calls
+- **Maintained performance optimizations** - All existing optimizations preserved: dynamic batching, retry logic, 504 error handling
+- **Result** - Zero server-side API calls, complete load distribution to users, all tokens now display proper logos from DexScreener
+
 ### July 27, 2025 - Major Portfolio Loading Performance Optimizations
 - **Problem identified** - Portfolio loading was experiencing excessive delays due to 504 gateway timeouts and 1000ms retry delays
 - **Root causes** - Large batch sizes (10 wallets) overwhelming server, long retry delays (1000ms), sequential retries, excessive timeouts
