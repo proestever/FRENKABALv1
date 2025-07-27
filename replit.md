@@ -31,12 +31,13 @@
 - **Result** - Users can easily save and backup their portfolio/wallet state for record-keeping or analysis
 
 ### July 26, 2025 - Fixed HEX Price to Use Specific PulseX Pair
-- **Updated HEX price source** - Now uses specific HEX/USDC pair address: 0xf1f4ee610b2babb05c635f726ef8b0c568c8dc65
+- **Updated HEX price source** - Now uses specific HEX/WPLS pair address: 0xf1f4ee610b2babb05c635f726ef8b0c568c8dc65
+- **Critical bug discovery** - Pair 0xf1f4ee610b2babb05c635f726ef8b0c568c8dc65 is actually HEX/WPLS, not HEX/USDC as originally assumed
+- **Fixed decimal calculations** - Updated to handle WPLS with 18 decimals instead of USDC's 6 decimals, resolving "invalid BigNumber value" errors
 - **Direct pair price calculation** - Fetches reserves directly from the specified pair contract to calculate accurate HEX price
-- **Hardcoded fallback price** - Falls back to $0.007672 (user-specified price) if pair fetching fails
-- **Updated smart contract price service** - Added special handling for HEX token to use specific pair in token list
-- **Fixed decimal calculation** - Properly handles HEX (8 decimals) and USDC (6 decimals) conversion
-- **Result** - HEX price now shows correctly at ~$0.007672 in both HEX stakes and token list
+- **WPLS price conversion** - HEX price in WPLS is multiplied by current WPLS price from stablecoin pairs for USD value
+- **Fixed function call** - Corrected call from `getWPLSPairPrice(provider)` to `getWPLSPrice()` in HEX special handling
+- **Result** - HEX price now calculates correctly using the HEX/WPLS pair with proper decimal handling
 
 ### July 26, 2025 - Added Special Pair Handling for PLSX and Wrapped Ethereum
 - **PLSX token special handling** - Now uses specific pair 0x1b45b9148791d3a104184cd5dfe5ce57193a3ee9 for accurate pricing

@@ -152,15 +152,13 @@ export async function getHexPriceWithCache(): Promise<number> {
     return await ongoingPriceRequest;
   }
   
-  // Default fallback price - set to the price you specified
-  let hexPrice = 0.007672;
-  
   // Create the ongoing request promise
   ongoingPriceRequest = (async () => {
+    let hexPrice = 0; // Initialize to 0, will be calculated from pair
     try {
-      // Use the specific HEX/USDC pair address provided by user
-      const HEX_USDC_PAIR = '0xf1f4ee610b2babb05c635f726ef8b0c568c8dc65';
-      const USDC_ADDRESS = '0x15D38573d2feeb82e7ad5187aB8c1D52810B1f07'; // USDC on PulseChain
+      // Use the specific HEX/WPLS pair address
+      const HEX_WPLS_PAIR = '0xf1f4ee610b2babb05c635f726ef8b0c568c8dc65';
+      const WPLS_ADDRESS = '0xa1077a294dde1b09bb078844df40758a5d0f9a27'; // WPLS on PulseChain
       
       // Try to fetch price from the specific pair
       const { ethers } = await import('ethers');
@@ -177,7 +175,7 @@ export async function getHexPriceWithCache(): Promise<number> {
         'function token1() external view returns (address)'
       ];
       
-      const pairContract = new ethers.Contract(HEX_USDC_PAIR, pairAbi, provider);
+      const pairContract = new ethers.Contract(HEX_WPLS_PAIR, pairAbi, provider);
       
       try {
         const [reserves, token0, token1] = await Promise.all([
@@ -186,39 +184,47 @@ export async function getHexPriceWithCache(): Promise<number> {
           pairContract.token1()
         ]);
         
-        // Determine which token is HEX and which is USDC
-        let hexReserve, usdcReserve;
+        // Determine which token is HEX and which is WPLS
+        let hexReserve, wplsReserve;
         if (token0.toLowerCase() === HEX_CONTRACT_ADDRESS.toLowerCase()) {
           hexReserve = reserves.reserve0;
-          usdcReserve = reserves.reserve1;
+          wplsReserve = reserves.reserve1;
         } else {
           hexReserve = reserves.reserve1;
-          usdcReserve = reserves.reserve0;
+          wplsReserve = reserves.reserve0;
         }
         
-        // Calculate price (USDC has 6 decimals, HEX has 8 decimals)
-        // Convert BigNumbers to regular numbers with proper decimal handling
-        const hexAmountRaw = hexReserve.toString();
-        const usdcAmountRaw = usdcReserve.toString();
+        // Calculate price - HEX has 8 decimals, WPLS has 18 decimals
+        const hexAmountBN = ethers.utils.formatUnits(hexReserve, 8);
+        const wplsAmountBN = ethers.utils.formatUnits(wplsReserve, 18);
         
-        // Convert to actual amounts considering decimals
-        const hexAmount = parseFloat(hexAmountRaw) / Math.pow(10, 8);
-        const usdcAmount = parseFloat(usdcAmountRaw) / Math.pow(10, 6);
+        const hexAmount = parseFloat(hexAmountBN);
+        const wplsAmount = parseFloat(wplsAmountBN);
         
         if (hexAmount > 0) {
-          hexPrice = usdcAmount / hexAmount;
-          console.log(`Fetched HEX price from specific pair ${HEX_USDC_PAIR}: $${hexPrice.toFixed(6)}`);
+          // Get WPLS price from WPLS/DAI pair
+          const WPLS_DAI_PAIR = '0xe56043671df55de5cdf8459710433c10324de0ae';
+          const daiPairContract = new ethers.Contract(WPLS_DAI_PAIR, pairAbi, provider);
+          const [daiReserves] = await daiPairContract.getReserves();
           
-          // If the price seems unreasonable, use the hardcoded price
-          if (hexPrice > 1 || hexPrice < 0.0001) {
-            console.log('Price seems unreasonable, using hardcoded price: $0.007672');
-            hexPrice = 0.007672;
-          }
+          // Both WPLS and DAI have 18 decimals
+          const wplsInDaiPair = parseFloat(ethers.utils.formatUnits(daiReserves.reserve0, 18));
+          const daiInPair = parseFloat(ethers.utils.formatUnits(daiReserves.reserve1, 18));
+          const wplsPrice = daiInPair / wplsInDaiPair;
+          
+          // Calculate HEX price in USD = (WPLS per HEX) * (USD per WPLS)
+          const wplsPerHex = wplsAmount / hexAmount;
+          hexPrice = wplsPerHex * wplsPrice;
+          
+          console.log(`HEX/WPLS pair calculation:`);
+          console.log(`HEX reserve: ${hexAmount} HEX`);
+          console.log(`WPLS reserve: ${wplsAmount} WPLS`);
+          console.log(`WPLS price: $${wplsPrice}`);
+          console.log(`HEX price: $${hexPrice.toFixed(6)}`);
         }
       } catch (pairError) {
         console.error('Error fetching from specific HEX/USDC pair:', pairError);
-        console.log('Using hardcoded HEX price: $0.007672');
-        hexPrice = 0.007672; // Use the price specified by user
+        throw pairError; // Propagate error instead of using hardcoded price
       }
       
       // Update cache with the price we got
@@ -229,14 +235,7 @@ export async function getHexPriceWithCache(): Promise<number> {
       
     } catch (error) {
       console.error('Error in HEX price fetching:', error);
-      // Use hardcoded price as fallback
-      hexPrice = 0.007672;
-      
-      // Update cache even with fallback
-      cachedHexPrice = {
-        price: hexPrice,
-        timestamp: Date.now()
-      };
+      throw error; // Propagate error instead of using hardcoded price
     } finally {
       // Clear the ongoing request when done
       ongoingPriceRequest = null;
