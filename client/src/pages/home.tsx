@@ -249,8 +249,8 @@ export default function Home() {
     try {
       console.log(`Fetching data for ${addresses.length} wallets individually`);
       
-      // For large portfolios, implement smaller batches to prevent hanging
-      const BATCH_SIZE = addresses.length > 20 ? 5 : 10; // Smaller batches for large portfolios
+      // Use smaller batches to prevent server overload and reduce 504 errors
+      const BATCH_SIZE = addresses.length > 50 ? 3 : addresses.length > 20 ? 4 : 5; // Dynamic batch sizing
       const batches: string[][] = [];
       for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
         batches.push(addresses.slice(i, i + BATCH_SIZE));
@@ -295,7 +295,7 @@ export default function Home() {
             const batchPromises = batch.map(async (address: string) => {
               return timer.measure(`wallet_${address.slice(0, 8)}`, async () => {
                 try {
-                  // Use fast scanner for portfolios
+                  // Use fast scanner for portfolios with automatic fallback to enhanced if needed
                   const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
                   const dataWithPrices = await fetchWalletDataFast(address);
                   
@@ -323,6 +323,7 @@ export default function Home() {
                       totalValue: 0,
                       tokenCount: 0,
                       plsBalance: 0,
+                      plsPriceChange: 0,
                       networkCount: 1,
                       error: errorMessage
                     }
@@ -346,9 +347,9 @@ export default function Home() {
               message: `Processed ${processedCount} of ${addresses.length} wallets...`
             }));
             
-            // Add delay between batches for large portfolios to prevent overwhelming the server
+            // Small delay between batches to prevent overwhelming the server
             if (batchIdx < batches.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, addresses.length > 20 ? 1000 : 100));
+              await new Promise(resolve => setTimeout(resolve, 50)); // Reduced from 100-1000ms to 50ms
             }
           }
           

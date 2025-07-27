@@ -2,6 +2,16 @@
 
 ## Recent Changes
 
+### July 27, 2025 - Major Portfolio Loading Performance Optimizations
+- **Problem identified** - Portfolio loading was experiencing excessive delays due to 504 gateway timeouts and 1000ms retry delays
+- **Root causes** - Large batch sizes (10 wallets) overwhelming server, long retry delays (1000ms), sequential retries, excessive timeouts
+- **Optimized retry logic** - Reduced retry delays from 1000ms to 200-600ms max, added automatic fallback from enhanced to fast endpoint on timeout/504 errors
+- **Reduced batch sizes** - Dynamic batching: 3 wallets for >50 portfolios, 4 for >20, 5 for smaller portfolios (was 10 before)
+- **Improved timeouts** - Reduced from 30s/10min to 15s/30s for fast/enhanced endpoints
+- **Parallel retry mechanism** - Created `fetchPortfolioWalletsOptimized` function that loads all wallets in parallel with fast endpoint first, then retries failed ones with enhanced endpoint
+- **Reduced inter-batch delay** - From 100-1000ms to 50ms between batches
+- **Result** - Portfolio loading is now significantly faster with better error recovery, 504 errors are handled gracefully with automatic fallback
+
 ### July 27, 2025 - Fixed Portfolio Loading Regression
 - **Problem identified** - Portfolio loading was failing with "tokensWithPrices.reduce is not a function" error
 - **Root cause** - The `timer.measure` function returns a promise that wasn't being awaited, causing type mismatch

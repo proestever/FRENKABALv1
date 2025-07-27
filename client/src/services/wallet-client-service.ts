@@ -61,15 +61,16 @@ interface TokenWithPrice extends ProcessedToken {
 
 /**
  * Fetch wallet balances using scanner API (gets ALL tokens, not just recent)
- * Includes retry logic for better reliability
+ * Includes retry logic with fallback to fast endpoint for better reliability
  */
 async function fetchWalletBalancesFromScanner(address: string, retries = 3, useFastEndpoint = false): Promise<Wallet> {
   let lastError: Error | null = null;
-  const endpoint = useFastEndpoint ? `/api/wallet/${address}/fast-balances` : `/api/wallet/${address}/scanner-balances`;
-  const timeoutMs = useFastEndpoint ? 30000 : 600000; // 30 seconds for fast, 10 minutes for enhanced
+  let currentEndpoint = useFastEndpoint ? 'fast' : 'enhanced';
+  const timeoutMs = useFastEndpoint ? 15000 : 30000; // 15 seconds for fast, 30 seconds for enhanced (reduced from 30s/10min)
   
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
+      const endpoint = currentEndpoint === 'fast' ? `/api/wallet/${address}/fast-balances` : `/api/wallet/${address}/scanner-balances`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       
@@ -82,10 +83,17 @@ async function fetchWalletBalancesFromScanner(address: string, retries = 3, useF
       if (!response.ok) {
         // Special handling for rate limit errors
         if (response.status === 429) {
-          const waitTime = Math.min(2000 * attempt, 5000); // Exponential backoff, max 5 seconds
+          const waitTime = Math.min(500 * attempt, 2000); // Reduced: 500ms, 1s, 2s max
           console.log(`Rate limited on attempt ${attempt} for wallet ${address}, waiting ${waitTime}ms`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
+        }
+        
+        // For 504 Gateway Timeout, immediately try fast endpoint
+        if (response.status === 504 && currentEndpoint === 'enhanced' && attempt < retries) {
+          console.log(`Gateway timeout for ${address}, switching to fast endpoint`);
+          currentEndpoint = 'fast';
+          continue; // Retry immediately with fast endpoint
         }
         
         const errorData = await response.json();
@@ -93,21 +101,29 @@ async function fetchWalletBalancesFromScanner(address: string, retries = 3, useF
       }
       
       const data = await response.json();
-      console.log(`Successfully fetched wallet ${address} on attempt ${attempt} using ${useFastEndpoint ? 'fast' : 'enhanced'} scanner`);
+      console.log(`Successfully fetched wallet ${address} on attempt ${attempt} using ${currentEndpoint} scanner`);
       return data;
       
     } catch (error) {
       lastError = error as Error;
       
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error(`Timeout on attempt ${attempt} for wallet ${address}`);
+        console.error(`Timeout on attempt ${attempt} for wallet ${address} using ${currentEndpoint} endpoint`);
+        
+        // If enhanced endpoint times out, try fast endpoint
+        if (currentEndpoint === 'enhanced' && attempt < retries) {
+          console.log(`Switching to fast endpoint for ${address} after timeout`);
+          currentEndpoint = 'fast';
+          continue; // Retry immediately with fast endpoint
+        }
       } else {
         console.error(`Error on attempt ${attempt} for wallet ${address}:`, error);
       }
       
       // Wait before retrying (except on last attempt)
       if (attempt < retries) {
-        const waitTime = Math.min(1000 * attempt, 3000); // Exponential backoff, max 3 seconds
+        // Reduced wait times: 200ms, 400ms, 600ms instead of 1s, 2s, 3s
+        const waitTime = Math.min(200 * attempt, 600); 
         console.log(`Retrying wallet ${address} after ${waitTime}ms...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
@@ -557,41 +573,117 @@ export async function fetchMissingLogosInBackground(tokens: ProcessedToken[]): P
 }
 
 /**
- * Optimized wallet data fetching for portfolios
- * Pre-fetches and caches prices for all unique tokens across multiple wallets
+ * Optimized wallet data fetching for portfolios with robust error handling
+ * Uses parallel loading with fast endpoint and automatic retry with enhanced endpoint
  */
 export async function fetchPortfolioWalletsOptimized(
   addresses: string[],
   onProgress?: (message: string, progress: number) => void
 ): Promise<Record<string, Wallet>> {
+  const timer = new PerformanceTimer();
+  timer.start('portfolio_load_optimized', { walletCount: addresses.length });
+  
   try {
     const results: Record<string, Wallet> = {};
     
-    // Step 1: Fetch all wallet data in parallel (without prices)
-    if (onProgress) onProgress(`Fetching data for ${addresses.length} wallets...`, 10);
+    // Step 1: Try to fetch all wallets in parallel using fast endpoint first
+    if (onProgress) onProgress(`Fetching data for ${addresses.length} wallets in parallel...`, 10);
     
     const walletDataPromises = addresses.map(async (address) => {
       try {
-        const response = await fetch(`/api/wallet/${address}/scanner-balances`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch wallet ${address}`);
+        // Try fast endpoint first with shorter timeout
+        const walletData = await fetchWalletBalancesFromScanner(address, 2, true); // 2 retries, fast endpoint
+        
+        if (!walletData.error) {
+          console.log(`Successfully loaded ${address} with fast endpoint`);
         }
-        const data = await response.json();
-        return { address, data };
+        
+        return { address, data: walletData, success: !walletData.error };
       } catch (error) {
         console.error(`Error fetching wallet ${address}:`, error);
-        return { address, data: null };
+        return { 
+          address, 
+          data: {
+            address,
+            tokens: [],
+            totalValue: 0,
+            tokenCount: 0,
+            plsBalance: 0,
+            plsPriceChange: 0,
+            networkCount: 1,
+            error: error instanceof Error ? error.message : 'Failed to fetch wallet'
+          },
+          success: false 
+        };
       }
     });
     
-    const walletDataResults = await Promise.all(walletDataPromises);
+    const firstPassResults = await timer.measure('first_pass_parallel', async () => {
+      return await Promise.all(walletDataPromises);
+    }, { endpoint: 'fast' });
     
-    // Step 2: Collect all unique token addresses
+    // Count successful vs failed wallets
+    const successfulWallets = firstPassResults.filter(r => r.success);
+    const failedWallets = firstPassResults.filter(r => !r.success);
+    
+    if (failedWallets.length > 0) {
+      if (onProgress) onProgress(`Retrying ${failedWallets.length} failed wallets with enhanced scanner...`, 30);
+      
+      // Step 2: Retry failed wallets with enhanced endpoint in smaller batches
+      const retryBatchSize = 3;
+      const retryBatches: typeof failedWallets[] = [];
+      
+      for (let i = 0; i < failedWallets.length; i += retryBatchSize) {
+        retryBatches.push(failedWallets.slice(i, i + retryBatchSize));
+      }
+      
+      let retriedCount = 0;
+      for (const batch of retryBatches) {
+        const retryPromises = batch.map(async ({ address }) => {
+          try {
+            const walletData = await fetchWalletBalancesFromScanner(address, 2, false); // Enhanced endpoint
+            return { address, data: walletData, success: !walletData.error };
+          } catch (error) {
+            return { 
+              address, 
+              data: {
+                address,
+                tokens: [],
+                totalValue: 0,
+                tokenCount: 0,
+                plsBalance: 0,
+                networkCount: 1,
+                plsPriceChange: 0,
+                error: 'Failed after all retries'
+              },
+              success: false 
+            };
+          }
+        });
+        
+        const batchResults = await timer.measure(`retry_batch_${retriedCount}`, async () => {
+          return await Promise.all(retryPromises);
+        }, { batchSize: batch.length });
+        
+        successfulWallets.push(...batchResults);
+        retriedCount += batch.length;
+        
+        if (onProgress) {
+          const progress = 30 + (retriedCount / failedWallets.length) * 20; // 30-50%
+          onProgress(`Retried ${retriedCount} of ${failedWallets.length} wallets...`, progress);
+        }
+      }
+    } else {
+      // All wallets loaded successfully on first pass
+      successfulWallets.push(...firstPassResults);
+    }
+    
+    // Step 3: Collect all unique token addresses from successful wallets
     const uniqueTokenAddresses = new Set<string>();
     const validWallets: Array<{ address: string; data: Wallet }> = [];
     
-    for (const { address, data } of walletDataResults) {
-      if (data && data.tokens) {
+    for (const { address, data } of successfulWallets) {
+      if (data && data.tokens && data.tokens.length > 0) {
         validWallets.push({ address, data });
         data.tokens.forEach((token: ProcessedToken) => {
           if (!token.isNative && !token.price && !token.isLp) {
