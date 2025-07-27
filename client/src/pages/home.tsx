@@ -312,7 +312,9 @@ export default function Home() {
                   
                   return { [address]: dataWithPrices };
                 } catch (error) {
-                  console.error(`Error fetching wallet ${address}:`, error);
+                  const errorMessage = error instanceof Error ? error.message : 'Failed to fetch wallet data';
+                  const errorStack = error instanceof Error ? error.stack : undefined;
+                  console.error(`Error fetching wallet ${address}:`, errorMessage, errorStack);
                   // Return wallet data with error flag instead of empty data
                   return { 
                     [address]: {
@@ -322,7 +324,7 @@ export default function Home() {
                       tokenCount: 0,
                       plsBalance: 0,
                       networkCount: 1,
-                      error: error instanceof Error ? error.message : 'Failed to fetch wallet data'
+                      error: errorMessage
                     }
                   };
                 }

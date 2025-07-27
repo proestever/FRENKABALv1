@@ -88,7 +88,9 @@ export async function getNativePlsBalanceFromChain(walletAddress: string): Promi
     console.log(`Fetching native PLS balance for ${walletAddress} directly from blockchain`);
     
     // Query the blockchain directly for this wallet's balance
-    const balanceWei = await provider.getBalance(walletAddress);
+    const balanceWei = await executeWithFailover(async (provider) => {
+      return await provider.getBalance(walletAddress);
+    });
     
     if (!balanceWei) {
       console.log('Could not get balance from blockchain');
@@ -215,7 +217,7 @@ export async function getTokenBalanceFromChain(walletAddress: string, tokenAddre
       price,
       value: price && price > 0 ? price * balanceFormatted : 0,
       priceChange24h,
-      logo: getDefaultLogo(symbol),
+      logo: getDefaultLogo(symbol) || undefined,
       exchange,
       verified: false // We don't have verification status when querying directly
     };
@@ -303,7 +305,7 @@ export async function getTokenBalancesFromList(
           price: plsPriceData?.usdPrice,
           value: plsBalance.balanceFormatted * (plsPriceData?.usdPrice || 0),
           priceChange24h: plsPriceData?.usdPrice24hrPercentChange,
-          logo: getDefaultLogo('PLS'),
+          logo: getDefaultLogo('PLS') || undefined,
           isNative: true,
           verified: true
         });
@@ -349,7 +351,9 @@ export async function getTokenTransferEvents(walletAddress: string, maxBlocks: n
     // Silent loading - no progress updates
 
     // Get current block number
-    const currentBlock = await provider.getBlockNumber();
+    const currentBlock = await executeWithFailover(async (provider) => {
+      return await provider.getBlockNumber();
+    });
     
     // Limit how far back we scan to be more efficient and focus on recent tokens
     // For a real-time update after a swap, recent blocks are most important
@@ -363,19 +367,23 @@ export async function getTokenTransferEvents(walletAddress: string, maxBlocks: n
     // Get transfer events where this wallet is the recipient
     // Silent loading - no progress updates
     
-    const incomingLogs = await provider.getLogs({
-      fromBlock,
-      toBlock: 'latest',
-      topics: [transferEventTopic, null, ethers.utils.hexZeroPad(walletAddress.toLowerCase(), 32)],
+    const incomingLogs = await executeWithFailover(async (provider) => {
+      return await provider.getLogs({
+        fromBlock,
+        toBlock: 'latest',
+        topics: [transferEventTopic, null, ethers.utils.hexZeroPad(walletAddress.toLowerCase(), 32)],
+      });
     });
     
     // Get transfer events where this wallet is the sender
     // Silent loading - no progress updates
     
-    const outgoingLogs = await provider.getLogs({
-      fromBlock,
-      toBlock: 'latest',
-      topics: [transferEventTopic, ethers.utils.hexZeroPad(walletAddress.toLowerCase(), 32)],
+    const outgoingLogs = await executeWithFailover(async (provider) => {
+      return await provider.getLogs({
+        fromBlock,
+        toBlock: 'latest',
+        topics: [transferEventTopic, ethers.utils.hexZeroPad(walletAddress.toLowerCase(), 32)],
+      });
     });
     
     // Combine logs and extract unique token contract addresses
