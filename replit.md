@@ -2,6 +2,16 @@
 
 ## Recent Changes
 
+### July 28, 2025 - Reverted Loading Progress to Working Percentage-Based System
+- **Fixed TypeScript errors** - Resolved all "any" types and property mismatch errors in loading progress implementation
+- **Simplified progress system** - Replaced complex stage-based progress with clean percentage-based system (0-100%)
+- **Created SimpleProgress component** - New `client/src/components/simple-progress.tsx` with proper TypeScript types
+- **Restored working functionality** - Loading progress bar now displays correctly during wallet searches
+- **Clean implementation** - Uses simple progress percentage calculation instead of complex batch tracking
+- **Visual improvements** - Loading bar shows animated progress with status messages and wallet address
+- **TypeScript compliance** - All progress types properly defined in `client/src/types/progress.ts`
+- **Result** - Loading progress system now works reliably with clean, maintainable code
+
 ### July 28, 2025 - Unified Architecture: Fast Scanner for All Wallet Searches
 - **Complete architectural unification** - Single wallet searches now use the same fast scanner approach as portfolios instead of maintaining separate systems
 - **Replaced useClientSideWallet with useQuery + fetchWalletDataFast** - All wallet searches (single and multi) now use identical data fetching path

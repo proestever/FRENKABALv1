@@ -6,9 +6,10 @@ import { WalletOverview } from '@/components/wallet-overview';
 import { TokenList } from '@/components/token-list';
 import { TokenLogo } from '@/components/token-logo';
 import { EmptyState } from '@/components/empty-state';
-import { LoadingProgress } from '@/components/loading-progress';
+import { SimpleProgress } from '@/components/simple-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
 import { WebSocketStatus } from '@/components/websocket-status';
+import { LoadingProgress as LoadingProgressType } from '@/types/progress';
 
 import ApiStats from '@/components/api-stats';
 import { Button } from '@/components/ui/button';
@@ -39,15 +40,7 @@ export default function Home() {
   const [portfolioUrlId, setPortfolioUrlId] = useState<string | null>(null);
   const [portfolioTimer, setPortfolioTimer] = useState<PerformanceTimer | null>(null);
 
-  const [multiWalletProgress, setMultiWalletProgress] = useState<{
-    currentBatch: number;
-    totalBatches: number;
-    status: 'idle' | 'loading' | 'complete' | 'error';
-    message: string;
-    recentMessages: string[];
-    walletsProcessed: number;
-    totalWallets: number;
-  }>({
+  const [multiWalletProgress, setMultiWalletProgress] = useState<LoadingProgressType>({
     currentBatch: 0,
     totalBatches: 0,
     status: 'idle',
@@ -712,7 +705,7 @@ export default function Home() {
   }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
 
   // Single wallet progress tracking state
-  const [singleWalletProgress, setSingleWalletProgress] = useState<any>({
+  const [singleWalletProgress, setSingleWalletProgress] = useState<LoadingProgressType>({
     currentBatch: 0,
     totalBatches: 1,
     status: 'idle',
@@ -1046,10 +1039,12 @@ export default function Home() {
       )}
       
       {/* Loading Progress Bar - shows during loading */}
-      <LoadingProgress 
+      <SimpleProgress 
         isLoading={isLoading || isFetching || isMultiWalletLoading} 
         walletAddress={searchedAddress || (multiWalletData ? 'Multiple wallets' : undefined)}
-        customProgress={isMultiWalletLoading ? multiWalletProgress : (isLoading || isFetching) ? singleWalletProgress : undefined}
+        percentage={isLoading || isFetching ? 50 : isMultiWalletLoading ? (multiWalletProgress.currentBatch / Math.max(multiWalletProgress.totalBatches, 1)) * 100 : 0}
+        message={isMultiWalletLoading ? multiWalletProgress.message : isLoading || isFetching ? 'Loading wallet data...' : ''}
+        status={isLoading || isFetching || isMultiWalletLoading ? 'loading' : 'complete'}
       />
       
       {/* Performance Display - shows real-time timing during loading */}
