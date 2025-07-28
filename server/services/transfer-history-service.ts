@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { ProcessedToken } from '../types';
-// getDefaultLogo is defined inline in this file
+import { getDefaultLogo } from './blockchain-service';
 import { getTokenPriceFromDexScreener } from './dexscreener';
 import { storage } from '../storage';
 
@@ -13,26 +13,6 @@ const TRANSFER_EVENT_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a116
 const PLS_DECIMALS = 18;
 const PLS_TOKEN_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 const WPLS_CONTRACT_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27';
-
-// Helper function to get default logo
-function getDefaultLogo(symbol: string): string {
-  const symbolUpper = symbol?.toUpperCase() || '';
-  
-  // Map of common tokens to their logo files
-  const logoMap: Record<string, string> = {
-    'PLS': '/assets/pls-logo-trimmed.png',
-    'WPLS': '/assets/pls-logo-trimmed.png',
-    'HEX': '/api/token-logo/hex',
-    'PLSX': '/api/token-logo/plsx',
-    'INC': '/api/token-logo/inc',
-    'DAI': '/api/token-logo/dai',
-    'USDC': '/api/token-logo/usdc',
-    'USDT': '/api/token-logo/usdt',
-    'WETH': '/api/token-logo/weth'
-  };
-  
-  return logoMap[symbolUpper] || '/assets/100xfrenlogo.png';
-}
 
 // Standard ERC20 ABI for getting token metadata
 const ERC20_ABI = [

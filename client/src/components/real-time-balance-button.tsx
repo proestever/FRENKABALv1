@@ -1,26 +1,35 @@
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { RotateCw, Loader2 } from 'lucide-react';
 import { useDirectWalletBalances } from '@/hooks/use-direct-wallet-balances';
+import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 
-interface LastUpdatedInfoProps {
+interface RealTimeBalanceButtonProps {
   walletAddress: string | null;
   onBalancesUpdated?: () => void;
 }
 
 /**
- * Component that displays when wallet balances were last updated
+ * Button component for refreshing wallet balances directly from the blockchain
+ * This is useful for getting real-time balances immediately after swaps
  */
-export function LastUpdatedInfo({ 
+export function RealTimeBalanceButton({ 
   walletAddress,
   onBalancesUpdated
-}: LastUpdatedInfoProps) {
+}: RealTimeBalanceButtonProps) {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeAgo, setTimeAgo] = useState<string>('');
+  const { toast } = useToast();
   
-  // Use the direct wallet balances hook but don't auto-fetch
+  // Use the direct wallet balances hook
+  // We set enabled to false so it doesn't fetch automatically
+  // We'll only manually fetch when the user clicks the refresh button
   const {
     isLoading,
     isFetching,
+    isRefreshing,
+    refreshBalances,
     walletData
   } = useDirectWalletBalances(walletAddress, false);
   
@@ -75,6 +84,35 @@ export function LastUpdatedInfo({
     
     return () => clearInterval(interval);
   }, [lastUpdated]);
+  
+  // Handle refresh
+  const handleRefresh = async () => {
+    if (!walletAddress || isLoading || isFetching || isRefreshing) return;
+    
+    try {
+      toast({
+        title: 'Refreshing balances',
+        description: 'Getting real-time balances directly from the blockchain...',
+        duration: 3000,
+      });
+      
+      await refreshBalances();
+      
+      toast({
+        title: 'Balances updated',
+        description: 'Your wallet balances have been refreshed with the latest blockchain data.',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error refreshing balances:', error);
+      toast({
+        title: 'Error refreshing balances',
+        description: 'There was an error getting your real-time balances. Please try again.',
+        variant: 'destructive',
+        duration: 5000,
+      });
+    }
+  };
   
   return (
     <div className="flex items-center gap-2">

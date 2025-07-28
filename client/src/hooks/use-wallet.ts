@@ -221,53 +221,34 @@ export function useWallet(): UseWalletReturn {
     if (!ethereum) return;
     
     const handleAccountsChanged = async (accounts: string[]) => {
-      // Skip if we already have the same account connected (case-insensitive)
-      if (account && accounts.length > 0 && account.toLowerCase() === accounts[0].toLowerCase()) {
-        return;
-      }
-      
+      // For any wallet change or disconnection, sign out the user completely
       const oldAddress = localStorage.getItem('walletAddress');
       
       if (accounts.length === 0) {
         // User disconnected all accounts
         console.log('All wallet accounts disconnected');
-        
-        // Clear all state and localStorage
-        setAccount(null);
-        setChainId(null);
-        setUserId(null);
-        setUser(null);
-        
-        // Clear localStorage
-        localStorage.removeItem('walletConnected');
-        localStorage.removeItem('walletAddress');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('lastLoginTimestamp');
-        localStorage.removeItem('walletSignature');
-        localStorage.removeItem('signatureTimestamp');
       } else if (oldAddress && oldAddress.toLowerCase() !== accounts[0].toLowerCase()) {
-        // User actually switched to a different wallet (not just case difference)
+        // User switched to a different wallet
         console.log(`Wallet changed from ${oldAddress} to ${accounts[0]}`);
         toast({
           title: "Wallet Changed",
           description: "You've switched wallets. Please connect again to continue.",
         });
-        
-        // Clear all state and localStorage for wallet switch
-        setAccount(null);
-        setChainId(null);
-        setUserId(null);
-        setUser(null);
-        
-        // Clear localStorage
-        localStorage.removeItem('walletConnected');
-        localStorage.removeItem('walletAddress');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('lastLoginTimestamp');
-        localStorage.removeItem('walletSignature');
-        localStorage.removeItem('signatureTimestamp');
       }
-      // If it's the same wallet (just case difference), don't clear state
+      
+      // Always clear all state and localStorage for any account change
+      setAccount(null);
+      setChainId(null);
+      setUserId(null);
+      setUser(null);
+      
+      // Clear localStorage
+      localStorage.removeItem('walletConnected');
+      localStorage.removeItem('walletAddress');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('lastLoginTimestamp');
+      localStorage.removeItem('walletSignature');
+      localStorage.removeItem('signatureTimestamp');
     };
     
     const handleChainChanged = (chainIdHex: string) => {
@@ -292,7 +273,7 @@ export function useWallet(): UseWalletReturn {
         ethereum.removeListener('chainChanged', handleChainChanged);
       }
     };
-  }, [toast, PULSE_CHAIN_ID, getUserFromWallet, getUserProfile, account]);
+  }, [toast, PULSE_CHAIN_ID, getUserFromWallet, getUserProfile]);
 
   // Connect to wallet with signature verification
   const connect = useCallback(async () => {

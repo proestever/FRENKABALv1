@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'wouter';
+import { useClientSideWallet } from '@/hooks/use-client-side-wallet';
 import { useHexStakes } from '@/hooks/use-hex-stakes';
 import { TokenLogo } from '@/components/token-logo';
 import { formatCurrency, formatTokenAmount } from '@/lib/utils';
 import { Token } from '@shared/schema';
 import { getHiddenTokens } from '@/lib/api';
-import { fetchWalletDataFast } from '@/services/wallet-client-service';
 
 export default function WalletShare() {
   const { walletAddress } = useParams<{ walletAddress: string }>();
-  const [walletData, setWalletData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { walletData, isLoading } = useClientSideWallet(walletAddress || '');
   const hexStakesData = useHexStakes(walletAddress || '');
   const [totalValue, setTotalValue] = useState(0);
   const [sortedTokens, setSortedTokens] = useState<any[]>([]);
@@ -21,25 +20,6 @@ export default function WalletShare() {
     const hidden = getHiddenTokens();
     setHiddenTokens(hidden);
   }, []);
-
-  // Fetch wallet data when component mounts
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!walletAddress) return;
-      
-      setIsLoading(true);
-      try {
-        const data = await fetchWalletDataFast(walletAddress);
-        setWalletData(data);
-      } catch (error) {
-        console.error('Error fetching wallet data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [walletAddress]);
 
   useEffect(() => {
     if (walletData && walletData.tokens) {

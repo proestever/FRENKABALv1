@@ -2,48 +2,6 @@
 
 ## Recent Changes
 
-### July 28, 2025 - Fixed Duplicate Search Prevention for URL-Based Wallet Loading
-- **Problem identified** - URL parameter handling was triggering duplicate searches when loading wallet addresses from links
-- **Improved search tracking** - Enhanced URL parameter checking to compare lowercase addresses and verify if search is already in progress
-- **Unified search approach** - Ensured handleSearch always uses handleMultiSearch with single-element array for consistency
-- **Centralized duplicate prevention** - Moved all duplicate search checks into handleMultiSearch function
-- **Fixed useEffect dependencies** - Removed isMultiWalletLoading and multiWalletData from dependencies to prevent re-triggering during search
-- **Result** - URL-based wallet loading now properly prevents duplicate searches while maintaining unified search architecture
-
-### July 28, 2025 - Major Code Cleanup After Architecture Unification
-- **Removed unused hooks** - Deleted `use-client-side-wallet.ts`, `use-direct-wallet-balances.ts`, and `use-direct-balance.ts` hooks that were replaced by unified approach
-- **Removed unused components** - Deleted `real-time-balance-button.tsx` component that depended on deleted hooks
-- **Updated dependent components** - Modified `last-updated-info.tsx` and `wallet-share.tsx` to work without deleted hooks
-- **Removed unused API functions** - Deleted `fetchDirectBalances` and `fetchDirectWalletBalances` functions from api.ts
-- **Removed unused server endpoints** - Deleted `/api/wallet/:address/direct-balances`, `/api/wallet/:address/balances-no-prices`, and `/api/wallet/:address/direct` endpoints from routes.ts
-- **Removed unused server services** - Deleted `blockchain-service.ts`, `direct-balance-service.ts`, and `direct-balance-no-prices.ts` services
-- **Removed old scanner scripts** - Deleted old standalone scanner JS files from attached_assets folder (scanner_*.js, multi-wallet-scanner_*.js, app_*.js, liquidity_*.js, report_*.js)
-- **Unified wallet fetching** - All wallet searches now use `fetchWalletDataFast` function from wallet-client-service.ts
-- **Result** - Codebase is cleaner and more maintainable with single approach for all wallet operations
-
-### July 28, 2025 - Fixed Single Wallet Display to Show Actual Address
-- **Problem identified** - Single wallet searches showed "Combined Wallet Overview" and "Combined (1 wallets)" instead of actual wallet address and labels
-- **Added actualWalletAddress extraction** - Detects when it's a single wallet search disguised as "Combined (1 wallets)" and extracts real address from tokens array
-- **Updated title display logic** - Shows bookmark label or truncated address for single wallet searches instead of "Combined Wallet Overview"
-- **Fixed bookmark checking** - Uses actual wallet address for bookmark lookups instead of "Combined (1 wallets)"
-- **Updated all address-related functionality** - Copy address, external PulseChain scan links, bookmark dialog all use actual wallet address
-- **Fixed button visibility** - Share button and LastUpdatedInfo component now show for single wallet searches
-- **Result** - Single wallet searches now display properly with actual addresses, bookmark labels, and all functionality working correctly
-
-### July 28, 2025 - Fixed Infinite Loop in Single Wallet URL Loading
-- **Problem identified** - Single wallet searches from URL parameters were triggering infinite loops
-- **Root cause** - Duplicate handling of wallet address URL parameters in useEffect and missing state updates
-- **Added searchedAddress state update** - Now properly sets `searchedAddress` when handling URL parameters to prevent re-triggering
-- **Removed duplicate logic** - Eliminated duplicate wallet address handling that was causing searches to trigger multiple times
-- **Result** - Single wallet searches from URLs now load correctly without infinite loops
-
-### July 28, 2025 - Fixed Wallet Reload Issue Caused by Case-Sensitive Address Comparison
-- **Problem identified** - Wallet was reloading continuously due to false wallet change detection
-- **Root cause** - `handleAccountsChanged` in use-wallet.ts was clearing state even when addresses only differed in case (e.g., 0x592139A3f8cf019f628A152FC1262B8aEf5B7199 vs 0x9be83826afdf22a88027f8e5b79f428178bd9635)
-- **Fixed comparison logic** - Now only clears state when wallet actually changes, not for case differences
-- **Technical detail** - Address comparison remains case-insensitive but state clearing only happens for true wallet switches
-- **Result** - Wallet searches no longer reload due to case differences in addresses
-
 ### July 28, 2025 - Unified Single and Portfolio Search Architecture
 - **Complete architectural unification** - Single wallet searches now use `handleMultiSearch([address])` instead of separate React Query implementation
 - **Eliminated code duplication** - Removed separate `handleSearch` logic, now it simply calls `handleMultiSearch` with single-item array
