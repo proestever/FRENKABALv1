@@ -132,13 +132,14 @@ export default function Home() {
     
     // Clear any existing wallet cache
     if (searchedAddress) {
-      // Invalidate the previous wallet's cache
-      queryClient.invalidateQueries({ queryKey: [`client-wallet-${searchedAddress}`] });
+      // Invalidate and remove the previous wallet's cache
+      queryClient.invalidateQueries({ queryKey: [`fast-wallet-${searchedAddress}`] });
+      queryClient.removeQueries({ queryKey: [`fast-wallet-${searchedAddress}`] });
     }
     
-    // Always invalidate the new wallet's cache to ensure fresh data
-    queryClient.invalidateQueries({ queryKey: [`client-wallet-${address}`] });
-    queryClient.removeQueries({ queryKey: [`client-wallet-${address}`] }); // Force remove from cache
+    // Always invalidate and remove the new wallet's cache to ensure fresh data
+    queryClient.invalidateQueries({ queryKey: [`fast-wallet-${address}`] });
+    queryClient.removeQueries({ queryKey: [`fast-wallet-${address}`] }); // Force remove from cache
     
     // Clear any other relevant caches
     queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
@@ -799,6 +800,11 @@ export default function Home() {
           return await fetchWalletDataFast(searchedAddress);
         });
         
+        // Check if data is valid
+        if (!data || !data.tokens) {
+          throw new Error('Invalid wallet data received');
+        }
+        
         // Update progress with completion
         setSingleWalletProgress(prev => ({
           ...prev,
@@ -823,6 +829,14 @@ export default function Home() {
         });
         
         return data;
+      } catch (error) {
+        // Ensure we throw a proper Error object
+        console.error('Failed to fetch wallet data:', error);
+        if (error instanceof Error) {
+          throw error;
+        } else {
+          throw new Error(typeof error === 'string' ? error : 'Failed to fetch wallet data');
+        }
       } finally {
         // Restore original console.log
         console.log = originalLog;

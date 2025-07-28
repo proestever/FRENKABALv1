@@ -617,18 +617,30 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
       if (tokensNeedingLpAnalysis.length > 0) {
         console.log(`🔍 Found ${tokensNeedingLpAnalysis.length} LP tokens needing client-side analysis`);
         
-        // Process LP tokens in parallel
+        // Process LP tokens in parallel with error handling
         const lpAnalysisPromises = tokensNeedingLpAnalysis.map(async (token, index) => {
-          const analyzedToken = await analyzeLpTokenClientSide(token, priceMap);
-          return { index: tokensWithPrices.indexOf(token), analyzedToken };
+          try {
+            const analyzedToken = await analyzeLpTokenClientSide(token, priceMap);
+            return { index: tokensWithPrices.indexOf(token), analyzedToken };
+          } catch (error) {
+            console.error(`Failed to analyze LP token ${token.symbol}:`, error);
+            // Return the original token with needsLpAnalysis cleared on error
+            return { 
+              index: tokensWithPrices.indexOf(token), 
+              analyzedToken: { ...token, needsLpAnalysis: undefined } 
+            };
+          }
         });
         
-        const analyzedResults = await Promise.all(lpAnalysisPromises);
+        const analyzedResults = await Promise.allSettled(lpAnalysisPromises);
         
-        // Replace tokens with analyzed versions
-        analyzedResults.forEach(({ index, analyzedToken }) => {
-          if (index !== -1) {
-            tokensWithPrices[index] = analyzedToken;
+        // Replace tokens with analyzed versions (handle both fulfilled and rejected promises)
+        analyzedResults.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value) {
+            const { index, analyzedToken } = result.value;
+            if (index !== -1) {
+              tokensWithPrices[index] = analyzedToken;
+            }
           }
         });
         

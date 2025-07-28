@@ -2,6 +2,15 @@
 
 ## Recent Changes
 
+### July 28, 2025 - Fixed Critical LP Token Analysis Error Handling
+- **Problem identified** - LP token analysis errors (e.g., DaiLP, HexLP, BtcLP) were causing entire wallet queries to fail with "Error fetching wallet data"
+- **Root cause** - Promise.all was failing when any LP token analysis threw an error, marking the entire query as failed
+- **Isolated error handling** - Wrapped individual LP token analysis in try-catch blocks to prevent cascade failures
+- **Changed to Promise.allSettled** - Replaced Promise.all with Promise.allSettled to handle both successful and failed LP analyses gracefully
+- **Result** - Wallet data now loads successfully even when some LP tokens fail analysis
+- **Error logging preserved** - Failed LP token analyses are still logged to console for debugging without crashing the fetch
+- **User experience improved** - Users see their wallet data and token balances immediately, even if some LP tokens can't be analyzed
+
 ### July 28, 2025 - Unified Architecture: Fast Scanner for All Wallet Searches
 - **Complete architectural unification** - Single wallet searches now use the same fast scanner approach as portfolios instead of maintaining separate systems
 - **Replaced useClientSideWallet with useQuery + fetchWalletDataFast** - All wallet searches (single and multi) now use identical data fetching path
