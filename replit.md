@@ -2,15 +2,6 @@
 
 ## Recent Changes
 
-### July 28, 2025 - Fixed Critical Search Loop Issue
-- **Problem identified** - Infinite search loop was occurring when navigating to single wallet URLs like `/0x9Be83826AFDf22a88027f8e5b79f428178bd9635`
-- **Root cause** - useEffect was detecting wallet address in URL params and triggering handleSearch → handleMultiSearch → URL update → useEffect trigger cycle
-- **Fixed URL update logic** - Modified handleMultiSearch to check if already on correct path before updating URL, preventing unnecessary navigation
-- **Added searchedAddress state management** - handleSearch now sets searchedAddress to prevent useEffect from triggering repeatedly
-- **Disabled React Query for single wallets** - Set enabled: false on useQuery to prevent duplicate fetches since unified approach uses handleMultiSearch
-- **Added duplicate search prevention** - useEffect now checks if already searching for address or if data already exists before triggering new search
-- **Result** - Search loop issue resolved, single wallet searches now work without infinite loops using unified architecture
-
 ### July 28, 2025 - Major Code Cleanup After Architecture Unification
 - **Removed unused hooks** - Deleted `use-client-side-wallet.ts`, `use-direct-wallet-balances.ts`, and `use-direct-balance.ts` hooks that were replaced by unified approach
 - **Removed unused components** - Deleted `real-time-balance-button.tsx` component that depended on deleted hooks
