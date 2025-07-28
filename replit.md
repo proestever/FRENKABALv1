@@ -13,6 +13,15 @@
 - **Unified wallet fetching** - All wallet searches now use `fetchWalletDataFast` function from wallet-client-service.ts
 - **Result** - Codebase is cleaner and more maintainable with single approach for all wallet operations
 
+### July 28, 2025 - Fixed Single Wallet Display to Show Actual Address
+- **Problem identified** - Single wallet searches showed "Combined Wallet Overview" and "Combined (1 wallets)" instead of actual wallet address and labels
+- **Added actualWalletAddress extraction** - Detects when it's a single wallet search disguised as "Combined (1 wallets)" and extracts real address from tokens array
+- **Updated title display logic** - Shows bookmark label or truncated address for single wallet searches instead of "Combined Wallet Overview"
+- **Fixed bookmark checking** - Uses actual wallet address for bookmark lookups instead of "Combined (1 wallets)"
+- **Updated all address-related functionality** - Copy address, external PulseChain scan links, bookmark dialog all use actual wallet address
+- **Fixed button visibility** - Share button and LastUpdatedInfo component now show for single wallet searches
+- **Result** - Single wallet searches now display properly with actual addresses, bookmark labels, and all functionality working correctly
+
 ### July 28, 2025 - Unified Single and Portfolio Search Architecture
 - **Complete architectural unification** - Single wallet searches now use `handleMultiSearch([address])` instead of separate React Query implementation
 - **Eliminated code duplication** - Removed separate `handleSearch` logic, now it simply calls `handleMultiSearch` with single-item array

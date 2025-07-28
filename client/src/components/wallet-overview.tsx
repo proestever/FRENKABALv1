@@ -79,6 +79,15 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
     }
   }, [wallet?.address, hexStakesSummary, hexStakesFromHook]);
 
+  // Extract the actual wallet address for single wallet searches
+  const actualWalletAddress = (() => {
+    // Check if this is a single wallet search disguised as "Combined (1 wallets)"
+    if (wallet?.address?.includes("Combined (1 wallets)") && wallet.tokens.length > 0 && wallet.tokens[0].walletAddress) {
+      return wallet.tokens[0].walletAddress;
+    }
+    return wallet?.address;
+  })();
+
   // Check if the current wallet is bookmarked
   useEffect(() => {
     const checkIfBookmarked = async () => {
@@ -86,7 +95,9 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
       
       setIsCheckingBookmark(true);
       try {
-        const bookmark = await isAddressBookmarked(userId, wallet.address);
+        // Use actual wallet address for single wallet searches
+        const addressToCheck = actualWalletAddress || wallet.address;
+        const bookmark = await isAddressBookmarked(userId, addressToCheck);
         setIsBookmarked(!!bookmark);
         setExistingBookmark(bookmark);
       } catch (error) {
@@ -97,7 +108,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
     };
     
     checkIfBookmarked();
-  }, [wallet, isConnected, userId]);
+  }, [wallet, isConnected, userId, actualWalletAddress]);
 
   useEffect(() => {
     // Get hidden tokens from localStorage
@@ -146,7 +157,9 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
   if (!wallet) return null;
 
   const handleCopyAddress = () => {
-    navigator.clipboard.writeText(wallet.address);
+    // Use actual wallet address for single wallet searches
+    const addressToCopy = actualWalletAddress || wallet.address;
+    navigator.clipboard.writeText(addressToCopy);
     toast({
       title: "Address copied",
       description: "Wallet address copied to clipboard",
@@ -179,7 +192,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
         <BookmarkDialog
           isOpen={bookmarkDialogOpen}
           onClose={() => setBookmarkDialogOpen(false)}
-          walletAddress={wallet.address}
+          walletAddress={actualWalletAddress || wallet.address}
           userId={userId}
           existingBookmark={existingBookmark}
           onBookmarkCreated={handleBookmarkCreated}
@@ -193,7 +206,15 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
         <div className="flex flex-col mb-6">
           <div className="mb-3">
             <h2 className="text-lg md:text-xl font-bold text-white flex items-center">
-              {wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:") ? (
+              {/* Check for single wallet search case */}
+              {wallet.address.includes("Combined (1 wallets)") ? (
+                <>
+                  {existingBookmark && existingBookmark.label ? 
+                    existingBookmark.label : 
+                    truncateAddress(actualWalletAddress || wallet.address, 6, 4)
+                  }
+                </>
+              ) : wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:") ? (
                 <>
                   {portfolioName ? `${portfolioName} Portfolio` : 
                    wallet.address.startsWith("Portfolio:") ? wallet.address.replace("Portfolio:", "") + " Portfolio" : 
@@ -212,14 +233,14 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
               {/* Only show address if not already shown in title or if it's a portfolio/combined view */}
               {(wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:") || (existingBookmark && existingBookmark.label)) && (
                 <span className="text-sm text-muted-foreground mr-2 metallic-address overflow-hidden text-ellipsis whitespace-nowrap">
-                  {truncateAddress(wallet.address, 10, 8)}
+                  {truncateAddress(actualWalletAddress || wallet.address, 10, 8)}
                 </span>
               )}
               <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-white glass-card hover:bg-black/20 p-0.5 flex-shrink-0">
                 <Copy className="h-4 w-4" />
               </Button>
               <a 
-                href={`https://scan.pulsechain.com/address/${wallet.address}`}
+                href={`https://scan.pulsechain.com/address/${actualWalletAddress || wallet.address}`}
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="h-6 w-6 text-white glass-card hover:bg-black/20 p-0.5 flex-shrink-0 inline-flex items-center justify-center rounded-md transition-all"
@@ -255,7 +276,7 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
             )}
             
             {/* Share button - show for single wallet and portfolios */}
-            {!wallet.address.startsWith("Combined") && (
+            {(wallet.address.includes("Combined (1 wallets)") || !wallet.address.startsWith("Combined")) && (
               <Button
                 variant="outline"
                 onClick={() => setShareModalOpen(true)}
@@ -267,9 +288,9 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
             )}
             
             {/* Only show for single wallet, not for portfolio or combined views */}
-            {!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:") && (
+            {(wallet.address.includes("Combined (1 wallets)") || (!wallet.address.startsWith("Combined") && !wallet.address.startsWith("Portfolio:"))) && (
               <LastUpdatedInfo
-                walletAddress={wallet.address}
+                walletAddress={actualWalletAddress || wallet.address}
                 onBalancesUpdated={onRefresh}
               />
             )}
