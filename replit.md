@@ -2,6 +2,14 @@
 
 ## Recent Changes
 
+### July 28, 2025 - Fixed Duplicate Search Prevention for URL-Based Wallet Loading
+- **Problem identified** - URL parameter handling was triggering duplicate searches when loading wallet addresses from links
+- **Improved search tracking** - Enhanced URL parameter checking to compare lowercase addresses and verify if search is already in progress
+- **Unified search approach** - Ensured handleSearch always uses handleMultiSearch with single-element array for consistency
+- **Centralized duplicate prevention** - Moved all duplicate search checks into handleMultiSearch function
+- **Fixed useEffect dependencies** - Removed isMultiWalletLoading and multiWalletData from dependencies to prevent re-triggering during search
+- **Result** - URL-based wallet loading now properly prevents duplicate searches while maintaining unified search architecture
+
 ### July 28, 2025 - Major Code Cleanup After Architecture Unification
 - **Removed unused hooks** - Deleted `use-client-side-wallet.ts`, `use-direct-wallet-balances.ts`, and `use-direct-balance.ts` hooks that were replaced by unified approach
 - **Removed unused components** - Deleted `real-time-balance-button.tsx` component that depended on deleted hooks
