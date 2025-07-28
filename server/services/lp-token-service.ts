@@ -211,10 +211,28 @@ export async function processLpToken(token: ProcessedToken, walletAddress: strin
       }
       
       // 6. Calculate token balances based on user's share
-      token0Balance = reserve0.mul(ethers.utils.parseEther(ratioString))
-                               .div(ethers.utils.parseEther('1')).toString();
-      token1Balance = reserve1.mul(ethers.utils.parseEther(ratioString))
-                               .div(ethers.utils.parseEther('1')).toString();
+      // Handle extremely small ratios that can't be parsed by parseEther
+      let token0BalanceCalculated, token1BalanceCalculated;
+      
+      if (userShareRatio > 1e-18) {
+        try {
+          const ratioBN = ethers.utils.parseEther(ratioString);
+          token0BalanceCalculated = reserve0.mul(ratioBN).div(ethers.utils.parseEther('1'));
+          token1BalanceCalculated = reserve1.mul(ratioBN).div(ethers.utils.parseEther('1'));
+        } catch (parseError) {
+          // Fallback for very small ratios: use BigNumber arithmetic
+          const userBalanceBN = ethers.BigNumber.from(token.balance);
+          token0BalanceCalculated = reserve0.mul(userBalanceBN).div(totalSupply);
+          token1BalanceCalculated = reserve1.mul(userBalanceBN).div(totalSupply);
+        }
+      } else {
+        // For dust amounts, set to zero
+        token0BalanceCalculated = ethers.BigNumber.from('0');
+        token1BalanceCalculated = ethers.BigNumber.from('0');
+      }
+      
+      token0Balance = token0BalanceCalculated.toString();
+      token1Balance = token1BalanceCalculated.toString();
     } catch (error) {
       console.error(`Error calculating LP token shares for ${token.address}:`, error);
       // Continue with default values if there's an error

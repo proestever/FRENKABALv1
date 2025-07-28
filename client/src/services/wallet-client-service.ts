@@ -303,11 +303,27 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
       }
       return token.address;
     });
+
+    // Add underlying LP token addresses to the price fetch list
+    const lpTokenAddresses = new Set<string>();
+    walletData.tokens.forEach(token => {
+      if (token.isLp) {
+        if (token.lpToken0Address) {
+          lpTokenAddresses.add(token.lpToken0Address.toLowerCase());
+        }
+        if (token.lpToken1Address) {
+          lpTokenAddresses.add(token.lpToken1Address.toLowerCase());
+        }
+      }
+    });
+
+    // Combine all addresses for price fetching
+    const allTokenAddresses = [...tokenAddresses, ...Array.from(lpTokenAddresses)];
     
     // Fetch all prices in batches from smart contracts
     const priceMap = await timer.measure('smart_contract_prices', async () => {
-      return await getMultipleTokenPricesFromContract(tokenAddresses);
-    }, { tokenCount: tokenAddresses.length });
+      return await getMultipleTokenPricesFromContract(allTokenAddresses);
+    }, { tokenCount: allTokenAddresses.length });
     
     // Apply prices to tokens
     const tokensWithPrices = await timer.measure('apply_prices', async () => {
@@ -315,6 +331,41 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
         const addressForPrice = tokenAddresses[index];
         const priceData = priceMap.get(addressForPrice.toLowerCase());
         
+        // Handle LP tokens specially
+        if (token.isLp && token.lpToken0BalanceFormatted !== undefined && token.lpToken1BalanceFormatted !== undefined) {
+          // Calculate LP token value based on underlying tokens
+          let lpValue = 0;
+          
+          // Get prices for underlying tokens
+          const token0Price = token.lpToken0Address ? priceMap.get(token.lpToken0Address.toLowerCase())?.price || 0 : 0;
+          const token1Price = token.lpToken1Address ? priceMap.get(token.lpToken1Address.toLowerCase())?.price || 0 : 0;
+          
+          // Calculate values of underlying tokens
+          const token0Value = token.lpToken0BalanceFormatted * token0Price;
+          const token1Value = token.lpToken1BalanceFormatted * token1Price;
+          
+          lpValue = token0Value + token1Value;
+          
+          return {
+            ...token,
+            price: lpValue > 0 && token.balanceFormatted > 0 ? lpValue / token.balanceFormatted : 0,
+            value: lpValue,
+            lpToken0Price: token0Price,
+            lpToken1Price: token1Price,
+            lpToken0Value: token0Value,
+            lpToken1Value: token1Value,
+            priceData: {
+              price: lpValue > 0 && token.balanceFormatted > 0 ? lpValue / token.balanceFormatted : 0,
+              priceChange24h: 0,
+              liquidityUsd: 0,
+              volumeUsd24h: 0,
+              dexId: 'LP',
+              pairAddress: token.address
+            }
+          };
+        }
+        
+        // Handle regular tokens
         if (priceData) {
           // Calculate value without any cap
           const calculatedValue = token.balanceFormatted * priceData.price;
