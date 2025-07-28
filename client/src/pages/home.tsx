@@ -92,6 +92,9 @@ export default function Home() {
   const handleSearch = (address: string) => {
     if (!address) return;
     
+    // Set searchedAddress to prevent useEffect from triggering repeatedly
+    setSearchedAddress(address);
+    
     // Simply use the portfolio search function with a single address array
     // This ensures consistent behavior between single and multi-wallet searches
     console.log('Using unified search approach for single wallet:', address);
@@ -128,13 +131,14 @@ export default function Home() {
     // Reset single wallet view
     setSearchedAddress(null);
     
-    // Only update URL if we're not already on a portfolio URL
+    // Only update URL if we're not already on a portfolio URL or the correct wallet URL
     // This preserves the /p/{code} URL when loading portfolio bundles
     if (!location.startsWith('/p/') && !location.startsWith('/portfolio/')) {
       // Update URL to show we're in multi-wallet mode
       const firstAddress = addresses[0];
       const currentPath = `/${firstAddress}`;
-      if (location !== currentPath) {
+      // Only update if we're not already on this path
+      if (location !== currentPath && !location.includes(firstAddress)) {
         setLocation(currentPath);
       }
     }
@@ -619,7 +623,11 @@ export default function Home() {
     
     // Handle single wallet address from URL path
     if (params.walletAddress && params.walletAddress.startsWith('0x')) {
-      if (searchedAddress !== params.walletAddress) {
+      // Only search if we're not already searching for this address and don't have data
+      const isAlreadySearching = searchedAddress === params.walletAddress || 
+                                (multiWalletData && Object.keys(multiWalletData).includes(params.walletAddress));
+      
+      if (!isAlreadySearching) {
         // Handle wallet address from URL only if it's different from current
         handleSearch(params.walletAddress);
       }
@@ -658,7 +666,7 @@ export default function Home() {
     refetch 
   } = useQuery({
     queryKey: searchedAddress ? [`fast-wallet-${searchedAddress}`] : ['fast-wallet-empty'],
-    enabled: !!searchedAddress,
+    enabled: false, // Disabled - we use handleMultiSearch for all wallet fetching now
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchOnMount: false,
