@@ -6,10 +6,9 @@ import { WalletOverview } from '@/components/wallet-overview';
 import { TokenList } from '@/components/token-list';
 import { TokenLogo } from '@/components/token-logo';
 import { EmptyState } from '@/components/empty-state';
-import { SimpleProgress } from '@/components/simple-progress';
+import { LoadingProgress } from '@/components/loading-progress';
 import { ManualTokenEntry } from '@/components/manual-token-entry';
 import { WebSocketStatus } from '@/components/websocket-status';
-import { LoadingProgress as LoadingProgressType } from '@/types/progress';
 
 import ApiStats from '@/components/api-stats';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,15 @@ export default function Home() {
   const [portfolioUrlId, setPortfolioUrlId] = useState<string | null>(null);
   const [portfolioTimer, setPortfolioTimer] = useState<PerformanceTimer | null>(null);
 
-  const [multiWalletProgress, setMultiWalletProgress] = useState<LoadingProgressType>({
+  const [multiWalletProgress, setMultiWalletProgress] = useState<{
+    currentBatch: number;
+    totalBatches: number;
+    status: 'idle' | 'loading' | 'complete' | 'error';
+    message: string;
+    recentMessages: string[];
+    walletsProcessed: number;
+    totalWallets: number;
+  }>({
     currentBatch: 0,
     totalBatches: 0,
     status: 'idle',
@@ -705,7 +712,7 @@ export default function Home() {
   }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
 
   // Single wallet progress tracking state
-  const [singleWalletProgress, setSingleWalletProgress] = useState<LoadingProgressType>({
+  const [singleWalletProgress, setSingleWalletProgress] = useState<any>({
     currentBatch: 0,
     totalBatches: 1,
     status: 'idle',
@@ -792,11 +799,6 @@ export default function Home() {
           return await fetchWalletDataFast(searchedAddress);
         });
         
-        // Validate data before proceeding
-        if (!data || !data.tokens) {
-          throw new Error('Invalid wallet data received from API');
-        }
-        
         // Update progress with completion
         setSingleWalletProgress(prev => ({
           ...prev,
@@ -821,15 +823,6 @@ export default function Home() {
         });
         
         return data;
-      } catch (error) {
-        console.error('Error in single wallet fetch:', error);
-        // Update progress with error state
-        setSingleWalletProgress(prev => ({
-          ...prev,
-          status: 'error',
-          message: `Error loading wallet: ${error instanceof Error ? error.message : 'Unknown error'}`
-        }));
-        throw error;
       } finally {
         // Restore original console.log
         console.log = originalLog;
@@ -1053,12 +1046,10 @@ export default function Home() {
       )}
       
       {/* Loading Progress Bar - shows during loading */}
-      <SimpleProgress 
+      <LoadingProgress 
         isLoading={isLoading || isFetching || isMultiWalletLoading} 
         walletAddress={searchedAddress || (multiWalletData ? 'Multiple wallets' : undefined)}
-        percentage={isLoading || isFetching ? 50 : isMultiWalletLoading ? (multiWalletProgress.currentBatch / Math.max(multiWalletProgress.totalBatches, 1)) * 100 : 0}
-        message={isMultiWalletLoading ? multiWalletProgress.message : isLoading || isFetching ? 'Loading wallet data...' : ''}
-        status={isLoading || isFetching || isMultiWalletLoading ? 'loading' : 'complete'}
+        customProgress={isMultiWalletLoading ? multiWalletProgress : (isLoading || isFetching) ? singleWalletProgress : undefined}
       />
       
       {/* Performance Display - shows real-time timing during loading */}
