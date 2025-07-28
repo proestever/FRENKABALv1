@@ -227,28 +227,43 @@ export function useWallet(): UseWalletReturn {
       if (accounts.length === 0) {
         // User disconnected all accounts
         console.log('All wallet accounts disconnected');
+        
+        // Clear all state and localStorage
+        setAccount(null);
+        setChainId(null);
+        setUserId(null);
+        setUser(null);
+        
+        // Clear localStorage
+        localStorage.removeItem('walletConnected');
+        localStorage.removeItem('walletAddress');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('lastLoginTimestamp');
+        localStorage.removeItem('walletSignature');
+        localStorage.removeItem('signatureTimestamp');
       } else if (oldAddress && oldAddress.toLowerCase() !== accounts[0].toLowerCase()) {
-        // User switched to a different wallet
+        // User actually switched to a different wallet (not just case difference)
         console.log(`Wallet changed from ${oldAddress} to ${accounts[0]}`);
         toast({
           title: "Wallet Changed",
           description: "You've switched wallets. Please connect again to continue.",
         });
+        
+        // Clear all state and localStorage for wallet switch
+        setAccount(null);
+        setChainId(null);
+        setUserId(null);
+        setUser(null);
+        
+        // Clear localStorage
+        localStorage.removeItem('walletConnected');
+        localStorage.removeItem('walletAddress');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('lastLoginTimestamp');
+        localStorage.removeItem('walletSignature');
+        localStorage.removeItem('signatureTimestamp');
       }
-      
-      // Always clear all state and localStorage for any account change
-      setAccount(null);
-      setChainId(null);
-      setUserId(null);
-      setUser(null);
-      
-      // Clear localStorage
-      localStorage.removeItem('walletConnected');
-      localStorage.removeItem('walletAddress');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('lastLoginTimestamp');
-      localStorage.removeItem('walletSignature');
-      localStorage.removeItem('signatureTimestamp');
+      // If it's the same wallet (just case difference), don't clear state
     };
     
     const handleChainChanged = (chainIdHex: string) => {

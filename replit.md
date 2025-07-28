@@ -29,6 +29,13 @@
 - **Removed duplicate logic** - Eliminated duplicate wallet address handling that was causing searches to trigger multiple times
 - **Result** - Single wallet searches from URLs now load correctly without infinite loops
 
+### July 28, 2025 - Fixed Wallet Reload Issue Caused by Case-Sensitive Address Comparison
+- **Problem identified** - Wallet was reloading continuously due to false wallet change detection
+- **Root cause** - `handleAccountsChanged` in use-wallet.ts was clearing state even when addresses only differed in case (e.g., 0x592139A3f8cf019f628A152FC1262B8aEf5B7199 vs 0x9be83826afdf22a88027f8e5b79f428178bd9635)
+- **Fixed comparison logic** - Now only clears state when wallet actually changes, not for case differences
+- **Technical detail** - Address comparison remains case-insensitive but state clearing only happens for true wallet switches
+- **Result** - Wallet searches no longer reload due to case differences in addresses
+
 ### July 28, 2025 - Unified Single and Portfolio Search Architecture
 - **Complete architectural unification** - Single wallet searches now use `handleMultiSearch([address])` instead of separate React Query implementation
 - **Eliminated code duplication** - Removed separate `handleSearch` logic, now it simply calls `handleMultiSearch` with single-item array
