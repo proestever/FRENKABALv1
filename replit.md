@@ -20,14 +20,16 @@
 - **Error logging preserved** - Failed LP token analyses are still logged to console for debugging without crashing the fetch
 - **User experience improved** - Users see their wallet data and token balances immediately, even if some LP tokens can't be analyzed
 
-### July 28, 2025 - Unified Architecture: Fast Scanner for All Wallet Searches
-- **Complete architectural unification** - Single wallet searches now use the same fast scanner approach as portfolios instead of maintaining separate systems
-- **Replaced useClientSideWallet with useQuery + fetchWalletDataFast** - All wallet searches (single and multi) now use identical data fetching path
-- **Consistent LP token analysis** - Single wallets now get the same client-side LP analysis that works perfectly in portfolios
-- **Simplified codebase** - Removed duplicate wallet fetching logic, one consistent approach for all searches
-- **Performance benefit** - Single wallets now benefit from fast scanner speed (2-4 seconds) while getting full LP analysis
-- **Identical functionality** - Single and multi-wallet searches provide exactly the same features and data accuracy
-- **Technical advantage** - Easier maintenance with one unified path instead of separate useClientSideWallet and portfolio systems
+### July 28, 2025 - STABLE BASELINE: Unified Architecture Completed
+- **Architecture fully unified** - Single wallet searches now use `handleMultiSearch([address])` eliminating all code duplication
+- **Removed React Query from single wallet** - Both single and multi-wallet searches use direct API calls with better error handling
+- **LP token errors handled gracefully** - Failed LP token analysis no longer crashes wallet loading, partial data is displayed
+- **Consistent loading behavior** - Both search types use identical progress tracking and batch processing
+- **Performance maintained** - Fast scanner approach (2-4 seconds) for all wallet searches
+- **Error resilience achieved** - System continues loading even when individual tokens or LP analysis fails
+- **Codebase simplified** - One function (`handleMultiSearch`) handles all wallet searches, reducing complexity
+- **User experience improved** - No more "Error fetching wallet data" messages, users see all available data
+- **STABLE VERSION** - This configuration tested and working correctly for both single and multi-wallet searches
 
 ### July 27, 2025 - Complete Migration to Client-Side API Architecture
 - **Problem identified** - Server was making all PulseChain Scan API calls, creating bottlenecks and server load issues
