@@ -94,86 +94,10 @@ export default function Home() {
   const handleSearch = (address: string) => {
     if (!address) return;
     
-    // Stop all background processes from previous wallet
-    console.log('Stopping all background processes before new search');
-    
-    // Stop background batch service polling for all wallets
-    backgroundBatchService.stopAll();
-    
-    // Stop live balance tracking for previous wallet
-    if (searchedAddress) {
-      // Invalidate live balance queries
-      queryClient.invalidateQueries({ queryKey: ['/api/wallet', searchedAddress, 'live-balances'] });
-      
-      // Send request to stop tracking the previous wallet
-      fetch(`/api/wallet/${searchedAddress}/tracking`, { method: 'DELETE' }).catch(
-        error => console.error('Failed to stop wallet tracking:', error)
-      );
-    }
-    
-    // Clear multi-wallet data if we're switching to single wallet view
-    if (multiWalletData) {
-      setMultiWalletData(null);
-    }
-    
-    // Reset single wallet progress state for new search
-    setSingleWalletProgress({
-      currentBatch: 0,
-      totalBatches: 1,
-      status: 'idle',
-      message: '',
-      recentMessages: [],
-      walletsProcessed: 0,
-      totalWallets: 1
-    });
-    
-    // Always invalidate cache to ensure fresh data, even when searching for the same address
-    console.log('Searching wallet address, clearing cache to ensure fresh data:', address);
-    
-    // Clear any existing wallet cache
-    if (searchedAddress) {
-      // Invalidate and remove the previous wallet's cache
-      queryClient.invalidateQueries({ queryKey: [`fast-wallet-${searchedAddress}`] });
-      queryClient.removeQueries({ queryKey: [`fast-wallet-${searchedAddress}`] });
-    }
-    
-    // Always invalidate and remove the new wallet's cache to ensure fresh data
-    queryClient.invalidateQueries({ queryKey: [`fast-wallet-${address}`] });
-    queryClient.removeQueries({ queryKey: [`fast-wallet-${address}`] }); // Force remove from cache
-    
-    // Clear any other relevant caches
-    queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
-    
-    // For the same address, we'll force a fresh fetch by first clearing the address and then setting it back
-    if (searchedAddress === address) {
-      // Temporarily clear the address (this will cancel any in-flight requests)
-      setSearchedAddress(null);
-      
-      // Use setTimeout to ensure the state update has completed before setting it back
-      setTimeout(() => {
-        setSearchedAddress(address);
-      }, 10);
-    } else {
-      // For new addresses, just set it directly
-      setSearchedAddress(address);
-    }
-    
-    // Update URL to include wallet address
-    const currentPath = `/${address}`;
-    if (location !== currentPath) {
-      setLocation(currentPath);
-    }
-    
-    // Save to recent addresses
-    saveRecentAddress(address);
-    
-    // Preload HEX stakes data in parallel to speed up tab switching
-    console.log('Preloading HEX stakes data for wallet:', address);
-    // We don't await this - let it run in the background
-    fetchHexStakesSummary(address).catch((err: Error) => {
-      console.warn('Preloading HEX stakes failed:', err.message);
-      // We can safely ignore errors here since it will be retried when the tab is opened
-    });
+    // Simply use the portfolio search function with a single address array
+    // This ensures consistent behavior between single and multi-wallet searches
+    console.log('Using unified search approach for single wallet:', address);
+    handleMultiSearch([address]);
   };
   
   // Handle multi-wallet search

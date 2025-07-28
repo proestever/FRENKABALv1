@@ -2,13 +2,14 @@
 
 ## Recent Changes
 
-### July 28, 2025 - Fixed Single Wallet Search to Match Portfolio Behavior
-- **Problem identified** - Single wallet searches were showing error state when LP token analysis failed, while portfolio searches handled the same errors gracefully
-- **Root cause** - Single wallet React Query was throwing errors even when wallet data was successfully fetched but some LP tokens failed analysis
-- **Updated error handling** - Modified single wallet query to return partial data despite LP errors, matching portfolio behavior
-- **Consistent architecture** - Both single and portfolio searches now handle LP token errors identically - log them but don't fail the entire request
-- **Result** - Single wallet searches now work exactly like portfolio searches, displaying wallet data even when some LP tokens can't be analyzed
-- **User experience** - No more "Error fetching wallet data" messages when LP tokens fail - wallet displays with all available data
+### July 28, 2025 - Unified Single and Portfolio Search Architecture
+- **Complete architectural unification** - Single wallet searches now use `handleMultiSearch([address])` instead of separate React Query implementation
+- **Eliminated code duplication** - Removed separate `handleSearch` logic, now it simply calls `handleMultiSearch` with single-item array
+- **Consistent error handling** - Both single and multi-wallet searches use identical error handling, LP token failures don't crash the search
+- **Same loading behavior** - Single wallets now show the same progress tracking and batch processing as portfolios
+- **Simplified maintenance** - One unified function handles all wallet searches, reducing complexity and potential bugs
+- **Result** - Perfect parity between single wallet and portfolio searches, both handle errors gracefully and display partial data
+- **Technical improvement** - Eliminated React Query issues by using direct API calls for all wallet searches
 
 ### July 28, 2025 - Fixed Critical LP Token Analysis Error Handling
 - **Problem identified** - LP token analysis errors (e.g., DaiLP, HexLP, BtcLP) were causing entire wallet queries to fail with "Error fetching wallet data"
