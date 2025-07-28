@@ -720,45 +720,61 @@ export default function Home() {
     gcTime: 0,
     queryFn: async () => {
       if (!searchedAddress) return null;
-      console.log(`Single wallet search using fast scanner for ${searchedAddress} (same as portfolio)`);
       
-      // Reset progress to 0 when starting
-      setProgress(prev => ({ 
-        ...prev, 
-        status: 'loading', 
-        message: 'Starting wallet scan...', 
-        currentBatch: 0,
-        recentMessages: ['Starting wallet scan...'] 
-      }));
-      
-      const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
-      const data = await fetchWalletDataFast(searchedAddress, (message, progressPercent) => {
-        // Update progress with meaningful feedback
+      try {
+        console.log(`Single wallet search using fast scanner for ${searchedAddress} (same as portfolio)`);
+        
+        // Reset progress to 0 when starting
+        setProgress(prev => ({ 
+          ...prev, 
+          status: 'loading', 
+          message: 'Starting wallet scan...', 
+          currentBatch: 0,
+          recentMessages: ['Starting wallet scan...'] 
+        }));
+        
+        const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
+        const data = await fetchWalletDataFast(searchedAddress, (message, progressPercent) => {
+          // Update progress with meaningful feedback
+          setProgress(prev => ({
+            ...prev,
+            status: 'loading',
+            message,
+            currentBatch: progressPercent,
+            recentMessages: [message, ...prev.recentMessages.slice(0, 4)] // Keep last 5 messages
+          }));
+        });
+        
+        // Mark as complete
         setProgress(prev => ({
           ...prev,
-          status: 'loading',
-          message,
-          currentBatch: progressPercent,
-          recentMessages: [message, ...prev.recentMessages.slice(0, 4)] // Keep last 5 messages
+          status: 'complete',
+          message: 'Wallet scan completed!',
+          currentBatch: 100
         }));
-      });
-      
-      // Mark as complete
-      setProgress(prev => ({
-        ...prev,
-        status: 'complete',
-        message: 'Wallet scan completed!',
-        currentBatch: 100
-      }));
-      
-      console.log(`Fast scanner result for single wallet ${searchedAddress}:`, {
-        tokenCount: data.tokens.length,
-        totalValue: data.totalValue,
-        lpCount: data.tokens.filter(t => t.isLp).length,
-        lpTokensWithValues: data.tokens.filter(t => t.isLp && t.value && t.value > 0).length
-      });
-      
-      return data;
+        
+        console.log(`Fast scanner result for single wallet ${searchedAddress}:`, {
+          tokenCount: data.tokens.length,
+          totalValue: data.totalValue,
+          lpCount: data.tokens.filter(t => t.isLp).length,
+          lpTokensWithValues: data.tokens.filter(t => t.isLp && t.value && t.value > 0).length
+        });
+        
+        return data;
+      } catch (error) {
+        console.error('Error fetching wallet data:', error);
+        
+        // Update progress to show error
+        setProgress(prev => ({
+          ...prev,
+          status: 'error',
+          message: 'Failed to load wallet data',
+          currentBatch: 0
+        }));
+        
+        // Re-throw the error so React Query can handle it
+        throw error;
+      }
     }
   });
   

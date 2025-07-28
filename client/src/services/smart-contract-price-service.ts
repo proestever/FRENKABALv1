@@ -624,7 +624,7 @@ class SmartContractPriceService {
     const results = new Map<string, PriceData | null>();
     
     // Process all tokens in parallel with rate limiting
-    const BATCH_SIZE = 200; // Increased parallelization for even faster processing
+    const BATCH_SIZE = 50; // Reduced batch size for better error handling
     const batches: string[][] = [];
     
     // Create batches
@@ -636,8 +636,13 @@ class SmartContractPriceService {
     const allBatchPromises = batches.map(async (batch) => {
       const batchResults = await Promise.all(
         batch.map(async (address) => {
-          const price = await this.getTokenPrice(address);
-          return { address: address.toLowerCase(), price };
+          try {
+            const price = await this.getTokenPrice(address);
+            return { address: address.toLowerCase(), price };
+          } catch (error) {
+            console.warn(`Failed to get price for token ${address}:`, error);
+            return { address: address.toLowerCase(), price: null };
+          }
         })
       );
       
@@ -647,8 +652,13 @@ class SmartContractPriceService {
       });
     });
     
-    // Wait for all batches to complete
-    await Promise.all(allBatchPromises);
+    // Wait for all batches to complete with error handling
+    try {
+      await Promise.all(allBatchPromises);
+    } catch (error) {
+      console.error('Error in batch processing for token prices:', error);
+      // Continue anyway - we'll have partial results
+    }
     
     return results;
   }

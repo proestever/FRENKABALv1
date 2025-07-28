@@ -459,7 +459,16 @@ export async function fetchWalletDataFast(address: string, onProgress?: (message
     
     // Fetch all prices in batches from smart contracts
     const priceMap = await timer.measure('smart_contract_prices', async () => {
-      return await getMultipleTokenPricesFromContract(allTokenAddresses);
+      try {
+        console.log(`Fetching prices for ${allTokenAddresses.length} tokens`);
+        const result = await getMultipleTokenPricesFromContract(allTokenAddresses);
+        console.log(`Price fetching completed. Got prices for ${result.size} tokens`);
+        return result;
+      } catch (error) {
+        console.error('Error in getMultipleTokenPricesFromContract:', error);
+        // Return empty map instead of throwing
+        return new Map<string, PriceData | null>();
+      }
     }, { tokenCount: allTokenAddresses.length });
     
     if (onProgress) onProgress('Calculating token values...', 75);
