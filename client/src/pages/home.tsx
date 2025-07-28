@@ -792,6 +792,11 @@ export default function Home() {
           return await fetchWalletDataFast(searchedAddress);
         });
         
+        // Validate data before proceeding
+        if (!data || !data.tokens) {
+          throw new Error('Invalid wallet data received from API');
+        }
+        
         // Update progress with completion
         setSingleWalletProgress(prev => ({
           ...prev,
@@ -816,6 +821,15 @@ export default function Home() {
         });
         
         return data;
+      } catch (error) {
+        console.error('Error in single wallet fetch:', error);
+        // Update progress with error state
+        setSingleWalletProgress(prev => ({
+          ...prev,
+          status: 'error',
+          message: `Error loading wallet: ${error instanceof Error ? error.message : 'Unknown error'}`
+        }));
+        throw error;
       } finally {
         // Restore original console.log
         console.log = originalLog;
