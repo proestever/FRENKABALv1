@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { SearchSection } from '@/components/search-section';
 import { WalletOverview } from '@/components/wallet-overview';
 import { TokenList } from '@/components/token-list';
@@ -700,16 +700,41 @@ export default function Home() {
     }
   }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
 
-  // Use client-side wallet hook to avoid server rate limits
-  const {
-    walletData,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching,
-    progress
-  } = useClientSideWallet(searchedAddress)
+  // Use the same fast scanner approach as portfolios for consistency
+  const { 
+    data: walletData, 
+    isLoading, 
+    isFetching, 
+    isError, 
+    error, 
+    refetch 
+  } = useQuery({
+    queryKey: searchedAddress ? [`fast-wallet-${searchedAddress}`] : ['fast-wallet-empty'],
+    enabled: !!searchedAddress,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    refetchInterval: false,
+    refetchIntervalInBackground: false,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => {
+      if (!searchedAddress) return null;
+      console.log(`Single wallet search using fast scanner for ${searchedAddress} (same as portfolio)`);
+      
+      const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
+      const data = await fetchWalletDataFast(searchedAddress);
+      
+      console.log(`Fast scanner result for single wallet ${searchedAddress}:`, {
+        tokenCount: data.tokens.length,
+        totalValue: data.totalValue,
+        lpCount: data.tokens.filter(t => t.isLp).length,
+        lpTokensWithValues: data.tokens.filter(t => t.isLp && t.value && t.value > 0).length
+      });
+      
+      return data;
+    }
+  });
   
   // Use live balance tracking for real-time updates
   const { 
@@ -930,7 +955,7 @@ export default function Home() {
       <LoadingProgress 
         isLoading={isLoading || isFetching || isMultiWalletLoading} 
         walletAddress={searchedAddress || (multiWalletData ? 'Multiple wallets' : undefined)}
-        customProgress={isMultiWalletLoading ? multiWalletProgress : progress}
+        customProgress={isMultiWalletLoading ? multiWalletProgress : undefined}
       />
       
       {/* Performance Display - shows real-time timing during portfolio loading */}

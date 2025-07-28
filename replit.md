@@ -2,6 +2,15 @@
 
 ## Recent Changes
 
+### July 28, 2025 - Unified Architecture: Fast Scanner for All Wallet Searches
+- **Complete architectural unification** - Single wallet searches now use the same fast scanner approach as portfolios instead of maintaining separate systems
+- **Replaced useClientSideWallet with useQuery + fetchWalletDataFast** - All wallet searches (single and multi) now use identical data fetching path
+- **Consistent LP token analysis** - Single wallets now get the same client-side LP analysis that works perfectly in portfolios
+- **Simplified codebase** - Removed duplicate wallet fetching logic, one consistent approach for all searches
+- **Performance benefit** - Single wallets now benefit from fast scanner speed (2-4 seconds) while getting full LP analysis
+- **Identical functionality** - Single and multi-wallet searches provide exactly the same features and data accuracy
+- **Technical advantage** - Easier maintenance with one unified path instead of separate useClientSideWallet and portfolio systems
+
 ### July 27, 2025 - Complete Migration to Client-Side API Architecture
 - **Problem identified** - Server was making all PulseChain Scan API calls, creating bottlenecks and server load issues
 - **Created client-side scanner service** - New `scanner-client-service.ts` that calls PulseChain Scan API directly from user browsers
