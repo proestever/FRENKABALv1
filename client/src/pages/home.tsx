@@ -116,17 +116,6 @@ export default function Home() {
       setMultiWalletData(null);
     }
     
-    // Reset single wallet progress state for new search
-    setSingleWalletProgress({
-      currentBatch: 0,
-      totalBatches: 1,
-      status: 'idle',
-      message: '',
-      recentMessages: [],
-      walletsProcessed: 0,
-      totalWallets: 1
-    });
-    
     // Always invalidate cache to ensure fresh data, even when searching for the same address
     console.log('Searching wallet address, clearing cache to ensure fresh data:', address);
     
@@ -711,21 +700,7 @@ export default function Home() {
     }
   }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
 
-  // Single wallet progress tracking state
-  const [singleWalletProgress, setSingleWalletProgress] = useState<any>({
-    currentBatch: 0,
-    totalBatches: 1,
-    status: 'idle',
-    message: '',
-    recentMessages: [],
-    walletsProcessed: 0,
-    totalWallets: 1
-  });
-
-  // Performance timer for single wallet (same as portfolio)
-  const [singleWalletTimer, setSingleWalletTimer] = useState<PerformanceTimer | null>(null);
-
-  // Use the same fast scanner approach as portfolios with detailed progress tracking
+  // Use the same fast scanner approach as portfolios for consistency
   const { 
     data: walletData, 
     isLoading, 
@@ -745,88 +720,19 @@ export default function Home() {
     gcTime: 0,
     queryFn: async () => {
       if (!searchedAddress) return null;
+      console.log(`Single wallet search using fast scanner for ${searchedAddress} (same as portfolio)`);
       
-      // Create performance timer for single wallet loading (same as portfolio)
-      const timer = new PerformanceTimer();
-      setSingleWalletTimer(timer);
+      const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
+      const data = await fetchWalletDataFast(searchedAddress);
       
-      // Set initial progress state
-      setSingleWalletProgress({
-        currentBatch: 1,
-        totalBatches: 1,
-        status: 'loading',
-        message: `Loading wallet ${searchedAddress.slice(0, 8)}...`,
-        recentMessages: [],
-        walletsProcessed: 0,
-        totalWallets: 1
+      console.log(`Fast scanner result for single wallet ${searchedAddress}:`, {
+        tokenCount: data.tokens.length,
+        totalValue: data.totalValue,
+        lpCount: data.tokens.filter(t => t.isLp).length,
+        lpTokensWithValues: data.tokens.filter(t => t.isLp && t.value && t.value > 0).length
       });
       
-      // Add progress message function
-      const addProgressMessage = (message: string) => {
-        setSingleWalletProgress((prev: any) => ({
-          ...prev,
-          recentMessages: [...prev.recentMessages.slice(-9), message]
-        }));
-      };
-      
-      // Intercept console logs to capture detailed progress (same as portfolio)
-      const originalLog = console.log;
-      console.log = (...args: any[]) => {
-        const message = args.join(' ');
-        if (message.includes('Successfully fetched wallet') || 
-            message.includes('Found LP token') ||
-            message.includes('Using specific pair') ||
-            message.includes('price from specific pair') ||
-            message.includes('Fast scanner result') ||
-            message.includes('Scanner response') ||
-            message.includes('TIMER')) {
-          addProgressMessage(message);
-        }
-        originalLog(...args);
-      };
-      
-      try {
-        console.log(`[TIMER START] single_wallet_load`, { address: searchedAddress });
-        
-        // Update progress
-        setSingleWalletProgress(prev => ({
-          ...prev,
-          message: `Fetching token balances for ${searchedAddress.slice(0, 8)}...`
-        }));
-        
-        const data = await timer.measure('total_wallet_fetch', async () => {
-          const { fetchWalletDataFast } = await import('@/services/wallet-client-service');
-          return await fetchWalletDataFast(searchedAddress);
-        });
-        
-        // Update progress with completion
-        setSingleWalletProgress(prev => ({
-          ...prev,
-          status: 'complete',
-          message: `Wallet loaded successfully - ${data.tokens.length} tokens found`,
-          walletsProcessed: 1
-        }));
-        
-        console.log(`[TIMER END] single_wallet_load: ${timer.getElapsedTime()}ms`, {
-          address: searchedAddress,
-          tokenCount: data.tokens.length,
-          totalValue: data.totalValue,
-          lpCount: data.tokens.filter(t => t.isLp).length
-        });
-        
-        // Show detailed results (same as portfolio)
-        console.log(`Fast scanner result for single wallet ${searchedAddress}:`, {
-          tokenCount: data.tokens.length,
-          totalValue: data.totalValue,
-          lpCount: data.tokens.filter(t => t.isLp).length,
-          lpTokensWithValues: data.tokens.filter(t => t.isLp && t.value && t.value > 0).length
-        });
-        
-        return data;
-      } finally {
-        // Restore original console.log
-        console.log = originalLog;
-      }
+      return data;
     }
   });
   
@@ -1049,20 +955,13 @@ export default function Home() {
       <LoadingProgress 
         isLoading={isLoading || isFetching || isMultiWalletLoading} 
         walletAddress={searchedAddress || (multiWalletData ? 'Multiple wallets' : undefined)}
-        customProgress={isMultiWalletLoading ? multiWalletProgress : (isLoading || isFetching) ? singleWalletProgress : undefined}
+        customProgress={isMultiWalletLoading ? multiWalletProgress : undefined}
       />
       
-      {/* Performance Display - shows real-time timing during loading */}
+      {/* Performance Display - shows real-time timing during portfolio loading */}
       {isMultiWalletLoading && portfolioTimer && (
         <div className="mt-4">
           <PerformanceDisplay timer={portfolioTimer} />
-        </div>
-      )}
-      
-      {/* Performance Display for single wallet loading */}
-      {(isLoading || isFetching) && !isMultiWalletLoading && singleWalletTimer && (
-        <div className="mt-4">
-          <PerformanceDisplay timer={singleWalletTimer} />
         </div>
       )}
       
