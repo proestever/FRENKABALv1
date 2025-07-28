@@ -198,27 +198,23 @@ export function WalletOverview({ wallet, isLoading, onRefresh, hexStakesSummary,
                   {portfolioName ? `${portfolioName} Portfolio` : 
                    wallet.address.startsWith("Portfolio:") ? wallet.address.replace("Portfolio:", "") + " Portfolio" : 
                    "Combined Wallet Overview"}
-                  <span className="ml-2 flex items-center">
-                    <span className="text-green-400 font-bold text-lg md:text-xl ml-2">
-                      {!portfolioName && !wallet.address.startsWith("Portfolio:") && wallet.address.includes("(") ? 
-                        wallet.address.split("(")[1].replace(")", "") : ""}
-                    </span>
-                  </span>
                 </>
               ) : (
                 <>
-                  Wallet Overview
-                  {existingBookmark && existingBookmark.label && (
-                    <span className="ml-2 flex items-center"><span className="text-green-400 font-bold text-lg md:text-xl ml-2">{existingBookmark.label}</span></span>
-                  )}
+                  {existingBookmark && existingBookmark.label ? 
+                    existingBookmark.label : 
+                    truncateAddress(wallet.address, 6, 4)
+                  }
                 </>
               )}
             </h2>
             <div className="flex items-center mt-1 max-w-full overflow-hidden">
-              {/* Always show truncated address for better fit in narrower layout */}
-              <span className="text-sm text-muted-foreground mr-2 metallic-address overflow-hidden text-ellipsis whitespace-nowrap">
-                {truncateAddress(wallet.address, 10, 8)}
-              </span>
+              {/* Only show address if not already shown in title or if it's a portfolio/combined view */}
+              {(wallet.address.startsWith("Combined") || wallet.address.startsWith("Portfolio:") || (existingBookmark && existingBookmark.label)) && (
+                <span className="text-sm text-muted-foreground mr-2 metallic-address overflow-hidden text-ellipsis whitespace-nowrap">
+                  {truncateAddress(wallet.address, 10, 8)}
+                </span>
+              )}
               <Button variant="ghost" size="icon" onClick={handleCopyAddress} className="h-6 w-6 text-white glass-card hover:bg-black/20 p-0.5 flex-shrink-0">
                 <Copy className="h-4 w-4" />
               </Button>
