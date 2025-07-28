@@ -22,6 +22,13 @@
 - **Fixed button visibility** - Share button and LastUpdatedInfo component now show for single wallet searches
 - **Result** - Single wallet searches now display properly with actual addresses, bookmark labels, and all functionality working correctly
 
+### July 28, 2025 - Fixed Infinite Loop in Single Wallet URL Loading
+- **Problem identified** - Single wallet searches from URL parameters were triggering infinite loops
+- **Root cause** - Duplicate handling of wallet address URL parameters in useEffect and missing state updates
+- **Added searchedAddress state update** - Now properly sets `searchedAddress` when handling URL parameters to prevent re-triggering
+- **Removed duplicate logic** - Eliminated duplicate wallet address handling that was causing searches to trigger multiple times
+- **Result** - Single wallet searches from URLs now load correctly without infinite loops
+
 ### July 28, 2025 - Unified Single and Portfolio Search Architecture
 - **Complete architectural unification** - Single wallet searches now use `handleMultiSearch([address])` instead of separate React Query implementation
 - **Eliminated code duplication** - Removed separate `handleSearch` logic, now it simply calls `handleMultiSearch` with single-item array

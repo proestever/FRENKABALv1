@@ -440,6 +440,7 @@ export default function Home() {
       // Only search if this is a different address than what we're currently showing
       if (searchedAddress !== params.walletAddress) {
         console.log(`Detected wallet address in URL params: ${params.walletAddress}`);
+        setSearchedAddress(params.walletAddress); // Set the searched address to prevent loops
         handleSearch(params.walletAddress);
       }
       return;
@@ -617,13 +618,8 @@ export default function Home() {
       setPortfolioUrlId(null);
     }
     
-    // Handle single wallet address from URL path
-    if (params.walletAddress && params.walletAddress.startsWith('0x')) {
-      if (searchedAddress !== params.walletAddress) {
-        // Handle wallet address from URL only if it's different from current
-        handleSearch(params.walletAddress);
-      }
-    } else if (!params.walletAddress && !params.portfolioId && location === '/') {
+    // Reset state when on the root URL after logo click
+    if (!params.walletAddress && !params.portfolioId && location === '/') {
       // Complete reset of state when on the root URL after logo click
       setSearchedAddress(null);
       setMultiWalletData(null);
