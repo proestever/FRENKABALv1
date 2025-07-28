@@ -390,20 +390,15 @@ export async function fetchWalletDataClientSide(
  * Fetches wallet data using enhanced scanner (for portfolios)
  * Returns complete token data with LP token analysis
  */
-export async function fetchWalletDataFast(address: string, onProgress?: (message: string, progress: number) => void): Promise<Wallet> {
+export async function fetchWalletDataFast(address: string): Promise<Wallet> {
   const timer = new PerformanceTimer();
   timer.start(`wallet_service_${address.slice(0, 8)}`, { address });
   
   try {
-    if (onProgress) onProgress('Connecting to PulseChain scanner...', 5);
-    
     // Use fast scanner by default for better reliability
     const walletData = await timer.measure('scanner_balance_fetch', async () => {
-      if (onProgress) onProgress('Fetching token balances from blockchain...', 20);
       return await fetchWalletBalancesFromScanner(address, 3, true); // Use fast endpoint by default
     }, { address });
-    
-    if (onProgress) onProgress('Processing token data...', 40);
     
     // Debug log to see what we're getting
     console.log('Scanner response for', address, ':', {
@@ -455,23 +450,10 @@ export async function fetchWalletDataFast(address: string, onProgress?: (message
     // Combine all addresses for price fetching
     const allTokenAddresses = [...tokenAddresses, ...Array.from(lpTokenAddresses)];
     
-    if (onProgress) onProgress('Fetching token prices from blockchain...', 60);
-    
     // Fetch all prices in batches from smart contracts
     const priceMap = await timer.measure('smart_contract_prices', async () => {
-      try {
-        console.log(`Fetching prices for ${allTokenAddresses.length} tokens`);
-        const result = await getMultipleTokenPricesFromContract(allTokenAddresses);
-        console.log(`Price fetching completed. Got prices for ${result.size} tokens`);
-        return result;
-      } catch (error) {
-        console.error('Error in getMultipleTokenPricesFromContract:', error);
-        // Return empty map instead of throwing
-        return new Map<string, PriceData | null>();
-      }
+      return await getMultipleTokenPricesFromContract(allTokenAddresses);
     }, { tokenCount: allTokenAddresses.length });
-    
-    if (onProgress) onProgress('Calculating token values...', 75);
     
     // Apply prices to tokens
     const tokensWithPrices = await timer.measure('apply_prices', async () => {
@@ -561,8 +543,6 @@ export async function fetchWalletDataFast(address: string, onProgress?: (message
       });
     }, { tokenCount: walletData.tokens.length });
     
-    if (onProgress) onProgress('Loading token logos...', 85);
-    
     // Fetch logos from server first
     await timer.measure('fetch_server_logos', async () => {
       try {
@@ -615,8 +595,6 @@ export async function fetchWalletDataFast(address: string, onProgress?: (message
       }
     }, { missingLogos: tokensWithPrices.filter(t => !t.logo && t.address !== 'native').length });
     
-    if (onProgress) onProgress('Analyzing LP tokens...', 92);
-    
     // Process tokens that need LP analysis
     await timer.measure('client_lp_analysis', async () => {
       const tokensNeedingLpAnalysis = tokensWithPrices.filter(token => token.needsLpAnalysis);
@@ -666,12 +644,8 @@ export async function fetchWalletDataFast(address: string, onProgress?: (message
     // Ensure tokensWithPrices is an array
     const tokensArray = Array.isArray(tokensWithPrices) ? tokensWithPrices : [];
     
-    if (onProgress) onProgress('Finalizing wallet data...', 98);
-    
     // Recalculate total value
     const totalValue = tokensArray.reduce((sum, token) => sum + (token.value || 0), 0);
-    
-    if (onProgress) onProgress('Complete!', 100);
     
     timer.end(`wallet_service_${address.slice(0, 8)}`, { 
       success: true,
