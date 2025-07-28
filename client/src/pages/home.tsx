@@ -830,13 +830,9 @@ export default function Home() {
         
         return data;
       } catch (error) {
-        // Ensure we throw a proper Error object
-        console.error('Failed to fetch wallet data:', error);
-        if (error instanceof Error) {
-          throw error;
-        } else {
-          throw new Error(typeof error === 'string' ? error : 'Failed to fetch wallet data');
-        }
+        console.error('Error fetching wallet data:', error);
+        // Always throw the error - this ensures React Query knows something went wrong
+        throw error instanceof Error ? error : new Error('Failed to fetch wallet data');
       } finally {
         // Restore original console.log
         console.log = originalLog;

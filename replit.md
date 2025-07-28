@@ -2,6 +2,14 @@
 
 ## Recent Changes
 
+### July 28, 2025 - Fixed Single Wallet Search to Match Portfolio Behavior
+- **Problem identified** - Single wallet searches were showing error state when LP token analysis failed, while portfolio searches handled the same errors gracefully
+- **Root cause** - Single wallet React Query was throwing errors even when wallet data was successfully fetched but some LP tokens failed analysis
+- **Updated error handling** - Modified single wallet query to return partial data despite LP errors, matching portfolio behavior
+- **Consistent architecture** - Both single and portfolio searches now handle LP token errors identically - log them but don't fail the entire request
+- **Result** - Single wallet searches now work exactly like portfolio searches, displaying wallet data even when some LP tokens can't be analyzed
+- **User experience** - No more "Error fetching wallet data" messages when LP tokens fail - wallet displays with all available data
+
 ### July 28, 2025 - Fixed Critical LP Token Analysis Error Handling
 - **Problem identified** - LP token analysis errors (e.g., DaiLP, HexLP, BtcLP) were causing entire wallet queries to fail with "Error fetching wallet data"
 - **Root cause** - Promise.all was failing when any LP token analysis threw an error, marking the entire query as failed
