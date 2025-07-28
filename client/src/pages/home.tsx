@@ -15,8 +15,6 @@ import { Button } from '@/components/ui/button';
 import { saveRecentAddress, ProcessedToken, fetchWalletData, fetchAllWalletTokens, forceRefreshWalletData } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAllWalletTokens } from '@/hooks/use-all-wallet-tokens'; // New hook for loading all tokens
-import { useClientSideWallet } from '@/hooks/use-client-side-wallet'; // Client-side wallet hook
-import { useDirectBalance } from '@/hooks/use-direct-balance';
 import { useLiveWalletBalances } from '@/hooks/use-live-wallet-balances'; // Live balance tracking hook
 import { useHexStakes, fetchHexStakesSummary, fetchCombinedHexStakes, HexStakeSummary } from '@/hooks/use-hex-stakes'; // For preloading HEX stakes data
 import { Wallet, Token } from '@shared/schema';

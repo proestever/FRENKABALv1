@@ -11,10 +11,9 @@ import {
 import { apiStatsService } from "./services/api-stats-service";
 import { getDonations, getTopDonors, clearDonationCache } from "./services/donations";
 import { getTokenPricesFromDexScreener, getTokenPriceFromDexScreener } from "./services/dexscreener";
-import { getDirectTokenBalances } from "./services/blockchain-service";
+
 import { calculateBalancesFromTransferHistory, getTransferHistoryWithBalances } from "./services/transfer-history-service";
-import { getDirectTokenBalances as getDirectBalances } from "./services/direct-balance-service";
-import { getDirectTokenBalancesNoPrices } from "./services/direct-balance-no-prices";
+
 import { getProviderHealth, switchToProvider, resetFailedProviders } from "./services/rpc-provider";
 import { getScannerTokenBalances, getFastScannerTokenBalances } from "./services/scanner-balance-service";
 import { getScannerTransactionHistory, getFullScannerTransactionHistory } from "./services/scanner-transaction-service";
@@ -129,106 +128,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // API route to get direct blockchain balances (more accurate for tax tokens)
-  app.get("/api/wallet/:address/direct-balances", async (req, res) => {
-    try {
-      const { address } = req.params;
-      
-      if (!address || typeof address !== 'string') {
-        return res.status(400).json({ message: "Invalid wallet address" });
-      }
-      
-      // Validate ethereum address format
-      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-      if (!addressRegex.test(address)) {
-        return res.status(400).json({ message: "Invalid wallet address format" });
-      }
-      
-      console.log(`Fetching direct balances for ${address}`);
-      
-      // Reset loading progress at the start
-      updateLoadingProgress({
-        status: 'loading',
-        currentBatch: 0,
-        totalBatches: 7,
-        message: 'Initializing wallet scan...'
-      });
-      
-      // Get direct balances from blockchain
-      const tokens = await getDirectBalances(address);
-      
-      // Calculate total value
-      const totalValue = tokens.reduce((sum, token) => sum + (token.value || 0), 0);
-      
-      // Find PLS balance
-      const plsToken = tokens.find(t => t.isNative);
-      const plsBalance = plsToken ? plsToken.balanceFormatted : 0;
-      
-      // Return in the same format as regular wallet data
-      return res.json({
-        address,
-        tokens,
-        totalValue,
-        tokenCount: tokens.length,
-        plsBalance,
-        plsPriceChange: null,
-        networkCount: 1,
-        calculationMethod: 'direct-blockchain',
-        message: 'Balances fetched directly from blockchain (accurate for tax tokens)'
-      });
-    } catch (error) {
-      console.error("Error fetching direct balances:", error);
-      return res.status(500).json({ 
-        message: "Failed to fetch direct balances",
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
   
-  // API route to get direct token balances WITHOUT prices (for client-side price fetching)
-  app.get("/api/wallet/:address/balances-no-prices", async (req, res) => {
-    try {
-      const { address } = req.params;
-      
-      // Validate address
-      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-      if (!addressRegex.test(address)) {
-        return res.status(400).json({ message: "Invalid wallet address" });
-      }
-      
-      console.log(`Getting balances without prices for wallet: ${address}`);
-      
-      const startTime = Date.now();
-      
-      // Get balances without prices
-      const tokens = await getDirectTokenBalancesNoPrices(address);
-      
-      const endTime = Date.now();
-      console.log(`Balances (no prices) fetch completed for ${address} in ${endTime - startTime}ms`);
-      
-      // Find PLS balance
-      const plsToken = tokens.find(t => t.isNative);
-      const plsBalance = plsToken ? plsToken.balanceFormatted : 0;
-      
-      return res.json({
-        address,
-        tokens,
-        totalValue: 0, // Will be calculated client-side
-        tokenCount: tokens.length,
-        plsBalance,
-        plsPriceChange: null,
-        networkCount: 1,
-        pricesNeeded: true // Indicates client needs to fetch prices
-      });
-    } catch (error) {
-      console.error("Error getting balances without prices:", error);
-      
-      return res.status(500).json({ 
-        message: "Failed to get balances",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
+
 
   // API route to calculate wallet balances from complete transfer history
   app.get("/api/wallet/:address/transfer-history-balances", async (req, res) => {
@@ -668,53 +569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // API route to get wallet tokens directly from the blockchain 
-  // This is useful for getting up-to-date balances immediately after a swap
-  app.get("/api/wallet/:address/direct", async (req, res) => {
-    try {
-      const { address } = req.params;
-      
-      if (!address || typeof address !== 'string') {
-        return res.status(400).json({ message: "Invalid wallet address" });
-      }
-      
-      // Validate ethereum address format (0x followed by 40 hex chars)
-      const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-      if (!addressRegex.test(address)) {
-        return res.status(400).json({ message: "Invalid wallet address format" });
-      }
-      
-      // Set loading progress
-      // Silent loading - no progress updates
-      
-      // Get tokens directly from the blockchain
-      const tokens = await getDirectTokenBalances(address);
-      
-      // Calculate total value
-      const totalValue = tokens.reduce((sum, token) => {
-        return sum + (token.value || 0);
-      }, 0);
-      
-      // Format the response in the same way as getWalletData
-      const walletData = {
-        address,
-        tokens,
-        totalValue,
-        tokenCount: tokens.length,
-        plsBalance: tokens.find(t => t.isNative)?.balanceFormatted || null,
-        plsPriceChange: tokens.find(t => t.isNative)?.priceChange24h || null,
-        networkCount: 1, // Always PulseChain in this case
-      };
-      
-      return res.json(walletData);
-    } catch (error) {
-      console.error("Error fetching direct wallet tokens:", error);
-      return res.status(500).json({ 
-        message: "Failed to fetch direct wallet tokens",
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
+
   
   // New endpoint for force refreshing wallet data (bypass cache completely)
   app.get("/api/wallet/:address/force-refresh", async (req, res) => {

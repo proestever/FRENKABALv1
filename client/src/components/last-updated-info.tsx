@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useDirectWalletBalances } from '@/hooks/use-direct-wallet-balances';
-import { queryClient } from '@/lib/queryClient';
 
 interface LastUpdatedInfoProps {
   walletAddress: string | null;
@@ -17,36 +15,17 @@ export function LastUpdatedInfo({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeAgo, setTimeAgo] = useState<string>('');
   
-  // Use the direct wallet balances hook but don't auto-fetch
-  const {
-    isLoading,
-    isFetching,
-    walletData
-  } = useDirectWalletBalances(walletAddress, false);
-  
-  // Track when balances were last updated
+  // Set last updated to now when wallet address changes
   useEffect(() => {
-    if (walletData && !isLoading && !isFetching) {
+    if (walletAddress) {
       setLastUpdated(new Date());
       
-      // Also invalidate the regular wallet data queries to ensure all views refresh
-      if (walletAddress) {
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/wallet/${walletAddress}`]
-        });
-        
-        // Also invalidate the "all" tokens query
-        queryClient.invalidateQueries({
-          queryKey: [`wallet-all-${walletAddress}`]
-        });
-        
-        // Call the callback if provided
-        if (onBalancesUpdated) {
-          onBalancesUpdated();
-        }
+      // Call the callback if provided
+      if (onBalancesUpdated) {
+        onBalancesUpdated();
       }
     }
-  }, [walletData, isLoading, isFetching, walletAddress, onBalancesUpdated]);
+  }, [walletAddress, onBalancesUpdated]);
   
   // Update the "time ago" string
   useEffect(() => {

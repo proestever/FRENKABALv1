@@ -2,6 +2,17 @@
 
 ## Recent Changes
 
+### July 28, 2025 - Major Code Cleanup After Architecture Unification
+- **Removed unused hooks** - Deleted `use-client-side-wallet.ts`, `use-direct-wallet-balances.ts`, and `use-direct-balance.ts` hooks that were replaced by unified approach
+- **Removed unused components** - Deleted `real-time-balance-button.tsx` component that depended on deleted hooks
+- **Updated dependent components** - Modified `last-updated-info.tsx` and `wallet-share.tsx` to work without deleted hooks
+- **Removed unused API functions** - Deleted `fetchDirectBalances` and `fetchDirectWalletBalances` functions from api.ts
+- **Removed unused server endpoints** - Deleted `/api/wallet/:address/direct-balances`, `/api/wallet/:address/balances-no-prices`, and `/api/wallet/:address/direct` endpoints from routes.ts
+- **Removed unused server services** - Deleted `blockchain-service.ts`, `direct-balance-service.ts`, and `direct-balance-no-prices.ts` services
+- **Removed old scanner scripts** - Deleted old standalone scanner JS files from attached_assets folder (scanner_*.js, multi-wallet-scanner_*.js, app_*.js, liquidity_*.js, report_*.js)
+- **Unified wallet fetching** - All wallet searches now use `fetchWalletDataFast` function from wallet-client-service.ts
+- **Result** - Codebase is cleaner and more maintainable with single approach for all wallet operations
+
 ### July 28, 2025 - Unified Single and Portfolio Search Architecture
 - **Complete architectural unification** - Single wallet searches now use `handleMultiSearch([address])` instead of separate React Query implementation
 - **Eliminated code duplication** - Removed separate `handleSearch` logic, now it simply calls `handleMultiSearch` with single-item array
