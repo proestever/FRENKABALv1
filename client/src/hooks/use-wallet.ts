@@ -221,7 +221,11 @@ export function useWallet(): UseWalletReturn {
     if (!ethereum) return;
     
     const handleAccountsChanged = async (accounts: string[]) => {
-      // For any wallet change or disconnection, sign out the user completely
+      // Skip if we already have the same account connected (case-insensitive)
+      if (account && accounts.length > 0 && account.toLowerCase() === accounts[0].toLowerCase()) {
+        return;
+      }
+      
       const oldAddress = localStorage.getItem('walletAddress');
       
       if (accounts.length === 0) {
@@ -288,7 +292,7 @@ export function useWallet(): UseWalletReturn {
         ethereum.removeListener('chainChanged', handleChainChanged);
       }
     };
-  }, [toast, PULSE_CHAIN_ID, getUserFromWallet, getUserProfile]);
+  }, [toast, PULSE_CHAIN_ID, getUserFromWallet, getUserProfile, account]);
 
   // Connect to wallet with signature verification
   const connect = useCallback(async () => {

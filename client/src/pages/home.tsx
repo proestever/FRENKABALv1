@@ -36,6 +36,7 @@ export default function Home() {
   const [portfolioName, setPortfolioName] = useState<string | null>(null);
   const [portfolioUrlId, setPortfolioUrlId] = useState<string | null>(null);
   const [portfolioTimer, setPortfolioTimer] = useState<PerformanceTimer | null>(null);
+  const [searchInProgress, setSearchInProgress] = useState<string | null>(null);
 
   const [multiWalletProgress, setMultiWalletProgress] = useState<{
     currentBatch: number;
@@ -92,9 +93,16 @@ export default function Home() {
   const handleSearch = (address: string) => {
     if (!address) return;
     
+    // Prevent duplicate searches
+    if (searchInProgress === address || searchedAddress === address) {
+      console.log('Search already in progress or completed for:', address);
+      return;
+    }
+    
     // Simply use the portfolio search function with a single address array
     // This ensures consistent behavior between single and multi-wallet searches
     console.log('Using unified search approach for single wallet:', address);
+    setSearchInProgress(address);
     handleMultiSearch([address]);
   };
   
@@ -408,6 +416,9 @@ export default function Home() {
       // Restore console.log
       console.log = originalLog;
       
+      // Clear search in progress
+      setSearchInProgress(null);
+      
       // Add a slight delay before setting loading to false to ensure progress is visible
       setTimeout(() => {
         setIsMultiWalletLoading(false);
@@ -438,7 +449,8 @@ export default function Home() {
     // Check if we have a wallet address directly in the URL path
     if (params.walletAddress && params.walletAddress.startsWith('0x')) {
       // Only search if this is a different address than what we're currently showing
-      if (searchedAddress !== params.walletAddress) {
+      // AND we're not already loading or have loaded this wallet
+      if (searchedAddress !== params.walletAddress && !isMultiWalletLoading && !multiWalletData) {
         console.log(`Detected wallet address in URL params: ${params.walletAddress}`);
         setSearchedAddress(params.walletAddress); // Set the searched address to prevent loops
         handleSearch(params.walletAddress);
@@ -628,7 +640,7 @@ export default function Home() {
       setPortfolioUrlId(null);
       setIndividualWalletHexStakes({});
     }
-  }, [params.walletAddress, params.portfolioId, searchedAddress, location]);
+  }, [params.walletAddress, params.portfolioId, searchedAddress, location, isMultiWalletLoading, multiWalletData]);
 
   // Single wallet progress tracking state
   const [singleWalletProgress, setSingleWalletProgress] = useState<any>({
@@ -654,7 +666,7 @@ export default function Home() {
     refetch 
   } = useQuery({
     queryKey: searchedAddress ? [`fast-wallet-${searchedAddress}`] : ['fast-wallet-empty'],
-    enabled: !!searchedAddress,
+    enabled: false, // Disabled - we use handleMultiSearch for single wallets too
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchOnMount: false,
