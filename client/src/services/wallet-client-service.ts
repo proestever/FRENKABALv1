@@ -42,7 +42,7 @@ const LP_PAIR_ABI = [
 /**
  * Analyze LP token client-side to get underlying token balances and values
  */
-async function analyzeLpTokenClientSide(token: ProcessedToken, priceMap: Map<string, number>): Promise<ProcessedToken> {
+async function analyzeLpTokenClientSide(token: ProcessedToken, priceMap: Map<string, any>): Promise<ProcessedToken> {
   try {
     console.log(`🔬 Analyzing LP token ${token.symbol} client-side...`);
     const provider = getRpcProvider();
@@ -92,8 +92,10 @@ async function analyzeLpTokenClientSide(token: ProcessedToken, priceMap: Map<str
     const token1BalanceFormatted = parseFloat(ethers.utils.formatUnits(token1Balance, token1Decimals));
     
     // Get prices for underlying tokens
-    const token0Price = priceMap.get(token0Address.toLowerCase()) || 0;
-    const token1Price = priceMap.get(token1Address.toLowerCase()) || 0;
+    const token0PriceData = priceMap.get(token0Address.toLowerCase());
+    const token1PriceData = priceMap.get(token1Address.toLowerCase());
+    const token0Price = token0PriceData?.price || 0;
+    const token1Price = token1PriceData?.price || 0;
     
     // Calculate values
     const token0Value = token0BalanceFormatted * token0Price;
@@ -470,10 +472,10 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
             hasRequiredFields: token.lpToken0BalanceFormatted !== undefined && token.lpToken1BalanceFormatted !== undefined
           });
           
-          // If LP token is detected but doesn't have underlying balances, we need to analyze it
+          // Fast scanner detects LP tokens but doesn't calculate underlying balances
+          // So ALL LP tokens from fast scanner need client-side analysis
           if (!token.lpToken0BalanceFormatted || !token.lpToken1BalanceFormatted) {
-            console.log(`🛠️  LP token ${token.symbol} missing underlying balances - needs client-side analysis`);
-            // Mark this token for LP analysis below
+            console.log(`🛠️  LP token ${token.symbol} missing underlying balances - flagging for client-side analysis`);
             token.needsLpAnalysis = true;
           }
         }
@@ -596,6 +598,21 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
     // Process tokens that need LP analysis
     await timer.measure('client_lp_analysis', async () => {
       const tokensNeedingLpAnalysis = tokensWithPrices.filter(token => token.needsLpAnalysis);
+      const lpTokens = tokensWithPrices.filter(token => token.isLp);
+      
+      console.log(`🔍 Debug LP analysis:`, {
+        totalTokens: tokensWithPrices.length,
+        lpTokensDetected: lpTokens.length,
+        tokensNeedingAnalysis: tokensNeedingLpAnalysis.length,
+        lpTokenDetails: lpTokens.map(t => ({
+          symbol: t.symbol,
+          isLp: t.isLp,
+          needsLpAnalysis: t.needsLpAnalysis,
+          hasBalanceFormatted: !!t.lpToken0BalanceFormatted,
+          lpToken0Address: t.lpToken0Address,
+          lpToken1Address: t.lpToken1Address
+        }))
+      });
       
       if (tokensNeedingLpAnalysis.length > 0) {
         console.log(`🔍 Found ${tokensNeedingLpAnalysis.length} LP tokens needing client-side analysis`);
@@ -616,6 +633,8 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
         });
         
         console.log(`✅ Completed client-side LP analysis for ${tokensNeedingLpAnalysis.length} tokens`);
+      } else if (lpTokens.length > 0) {
+        console.log(`⚠️  Found ${lpTokens.length} LP tokens but none were flagged for analysis!`);
       }
     }, { lpTokensAnalyzed: tokensWithPrices.filter(t => t.needsLpAnalysis).length });
     
