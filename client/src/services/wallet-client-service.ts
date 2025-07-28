@@ -62,21 +62,64 @@ interface TokenWithPrice extends ProcessedToken {
 }
 
 /**
- * Fetch wallet balances directly from browser using PulseChain Scan API
- * This distributes load across users' IPs instead of server
+ * Fetch wallet balances using the same API as portfolio loading
+ * This ensures consistency between single wallet and multi-wallet views
  */
 async function fetchWalletBalancesFromScanner(address: string, retries = 3, useFastEndpoint = false): Promise<Wallet> {
   try {
-    // Fetch token balances directly from browser
-    const { tokens, plsBalance } = await fetchTokenBalancesFromBrowser(address, retries);
+    console.log(`Fetching wallet data for ${address} using server API (same as portfolio)`);
+    
+    // Use the same API endpoint as portfolio loading - try fast scanner first for better reliability
+    const response = await fetch(`/api/wallet/${address}/fast-balances`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      // Try enhanced endpoint as fallback (though it often fails with 504)
+      console.log(`Fast endpoint failed, trying enhanced endpoint for ${address}`);
+      const enhancedResponse = await fetch(`/api/wallet/${address}/enhanced-balances`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!enhancedResponse.ok) {
+        throw new Error(`Both fast and enhanced endpoints failed: ${response.status} / ${enhancedResponse.status}`);
+      }
+      
+      const data = await enhancedResponse.json();
+      return {
+        address,
+        tokens: data.tokens || [],
+        totalValue: 0, // Will be calculated after prices are fetched
+        tokenCount: data.tokens?.length || 0,
+        plsBalance: data.plsBalance || 0,
+        plsPriceChange: 0,
+        networkCount: 1,
+        pricesNeeded: true
+      };
+    }
+    
+    const data = await response.json();
+    
+    console.log(`Successfully fetched wallet data from API:`, {
+      address,
+      tokenCount: data.tokens?.length || 0,
+      totalValue: data.totalValue || 0,
+      plsBalance: data.plsBalance || 0
+    });
     
     // Transform to wallet format
     return {
       address,
-      tokens,
+      tokens: data.tokens || [],
       totalValue: 0, // Will be calculated after prices are fetched
-      tokenCount: tokens.length,
-      plsBalance: plsBalance || 0,
+      tokenCount: data.tokens?.length || 0,
+      plsBalance: data.plsBalance || 0,
       plsPriceChange: 0,
       networkCount: 1,
       pricesNeeded: true
