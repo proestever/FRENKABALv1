@@ -733,7 +733,16 @@ export default function Home() {
       if (liveBalance !== undefined) {
         // Update balance and recalculate value
         const balanceFormatted = parseFloat(liveBalance) / Math.pow(10, token.decimals);
-        const value = balanceFormatted * (token.price || 0);
+        // For LP tokens, preserve the original value calculation since it's more complex
+        let value;
+        if (token.isLp && token.lpToken0BalanceFormatted !== undefined && token.lpToken1BalanceFormatted !== undefined) {
+          // For LP tokens, recalculate based on updated balance proportionally
+          const balanceRatio = balanceFormatted / (token.balanceFormatted || 1);
+          value = (token.value || 0) * balanceRatio;
+        } else {
+          // For regular tokens, simple multiplication
+          value = balanceFormatted * (token.price || 0);
+        }
         
         return {
           ...token,

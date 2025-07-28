@@ -104,13 +104,7 @@ export function TokenList({
   // Filter tokens based on view and search
   const filteredTokens = useMemo(() => {
     try {
-      console.log('Filtering tokens:', {
-        totalTokens: safeTokens.length,
-        hiddenTokensCount: hiddenTokens.length,
-        showHidden,
-        showLiquidity,
-        filterText: debouncedFilterText
-      });
+      // Temporarily disabled logging to debug LP token values
       
       // First apply the general filters
       const filtered = safeTokens.filter(token => {
@@ -131,17 +125,19 @@ export function TokenList({
         }
       });
       
-      console.log('After general filters:', filtered.length, 'tokens remaining');
-      
       // Then apply the view-specific filter
       if (showLiquidity) {
         // Only return LP tokens when in liquidity view
         const lpFiltered = filtered.filter(token => token.isLp === true);
-        console.log('Liquidity view active - showing', lpFiltered.length, 'LP tokens');
+        // Debug LP token values
+        lpFiltered.forEach(token => {
+          if (token.value === undefined || token.value === 0) {
+            console.log('LP token missing value:', token.symbol, 'value:', token.value, 'lpToken0Address:', token.lpToken0Address, 'lpToken1Address:', token.lpToken1Address);
+          }
+        });
         return lpFiltered;
       } else if (!showTransactions) {
         // In all tokens view, return all tokens
-        console.log('All tokens view - showing', filtered.length, 'tokens');
         return filtered;
       }
       

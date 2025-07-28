@@ -73,11 +73,14 @@ export function useClientSideWallet(walletAddress: string | null) {
     refetchIntervalInBackground: false,
     staleTime: 0, // Always consider data stale
     gcTime: 0,    // Don't keep in cache
+    retry: false, // Disable retry
+    cacheTime: 0, // No cache time
     queryFn: async () => {
       if (!walletAddress) return null;
       
       try {
         // Fetch wallet data with direct smart contract price reading (real-time)
+        console.log('🚀 useClientSideWallet: Starting fetchWalletDataWithContractPrices for', walletAddress);
         const data = await fetchWalletDataWithContractPrices(walletAddress, (message, progress) => {
           setProgress({
             currentBatch: progress,

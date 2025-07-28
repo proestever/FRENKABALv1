@@ -9,12 +9,128 @@ import { requestDeduplicator } from '@/lib/request-deduplicator';
 import { PerformanceTimer } from '@/utils/performance-timer';
 import { fetchTokenBalancesFromBrowser } from './scanner-client-service';
 import { fetchMultipleTokenLogos } from './dexscreener-logo-service';
+import { ethers } from 'ethers';
 
 // Blacklist of known dust tokens to filter out
 const DUST_TOKEN_BLACKLIST = new Set<string>([
   // Add dust token addresses here in lowercase
   // Example: '0x1234567890abcdef...',
 ]);
+
+// RPC provider for blockchain calls
+const getRpcProvider = () => {
+  return new ethers.providers.JsonRpcProvider('https://rpc-pulsechain.g4mm4.io');
+};
+
+// ERC20 ABI for basic token functions
+const ERC20_ABI = [
+  'function symbol() view returns (string)',
+  'function name() view returns (string)',
+  'function decimals() view returns (uint8)',
+  'function balanceOf(address) view returns (uint256)',
+  'function totalSupply() view returns (uint256)',
+];
+
+// PulseX LP pair ABI for getting reserves and tokens
+const LP_PAIR_ABI = [
+  'function token0() view returns (address)',
+  'function token1() view returns (address)',
+  'function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)',
+  'function totalSupply() view returns (uint256)',
+];
+
+/**
+ * Analyze LP token client-side to get underlying token balances and values
+ */
+async function analyzeLpTokenClientSide(token: ProcessedToken, priceMap: Map<string, number>): Promise<ProcessedToken> {
+  try {
+    console.log(`🔬 Analyzing LP token ${token.symbol} client-side...`);
+    const provider = getRpcProvider();
+    
+    // Create contract instance for LP pair
+    const lpContract = new ethers.Contract(token.address, LP_PAIR_ABI, provider);
+    
+    // Get underlying token addresses
+    const [token0Address, token1Address] = await Promise.all([
+      lpContract.token0(),
+      lpContract.token1()
+    ]);
+    
+    console.log(`LP ${token.symbol} contains tokens:`, { token0Address, token1Address });
+    
+    // Get reserves and total supply
+    const [reserves, totalSupply] = await Promise.all([
+      lpContract.getReserves(),
+      lpContract.totalSupply()
+    ]);
+    
+    const lpBalance = ethers.BigNumber.from(token.balance);
+    const totalSupplyBN = ethers.BigNumber.from(totalSupply);
+    
+    // Calculate user's share of the pool
+    const userShareRatio = lpBalance.mul(ethers.constants.WeiPerEther).div(totalSupplyBN);
+    
+    // Get token contracts for metadata
+    const token0Contract = new ethers.Contract(token0Address, ERC20_ABI, provider);
+    const token1Contract = new ethers.Contract(token1Address, ERC20_ABI, provider);
+    
+    const [token0Symbol, token0Decimals, token1Symbol, token1Decimals] = await Promise.all([
+      token0Contract.symbol(),
+      token0Contract.decimals(),
+      token1Contract.symbol(),
+      token1Contract.decimals()
+    ]);
+    
+    // Calculate underlying token balances
+    const token0ReserveBN = ethers.BigNumber.from(reserves.reserve0);
+    const token1ReserveBN = ethers.BigNumber.from(reserves.reserve1);
+    
+    const token0Balance = token0ReserveBN.mul(userShareRatio).div(ethers.constants.WeiPerEther);
+    const token1Balance = token1ReserveBN.mul(userShareRatio).div(ethers.constants.WeiPerEther);
+    
+    const token0BalanceFormatted = parseFloat(ethers.utils.formatUnits(token0Balance, token0Decimals));
+    const token1BalanceFormatted = parseFloat(ethers.utils.formatUnits(token1Balance, token1Decimals));
+    
+    // Get prices for underlying tokens
+    const token0Price = priceMap.get(token0Address.toLowerCase()) || 0;
+    const token1Price = priceMap.get(token1Address.toLowerCase()) || 0;
+    
+    // Calculate values
+    const token0Value = token0BalanceFormatted * token0Price;
+    const token1Value = token1BalanceFormatted * token1Price;
+    const totalLpValue = token0Value + token1Value;
+    
+    console.log(`✅ LP ${token.symbol} analysis complete:`, {
+      token0: `${token0BalanceFormatted.toFixed(6)} ${token0Symbol} ($${token0Value.toFixed(2)})`,
+      token1: `${token1BalanceFormatted.toFixed(6)} ${token1Symbol} ($${token1Value.toFixed(2)})`,
+      totalValue: `$${totalLpValue.toFixed(2)}`
+    });
+    
+    // Return enhanced token with LP data
+    return {
+      ...token,
+      isLp: true,
+      lpToken0Address: token0Address,
+      lpToken1Address: token1Address,
+      lpToken0Symbol: token0Symbol,
+      lpToken1Symbol: token1Symbol,
+      lpToken0BalanceFormatted: token0BalanceFormatted,
+      lpToken1BalanceFormatted: token1BalanceFormatted,
+      lpToken0Value: token0Value,
+      lpToken1Value: token1Value,
+      value: totalLpValue,
+      price: totalLpValue / token.balanceFormatted, // Price per LP token
+      needsLpAnalysis: undefined
+    };
+    
+  } catch (error) {
+    console.error(`❌ Failed to analyze LP token ${token.symbol}:`, error);
+    return {
+      ...token,
+      needsLpAnalysis: undefined
+    };
+  }
+}
 
 // Import types directly from server since they're not in shared schema
 interface ProcessedToken {
@@ -33,6 +149,18 @@ interface ProcessedToken {
   securityScore?: number;
   isNative?: boolean;
   isLp?: boolean;
+  needsLpAnalysis?: boolean;
+  lpToken0Address?: string;
+  lpToken1Address?: string;
+  lpToken0Symbol?: string;
+  lpToken1Symbol?: string;
+  lpToken0BalanceFormatted?: number;
+  lpToken1BalanceFormatted?: number;
+  lpToken0Value?: number;
+  lpToken1Value?: number;
+  lpToken0Price?: number;
+  lpToken1Price?: number;
+  priceData?: any;
 }
 
 interface Wallet {
@@ -331,7 +459,25 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
         const addressForPrice = tokenAddresses[index];
         const priceData = priceMap.get(addressForPrice.toLowerCase());
         
-        // Handle LP tokens specially
+        // Handle LP tokens specially  
+        if (token.isLp) {
+          console.log(`🔍 Processing LP token ${token.symbol}:`, {
+            isLp: token.isLp,
+            lpToken0Address: token.lpToken0Address,
+            lpToken1Address: token.lpToken1Address,
+            lpToken0BalanceFormatted: token.lpToken0BalanceFormatted,
+            lpToken1BalanceFormatted: token.lpToken1BalanceFormatted,
+            hasRequiredFields: token.lpToken0BalanceFormatted !== undefined && token.lpToken1BalanceFormatted !== undefined
+          });
+          
+          // If LP token is detected but doesn't have underlying balances, we need to analyze it
+          if (!token.lpToken0BalanceFormatted || !token.lpToken1BalanceFormatted) {
+            console.log(`🛠️  LP token ${token.symbol} missing underlying balances - needs client-side analysis`);
+            // Mark this token for LP analysis below
+            token.needsLpAnalysis = true;
+          }
+        }
+        
         if (token.isLp && token.lpToken0BalanceFormatted !== undefined && token.lpToken1BalanceFormatted !== undefined) {
           // Calculate LP token value based on underlying tokens
           let lpValue = 0;
@@ -345,6 +491,19 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
           const token1Value = token.lpToken1BalanceFormatted * token1Price;
           
           lpValue = token0Value + token1Value;
+          
+          // Debug LP token calculation
+          console.log(`LP Token ${token.symbol}:`, {
+            lpToken0Address: token.lpToken0Address,
+            lpToken1Address: token.lpToken1Address,
+            lpToken0BalanceFormatted: token.lpToken0BalanceFormatted,
+            lpToken1BalanceFormatted: token.lpToken1BalanceFormatted,
+            token0Price,
+            token1Price,
+            token0Value,
+            token1Value,
+            lpValue
+          });
           
           return {
             ...token,
@@ -433,6 +592,32 @@ export async function fetchWalletDataFast(address: string): Promise<Wallet> {
         });
       }
     }, { missingLogos: tokensWithPrices.filter(t => !t.logo && t.address !== 'native').length });
+    
+    // Process tokens that need LP analysis
+    await timer.measure('client_lp_analysis', async () => {
+      const tokensNeedingLpAnalysis = tokensWithPrices.filter(token => token.needsLpAnalysis);
+      
+      if (tokensNeedingLpAnalysis.length > 0) {
+        console.log(`🔍 Found ${tokensNeedingLpAnalysis.length} LP tokens needing client-side analysis`);
+        
+        // Process LP tokens in parallel
+        const lpAnalysisPromises = tokensNeedingLpAnalysis.map(async (token, index) => {
+          const analyzedToken = await analyzeLpTokenClientSide(token, priceMap);
+          return { index: tokensWithPrices.indexOf(token), analyzedToken };
+        });
+        
+        const analyzedResults = await Promise.all(lpAnalysisPromises);
+        
+        // Replace tokens with analyzed versions
+        analyzedResults.forEach(({ index, analyzedToken }) => {
+          if (index !== -1) {
+            tokensWithPrices[index] = analyzedToken;
+          }
+        });
+        
+        console.log(`✅ Completed client-side LP analysis for ${tokensNeedingLpAnalysis.length} tokens`);
+      }
+    }, { lpTokensAnalyzed: tokensWithPrices.filter(t => t.needsLpAnalysis).length });
     
     // Debug check
     console.log('tokensWithPrices type:', typeof tokensWithPrices, 'isArray:', Array.isArray(tokensWithPrices), 'value:', tokensWithPrices);
