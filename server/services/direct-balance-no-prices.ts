@@ -81,8 +81,9 @@ export async function getDirectTokenBalancesNoPrices(walletAddress: string): Pro
     // Get block range
     const latestBlock = await provider.getBlockNumber();
     
-    // Limit lookback to ~3 months (about 1M blocks)
-    const maxLookback = 1000000;
+    // Extended lookback to ~12 months (about 4M blocks) to catch older tokens like HEX
+    // This ensures we find tokens that haven't moved in a long time
+    const maxLookback = 4000000;
     const fromBlock = Math.max(0, latestBlock - maxLookback);
     
     console.log(`Scanning blocks ${fromBlock} to ${latestBlock} (${latestBlock - fromBlock} blocks)`);
@@ -101,7 +102,7 @@ export async function getDirectTokenBalancesNoPrices(walletAddress: string): Pro
       });
     }
 
-    console.log(`Split into ${chunks.length} chunks of ${CHUNK_SIZE} blocks each`);
+    console.log(`Split into ${chunks.length} chunks of ${CHUNK_SIZE} blocks each (lookback: ~12 months to catch old tokens like HEX)`);
 
     // Process chunks in parallel
     const allLogs = await Promise.all(
