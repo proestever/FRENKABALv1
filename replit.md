@@ -10,6 +10,13 @@
 - **Safety net maintained** - HEX remains in IMPORTANT_TOKENS list as additional protection
 - **Production deployment needed** - Development environment has the fix, production needs deployment to work correctly
 
+### July 29, 2025 - Added Token Launcher Link to Navigation Menu
+- **New menu item added** - "Token Launcher" with Archon logo in dropdown menus
+- **External link** - Links to archon.frenkabal.com and opens in new tab
+- **Logo integration** - Archon logo displayed at h-4 w-4 size next to menu text
+- **Consistent placement** - Added after Donations item in both desktop and mobile menus
+- **Result** - Users can easily access the Token Launcher from the main navigation
+
 ### July 28, 2025 - Unified Single and Portfolio Search Architecture
 - **Complete architectural unification** - Single wallet searches now use `handleMultiSearch([address])` instead of separate React Query implementation
 - **Eliminated code duplication** - Removed separate `handleSearch` logic, now it simply calls `handleMultiSearch` with single-item array

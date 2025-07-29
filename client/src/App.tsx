@@ -172,6 +172,11 @@ function Header() {
                 <span>Donations</span>
               </DropdownMenuItem>
               
+              <DropdownMenuItem onClick={() => window.open("https://archon.frenkabal.com", "_blank")} className="cursor-pointer dropdown-item-hover">
+                <img src="/assets/archon_logo.png" alt="Archon" className="mr-2 h-4 w-4 object-contain" />
+                <span>Token Launcher</span>
+              </DropdownMenuItem>
+              
               {isConnected && (
                 <>
                   <DropdownMenuItem onClick={() => setLocation("/saved")} className="cursor-pointer dropdown-item-hover">
@@ -241,6 +246,11 @@ function Header() {
                 <DropdownMenuItem onClick={() => setLocation("/donations")} className="cursor-pointer dropdown-item-hover">
                   <HeartHandshake className="mr-2 h-4 w-4" />
                   <span>Donations</span>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem onClick={() => window.open("https://archon.frenkabal.com", "_blank")} className="cursor-pointer dropdown-item-hover">
+                  <img src="/assets/archon_logo.png" alt="Archon" className="mr-2 h-4 w-4 object-contain" />
+                  <span>Token Launcher</span>
                 </DropdownMenuItem>
                 
                 {isConnected && (
