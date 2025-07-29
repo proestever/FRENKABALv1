@@ -173,7 +173,7 @@ function Header() {
               </DropdownMenuItem>
               
               <DropdownMenuItem onClick={() => window.open("https://archon.frenkabal.com", "_blank")} className="cursor-pointer dropdown-item-hover">
-                <img src="/assets/archon_logo.png" alt="Archon" className="mr-2 h-4 w-4 object-contain" />
+                <img src="/assets/archon_symbol.png" alt="Archon" className="mr-2 h-4 w-4 object-contain" />
                 <span>Token Launcher</span>
               </DropdownMenuItem>
               
@@ -249,7 +249,7 @@ function Header() {
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem onClick={() => window.open("https://archon.frenkabal.com", "_blank")} className="cursor-pointer dropdown-item-hover">
-                  <img src="/assets/archon_logo.png" alt="Archon" className="mr-2 h-4 w-4 object-contain" />
+                  <img src="/assets/archon_symbol.png" alt="Archon" className="mr-2 h-4 w-4 object-contain" />
                   <span>Token Launcher</span>
                 </DropdownMenuItem>
                 
