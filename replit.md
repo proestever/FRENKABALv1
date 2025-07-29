@@ -2,6 +2,14 @@
 
 ## Recent Changes
 
+### July 29, 2025 - Extended Token Discovery Lookback Period for HEX Support
+- **Problem identified** - HEX tokens weren't appearing in portfolios because they hadn't moved in months
+- **Root cause** - Token discovery only looked back ~3 months (1M blocks), missing older unmoved tokens
+- **Extended lookback to 12 months** - Changed LOOKBACK_BLOCKS from 1,000,000 to 4,000,000 in direct-balance-no-prices.ts
+- **Result** - Old tokens like HEX that haven't moved in many months are now properly discovered and displayed
+- **Safety net maintained** - HEX remains in IMPORTANT_TOKENS list as additional protection
+- **Production deployment needed** - Development environment has the fix, production needs deployment to work correctly
+
 ### July 28, 2025 - Unified Single and Portfolio Search Architecture
 - **Complete architectural unification** - Single wallet searches now use `handleMultiSearch([address])` instead of separate React Query implementation
 - **Eliminated code duplication** - Removed separate `handleSearch` logic, now it simply calls `handleMultiSearch` with single-item array
