@@ -2482,8 +2482,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const priceData = await getTokenPriceFromContract(address);
       
       // Also get raw pair data for both factories
-      const { getRpcProvider } = await import('./services/rpc-provider');
-      const provider = getRpcProvider();
+      const { getProvider } = await import('./services/rpc-provider');
+      const provider = getProvider();
       const FACTORY_ABI = ["function getPair(address tokenA, address tokenB) view returns (address)"];
       const PAIR_ABI = [
         "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32)",

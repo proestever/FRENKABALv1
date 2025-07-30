@@ -153,23 +153,16 @@ app.use((req, res, next) => {
     });
   });
   
-  // Cache statistics endpoint
+  // Cache statistics endpoint - temporarily disabled until token-cache service is implemented
   app.get('/api/cache-stats', async (_req, res) => {
-    try {
-      const { tokenCache } = await import('./services/token-cache.js');
-      const stats = tokenCache.getStats();
-      
-      res.json({
-        status: 'ok',
-        cacheStats: stats,
-        message: `Caching ${stats.walletCacheSize} wallets and ${stats.metadataCacheSize} token metadata entries`
-      });
-    } catch (error) {
-      res.status(500).json({ 
-        status: 'error',
-        message: 'Failed to get cache statistics'
-      });
-    }
+    res.json({
+      status: 'ok',
+      message: 'Cache statistics temporarily unavailable',
+      cacheStats: {
+        walletCacheSize: 0,
+        metadataCacheSize: 0
+      }
+    });
   });
 
   const server = await registerRoutes(app);
