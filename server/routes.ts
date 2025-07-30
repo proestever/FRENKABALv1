@@ -1298,6 +1298,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(logo);
       }
       
+      // Special cases for stablecoins with specific logos
+      const addressLower = address.toLowerCase();
+      
+      // USDT
+      if (addressLower === '0x0cb6f5a34ad42ec934882a05265a7d5f59b51a2f') {
+        const logo = {
+          tokenAddress: address,
+          logoUrl: '/assets/usdt_logo.png',
+          symbol: "USDT",
+          name: "Tether USD",
+          lastUpdated: new Date().toISOString()
+        };
+        return res.json(logo);
+      }
+      
+      // DAI
+      if (addressLower === '0xefd766ccb38eaf1dfd701853bfce31359239f305') {
+        const logo = {
+          tokenAddress: address,
+          logoUrl: '/assets/dai_logo.png',
+          symbol: "DAI",
+          name: "Dai Stablecoin",
+          lastUpdated: new Date().toISOString()
+        };
+        return res.json(logo);
+      }
+      
+      // USDC
+      if (addressLower === '0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07') {
+        const logo = {
+          tokenAddress: address,
+          logoUrl: '/assets/usdc_logo.png',
+          symbol: "USDC",
+          name: "USD Coin",
+          lastUpdated: new Date().toISOString()
+        };
+        return res.json(logo);
+      }
+      
       // For other tokens, validate the address format
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(address)) {

@@ -17,6 +17,15 @@
 - **Consistent placement** - Added after Donations item in both desktop and mobile menus
 - **Result** - Users can easily access the Token Launcher from the main navigation
 
+### July 30, 2025 - Implemented Hardcoded Stablecoin Logos
+- **Fixed stablecoin branding** - Three major stablecoins now always display their official logos
+- **USDT contract** - 0x0Cb6F5a34ad42ec934882A05265A7d5F59b51A2f always uses Tether logo
+- **DAI contract** - 0xefD766cCb38EaF1dfd701853BFCe31359239F305 always uses DAI logo
+- **USDC contract** - 0x15D38573d2feeb82e7ad5187aB8c1D52810B1f07 always uses USDC logo
+- **Client-side hardcoding** - TokenLogo component checks for these addresses before API calls
+- **Server-side hardcoding** - API endpoint returns correct logos for these addresses without database lookup
+- **Result** - Consistent stablecoin branding across the entire application
+
 ### July 28, 2025 - Unified Single and Portfolio Search Architecture
 - **Complete architectural unification** - Single wallet searches now use `handleMultiSearch([address])` instead of separate React Query implementation
 - **Eliminated code duplication** - Removed separate `handleSearch` logic, now it simply calls `handleMultiSearch` with single-item array

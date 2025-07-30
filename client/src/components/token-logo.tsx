@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 // Logo cache to prevent excessive API calls
-const logoCache: Record<string, string> = {};
+const logoCache: Record<string, string | null> = {};
 
 interface TokenLogoProps {
   address: string;
@@ -71,6 +71,31 @@ export function TokenLogo({ address, symbol, fallbackLogo, size = 'md', logo }: 
       const plsLogo = '/assets/pls-logo-trimmed.png';
       logoCache[normalizedAddress] = plsLogo;
       setLogoUrl(plsLogo);
+      setIsLoading(false);
+      return;
+    }
+    
+    // Special cases for stablecoins with specific logos
+    if (normalizedAddress === '0x0cb6f5a34ad42ec934882a05265a7d5f59b51a2f') { // USDT
+      const usdtLogo = '/assets/usdt_logo.png';
+      logoCache[normalizedAddress] = usdtLogo;
+      setLogoUrl(usdtLogo);
+      setIsLoading(false);
+      return;
+    }
+    
+    if (normalizedAddress === '0xefd766ccb38eaf1dfd701853bfce31359239f305') { // DAI
+      const daiLogo = '/assets/dai_logo.png';
+      logoCache[normalizedAddress] = daiLogo;
+      setLogoUrl(daiLogo);
+      setIsLoading(false);
+      return;
+    }
+    
+    if (normalizedAddress === '0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07') { // USDC
+      const usdcLogo = '/assets/usdc_logo.png';
+      logoCache[normalizedAddress] = usdcLogo;
+      setLogoUrl(usdcLogo);
       setIsLoading(false);
       return;
     }
